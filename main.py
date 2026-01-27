@@ -73,83 +73,81 @@ def extract_from_pdf(pdf_path):
         # テキストを行に分割
         lines = all_text.split('\n')
         
-        # ヘッダー行を探して「差引き」の位置を特定
-        balance_keyword_positions = []
-        for i, line in enumerate(lines):
-            if '差引き' in line or 'balance' in line.lower():
-                print(f"差引きヘッダー行 (行{i}): {line}")
-                # この行での「差引き」の出現位置を記録
-                words = line.split()
-                for j, word in enumerate(words):
-                    if '差引き' in word.lower() or 'balance' in word.lower():
-                        balance_keyword_positions.append(j)
-        
-        # 海外投資家の買いの行を探す
-        foreign_investor_found = False
-        purchases_found = False
-        target_line = None
+        # 海外投資家のセクションを探す
+        foreign_section_start = None
         
         for i, line in enumerate(lines):
-            line_lower = line.lower()
-            
-            # 海外投資家の行を見つける
-            if ('海外投資家' in line or 'foreigners' in line_lower) and not foreign_investor_found:
-                foreign_investor_found = True
-                print(f"\n海外投資家行を発見 (行{i}): {line}")
-                
-                # この行または次の数行で「買い」または「purchases」を探す
-                for j in range(i, min(i + 3, len(lines))):
-                    check_line = lines[j].lower()
-                    if '買い' in check_line or 'purchases' in check_line:
-                        target_line = lines[j]
-                        purchases_found = True
-                        print(f"買い行を発見 (行{j}): {lines[j]}")
-                        break
-                
-                if purchases_found:
+            # 「海外投資家」の行を見つける
+            if '海外投資家' in line or 'Foreigners' in line:
+                # この行に「売り」「買い」が含まれていないことを確認（ヘッダー行）
+                if '売り' not in line and '買い' not in line:
+                    foreign_section_start = i
+                    print(f"\n海外投資家セクション開始 (行{i}): {line}")
                     break
         
-        if not purchases_found:
-            raise ValueError("海外投資家の買い行が見つかりませんでした")
+        if foreign_section_start is None:
+            raise ValueError("海外投資家セクションが見つかりませんでした")
         
-        print(f"\n対象行の全文: {target_line}")
+        # 海外投資家セクションの次の数行を解析
+        sell_line = None
+        buy_line = None
         
-        # 行を単語に分割
-        words = target_line.split()
+        for i in range(foreign_section_start + 1, min(foreign_section_start + 5, len(lines))):
+            line = lines[i]
+            
+            if '売り' in line or 'Sales' in line:
+                sell_line = line
+                sell_line_index = i
+                print(f"売り行 (行{i}): {line}")
+            
+            if '買い' in line or 'Purchases' in line:
+                buy_line = line
+                buy_line_index = i
+                print(f"買い行 (行{i}): {line}")
         
-        # 数値を抽出（カンマ区切りの数値も含む）
+        if not sell_line or not buy_line:
+            raise ValueError("海外投資家の売り/買い行が見つかりませんでした")
+        
+        # 各行から数値を抽出
         number_pattern = r'-?\d{1,3}(?:,\d{3})+|-?\d+'
-        numbers_with_positions = []
         
-        for i, word in enumerate(words):
-            matches = re.findall(number_pattern, word)
+        def extract_numbers_from_line(line):
+            """行から数値を抽出し、整数リストとして返す"""
+            matches = re.findall(number_pattern, line)
+            numbers = []
             for match in matches:
                 try:
-                    clean_num = match.replace(',', '')
-                    value = int(clean_num)
+                    clean = match.replace(',', '')
+                    val = int(clean)
                     # 小さすぎる数値（比率など）は除外
-                    if abs(value) >= 1000:
-                        numbers_with_positions.append((i, value, match))
+                    if abs(val) >= 1000:
+                        numbers.append(val)
                 except ValueError:
                     continue
+            return numbers
         
-        print(f"\n数値とその位置:")
-        for pos, val, orig in numbers_with_positions:
-            print(f"  位置{pos}: {orig} = {val:,}")
+        sell_numbers = extract_numbers_from_line(sell_line)
+        buy_numbers = extract_numbers_from_line(buy_line)
         
-        # 差引きの値を特定
-        # 戦略: 行の中で3番目以降の大きな数値（最初の2つは通常、売りと買いの金額）
-        if len(numbers_with_positions) >= 3:
-            # 位置でソートして、3番目の大きな数値を取得
-            # または、「差引き」の直後の数値を探す
-            balance = numbers_with_positions[2][1]  # 3番目の数値
-            print(f"\n✓ 抽出成功 (3番目の数値): {balance:,}")
-        elif len(numbers_with_positions) >= 1:
-            # フォールバック: 最小の絶対値を持つ数値（差引きは通常、売買金額より小さい）
-            balance = min(numbers_with_positions, key=lambda x: abs(x[1]))[1]
-            print(f"\n✓ 抽出成功 (最小絶対値): {balance:,}")
+        print(f"\n売り行の数値: {[f'{n:,}' for n in sell_numbers]}")
+        print(f"買い行の数値: {[f'{n:,}' for n in buy_numbers]}")
+        
+        # 差引きを計算
+        # 売り行の最後の数値が売りの差引き
+        # 買い行の最後の数値が買いの差引き
+        sell_balance = sell_numbers[-1] if sell_numbers else 0
+        buy_balance = buy_numbers[-1] if buy_numbers else 0
+        
+        print(f"\n売りの差引き: {sell_balance:,}")
+        print(f"買いの差引き: {buy_balance:,}")
+        
+        # 絶対値が大きい方（買い超 or 売り超）を返す
+        if abs(buy_balance) >= abs(sell_balance):
+            balance = buy_balance
+            print(f"\n✓ 買い超を採用: {balance:,}")
         else:
-            raise ValueError("適切な数値を抽出できませんでした")
+            balance = sell_balance
+            print(f"\n✓ 売り超を採用: {balance:,}")
         
         return balance
         
