@@ -76,8 +76,8 @@
                 <div style="position: relative; height: 500px;">
                     <canvas id="mainChart"></canvas>
                     
-                    <!-- 拡大・縮小ボタン（チャートエリア左下） -->
-                    <div style="position: absolute; bottom: 90px; left: 20px; display: flex; gap: 8px; z-index: 10;">
+                    <!-- 拡大・縮小ボタン（チャートエリア左下、Y軸より右） -->
+                    <div style="position: absolute; bottom: 90px; left: 80px; display: flex; gap: 8px; z-index: 10;">
                         <button onclick="zoomChart('in')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
                             ＋
                         </button>
@@ -193,6 +193,7 @@
                                 const year = date.getFullYear();
                                 const month = date.getMonth() + 1;
                                 const day = date.getDate();
+                                const weekOfMonth = getWeekOfMonth(date);
                                 
                                 // 元データは1,000円単位なので、億円にするには ÷100,000
                                 const balanceInOku = row.balance / 100000;
@@ -205,7 +206,7 @@
                                     month: month,
                                     day: day,
                                     displayDate: `${year}/${month}/${day}週`,
-                                    tooltipDate: `${year}年${month}月${day}日週`
+                                    tooltipDate: `${year}年${month}月第${weekOfMonth}週`
                                 };
                             })
                             .sort((a, b) => new Date(a.date) - new Date(b.date));
