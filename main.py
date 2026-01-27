@@ -58,20 +58,20 @@ def extract_foreign_investor_balance(excel_url):
             print(f"\n=== シート: {sheet_name} ===")
             
             # すべてのセルを文字列に変換（NaNは空文字列に）
-            df = df.fillna('').astype(str)
+            df = df.astype(str).fillna('')
             
             # ステップ1: ヘッダー行を探す（「差引き」「Balance」を含む行）
             balance_col = None
             header_row = None
             
             for idx, row in df.iterrows():
-                row_text = ' '.join(row.values).lower()
+                row_text = ' '.join(str(cell) for cell in row.values).lower()
                 if 'balance' in row_text or '差引き' in row_text:
                     header_row = idx
                     # この行から「差引き」「Balance」の列を特定
                     for col_idx, cell in enumerate(row.values):
-                        cell_lower = str(cell).lower().strip()
-                        if 'balance' in cell_lower or '差引' in cell_lower:
+                        cell_str = str(cell).lower().strip()
+                        if 'balance' in cell_str or '差引' in cell_str:
                             balance_col = col_idx
                             print(f"差引き列を発見: 列{balance_col} (ヘッダー行{header_row})")
                             break
@@ -86,30 +86,30 @@ def extract_foreign_investor_balance(excel_url):
             
             for idx, row in df.iterrows():
                 # 行の最初の数列を結合してチェック
-                row_text = ' '.join(row.values[:5]).lower()
+                row_text = ' '.join(str(cell) for cell in row.values[:5]).lower()
                 
                 # 「海外投資家」または「foreigners」を含み、かつ「買い」または「purchases」を含む
                 if ('海外投資家' in row_text or 'foreigners' in row_text) and \
                    ('買い' in row_text or 'purchases' in row_text):
                     foreign_investor_row = idx
                     print(f"海外投資家(買い)行を発見: 行{idx}")
-                    print(f"  内容: {row.values[:5]}")
+                    print(f"  内容: {[str(cell) for cell in row.values[:5]]}")
                     break
             
             if foreign_investor_row is None:
                 # 買い売りが分かれていない可能性もあるため、海外投資家行だけを探す
                 for idx, row in df.iterrows():
-                    row_text = ' '.join(row.values[:5]).lower()
+                    row_text = ' '.join(str(cell) for cell in row.values[:5]).lower()
                     if '海外投資家' in row_text or 'foreigners' in row_text:
                         # この行の数行後に「買い」があるかチェック
                         for offset in range(1, 5):
                             if idx + offset >= len(df):
                                 break
-                            next_row_text = ' '.join(df.iloc[idx + offset].values[:5]).lower()
+                            next_row_text = ' '.join(str(cell) for cell in df.iloc[idx + offset].values[:5]).lower()
                             if '買い' in next_row_text or 'purchases' in next_row_text:
                                 foreign_investor_row = idx + offset
                                 print(f"海外投資家(買い)行を発見: 行{foreign_investor_row}")
-                                print(f"  内容: {df.iloc[foreign_investor_row].values[:5]}")
+                                print(f"  内容: {[str(cell) for cell in df.iloc[foreign_investor_row].values[:5]]}")
                                 break
                         if foreign_investor_row:
                             break
