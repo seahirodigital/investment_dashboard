@@ -152,30 +152,52 @@ def extract_from_pdf(pdf_path):
                 raise ValueError("テーブルが見つかりませんでした")
             
             for table_num, table in enumerate(tables):
-                # 各行を検索
+                # ヘッダー行を探して「差引き」列のインデックスを特定
+                balance_col_idx = None
+                
                 for row_idx, row in enumerate(table):
                     if not row:
                         continue
                     
-                    # 行の内容を文字列として結合
                     row_text = ' '.join([str(cell) if cell else '' for cell in row])
+                    
+                    # ヘッダー行で「差引き」または「Balance」を探す
+                    if 'Balance' in row_text or '差引き' in row_text:
+                        for col_idx, cell in enumerate(row):
+                            if cell and ('Balance' in str(cell) or '差引' in str(cell)):
+                                balance_col_idx = col_idx
+                                print(f"差引き列を発見: 列インデックス {balance_col_idx}")
+                                break
                     
                     # 海外投資家の売り行
                     if ('海外投資家' in row_text or 'Foreigners' in row_text) and ('売り' in row_text or 'Sales' in row_text):
                         print(f"\n海外投資家(売り)行を発見 (テーブル{table_num + 1}, 行{row_idx}):")
                         print(f"  内容: {row}")
                         
-                        # 差引き列を探す（負の数値）
-                        for cell in reversed(row):
-                            if cell and cell.strip():
-                                match = re.search(r'-\d{1,3}(?:,\d{3})+|-\d+', str(cell))
+                        # 差引き列が特定されている場合はその列を使用
+                        if balance_col_idx is not None and balance_col_idx < len(row):
+                            cell = row[balance_col_idx]
+                            if cell:
+                                match = re.search(r'-?\d{1,3}(?:,\d{3})+|-?\d+', str(cell))
                                 if match:
                                     try:
                                         sell_balance = int(match.group().replace(',', ''))
-                                        print(f"  売りの差引き: {sell_balance:,}")
-                                        break
+                                        print(f"  売りの差引き (列{balance_col_idx}): {sell_balance:,}")
                                     except ValueError:
-                                        continue
+                                        pass
+                        
+                        # 差引き列が特定できない場合は右から探す
+                        if sell_balance is None:
+                            for cell in reversed(row):
+                                if cell and cell.strip():
+                                    match = re.search(r'-\d{1,3}(?:,\d{3})+|-\d+', str(cell))
+                                    if match:
+                                        try:
+                                            sell_balance = int(match.group().replace(',', ''))
+                                            print(f"  売りの差引き (右から検索): {sell_balance:,}")
+                                            break
+                                        except ValueError:
+                                            continue
                         
                         # 次の行を買い行として処理
                         if row_idx + 1 < len(table):
@@ -187,20 +209,34 @@ def extract_from_pdf(pdf_path):
                             
                             # 買い行であることを確認
                             if '買い' in next_row_text or 'Purchases' in next_row_text or 'Foreigners' in next_row_text:
-                                # 差引き列を探す
-                                for cell in reversed(next_row):
-                                    if cell and cell.strip():
+                                # 差引き列が特定されている場合はその列を使用
+                                if balance_col_idx is not None and balance_col_idx < len(next_row):
+                                    cell = next_row[balance_col_idx]
+                                    if cell:
                                         match = re.search(r'-?\d{1,3}(?:,\d{3})+|-?\d+', str(cell))
                                         if match:
                                             try:
                                                 value = int(match.group().replace(',', ''))
-                                                # 100,000以上の数値を差引きとみなす
                                                 if abs(value) >= 100000:
                                                     buy_balance = value
-                                                    print(f"  買いの差引き: {buy_balance:,}")
-                                                    break
+                                                    print(f"  買いの差引き (列{balance_col_idx}): {buy_balance:,}")
                                             except ValueError:
-                                                continue
+                                                pass
+                                
+                                # 差引き列が特定できない場合は右から探す
+                                if buy_balance is None:
+                                    for cell in reversed(next_row):
+                                        if cell and cell.strip():
+                                            match = re.search(r'-?\d{1,3}(?:,\d{3})+|-?\d+', str(cell))
+                                            if match:
+                                                try:
+                                                    value = int(match.group().replace(',', ''))
+                                                    if abs(value) >= 100000:
+                                                        buy_balance = value
+                                                        print(f"  買いの差引き (右から検索): {buy_balance:,}")
+                                                        break
+                                                except ValueError:
+                                                    continue
                         
                         # 売りと買いの両方が見つかったらループを抜ける
                         if sell_balance is not None and buy_balance is not None:
@@ -293,6 +329,12 @@ def create_trend_chart():
 def process_historical_data():
     """過去データ（2023-2026年度）を全て取得して保存"""
     print("\n=== 過去データの取得を開始 ===")
+    
+    # 既存のCSVファイルを削除（クリーンスタート）
+    csv_file = 'history.csv'
+    if os.path.exists(csv_file):
+        os.remove(csv_file)
+        print("既存のCSVファイルを削除しました")
     
     all_urls = []
     for year in [2023, 2024, 2025, 2026]:
