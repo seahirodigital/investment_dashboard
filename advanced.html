@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPX Advanced Viewer - 3-Pane Synchronized Layout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.10.3/dist/Recharts.js"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        /* UI/UX仕様書準拠のスクロールバー */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* カーソルスタイル */
+        .cursor-ns-resize { cursor: ns-resize; }
+        .cursor-ew-resize { cursor: ew-resize; }
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing; }
+        
+        /* アニメーション */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        /* 3ペインレイアウト用 */
+        .pane-container {
+            display: grid;
+            grid-template-areas: 
+                "left-axis main-chart"
+                "empty bottom-axis";
+            grid-template-columns: 100px 1fr;
+            grid-template-rows: 1fr 60px;
+            gap: 0;
+            height: 600px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+        }
+        
+        .left-axis-pane {
+            grid-area: left-axis;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border-right: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        
+        .main-chart-pane {
+            grid-area: main-chart;
+            overflow: auto;
+            position: relative;
+        }
+        
+        .bottom-axis-pane {
+            grid-area: bottom-axis;
+            overflow-x: auto;
+            overflow-y: hidden;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        
+        .axis-label {
+            padding: 8px;
+            font-size: 12px;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+            user-select: none;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } = Recharts;
+
+        // 3ペイン同期スクロールコンポーネント
+        const ThreePaneChart = ({ data }) => {
+            const leftAxisRef = useRef(null);
+            const mainChartRef = useRef(null);
+            const bottomAxisRef = useRef(null);
+            
+            const [scale, setScale] = useState({ x: 1, y: 1 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [hoverZone, setHoverZone] = useState(null); // 'left', 'bottom', 'main'
+
+            // メインチャートのスクロール同期
+            const handleMainScroll = () => {
+                if (!mainChartRef.current || !leftAxisRef.current || !bottomAxisRef.current) return;
+                
+                const { scrollTop, scrollLeft } = mainChartRef.current;
+                
+                // 左軸は縦スクロールのみ同期
+                if (leftAxisRef.current.scrollTop !== scrollTop) {
+                    leftAxisRef.current.scrollTop = scrollTop;
+                }
+                
+                // 下軸は横スクロールのみ同期
+                if (bottomAxisRef.current.scrollLeft !== scrollLeft) {
+                    bottomAxisRef.current.scrollLeft = scrollLeft;
+                }
+            };
+
+            // ホイール操作でのズーム制御
+            const handleWheel = (e, zone) => {
+                e.preventDefault();
+                
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                
+                setScale(prev => {
+                    if (zone === 'left') {
+                        // 左軸上: Y軸のみズーム
+                        return { ...prev, y: Math.max(0.5, Math.min(3, prev.y * delta)) };
+                    } else if (zone === 'bottom') {
+                        // 下軸上: X軸のみズーム
+                        return { ...prev, x: Math.max(0.5, Math.min(3, prev.x * delta)) };
+                    } else {
+                        // メインエリア: 両軸ズーム
+                        return {
+                            x: Math.max(0.5, Math.min(3, prev.x * delta)),
+                            y: Math.max(0.5, Math.min(3, prev.y * delta))
+                        };
+                    }
+                });
+            };
+
+            // Y軸のラベル生成
+            const yAxisLabels = Array.from({ length: 20 }, (_, i) => {
+                const value = (i - 10) * 100000000; // -1B to +1B
+                return {
+                    value,
+                    label: value === 0 ? '0' : `${(value / 100000000).toFixed(0)}億`
+                };
+            });
+
+            // X軸のラベル生成
+            const xAxisLabels = data.map((item, idx) => ({
+                index: idx,
+                label: item.displayDate
+            }));
+
+            const barWidth = 40 * scale.x;
+            const barHeight = 30 * scale.y;
+            const chartWidth = data.length * barWidth;
+
+            return (
+                <div className="pane-container">
+                    {/* 左軸ペイン */}
+                    <div 
+                        ref={leftAxisRef}
+                        className={`left-axis-pane ${hoverZone === 'left' ? 'cursor-ns-resize' : ''}`}
+                        onMouseEnter={() => setHoverZone('left')}
+                        onMouseLeave={() => setHoverZone(null)}
+                        onWheel={(e) => handleWheel(e, 'left')}
+                    >
+                        <div style={{ height: yAxisLabels.length * barHeight }}>
+                            {yAxisLabels.map((item, idx) => (
+                                <div 
+                                    key={idx}
+                                    className="axis-label"
+                                    style={{ 
+                                        height: barHeight,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-end',
+                                        fontWeight: item.value === 0 ? 'bold' : 'normal',
+                                        color: item.value === 0 ? '#1e293b' : '#64748b'
+                                    }}
+                                >
+                                    {item.label}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* メインチャートペイン */}
+                    <div 
+                        ref={mainChartRef}
+                        className={`main-chart-pane ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                        onScroll={handleMainScroll}
+                        onWheel={(e) => {
+                            if (!e.ctrlKey && !e.metaKey) return;
+                            handleWheel(e, 'main');
+                        }}
+                        onMouseDown={() => setIsDragging(true)}
+                        onMouseUp={() => setIsDragging(false)}
+                        onMouseLeave={() => setIsDragging(false)}
+                    >
+                        <svg width={chartWidth} height={yAxisLabels.length * barHeight}>
+                            {/* ゼロライン */}
+                            <line 
+                                x1="0" 
+                                y1={yAxisLabels.length * barHeight / 2} 
+                                x2={chartWidth} 
+                                y2={yAxisLabels.length * barHeight / 2}
+                                stroke="#94a3b8"
+                                strokeWidth="2"
+                            />
+                            
+                            {/* データバー */}
+                            {data.map((item, idx) => {
+                                const x = idx * barWidth;
+                                const centerY = yAxisLabels.length * barHeight / 2;
+                                const value = item.balance;
+                                const maxValue = 1000000000; // 10億
+                                const normalizedHeight = (value / maxValue) * (yAxisLabels.length * barHeight / 2);
+                                
+                                const barY = value >= 0 ? centerY - normalizedHeight : centerY;
+                                const actualHeight = Math.abs(normalizedHeight);
+                                const color = value >= 0 ? '#4A86E8' : '#E67C73';
+                                
+                                return (
+                                    <g key={idx}>
+                                        <rect
+                                            x={x + barWidth * 0.1}
+                                            y={barY}
+                                            width={barWidth * 0.8}
+                                            height={actualHeight}
+                                            fill={color}
+                                            opacity="0.8"
+                                            rx="4"
+                                        />
+                                        <title>{`${item.date}: ${value.toLocaleString('ja-JP')}円`}</title>
+                                    </g>
+                                );
+                            })}
+                        </svg>
+                    </div>
+
+                    {/* 下軸ペイン */}
+                    <div 
+                        ref={bottomAxisRef}
+                        className={`bottom-axis-pane ${hoverZone === 'bottom' ? 'cursor-ew-resize' : ''}`}
+                        onMouseEnter={() => setHoverZone('bottom')}
+                        onMouseLeave={() => setHoverZone(null)}
+                        onWheel={(e) => handleWheel(e, 'bottom')}
+                    >
+                        <div style={{ width: chartWidth, display: 'flex' }}>
+                            {xAxisLabels.map((item, idx) => (
+                                <div 
+                                    key={idx}
+                                    className="axis-label"
+                                    style={{ 
+                                        width: barWidth,
+                                        textAlign: 'center',
+                                        borderRight: idx < xAxisLabels.length - 1 ? '1px solid #e2e8f0' : 'none'
+                                    }}
+                                >
+                                    {item.label}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // メインアプリ
+        const App = () => {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [viewMode, setViewMode] = useState('simple'); // 'simple' or 'advanced'
+
+            useEffect(() => {
+                loadData();
+            }, []);
+
+            const loadData = async () => {
+                try {
+                    const response = await fetch('history.csv');
+                    const csvText = await response.text();
+                    
+                    Papa.parse(csvText, {
+                        header: true,
+                        dynamicTyping: true,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            const parsedData = results.data
+                                .filter(row => row.date && row.balance !== null)
+                                .map(row => ({
+                                    date: row.date,
+                                    balance: row.balance,
+                                    displayDate: new Date(row.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+                                }))
+                                .sort((a, b) => new Date(a.date) - new Date(b.date));
+                            
+                            setData(parsedData.slice(-50)); // 最新50件
+                            setLoading(false);
+                        }
+                    });
+                } catch (err) {
+                    console.error(err);
+                    setLoading(false);
+                }
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            <p className="mt-4 text-slate-600">Loading...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen pb-12">
+                    <div className="gradient-bg text-white shadow-lg">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                            <h1 className="text-4xl font-bold mb-2">JPX Advanced Viewer</h1>
+                            <p className="text-blue-100 text-lg">3-Pane Synchronized Layout</p>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
+                        {/* モード切替 */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 animate-fade-in-up">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setViewMode('simple')}
+                                    className={`px-4 py-2 rounded-lg transition-colors ${
+                                        viewMode === 'simple' 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    シンプル表示
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('advanced')}
+                                    className={`px-4 py-2 rounded-lg transition-colors ${
+                                        viewMode === 'advanced' 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    上級者向け（3ペイン同期）
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* チャート表示 */}
+                        <div className="animate-fade-in-up">
+                            {viewMode === 'advanced' ? (
+                                <div>
+                                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-4">
+                                        <h2 className="text-xl font-bold text-slate-900 mb-2">
+                                            3ペイン同期スクロールビュー
+                                        </h2>
+                                        <div className="text-sm text-slate-600 space-y-1 mb-4">
+                                            <p>🖱️ <strong>左軸エリア</strong>: ホイールでY軸ズーム</p>
+                                            <p>🖱️ <strong>下軸エリア</strong>: ホイールでX軸ズーム</p>
+                                            <p>🖱️ <strong>メインエリア</strong>: ドラッグでパン、Ctrl+ホイールで全体ズーム</p>
+                                        </div>
+                                    </div>
+                                    <ThreePaneChart data={data} />
+                                </div>
+                            ) : (
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                    <h2 className="text-xl font-bold text-slate-900 mb-4">標準ビュー</h2>
+                                    <ResponsiveContainer width="100%" height={500}>
+                                        <BarChart data={data}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                            <XAxis dataKey="displayDate" stroke="#64748b" />
+                                            <YAxis stroke="#64748b" tickFormatter={(v) => `${(v/1e8).toFixed(0)}億`} />
+                                            <Tooltip />
+                                            <Bar dataKey="balance" radius={[4, 4, 0, 0]}>
+                                                {data.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.balance >= 0 ? '#4A86E8' : '#E67C73'} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
