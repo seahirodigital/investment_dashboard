@@ -4,11 +4,16 @@ on:
   schedule:
     - cron: '0 9 * * 4'  # 毎週木曜日 9:00 UTC (日本時間 18:00)
 
+permissions:
+  contents: write  # リポジトリへの書き込み権限
+
 jobs:
   run-and-save:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -23,8 +28,8 @@ jobs:
       
       - name: Commit and Push
         run: |
-          git config --global user.name "actions-user"
-          git config --global user.email "actions-user@example.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add history.csv trend.png
           git commit -m "Update JPX data: $(date)" || exit 0
           git push
