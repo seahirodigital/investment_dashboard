@@ -76,6 +76,16 @@
                 <div style="position: relative; height: 500px;">
                     <canvas id="mainChart"></canvas>
                     
+                    <!-- 拡大・縮小ボタン（チャートエリア左下） -->
+                    <div style="position: absolute; bottom: 90px; left: 20px; display: flex; gap: 8px; z-index: 10;">
+                        <button onclick="zoomChart('in')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
+                            ＋
+                        </button>
+                        <button onclick="zoomChart('out')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
+                            ー
+                        </button>
+                    </div>
+                    
                     <!-- 左右移動ボタン（チャートエリア内側の右下、X軸より十分上） -->
                     <div style="position: absolute; bottom: 90px; right: 20px; display: flex; gap: 8px; z-index: 10;">
                         <button onclick="panChart('left')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
@@ -496,6 +506,23 @@
                 const filteredData = getFilteredData();
                 updateStats(filteredData);
             }
+        }
+
+        // チャートを拡大・縮小
+        function zoomChart(direction) {
+            if (!chart) return;
+            
+            const zoomFactor = direction === 'in' ? 1.2 : 0.8;
+            
+            chart.zoom(zoomFactor);
+            
+            // 統計を更新
+            const filteredData = getFilteredData();
+            const xScale = chart.scales.x;
+            const startIndex = Math.max(0, Math.floor(xScale.min));
+            const endIndex = Math.min(filteredData.length - 1, Math.ceil(xScale.max));
+            const visibleData = filteredData.slice(startIndex, endIndex + 1);
+            updateStats(visibleData);
         }
 
         // チャートを左右に移動
