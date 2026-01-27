@@ -338,16 +338,25 @@ def main():
         csv_file = 'history.csv'
         
         # 初回実行判定: CSVファイルが存在しないか、データが少ない場合
+        should_get_historical = False
+        
         if not os.path.exists(csv_file):
-            print("=== 初回実行: 過去データを取得します ===\n")
-            process_historical_data()
+            should_get_historical = True
+            print("=== 初回実行: CSVファイルが存在しません ===\n")
         else:
-            df = pd.read_csv(csv_file)
-            if len(df) < 10:  # データが10件未満なら過去データを再取得
-                print("=== データが少ないため、過去データを取得します ===\n")
-                process_historical_data()
-            else:
-                print("=== 通常実行: 最新データのみ取得します ===\n")
+            try:
+                df = pd.read_csv(csv_file)
+                if len(df) < 10:  # データが10件未満なら過去データを再取得
+                    should_get_historical = True
+                    print("=== データが少ないため、過去データを取得します ===\n")
+                else:
+                    print("=== 通常実行: 最新データのみ取得します ===\n")
+            except (pd.errors.EmptyDataError, pd.errors.ParserError):
+                should_get_historical = True
+                print("=== CSVファイルが破損しているため、再取得します ===\n")
+        
+        if should_get_historical:
+            process_historical_data()
         
         # 最新データを取得
         print("\n=== 最新データの取得 ===")
@@ -374,6 +383,8 @@ def main():
         
     except Exception as e:
         print(f"\nエラーが発生しました: {e}")
+        import traceback
+        traceback.print_exc()
         raise
     finally:
         # 一時ファイルを削除
