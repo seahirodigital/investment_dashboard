@@ -183,22 +183,18 @@ def extract_from_pdf(pdf_path):
                         print(f"\n海外投資家(売り)行を発見:")
                         print(f"  行データ: {row}")
                         
-                        # 売り金額を取得（最初の大きな数値）
+                        # 7列目（インデックス6）の金額を取得
                         sell_amount = None
-                        for cell in row:
-                            if cell and str(cell).strip():
-                                # カンマ区切りの大きな数値を探す
-                                match = re.search(r'\d{1,3}(?:,\d{3})+', str(cell))
-                                if match:
-                                    try:
-                                        value = int(match.group().replace(',', ''))
-                                        # 100億以上の数値（売買金額レベル）
-                                        if value >= 1000000000:
-                                            sell_amount = value
-                                            print(f"  売り金額: {sell_amount:,}")
-                                            break
-                                    except ValueError:
-                                        continue
+                        if len(row) > 6 and row[6]:
+                            cell_text = str(row[6]).strip()
+                            # カンマ区切りの数値を探す
+                            match = re.search(r'\d{1,3}(?:,\d{3})+', cell_text)
+                            if match:
+                                try:
+                                    sell_amount = int(match.group().replace(',', ''))
+                                    print(f"  売り金額（7列目）: {sell_amount:,}")
+                                except ValueError:
+                                    pass
                         
                         if sell_amount is None:
                             print("  警告: 売り金額が見つかりませんでした")
@@ -214,21 +210,17 @@ def extract_from_pdf(pdf_path):
                             print(f"  行データ: {next_row}")
                             
                             if '買い' in next_row_text or 'Purchases' in next_row_text or 'Foreigners' in next_row_text:
-                                # 買い金額を取得（最初の大きな数値）
-                                for cell in next_row:
-                                    if cell and str(cell).strip():
-                                        # カンマ区切りの大きな数値を探す
-                                        match = re.search(r'\d{1,3}(?:,\d{3})+', str(cell))
-                                        if match:
-                                            try:
-                                                value = int(match.group().replace(',', ''))
-                                                # 100億以上の数値（売買金額レベル）
-                                                if value >= 1000000000:
-                                                    buy_amount = value
-                                                    print(f"  買い金額: {buy_amount:,}")
-                                                    break
-                                            except ValueError:
-                                                continue
+                                # 7列目（インデックス6）の金額を取得
+                                if len(next_row) > 6 and next_row[6]:
+                                    cell_text = str(next_row[6]).strip()
+                                    # カンマ区切りの数値を探す
+                                    match = re.search(r'\d{1,3}(?:,\d{3})+', cell_text)
+                                    if match:
+                                        try:
+                                            buy_amount = int(match.group().replace(',', ''))
+                                            print(f"  買い金額（7列目）: {buy_amount:,}")
+                                        except ValueError:
+                                            pass
                         
                         if buy_amount is None:
                             print("  警告: 買い金額が見つかりませんでした")
