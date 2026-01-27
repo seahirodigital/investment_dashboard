@@ -1,11 +1,14 @@
-name: JPX Data Update
+name: JPX Automation
 on:
   schedule:
-    - cron: '0 9 * * 4' # 毎週木曜 18:00 (JST)
-  workflow_dispatch:    # 手動実行ボタンを出す
+    - cron: '0 9 * * 4' # 毎週木曜 18:00 JST
+  workflow_dispatch:
+
+permissions:
+  contents: write # リポジトリへの書き込み許可
 
 jobs:
-  build:
+  run-and-save:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,9 +16,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
       - name: Run Script
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python main.py
+      - name: Commit and Push
         run: |
-          pip install pandas requests pdfplumber google-generativeai matplotlib
-          python main.py
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add history.csv trend.png
+          git commit -m "Update JPX data: $(date)" || echo "No changes to commit"
+          git push
