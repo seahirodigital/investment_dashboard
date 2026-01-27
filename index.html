@@ -342,10 +342,12 @@
             const chartConfig = {
                 type: 'bar',
                 data: {
-                    labels: filteredData.map(d => d.displayDate),
                     datasets: [{
                         label: '差引（億円）',
-                        data: filteredData.map(d => d.balance),
+                        data: filteredData.map((d, index) => ({
+                            x: index,
+                            y: d.balance
+                        })),
                         backgroundColor: function(context) {
                             if (!context.parsed || context.parsed.y === undefined) {
                                 return 'rgba(74, 134, 232, 0.7)';
@@ -382,15 +384,21 @@
                             displayColors: false,
                             callbacks: {
                                 title: function(context) {
-                                    const index = context[0].dataIndex;
-                                    return filteredData[index].tooltipDate;
+                                    const index = Math.round(context[0].parsed.x);
+                                    if (index >= 0 && index < filteredData.length) {
+                                        return filteredData[index].tooltipDate;
+                                    }
+                                    return '';
                                 },
                                 label: function(context) {
-                                    const index = context.dataIndex;
-                                    const value = filteredData[index].balance;
-                                    const rawValue = filteredData[index].rawBalance;
-                                    const sign = value >= 0 ? '+' : '';
-                                    return `${sign}${formatNumber(value)}億円 (${sign}${(rawValue * 1000).toLocaleString('ja-JP')}円)`;
+                                    const index = Math.round(context.parsed.x);
+                                    if (index >= 0 && index < filteredData.length) {
+                                        const value = filteredData[index].balance;
+                                        const rawValue = filteredData[index].rawBalance;
+                                        const sign = value >= 0 ? '+' : '';
+                                        return `${sign}${formatNumber(value)}億円 (${sign}${(rawValue * 1000).toLocaleString('ja-JP')}円)`;
+                                    }
+                                    return '';
                                 },
                                 afterLabel: function(context) {
                                     const value = context.parsed.y;
