@@ -137,132 +137,84 @@ def extract_from_pdf(pdf_path):
     try:
         print("PDFからテーブルを抽出中...")
         
-        sell_balance = None
-        buy_balance = None
-        
         with pdfplumber.open(pdf_path) as pdf:
-            # 最初のページのみを処理（投資部門別のサマリーがある）
             page = pdf.pages[0]
             print(f"\n=== ページ 1 を処理 ===")
             
-            # テーブルを抽出
             tables = page.extract_tables()
             
             if not tables:
                 raise ValueError("テーブルが見つかりませんでした")
             
             for table_num, table in enumerate(tables):
-                # ヘッダー行を探して「差引き」列のインデックスを特定
-                balance_col_idx = None
-                
                 for row_idx, row in enumerate(table):
                     if not row:
                         continue
                     
                     row_text = ' '.join([str(cell) if cell else '' for cell in row])
                     
-                    # ヘッダー行で「差引き」または「Balance」を探す
-                    if 'Balance' in row_text or '差引き' in row_text:
-                        for col_idx, cell in enumerate(row):
-                            if cell and ('Balance' in str(cell) or '差引' in str(cell)):
-                                balance_col_idx = col_idx
-                                print(f"差引き列を発見: 列インデックス {balance_col_idx}")
-                                break
-                    
                     # 海外投資家の売り行
                     if ('海外投資家' in row_text or 'Foreigners' in row_text) and ('売り' in row_text or 'Sales' in row_text):
-                        print(f"\n海外投資家(売り)行を発見 (テーブル{table_num + 1}, 行{row_idx}):")
-                        print(f"  内容: {row}")
+                        print(f"\n海外投資家(売り)行を発見:")
+                        print(f"  行データ: {row}")
                         
-                        # 差引き列が特定されている場合はその列を使用
-                        if balance_col_idx is not None and balance_col_idx < len(row):
-                            cell = row[balance_col_idx]
-                            if cell:
-                                match = re.search(r'-?\d{1,3}(?:,\d{3})+|-?\d+', str(cell))
+                        # 右端から数値を探す（最後の列が差引き）
+                        sell_balance = None
+                        for cell in reversed(row):
+                            if cell and str(cell).strip():
+                                # 負の数値を優先的に探す
+                                match = re.search(r'-\d{1,3}(?:,\d{3})+|-\d+', str(cell))
                                 if match:
                                     try:
                                         sell_balance = int(match.group().replace(',', ''))
-                                        print(f"  売りの差引き (列{balance_col_idx}): {sell_balance:,}")
+                                        print(f"  売りの差引き: {sell_balance:,}")
+                                        break
                                     except ValueError:
-                                        pass
-                        
-                        # 差引き列が特定できない場合は右から探す
-                        if sell_balance is None:
-                            for cell in reversed(row):
-                                if cell and cell.strip():
-                                    match = re.search(r'-\d{1,3}(?:,\d{3})+|-\d+', str(cell))
-                                    if match:
-                                        try:
-                                            sell_balance = int(match.group().replace(',', ''))
-                                            print(f"  売りの差引き (右から検索): {sell_balance:,}")
-                                            break
-                                        except ValueError:
-                                            continue
+                                        continue
                         
                         # 次の行を買い行として処理
+                        buy_balance = None
                         if row_idx + 1 < len(table):
                             next_row = table[row_idx + 1]
                             next_row_text = ' '.join([str(cell) if cell else '' for cell in next_row])
                             
                             print(f"\n次の行（買い行と推定）:")
-                            print(f"  内容: {next_row}")
+                            print(f"  行データ: {next_row}")
                             
-                            # 買い行であることを確認
                             if '買い' in next_row_text or 'Purchases' in next_row_text or 'Foreigners' in next_row_text:
-                                # 差引き列が特定されている場合はその列を使用
-                                if balance_col_idx is not None and balance_col_idx < len(next_row):
-                                    cell = next_row[balance_col_idx]
-                                    if cell:
+                                # 右端から数値を探す
+                                for cell in reversed(next_row):
+                                    if cell and str(cell).strip():
+                                        # 数値を探す（正負両方）
                                         match = re.search(r'-?\d{1,3}(?:,\d{3})+|-?\d+', str(cell))
                                         if match:
                                             try:
                                                 value = int(match.group().replace(',', ''))
+                                                # 10万以上の数値のみ（比率を除外）
                                                 if abs(value) >= 100000:
                                                     buy_balance = value
-                                                    print(f"  買いの差引き (列{balance_col_idx}): {buy_balance:,}")
+                                                    print(f"  買いの差引き: {buy_balance:,}")
+                                                    break
                                             except ValueError:
-                                                pass
-                                
-                                # 差引き列が特定できない場合は右から探す
-                                if buy_balance is None:
-                                    for cell in reversed(next_row):
-                                        if cell and cell.strip():
-                                            match = re.search(r'-?\d{1,3}(?:,\d{3})+|-?\d+', str(cell))
-                                            if match:
-                                                try:
-                                                    value = int(match.group().replace(',', ''))
-                                                    if abs(value) >= 100000:
-                                                        buy_balance = value
-                                                        print(f"  買いの差引き (右から検索): {buy_balance:,}")
-                                                        break
-                                                except ValueError:
-                                                    continue
+                                                continue
                         
-                        # 売りと買いの両方が見つかったらループを抜ける
+                        # 結果を判定
                         if sell_balance is not None and buy_balance is not None:
-                            break
-                
-                if sell_balance is not None and buy_balance is not None:
-                    break
+                            # 絶対値が大きい方を返す
+                            if abs(buy_balance) >= abs(sell_balance):
+                                print(f"\n✓ 買い超を採用: {buy_balance:,}")
+                                return buy_balance
+                            else:
+                                print(f"\n✓ 売り超を採用: {sell_balance:,}")
+                                return sell_balance
+                        elif buy_balance is not None:
+                            print(f"\n✓ 買いのみ採用: {buy_balance:,}")
+                            return buy_balance
+                        elif sell_balance is not None:
+                            print(f"\n✓ 売りのみ採用: {sell_balance:,}")
+                            return sell_balance
         
-        # 結果の判定
-        if sell_balance is None and buy_balance is None:
-            raise ValueError("海外投資家の差引き金額が見つかりませんでした")
-        
-        # 絶対値が大きい方を返す
-        if buy_balance is not None and sell_balance is not None:
-            if abs(buy_balance) >= abs(sell_balance):
-                print(f"\n✓ 買い超を採用: {buy_balance:,}")
-                return buy_balance
-            else:
-                print(f"\n✓ 売り超を採用: {sell_balance:,}")
-                return sell_balance
-        elif buy_balance is not None:
-            print(f"\n✓ 買いのみ採用: {buy_balance:,}")
-            return buy_balance
-        else:
-            print(f"\n✓ 売りのみ採用: {sell_balance:,}")
-            return sell_balance
+        raise ValueError("海外投資家の差引き金額が見つかりませんでした")
         
     except Exception as e:
         print(f"PDF抽出エラー: {e}")
