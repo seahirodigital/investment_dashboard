@@ -1,0 +1,21 @@
+name: JPX Data Update
+on:
+  schedule:
+    - cron: '0 9 * * 4' # 毎週木曜 18:00 (JST)
+  workflow_dispatch:    # 手動実行ボタンを出す
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          pip install pandas requests pdfplumber google-generativeai matplotlib
+          python main.py
