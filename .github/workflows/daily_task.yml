@@ -12,10 +12,12 @@ on:
           - 'false'
   schedule:
     - cron: '0 9 * * 4'  # 毎週木曜日 9:00 UTC (日本時間 18:00)
+
 permissions:
   contents: write
   pages: write
   id-token: write
+
 jobs:
   run-and-save:
     runs-on: ubuntu-latest
@@ -48,7 +50,7 @@ jobs:
             echo "Changes detected"
           fi
       
-      - name: Commit and Push
+      - name: Commit to main branch
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
@@ -56,42 +58,21 @@ jobs:
           
           git add history.csv trend.png
           git commit -m "Update JPX data: $(date)"
-          
-          # プッシュをリトライ
-          success=false
-          for i in {1..5}; do
-            echo "Push attempt $i/5..."
-            
-            if git push origin main; then
-              echo "✓ Push successful!"
-              success=true
-              break
-            fi
-            
-            echo "⚠ Push failed, pulling latest changes..."
-            
-            # プッシュ失敗時はリモートの変更を取り込んでマージ
-            git fetch origin main
-            git merge origin/main -X ours --allow-unrelated-histories -m "Merge remote changes" || {
-              # マージ失敗時は強制的に解決
-              git checkout --ours history.csv trend.png
-              git add history.csv trend.png
-              git commit --no-edit -m "Resolve merge conflict" || true
-            }
-            
-            sleep 2
-          done
-          
-          if [ "$success" = false ]; then
-            echo "✗ Failed to push after 5 attempts"
-            exit 1
-          fi
+          git push origin main
+      
+      - name: Prepare deployment files
+        run: |
+          mkdir -p deploy
+          cp index.html deploy/
+          cp advanced.html deploy/
+          cp history.csv deploy/
+          cp trend.png deploy/
+          echo "Files prepared for deployment"
+          ls -la deploy/
       
       - name: Deploy to GitHub Pages
-        if: steps.check_changes.outputs.has_changes == 'true' || github.event_name == 'workflow_dispatch'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
+          publish_dir: ./deploy
           keep_files: false
-          exclude_assets: '.github,requirements.txt,main.py,*.pyc,__pycache__'
