@@ -246,7 +246,7 @@
             
             const statsConfig = [
                 {
-                    label: '最新の差引',
+                    label: '最新週（先週）の売買状況',
                     value: formatLargeNumber(stats.latest.balance),
                     subtext: stats.latest.balance >= 0 ? '買い越し' : '売り越し',
                     color: stats.latest.balance >= 0 ? 'text-blue-600' : 'text-red-500'
@@ -360,10 +360,6 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
                     plugins: {
                         legend: {
                             display: false
@@ -397,7 +393,8 @@
                         zoom: {
                             pan: {
                                 enabled: true,
-                                mode: 'x'
+                                mode: 'x',
+                                threshold: 5
                             },
                             zoom: {
                                 wheel: {
