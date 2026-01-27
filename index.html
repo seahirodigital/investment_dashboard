@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <style>
         /* スクロールバーのカスタマイズ */
@@ -340,10 +342,12 @@
             const chartConfig = {
                 type: 'bar',
                 data: {
-                    labels: filteredData.map(d => d.displayDate),
                     datasets: [{
                         label: '差引（億円）',
-                        data: filteredData.map(d => d.balance),
+                        data: filteredData.map(d => ({
+                            x: d.date,
+                            y: d.balance
+                        })),
                         backgroundColor: function(context) {
                             if (!context.parsed || context.parsed.y === undefined) {
                                 return 'rgba(74, 134, 232, 0.7)';
@@ -378,13 +382,19 @@
                             displayColors: false,
                             callbacks: {
                                 title: function(context) {
-                                    const index = context[0].dataIndex;
-                                    return filteredData[index].tooltipDate;
+                                    const dataPoint = context[0].raw;
+                                    const date = new Date(dataPoint.x);
+                                    const year = date.getFullYear();
+                                    const month = date.getMonth() + 1;
+                                    const weekOfMonth = getWeekOfMonth(date);
+                                    return `${year}年${month}月 第${weekOfMonth}週`;
                                 },
                                 label: function(context) {
-                                    const index = context.dataIndex;
-                                    const value = filteredData[index].balance;
-                                    const rawValue = filteredData[index].rawBalance;
+                                    const dataPoint = context.raw;
+                                    const value = dataPoint.y;
+                                    const dateStr = dataPoint.x;
+                                    const matchData = filteredData.find(d => d.date === dateStr);
+                                    const rawValue = matchData ? matchData.rawBalance : value * 100000;
                                     const sign = value >= 0 ? '+' : '';
                                     return `${sign}${formatNumber(value)}億円 (${sign}${(rawValue * 1000).toLocaleString('ja-JP')}円)`;
                                 },
@@ -411,10 +421,11 @@
                                 },
                                 mode: 'x',
                                 onZoomComplete: function({chart}) {
-                                    const xAxis = chart.scales.x;
-                                    const startIndex = Math.max(0, Math.floor(xAxis.min));
-                                    const endIndex = Math.min(filteredData.length - 1, Math.ceil(xAxis.max));
-                                    const visibleData = filteredData.slice(startIndex, endIndex + 1);
+                                    const xScale = chart.scales.x;
+                                    const visibleData = filteredData.filter(d => {
+                                        const t = new Date(d.date).getTime();
+                                        return t >= xScale.min && t <= xScale.max;
+                                    });
                                     updateStats(visibleData);
                                 }
                             },
@@ -439,8 +450,14 @@
                             }
                         },
                         x: {
-                            type: 'category',
-                            offset: true,
+                            type: 'time',
+                            time: {
+                                unit: 'week',
+                                displayFormats: {
+                                    week: 'yyyy/M/d'
+                                },
+                                tooltipFormat: 'yyyy年M月 第W週'
+                            },
                             grid: {
                                 color: '#e2e8f0'
                             },
