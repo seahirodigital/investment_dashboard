@@ -2,4 +2,4 @@ pandas
 requests
 beautifulsoup4
 matplotlib
-google-generativeai
+google-genai
