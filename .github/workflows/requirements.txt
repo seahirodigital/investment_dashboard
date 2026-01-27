@@ -1,0 +1,6 @@
+pandas
+xlrd
+requests
+beautifulsoup4
+matplotlib
+google-generativeai
