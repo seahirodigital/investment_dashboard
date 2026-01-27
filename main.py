@@ -4,9 +4,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-from google import genai
-from google.genai import types
-import time
+import pdfplumber
+import re
 
 def get_latest_pdf_url():
     """JPXのページから最新のPDFファイルのURLを取得"""
@@ -57,75 +56,85 @@ def download_pdf(url, filename='temp.pdf'):
         print(f"PDFダウンロードエラー: {e}")
         raise
 
-def extract_with_gemini(pdf_path):
-    """Gemini APIを使ってPDFから海外投資家の差引き金額を抽出"""
-    
-    # 環境変数からAPIキーを取得
-    api_key = os.environ.get('GEMINI_API_KEY')
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY環境変数が設定されていません")
-    
-    # Gemini APIクライアントを初期化
-    client = genai.Client(api_key=api_key)
+def extract_from_pdf(pdf_path):
+    """PDFから海外投資家の差引き金額を抽出"""
     
     try:
-        # PDFファイルを読み込み
-        print("PDFを読み込み中...")
-        with open(pdf_path, 'rb') as f:
-            pdf_data = f.read()
+        print("PDFからテキストを抽出中...")
         
-        # プロンプトを作成
-        prompt = """
-このPDFファイルは日本取引所グループ(JPX)の「投資部門別売買状況」のデータです。
-
-以下の情報を抽出してください:
-- 「海外投資家」(Foreigners)の行を見つける
-- その行の「買い」(Purchases)に対応する「差引き」(Balance)の金額を見つける
-- 金額は数値のみを返してください（カンマなし、符号あり）
-
-例: 750493712 または -123456789
-
-重要:
-- 必ず「海外投資家」の「買い」の行を見てください
-- 「比率」や他の列の数値と間違えないでください
-- 数値のみを返してください（説明や単位は不要）
-"""
+        with pdfplumber.open(pdf_path) as pdf:
+            # すべてのページからテキストを抽出
+            all_text = ""
+            for page in pdf.pages:
+                all_text += page.extract_text() + "\n"
         
-        print("Geminiで解析中...")
+        print(f"抽出したテキスト長: {len(all_text)} 文字")
         
-        # PDFをアップロードしてコンテンツ生成
-        response = client.models.generate_content(
-            model='gemini-2.0-flash-exp',
-            contents=[
-                types.Part.from_bytes(
-                    data=pdf_data,
-                    mime_type='application/pdf'
-                ),
-                prompt
-            ]
-        )
+        # テキストを行に分割
+        lines = all_text.split('\n')
         
-        # 結果を取得
-        result_text = response.text.strip()
-        print(f"Gemini応答: {result_text}")
+        # 海外投資家の買いの行を探す
+        foreign_investor_found = False
+        purchases_found = False
+        target_line_index = None
         
-        # 数値に変換
-        # レスポンスから数値部分のみを抽出
-        import re
-        numbers = re.findall(r'-?\d+', result_text.replace(',', '').replace(' ', ''))
+        for i, line in enumerate(lines):
+            line_lower = line.lower()
+            
+            # 海外投資家の行を見つける
+            if ('海外投資家' in line or 'foreigners' in line_lower) and not foreign_investor_found:
+                foreign_investor_found = True
+                print(f"海外投資家行を発見 (行{i}): {line[:100]}")
+                
+                # この行または次の数行で「買い」または「purchases」を探す
+                for j in range(i, min(i + 10, len(lines))):
+                    check_line = lines[j].lower()
+                    if '買い' in check_line or 'purchases' in check_line:
+                        target_line_index = j
+                        purchases_found = True
+                        print(f"買い行を発見 (行{j}): {lines[j][:100]}")
+                        break
+                
+                if purchases_found:
+                    break
         
-        if not numbers:
-            raise ValueError("Geminiのレスポンスから数値を抽出できませんでした")
+        if not purchases_found:
+            raise ValueError("海外投資家の買い行が見つかりませんでした")
         
-        # 最初の数値を使用（通常は最も関連性の高い数値）
-        value = int(numbers[0])
+        # ターゲット行から数値を抽出
+        # 差引き（Balance）は通常、行の右側にある大きな数値
+        target_line = lines[target_line_index]
+        print(f"\n対象行の全文: {target_line}")
         
-        print(f"抽出された値: {value:,}")
+        # 数値を抽出（カンマ区切りの数値も含む）
+        # パターン: 符号あり/なしの数値、カンマ区切り対応
+        number_pattern = r'-?\d{1,3}(?:,\d{3})+|\d+'
+        numbers = re.findall(number_pattern, target_line)
         
-        return value
+        print(f"行内の数値: {numbers}")
+        
+        # 最も大きな数値を差引きとみなす（通常、差引きは最大の金額）
+        # カンマを除去して整数に変換
+        values = []
+        for num_str in numbers:
+            try:
+                clean_num = num_str.replace(',', '')
+                value = int(clean_num)
+                values.append(value)
+            except ValueError:
+                continue
+        
+        if not values:
+            raise ValueError("数値を抽出できませんでした")
+        
+        # 絶対値が最大の数値を選択（差引きは通常最大）
+        balance = max(values, key=abs)
+        
+        print(f"\n✓ 抽出成功: {balance:,}")
+        return balance
         
     except Exception as e:
-        print(f"Gemini抽出エラー: {e}")
+        print(f"PDF抽出エラー: {e}")
         raise
 
 def save_to_csv(value):
@@ -179,7 +188,7 @@ def create_trend_chart():
 def main():
     pdf_path = None
     try:
-        print("=== JPX海外投資家データ抽出開始 (Gemini使用) ===\n")
+        print("=== JPX海外投資家データ抽出開始 ===\n")
         
         # 最新のPDF URLを取得
         pdf_url = get_latest_pdf_url()
@@ -187,8 +196,8 @@ def main():
         # PDFをダウンロード
         pdf_path = download_pdf(pdf_url)
         
-        # Geminiでデータ抽出
-        balance = extract_with_gemini(pdf_path)
+        # PDFからデータ抽出
+        balance = extract_from_pdf(pdf_path)
         
         # CSV保存
         save_to_csv(balance)
