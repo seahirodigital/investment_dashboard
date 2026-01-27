@@ -119,6 +119,9 @@
     </div>
 
     <script>
+        // ★ chartjs-plugin-zoomを登録（必須）
+        Chart.register(ChartZoom);
+
         let allData = [];
         let chart = null;
         let currentTimeRange = 'all';
