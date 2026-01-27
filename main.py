@@ -1,12 +1,14 @@
-import pandas as pd
+import os
 import requests
 from bs4 import BeautifulSoup
+import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-import os
+import google.generativeai as genai
+import time
 
-def get_latest_excel_url():
-    """JPXのページから最新のExcelファイルのURLを取得"""
+def get_latest_pdf_url():
+    """JPXのページから最新のPDFファイルのURLを取得"""
     base_url = "https://www.jpx.co.jp"
     page_url = "https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html"
     
@@ -15,131 +17,119 @@ def get_latest_excel_url():
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # .xlsファイルのリンクを探す（最新のものを取得）
-        xls_links = soup.find_all('a', href=lambda x: x and '.xls' in x.lower())
+        # PDFファイルのリンクを探す（最新のものを取得）
+        pdf_links = soup.find_all('a', href=lambda x: x and '.pdf' in x.lower())
         
-        if not xls_links:
-            raise ValueError("Excel(.xls)ファイルが見つかりませんでした")
+        if not pdf_links:
+            raise ValueError("PDFファイルが見つかりませんでした")
         
         # 最初のリンクを最新とみなす
-        latest_link = xls_links[0]['href']
+        latest_link = pdf_links[0]['href']
         
         # 相対URLを絶対URLに変換
         if latest_link.startswith('/'):
-            excel_url = base_url + latest_link
+            pdf_url = base_url + latest_link
         elif latest_link.startswith('http'):
-            excel_url = latest_link
+            pdf_url = latest_link
         else:
-            excel_url = base_url + '/' + latest_link
+            pdf_url = base_url + '/' + latest_link
             
-        print(f"取得URL: {excel_url}")
-        return excel_url
+        print(f"取得URL: {pdf_url}")
+        return pdf_url
         
     except Exception as e:
         print(f"URL取得エラー: {e}")
         raise
 
-def extract_foreign_investor_balance(excel_url):
-    """
-    Excelファイルから海外投資家の差引き金額を抽出
-    
-    戦略:
-    1. Excelを読み込み、すべてのセルを文字列として扱う
-    2. 「海外投資家」または「Foreigners」を含む行を検索
-    3. その行の「買い」に対応する差引き列を特定
-    4. 列ヘッダーから「差引き」「Balance」を探して列位置を特定
-    """
+def download_pdf(url, filename='temp.pdf'):
+    """PDFをダウンロード"""
     try:
-        # Excelを読み込む（複数シートの可能性を考慮）
-        # header=Noneで列名を自動判定させず、すべて数値インデックスで扱う
-        all_sheets = pd.read_excel(excel_url, sheet_name=None, header=None)
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
         
-        for sheet_name, df in all_sheets.items():
-            print(f"\n=== シート: {sheet_name} ===")
-            
-            # すべてのセルを文字列に変換（NaNは空文字列に）
-            df = df.astype(str).fillna('')
-            
-            # ステップ1: ヘッダー行を探す（「差引き」「Balance」を含む行）
-            balance_col = None
-            header_row = None
-            
-            for idx, row in df.iterrows():
-                row_text = ' '.join(str(cell) for cell in row.values).lower()
-                if 'balance' in row_text or '差引き' in row_text:
-                    header_row = idx
-                    # この行から「差引き」「Balance」の列を特定
-                    for col_idx, cell in enumerate(row.values):
-                        cell_str = str(cell).lower().strip()
-                        if 'balance' in cell_str or '差引' in cell_str:
-                            balance_col = col_idx
-                            print(f"差引き列を発見: 列{balance_col} (ヘッダー行{header_row})")
-                            break
-                    break
-            
-            if balance_col is None:
-                print(f"このシートには差引き列が見つかりませんでした")
-                continue
-            
-            # ステップ2: 「海外投資家」の「買い」行を探す
-            foreign_investor_row = None
-            
-            for idx, row in df.iterrows():
-                # 行の最初の数列を結合してチェック
-                row_text = ' '.join(str(cell) for cell in row.values[:5]).lower()
-                
-                # 「海外投資家」または「foreigners」を含み、かつ「買い」または「purchases」を含む
-                if ('海外投資家' in row_text or 'foreigners' in row_text) and \
-                   ('買い' in row_text or 'purchases' in row_text):
-                    foreign_investor_row = idx
-                    print(f"海外投資家(買い)行を発見: 行{idx}")
-                    print(f"  内容: {[str(cell) for cell in row.values[:5]]}")
-                    break
-            
-            if foreign_investor_row is None:
-                # 買い売りが分かれていない可能性もあるため、海外投資家行だけを探す
-                for idx, row in df.iterrows():
-                    row_text = ' '.join(str(cell) for cell in row.values[:5]).lower()
-                    if '海外投資家' in row_text or 'foreigners' in row_text:
-                        # この行の数行後に「買い」があるかチェック
-                        for offset in range(1, 5):
-                            if idx + offset >= len(df):
-                                break
-                            next_row_text = ' '.join(str(cell) for cell in df.iloc[idx + offset].values[:5]).lower()
-                            if '買い' in next_row_text or 'purchases' in next_row_text:
-                                foreign_investor_row = idx + offset
-                                print(f"海外投資家(買い)行を発見: 行{foreign_investor_row}")
-                                print(f"  内容: {[str(cell) for cell in df.iloc[foreign_investor_row].values[:5]]}")
-                                break
-                        if foreign_investor_row:
-                            break
-            
-            if foreign_investor_row is None:
-                print(f"このシートには海外投資家の買い行が見つかりませんでした")
-                continue
-            
-            # ステップ3: 該当セルから数値を取得
-            target_cell = df.iloc[foreign_investor_row, balance_col]
-            print(f"ターゲットセル: 行{foreign_investor_row}, 列{balance_col} = {target_cell}")
-            
-            # 数値に変換（カンマを除去）
-            try:
-                # 文字列から数値部分のみを抽出
-                cleaned_value = target_cell.replace(',', '').replace(' ', '').strip()
-                # マイナス記号が含まれる可能性も考慮
-                value = float(cleaned_value)
-                
-                print(f"\n✓ 抽出成功: {value:,.0f}")
-                return value
-                
-            except ValueError:
-                print(f"数値変換エラー: '{target_cell}' は数値ではありません")
-                continue
+        with open(filename, 'wb') as f:
+            f.write(response.content)
         
-        raise ValueError("すべてのシートで海外投資家の差引き金額が見つかりませんでした")
+        print(f"PDFをダウンロードしました: {filename}")
+        return filename
+    except Exception as e:
+        print(f"PDFダウンロードエラー: {e}")
+        raise
+
+def extract_with_gemini(pdf_path):
+    """Gemini APIを使ってPDFから海外投資家の差引き金額を抽出"""
+    
+    # 環境変数からAPIキーを取得
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY環境変数が設定されていません")
+    
+    # Gemini APIの設定
+    genai.configure(api_key=api_key)
+    
+    try:
+        # PDFファイルをアップロード
+        print("PDFをGeminiにアップロード中...")
+        uploaded_file = genai.upload_file(pdf_path)
+        
+        # アップロード完了を待つ
+        while uploaded_file.state.name == "PROCESSING":
+            print("処理中...")
+            time.sleep(2)
+            uploaded_file = genai.get_file(uploaded_file.name)
+        
+        if uploaded_file.state.name == "FAILED":
+            raise ValueError("PDFのアップロードに失敗しました")
+        
+        print("PDFアップロード完了")
+        
+        # Geminiモデルを初期化
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # プロンプトを作成
+        prompt = """
+このPDFファイルは日本取引所グループ(JPX)の「投資部門別売買状況」のデータです。
+
+以下の情報を抽出してください:
+- 「海外投資家」(Foreigners)の行を見つける
+- その行の「買い」(Purchases)に対応する「差引き」(Balance)の金額を見つける
+- 金額は数値のみを返してください（カンマなし、符号あり）
+
+例: 750493712 または -123456789
+
+重要:
+- 必ず「海外投資家」の「買い」の行を見てください
+- 「比率」や他の列の数値と間違えないでください
+- 数値のみを返してください（説明や単位は不要）
+"""
+        
+        print("Geminiで解析中...")
+        response = model.generate_content([uploaded_file, prompt])
+        
+        # 結果を取得
+        result_text = response.text.strip()
+        print(f"Gemini応答: {result_text}")
+        
+        # 数値に変換
+        # レスポンスから数値部分のみを抽出
+        import re
+        numbers = re.findall(r'-?\d+', result_text.replace(',', '').replace(' ', ''))
+        
+        if not numbers:
+            raise ValueError("Geminiのレスポンスから数値を抽出できませんでした")
+        
+        # 最初の数値を使用（通常は最も関連性の高い数値）
+        value = int(numbers[0])
+        
+        print(f"抽出された値: {value:,}")
+        
+        # アップロードしたファイルを削除
+        genai.delete_file(uploaded_file.name)
+        
+        return value
         
     except Exception as e:
-        print(f"データ抽出エラー: {e}")
+        print(f"Gemini抽出エラー: {e}")
         raise
 
 def save_to_csv(value):
@@ -191,14 +181,18 @@ def create_trend_chart():
     print("グラフを保存しました: trend.png")
 
 def main():
+    pdf_path = None
     try:
-        print("=== JPX海外投資家データ抽出開始 ===\n")
+        print("=== JPX海外投資家データ抽出開始 (Gemini使用) ===\n")
         
-        # 最新のExcel URLを取得
-        excel_url = get_latest_excel_url()
+        # 最新のPDF URLを取得
+        pdf_url = get_latest_pdf_url()
         
-        # データ抽出
-        balance = extract_foreign_investor_balance(excel_url)
+        # PDFをダウンロード
+        pdf_path = download_pdf(pdf_url)
+        
+        # Geminiでデータ抽出
+        balance = extract_with_gemini(pdf_path)
         
         # CSV保存
         save_to_csv(balance)
@@ -211,6 +205,11 @@ def main():
     except Exception as e:
         print(f"\nエラーが発生しました: {e}")
         raise
+    finally:
+        # 一時ファイルを削除
+        if pdf_path and os.path.exists(pdf_path):
+            os.remove(pdf_path)
+            print("一時ファイルを削除しました")
 
 if __name__ == "__main__":
     main()
