@@ -75,6 +75,16 @@
                 
                 <div style="position: relative; height: 500px;">
                     <canvas id="mainChart"></canvas>
+                    
+                    <!-- 左右移動ボタン -->
+                    <div style="position: absolute; bottom: 10px; right: 10px; display: flex; gap: 8px; z-index: 10;">
+                        <button onclick="panChart('left')" class="px-3 py-2 bg-white text-slate-700 rounded-lg shadow-md hover:bg-slate-50 transition-colors text-sm font-medium border border-slate-300">
+                            ← 左へ
+                        </button>
+                        <button onclick="panChart('right')" class="px-3 py-2 bg-white text-slate-700 rounded-lg shadow-md hover:bg-slate-50 transition-colors text-sm font-medium border border-slate-300">
+                            右へ →
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mt-4 pt-4 border-t border-slate-200">
@@ -488,6 +498,28 @@
                 const filteredData = getFilteredData();
                 updateStats(filteredData);
             }
+        }
+
+        // チャートを左右に移動
+        function panChart(direction) {
+            if (!chart) return;
+            
+            const xScale = chart.scales.x;
+            const range = xScale.max - xScale.min;
+            const shift = range * 0.2; // 20%移動
+            
+            if (direction === 'left') {
+                chart.pan({ x: shift }, undefined, 'default');
+            } else if (direction === 'right') {
+                chart.pan({ x: -shift }, undefined, 'default');
+            }
+            
+            // 統計を更新
+            const filteredData = getFilteredData();
+            const startIndex = Math.max(0, Math.floor(xScale.min));
+            const endIndex = Math.min(filteredData.length - 1, Math.ceil(xScale.max));
+            const visibleData = filteredData.slice(startIndex, endIndex + 1);
+            updateStats(visibleData);
         }
 
         // コントロールボタンを初期化
