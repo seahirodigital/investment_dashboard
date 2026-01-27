@@ -89,10 +89,10 @@
                     <!-- 左右移動ボタン（チャートエリア内側の右下、X軸より十分上） -->
                     <div style="position: absolute; bottom: 90px; right: 20px; display: flex; gap: 8px; z-index: 10;">
                         <button onclick="panChart('left')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
-                            ← 
+                            ← 左へ
                         </button>
                         <button onclick="panChart('right')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
-                             →
+                            右へ →
                         </button>
                     </div>
                 </div>
@@ -205,7 +205,7 @@
                                     year: year,
                                     month: month,
                                     day: day,
-                                    displayDate: `${year}/${month}/${day}週`,
+                                    displayDate: `${year}年${month}月${weekOfMonth}週`,
                                     tooltipDate: `${year}年${month}月第${weekOfMonth}週`
                                 };
                             })
