@@ -76,7 +76,7 @@
 
                 <div class="mt-4 pt-4 border-t border-slate-200">
                     <p class="text-xs text-slate-500">
-                        💡 PC: マウスホイールでズーム、ドラッグで移動 | スマホ: ピンチイン・アウトでズーム
+                        💡 PC: ドラッグで左右移動、ホイールでズーム | スマホ: ピンチイン・アウトでズーム、スワイプで移動
                     </p>
                 </div>
             </div>
@@ -122,6 +122,11 @@
         let chart = null;
         let currentTimeRange = 'all';
 
+        // 数値をカンマ区切りでフォーマット
+        function formatNumber(num) {
+            return Math.round(num).toLocaleString('ja-JP');
+        }
+
         // 週番号を計算
         function getWeekNumber(date) {
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -160,8 +165,8 @@
                             .map(row => {
                                 const date = new Date(row.date);
                                 const year = date.getFullYear();
-                                const weekNum = getWeekNumber(date);
                                 const month = date.getMonth() + 1;
+                                const day = date.getDate();
                                 const weekOfMonth = getWeekOfMonth(date);
                                 
                                 // 元データは1,000円単位なので、億円にするには ÷100,000
@@ -172,10 +177,10 @@
                                     balance: balanceInOku, // 億円単位
                                     rawBalance: row.balance, // 元の1,000円単位
                                     year: year,
-                                    weekNum: weekNum,
                                     month: month,
+                                    day: day,
                                     weekOfMonth: weekOfMonth,
-                                    displayDate: `${year}年 第${weekNum}週`,
+                                    displayDate: `${year}/${month}/${day}週`,
                                     tooltipDate: `${year}年${month}月 第${weekOfMonth}週`
                                 };
                             })
@@ -286,7 +291,7 @@
         function formatLargeNumber(value) {
             if (typeof value === 'number') {
                 const sign = value >= 0 ? '+' : '';
-                return sign + value.toFixed(0) + '億円';
+                return sign + formatNumber(value) + '億円';
             }
             return value.toString();
         }
@@ -355,6 +360,10 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
                     plugins: {
                         legend: {
                             display: false
@@ -377,7 +386,7 @@
                                     const value = filteredData[index].balance;
                                     const rawValue = filteredData[index].rawBalance;
                                     const sign = value >= 0 ? '+' : '';
-                                    return `${sign}${value.toFixed(0)}億円 (${sign}${(rawValue * 1000).toLocaleString('ja-JP')}円)`;
+                                    return `${sign}${formatNumber(value)}億円 (${sign}${(rawValue * 1000).toLocaleString('ja-JP')}円)`;
                                 },
                                 afterLabel: function(context) {
                                     const value = context.parsed.y;
@@ -388,24 +397,15 @@
                         zoom: {
                             pan: {
                                 enabled: true,
-                                mode: 'x',
-                                modifierKey: null // ドラッグだけでパン可能
+                                mode: 'x'
                             },
                             zoom: {
                                 wheel: {
                                     enabled: true,
-                                    speed: 0.1,
-                                    modifierKey: null
+                                    speed: 0.1
                                 },
                                 pinch: {
                                     enabled: true
-                                },
-                                drag: {
-                                    enabled: true,
-                                    backgroundColor: 'rgba(100, 116, 139, 0.1)',
-                                    borderColor: 'rgba(100, 116, 139, 0.5)',
-                                    borderWidth: 1,
-                                    modifierKey: 'shift' // Shift押しながらドラッグでズーム
                                 },
                                 mode: 'x',
                                 onZoomComplete: function({chart}) {
@@ -415,14 +415,21 @@
                                     const visibleData = filteredData.slice(startIndex, endIndex + 1);
                                     updateStats(visibleData);
                                 }
+                            },
+                            limits: {
+                                x: {min: 'original', max: 'original'}
                             }
                         }
                     },
                     scales: {
                         y: {
                             ticks: {
-                                callback: function(value) {
-                                    return value.toFixed(0) + '億円';
+                                callback: function(value, index, ticks) {
+                                    // 最大値のみに「億円」を付ける
+                                    if (index === ticks.length - 1) {
+                                        return formatNumber(value) + '億円';
+                                    }
+                                    return formatNumber(value);
                                 }
                             },
                             grid: {
@@ -432,6 +439,10 @@
                         x: {
                             grid: {
                                 color: '#e2e8f0'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
                     }
