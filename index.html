@@ -76,8 +76,8 @@
                 <div style="position: relative; height: 500px;">
                     <canvas id="mainChart"></canvas>
                     
-                    <!-- 左右移動ボタン -->
-                    <div style="position: absolute; bottom: 10px; right: 10px; display: flex; gap: 8px; z-index: 10;">
+                    <!-- 左右移動ボタン（チャートエリア右上） -->
+                    <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 10;">
                         <button onclick="panChart('left')" class="px-3 py-2 bg-white text-slate-700 rounded-lg shadow-md hover:bg-slate-50 transition-colors text-sm font-medium border border-slate-300">
                             ← 左へ
                         </button>
@@ -183,7 +183,6 @@
                                 const year = date.getFullYear();
                                 const month = date.getMonth() + 1;
                                 const day = date.getDate();
-                                const weekOfMonth = getWeekOfMonth(date);
                                 
                                 // 元データは1,000円単位なので、億円にするには ÷100,000
                                 const balanceInOku = row.balance / 100000;
@@ -195,9 +194,8 @@
                                     year: year,
                                     month: month,
                                     day: day,
-                                    weekOfMonth: weekOfMonth,
                                     displayDate: `${year}/${month}/${day}週`,
-                                    tooltipDate: `${year}年${month}月 第${weekOfMonth}週`
+                                    tooltipDate: `${year}年${month}月${day}日週`
                                 };
                             })
                             .sort((a, b) => new Date(a.date) - new Date(b.date));
