@@ -15,68 +15,68 @@ def get_latest_excel_url():
     return BASE_URL + link['href']
 
 def extract_data(url):
-    # Excelを読み込み。エンジンを指定し、全てのセルを文字列として扱う
-    df = pd.read_excel(url, header=None).astype(str)
+    df = pd.read_excel(url, header=None)
     
-    # 1. 日付の取得（4行目 A列）
-    date_label = df.iloc[3, 0].split(' ')[0].split('\n')[0]
-    print(f"Target Date: {date_label}")
-
-    # 2. 「海外投資家」を検索（空白や改行を無視）
+    # 1. 日付の取得
+    date_label = str(df.iloc[3, 0]).split(' ')[0].split('\n')[0]
+    
+    # 2. 「海外投資家」の行を探す
     target_row_idx = None
     for idx, row in df.iterrows():
-        cell_value = str(row[1]) # B列をチェック
-        if "海外投資家" in cell_value:
+        if "海外投資家" in str(row[1]): # B列を優先
             target_row_idx = idx
-            print(f"Found 'Foreigners' at row: {idx + 1}")
             break
-            
+    
     if target_row_idx is None:
-        # B列で見つからない場合、全列から探す
-        mask = df.apply(lambda x: x.str.contains("海外投資家", na=False)).any(axis=1)
+        mask = df.apply(lambda x: x.astype(str).str.contains("海外投資家")).any(axis=1)
         target_row_idx = df[mask].index[0]
-        print(f"Found 'Foreigners' in alternative search at row: {target_row_idx + 1}")
 
-    # 3. 数値の抽出
-    # 海外投資家行の1行下（買い Purchases）のL列（Index 11）を取得
-    val_str = df.iloc[target_row_idx + 1, 11]
-    
-    # 数値化（カンマやゴミを除去）
-    val_clean = val_str.replace(',', '').replace(' ', '').split('.')[0]
-    val = int(val_clean)
-    
+    # 3. 数値の抽出（ここを強化）
+    # 海外投資家行の「1行下(買い)」の中で、数値が入っている列を後ろから探す
+    # 通常、一番右側の数値が「差引き（Balance）」になる
+    target_row = df.iloc[target_row_idx + 1]
+    val = None
+    for item in reversed(target_row):
+        try:
+            temp_val = float(str(item).replace(',', ''))
+            if not pd.isna(temp_val):
+                val = int(temp_val)
+                break
+        except:
+            continue
+            
+    if val is None:
+        raise Exception("数値が見つかりませんでした")
+        
     return date_label, val
 
 def main():
     try:
         url = get_latest_excel_url()
-        print(f"Downloading: {url}")
         date, val = extract_data(url)
+        print(f"Captured: {date} = {val}")
         
         if os.path.exists(CSV_FILE):
             history = pd.read_csv(CSV_FILE)
         else:
             history = pd.DataFrame(columns=['Date', 'Value'])
         
-        # 重複削除
         history = history[history['Date'] != date]
-        
         new_row = pd.DataFrame({'Date': [date], 'Value': [val]})
         history = pd.concat([history, new_row], ignore_index=True)
         history.to_csv(CSV_FILE, index=False)
         
         # グラフ作成
         plt.figure(figsize=(10, 5))
-        plt.plot(history['Date'], history['Value'], marker='o', color='blue', linewidth=2)
+        plt.plot(history['Date'], history['Value'], marker='o', color='#1f77b4', linewidth=2)
         plt.axhline(0, color='red', linestyle='--', alpha=0.5)
         plt.title('Foreign Investors Net Trading Volume (Weekly)')
-        plt.grid(axis='y', linestyle=':', alpha=0.7)
+        plt.grid(True, linestyle=':', alpha=0.7)
         plt.tight_layout()
         plt.savefig('trend.png')
-        print(f"Successfully updated: {date} = {val}")
         
     except Exception as e:
-        print(f"Critical Error: {e}")
+        print(f"Error: {e}")
         exit(1)
 
 if __name__ == "__main__":
