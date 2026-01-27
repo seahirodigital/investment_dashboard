@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime
+from datetime import datetime, timedelta
 import pdfplumber
 import re
 
@@ -101,7 +101,15 @@ def get_latest_pdf_url():
         raise
 
 def extract_date_from_filename(url):
-    """PDFのURLから日付を抽出（例: stock_val_1_260102.pdf → 2026-01-02）"""
+    """
+    PDFのURLから日付を抽出し、その週の開始日（月曜日）を返す
+    
+    ファイル名の日付は週の最終日（金曜日）を示しているため、
+    その週の月曜日を計算して返す
+    
+    例: stock_val_1_260102.pdf (2026-01-02 金曜日) 
+        → 2025-12-29 (その週の月曜日)
+    """
     try:
         # ファイル名から日付部分を抽出 (例: 260102)
         match = re.search(r'stock_val_\d+_(\d{6})\.pdf', url)
@@ -111,7 +119,21 @@ def extract_date_from_filename(url):
             year = int('20' + date_str[0:2])
             month = int(date_str[2:4])
             day = int(date_str[4:6])
-            return f"{year:04d}-{month:02d}-{day:02d}"
+            
+            # ファイル名の日付（週末の金曜日）
+            file_date = datetime(year, month, day)
+            
+            # 曜日を取得 (0=月曜日, 6=日曜日)
+            weekday = file_date.weekday()
+            
+            # その週の月曜日を計算
+            # 例: 金曜日(4)なら、4日前が月曜日
+            monday = file_date - timedelta(days=weekday)
+            
+            result_date = monday.strftime('%Y-%m-%d')
+            print(f"  ファイル日付: {file_date.strftime('%Y-%m-%d')} ({['月','火','水','木','金','土','日'][weekday]}) → 週開始日: {result_date}")
+            
+            return result_date
     except Exception as e:
         print(f"日付抽出エラー: {e}")
     return None
@@ -309,7 +331,7 @@ def process_historical_data():
         try:
             print(f"\n[{idx}/{len(all_urls)}] 処理中: {url}")
             
-            # 日付を抽出
+            # 日付を抽出（週の開始日=月曜日）
             date_str = extract_date_from_filename(url)
             if not date_str:
                 print(f"  警告: 日付を抽出できませんでした。スキップします。")
@@ -371,7 +393,7 @@ def main():
         # 最新のPDF URLを取得
         pdf_url = get_latest_pdf_url()
         
-        # 日付を抽出
+        # 日付を抽出（週の開始日=月曜日）
         date_str = extract_date_from_filename(pdf_url)
         
         # PDFをダウンロード
