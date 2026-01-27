@@ -4,7 +4,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import time
 
 def get_latest_pdf_url():
@@ -64,27 +65,14 @@ def extract_with_gemini(pdf_path):
     if not api_key:
         raise ValueError("GEMINI_API_KEY環境変数が設定されていません")
     
-    # Gemini APIの設定
-    genai.configure(api_key=api_key)
+    # Gemini APIクライアントを初期化
+    client = genai.Client(api_key=api_key)
     
     try:
-        # PDFファイルをアップロード
-        print("PDFをGeminiにアップロード中...")
-        uploaded_file = genai.upload_file(pdf_path)
-        
-        # アップロード完了を待つ
-        while uploaded_file.state.name == "PROCESSING":
-            print("処理中...")
-            time.sleep(2)
-            uploaded_file = genai.get_file(uploaded_file.name)
-        
-        if uploaded_file.state.name == "FAILED":
-            raise ValueError("PDFのアップロードに失敗しました")
-        
-        print("PDFアップロード完了")
-        
-        # Geminiモデルを初期化
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # PDFファイルを読み込み
+        print("PDFを読み込み中...")
+        with open(pdf_path, 'rb') as f:
+            pdf_data = f.read()
         
         # プロンプトを作成
         prompt = """
@@ -104,7 +92,18 @@ def extract_with_gemini(pdf_path):
 """
         
         print("Geminiで解析中...")
-        response = model.generate_content([uploaded_file, prompt])
+        
+        # PDFをアップロードしてコンテンツ生成
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-exp',
+            contents=[
+                types.Part.from_bytes(
+                    data=pdf_data,
+                    mime_type='application/pdf'
+                ),
+                prompt
+            ]
+        )
         
         # 結果を取得
         result_text = response.text.strip()
@@ -122,9 +121,6 @@ def extract_with_gemini(pdf_path):
         value = int(numbers[0])
         
         print(f"抽出された値: {value:,}")
-        
-        # アップロードしたファイルを削除
-        genai.delete_file(uploaded_file.name)
         
         return value
         
