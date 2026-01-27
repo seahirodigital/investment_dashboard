@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPX 海外投資家動向 - Foreign Investors Balance Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.10.3/dist/Recharts.js"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        /* スクロールバーのカスタマイズ */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* アニメーション */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        /* グラデーション背景 */
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        /* カスタムツールチップ */
+        .custom-tooltip {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, Area, ComposedChart } = Recharts;
+
+        // カスタムツールチップコンポーネント
+        const CustomTooltip = ({ active, payload, label }) => {
+            if (active && payload && payload.length) {
+                const value = payload[0].value;
+                const isPositive = value >= 0;
+                
+                return (
+                    <div className="custom-tooltip">
+                        <p className="text-slate-700 font-semibold mb-1">{label}</p>
+                        <p className={`text-lg font-bold ${isPositive ? 'text-blue-600' : 'text-red-500'}`}>
+                            {isPositive ? '+' : ''}{value.toLocaleString('ja-JP')} 円
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                            {isPositive ? '買い越し' : '売り越し'}
+                        </p>
+                    </div>
+                );
+            }
+            return null;
+        };
+
+        // メインアプリケーションコンポーネント
+        const App = () => {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [stats, setStats] = useState({
+                total: 0,
+                positive: 0,
+                negative: 0,
+                average: 0,
+                latest: 0,
+                latestDate: ''
+            });
+            const [timeRange, setTimeRange] = useState('all'); // all, 3m, 6m, 1y
+            const [chartType, setChartType] = useState('line'); // line, bar, area
+
+            // CSVデータを読み込む
+            useEffect(() => {
+                loadData();
+                // 5分ごとに自動更新
+                const interval = setInterval(loadData, 5 * 60 * 1000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const loadData = async () => {
+                try {
+                    setLoading(true);
+                    setError(null);
+                    
+                    // GitHub Pagesの場合はリポジトリ名を含むパスを使用
+                    const response = await fetch('history.csv');
+                    
+                    if (!response.ok) {
+                        throw new Error('データの読み込みに失敗しました');
+                    }
+                    
+                    const csvText = await response.text();
+                    
+                    Papa.parse(csvText, {
+                        header: true,
+                        dynamicTyping: true,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            const parsedData = results.data
+                                .filter(row => row.date && row.balance !== null && row.balance !== undefined)
+                                .map(row => ({
+                                    date: row.date,
+                                    balance: row.balance,
+                                    displayDate: formatDate(row.date)
+                                }))
+                                .sort((a, b) => new Date(a.date) - new Date(b.date));
+                            
+                            setData(parsedData);
+                            calculateStats(parsedData);
+                            setLoading(false);
+                        },
+                        error: (error) => {
+                            setError('CSVの解析に失敗しました: ' + error.message);
+                            setLoading(false);
+                        }
+                    });
+                } catch (err) {
+                    setError(err.message);
+                    setLoading(false);
+                }
+            };
+
+            const formatDate = (dateStr) => {
+                const date = new Date(dateStr);
+                return `${date.getMonth() + 1}/${date.getDate()}`;
+            };
+
+            const calculateStats = (data) => {
+                if (data.length === 0) return;
+                
+                const total = data.reduce((sum, item) => sum + item.balance, 0);
+                const positive = data.filter(item => item.balance > 0).length;
+                const negative = data.filter(item => item.balance < 0).length;
+                const average = total / data.length;
+                const latest = data[data.length - 1];
+                
+                setStats({
+                    total,
+                    positive,
+                    negative,
+                    average,
+                    latest: latest.balance,
+                    latestDate: latest.date
+                });
+            };
+
+            // 時間範囲でフィルタリング
+            const getFilteredData = () => {
+                if (timeRange === 'all') return data;
+                
+                const now = new Date();
+                const cutoffDate = new Date();
+                
+                switch (timeRange) {
+                    case '3m':
+                        cutoffDate.setMonth(now.getMonth() - 3);
+                        break;
+                    case '6m':
+                        cutoffDate.setMonth(now.getMonth() - 6);
+                        break;
+                    case '1y':
+                        cutoffDate.setFullYear(now.getFullYear() - 1);
+                        break;
+                    default:
+                        return data;
+                }
+                
+                return data.filter(item => new Date(item.date) >= cutoffDate);
+            };
+
+            const filteredData = getFilteredData();
+
+            // チャートコンポーネントの選択
+            const renderChart = () => {
+                const chartProps = {
+                    data: filteredData,
+                    margin: { top: 10, right: 30, left: 0, bottom: 0 }
+                };
+
+                switch (chartType) {
+                    case 'bar':
+                        return (
+                            <BarChart {...chartProps}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis 
+                                    dataKey="displayDate" 
+                                    stroke="#64748b"
+                                    tick={{ fontSize: 12 }}
+                                    interval="preserveStartEnd"
+                                />
+                                <YAxis 
+                                    stroke="#64748b"
+                                    tick={{ fontSize: 12 }}
+                                    tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={2} />
+                                <Bar 
+                                    dataKey="balance" 
+                                    fill="#4A86E8"
+                                    radius={[4, 4, 0, 0]}
+                                />
+                            </BarChart>
+                        );
+                    
+                    case 'area':
+                        return (
+                            <ComposedChart {...chartProps}>
+                                <defs>
+                                    <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#4A86E8" stopOpacity={0.3}/>
+                                        <stop offset="95%" stopColor="#4A86E8" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis 
+                                    dataKey="displayDate" 
+                                    stroke="#64748b"
+                                    tick={{ fontSize: 12 }}
+                                    interval="preserveStartEnd"
+                                />
+                                <YAxis 
+                                    stroke="#64748b"
+                                    tick={{ fontSize: 12 }}
+                                    tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={2} />
+                                <Area 
+                                    type="monotone"
+                                    dataKey="balance" 
+                                    stroke="#4A86E8"
+                                    strokeWidth={2}
+                                    fill="url(#colorBalance)"
+                                />
+                            </ComposedChart>
+                        );
+                    
+                    default: // line
+                        return (
+                            <LineChart {...chartProps}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis 
+                                    dataKey="displayDate" 
+                                    stroke="#64748b"
+                                    tick={{ fontSize: 12 }}
+                                    interval="preserveStartEnd"
+                                />
+                                <YAxis 
+                                    stroke="#64748b"
+                                    tick={{ fontSize: 12 }}
+                                    tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={2} />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="balance" 
+                                    stroke="#4A86E8" 
+                                    strokeWidth={3}
+                                    dot={{ fill: '#4A86E8', r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                />
+                            </LineChart>
+                        );
+                }
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            <p className="mt-4 text-slate-600">データを読み込んでいます...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full border border-slate-200">
+                            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-2">エラー</h2>
+                            <p className="text-slate-600 mb-4">{error}</p>
+                            <button 
+                                onClick={loadData}
+                                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                再読み込み
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen pb-12">
+                    {/* ヘッダー */}
+                    <div className="gradient-bg text-white shadow-lg">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                            <div className="animate-fade-in-up">
+                                <h1 className="text-4xl font-bold mb-2">JPX 海外投資家動向</h1>
+                                <p className="text-blue-100 text-lg">Foreign Investors Balance Tracker</p>
+                                <p className="text-blue-200 text-sm mt-2">
+                                    最終更新: {stats.latestDate} | データ件数: {data.length}件
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
+                        {/* 統計カード */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in-up">
+                            {/* 最新値 */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <p className="text-slate-600 text-sm font-medium mb-2">最新の差引</p>
+                                <p className={`text-3xl font-bold ${stats.latest >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                                    {stats.latest >= 0 ? '+' : ''}{(stats.latest / 1000000).toFixed(0)}M
+                                </p>
+                                <p className="text-slate-400 text-xs mt-1">
+                                    {stats.latest >= 0 ? '買い越し' : '売り越し'}
+                                </p>
+                            </div>
+
+                            {/* 平均値 */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <p className="text-slate-600 text-sm font-medium mb-2">平均差引</p>
+                                <p className={`text-3xl font-bold ${stats.average >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                                    {stats.average >= 0 ? '+' : ''}{(stats.average / 1000000).toFixed(0)}M
+                                </p>
+                                <p className="text-slate-400 text-xs mt-1">全期間平均</p>
+                            </div>
+
+                            {/* 買い越し日数 */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <p className="text-slate-600 text-sm font-medium mb-2">買い越し</p>
+                                <p className="text-3xl font-bold text-blue-600">{stats.positive}</p>
+                                <p className="text-slate-400 text-xs mt-1">
+                                    {((stats.positive / data.length) * 100).toFixed(1)}%
+                                </p>
+                            </div>
+
+                            {/* 売り越し日数 */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <p className="text-slate-600 text-sm font-medium mb-2">売り越し</p>
+                                <p className="text-3xl font-bold text-red-500">{stats.negative}</p>
+                                <p className="text-slate-400 text-xs mt-1">
+                                    {((stats.negative / data.length) * 100).toFixed(1)}%
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* コントロールパネル */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 animate-fade-in-up">
+                            <div className="flex flex-wrap gap-4 items-center">
+                                {/* 期間選択 */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-600 text-sm font-medium">期間:</span>
+                                    <div className="flex gap-1">
+                                        {[
+                                            { value: 'all', label: '全期間' },
+                                            { value: '1y', label: '1年' },
+                                            { value: '6m', label: '6ヶ月' },
+                                            { value: '3m', label: '3ヶ月' }
+                                        ].map(option => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => setTimeRange(option.value)}
+                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                    timeRange === option.value
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* チャートタイプ選択 */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-600 text-sm font-medium">表示:</span>
+                                    <div className="flex gap-1">
+                                        {[
+                                            { value: 'line', label: 'ライン' },
+                                            { value: 'bar', label: 'バー' },
+                                            { value: 'area', label: 'エリア' }
+                                        ].map(option => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => setChartType(option.value)}
+                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                    chartType === option.value
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 更新ボタン */}
+                                <button
+                                    onClick={loadData}
+                                    className="ml-auto px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium"
+                                >
+                                    🔄 更新
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* メインチャート */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
+                            <h2 className="text-xl font-bold text-slate-900 mb-4">
+                                差引推移
+                                <span className="text-sm font-normal text-slate-500 ml-2">
+                                    ({filteredData.length}件のデータ)
+                                </span>
+                            </h2>
+                            
+                            <ResponsiveContainer width="100%" height={500}>
+                                {renderChart()}
+                            </ResponsiveContainer>
+
+                            <div className="mt-4 pt-4 border-t border-slate-200">
+                                <p className="text-xs text-slate-500">
+                                    💡 ヒント: グラフにマウスを合わせると詳細が表示されます
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* フッター情報 */}
+                        <div className="mt-8 text-center text-slate-500 text-sm">
+                            <p>データソース: 日本取引所グループ (JPX)</p>
+                            <p className="mt-1">自動更新: 毎週木曜日 18:00 (JST)</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // レンダリング
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
