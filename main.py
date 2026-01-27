@@ -7,6 +7,10 @@ from datetime import datetime, timedelta
 import pdfplumber
 import re
 
+# デバッグモード: 環境変数 DEBUG_MODE=true で有効化
+DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
+DEBUG_LIMIT = 5  # デバッグ時に取得するPDF数
+
 def get_all_pdf_urls_by_year(year):
     """指定年度のページから全てのstock_val PDFのURLを取得"""
     base_url = "https://www.jpx.co.jp"
@@ -320,7 +324,13 @@ def create_trend_chart():
 
 def process_historical_data():
     """過去データ（2023-2026年度）を全て取得して保存"""
-    print("\n=== 過去データの取得を開始 ===")
+    
+    if DEBUG_MODE:
+        print("\n" + "="*60)
+        print("⚠️  DEBUG MODE ACTIVE - 最新5件のみ取得")
+        print("="*60 + "\n")
+    else:
+        print("\n=== 過去データの取得を開始 ===")
     
     # 既存のCSVファイルを削除（クリーンスタート）
     csv_file = 'history.csv'
@@ -328,12 +338,17 @@ def process_historical_data():
         os.remove(csv_file)
         print("既存のCSVファイルを削除しました")
     
-    all_urls = []
-    for year in [2023, 2024, 2025, 2026]:
-        urls = get_all_pdf_urls_by_year(year)
-        all_urls.extend(urls)
-    
-    print(f"\n合計 {len(all_urls)} 件のPDFを処理します")
+    if DEBUG_MODE:
+        # デバッグモード: 2026年の最新5件のみ取得
+        all_urls = get_all_pdf_urls_by_year(2026)[:DEBUG_LIMIT]
+        print(f"デバッグモード: 最新 {len(all_urls)} 件のPDFを処理します")
+    else:
+        # 本番モード: 全年度のデータを取得
+        all_urls = []
+        for year in [2023, 2024, 2025, 2026]:
+            urls = get_all_pdf_urls_by_year(year)
+            all_urls.extend(urls)
+        print(f"\n合計 {len(all_urls)} 件のPDFを処理します")
     
     success_count = 0
     error_count = 0
@@ -380,6 +395,12 @@ def process_historical_data():
 def main():
     pdf_path = None
     try:
+        if DEBUG_MODE:
+            print("\n" + "🐛 "*20)
+            print("   DEBUG MODE: 高速デバッグモードで実行中")
+            print("   最新5件のPDFのみ処理します")
+            print("🐛 "*20 + "\n")
+        
         csv_file = 'history.csv'
         
         # 初回実行判定: CSVファイルが存在しないか、データが少ない場合
