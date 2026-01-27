@@ -153,7 +153,7 @@
             return Math.round(num).toLocaleString('ja-JP');
         }
 
-        // 週番号を計算
+        // 週番号を計算（年内の通し番号）
         function getWeekNumber(date) {
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
             const dayNum = d.getUTCDay() || 7;
@@ -163,12 +163,36 @@
             return weekNo;
         }
 
-        // 月の週番号を計算
-        function getWeekOfMonth(date) {
-            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-            const firstDayOfWeek = firstDay.getDay();
-            const offsetDate = date.getDate() + firstDayOfWeek - 1;
-            return Math.floor(offsetDate / 7) + 1;
+        // 月内での週番号を計算（各データポイントごとに連番を振る）
+        function calculateWeekLabels(data) {
+            const weekCounter = {};
+            
+            return data.map(row => {
+                const date = new Date(row.date);
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                
+                // 年月のキーを作成
+                const yearMonthKey = `${year}-${month}`;
+                
+                // その年月で初めて出現した場合は1から開始
+                if (!weekCounter[yearMonthKey]) {
+                    weekCounter[yearMonthKey] = 1;
+                } else {
+                    weekCounter[yearMonthKey]++;
+                }
+                
+                const weekNum = weekCounter[yearMonthKey];
+                
+                return {
+                    ...row,
+                    year: year,
+                    month: month,
+                    weekNum: weekNum,
+                    displayDate: `${year}年${month}月${weekNum}週`,
+                    tooltipDate: `${year}年${month}月第${weekNum}週`
+                };
+            });
         }
 
         // データ読み込み
@@ -186,41 +210,22 @@
                     dynamicTyping: true,
                     skipEmptyLines: true,
                     complete: function(results) {
-                        // 週ごとにグループ化するためのマップ
-                        const weekMap = new Map();
-                        
-                        results.data
+                        const rawData = results.data
                             .filter(row => row.date && row.balance !== null && row.balance !== undefined)
-                            .forEach(row => {
-                                const date = new Date(row.date);
-                                const year = date.getFullYear();
-                                const month = date.getMonth() + 1;
-                                const weekOfMonth = getWeekOfMonth(date);
-                                
-                                // 週の一意なキーを生成
-                                const weekKey = `${year}-${month}-${weekOfMonth}`;
-                                
+                            .map(row => {
                                 // 元データは1,000円単位なので、億円にするには ÷100,000
                                 const balanceInOku = row.balance / 100000;
                                 
-                                // 週ごとに最初のデータのみを保持
-                                if (!weekMap.has(weekKey)) {
-                                    weekMap.set(weekKey, {
-                                        date: row.date,
-                                        balance: balanceInOku,
-                                        rawBalance: row.balance,
-                                        year: year,
-                                        month: month,
-                                        weekOfMonth: weekOfMonth,
-                                        displayDate: `${year}年${month}月${weekOfMonth}週`,
-                                        tooltipDate: `${year}年${month}月第${weekOfMonth}週`
-                                    });
-                                }
-                            });
-                        
-                        // マップから配列に変換してソート
-                        allData = Array.from(weekMap.values())
+                                return {
+                                    date: row.date,
+                                    balance: balanceInOku,
+                                    rawBalance: row.balance
+                                };
+                            })
                             .sort((a, b) => new Date(a.date) - new Date(b.date));
+                        
+                        // 週番号を計算してラベルを付与
+                        allData = calculateWeekLabels(rawData);
                         
                         if (allData.length === 0) {
                             alert('データが見つかりませんでした');
