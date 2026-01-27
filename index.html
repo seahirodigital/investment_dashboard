@@ -39,6 +39,7 @@
         /* チャートエリアのカーソル */
         #mainChart {
             cursor: grab;
+            touch-action: none; /* ブラウザのデフォルトスクロールを無効化 */
         }
         #mainChart:active {
             cursor: grabbing;
@@ -394,7 +395,8 @@
                             pan: {
                                 enabled: true,
                                 mode: 'x',
-                                threshold: 5
+                                threshold: 0,          // 即座に反応
+                                modifierKey: null      // 修飾キー不要
                             },
                             zoom: {
                                 wheel: {
@@ -434,6 +436,8 @@
                             }
                         },
                         x: {
+                            type: 'category',
+                            offset: true,
                             grid: {
                                 color: '#e2e8f0'
                             },
