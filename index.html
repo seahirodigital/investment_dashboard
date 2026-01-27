@@ -6,6 +6,7 @@
     <title>JPX 海外投資家動向 - Foreign Investors Balance Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <style>
         /* スクロールバーのカスタマイズ */
@@ -76,6 +77,11 @@
                         </div>
                     </div>
 
+                    <!-- リセットボタン -->
+                    <button onclick="resetZoom()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">
+                        🔄 ズームリセット
+                    </button>
+
                     <!-- 更新ボタン -->
                     <button onclick="loadData()" class="ml-auto px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">
                         🔄 更新
@@ -98,7 +104,7 @@
 
                 <div class="mt-4 pt-4 border-t border-slate-200">
                     <p class="text-xs text-slate-500">
-                        💡 ヒント: グラフにマウスを合わせると詳細が表示されます
+                        💡 ヒント: マウスホイールで横スクロールして拡大・縮小できます
                     </p>
                 </div>
             </div>
@@ -117,6 +123,24 @@
         let currentTimeRange = 'all';
         let currentChartType = 'line';
 
+        // 週番号を計算
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            return weekNo;
+        }
+
+        // 月の週番号を計算
+        function getWeekOfMonth(date) {
+            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+            const firstDayOfWeek = firstDay.getDay();
+            const offsetDate = date.getDate() + firstDayOfWeek - 1;
+            return Math.floor(offsetDate / 7) + 1;
+        }
+
         // データ読み込み
         async function loadData() {
             try {
@@ -134,11 +158,24 @@
                     complete: function(results) {
                         allData = results.data
                             .filter(row => row.date && row.balance !== null && row.balance !== undefined)
-                            .map(row => ({
-                                date: row.date,
-                                balance: row.balance,
-                                displayDate: formatDate(row.date)
-                            }))
+                            .map(row => {
+                                const date = new Date(row.date);
+                                const year = date.getFullYear();
+                                const weekNum = getWeekNumber(date);
+                                const month = date.getMonth() + 1;
+                                const weekOfMonth = getWeekOfMonth(date);
+                                
+                                return {
+                                    date: row.date,
+                                    balance: row.balance,
+                                    year: year,
+                                    weekNum: weekNum,
+                                    month: month,
+                                    weekOfMonth: weekOfMonth,
+                                    displayDate: `${year}年 第${weekNum}週`,
+                                    tooltipDate: `${year}年${month}月 第${weekOfMonth}週`
+                                };
+                            })
                             .sort((a, b) => new Date(a.date) - new Date(b.date));
                         
                         if (allData.length === 0) {
@@ -166,51 +203,74 @@
             }
         }
 
-        // 日付フォーマット
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return `${date.getMonth() + 1}/${date.getDate()}`;
+        // 統計情報を計算
+        function calculateStats(data) {
+            const positiveData = data.filter(item => item.balance > 0).map(item => item.balance);
+            const negativeData = data.filter(item => item.balance < 0).map(item => item.balance);
+            
+            const calcMedian = (arr) => {
+                if (arr.length === 0) return 0;
+                const sorted = [...arr].sort((a, b) => a - b);
+                const mid = Math.floor(sorted.length / 2);
+                return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+            };
+            
+            const calcAverage = (arr) => {
+                if (arr.length === 0) return 0;
+                return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+            };
+            
+            return {
+                positiveAvg: calcAverage(positiveData),
+                positiveMedian: calcMedian(positiveData),
+                negativeAvg: calcAverage(negativeData),
+                negativeMedian: calcMedian(negativeData),
+                latest: data[data.length - 1]
+            };
         }
 
         // 統計情報を更新
-        function updateStats() {
-            if (allData.length === 0) return;
+        function updateStats(visibleData = null) {
+            const data = visibleData || allData;
+            if (data.length === 0) return;
             
-            const total = allData.reduce((sum, item) => sum + item.balance, 0);
-            const positive = allData.filter(item => item.balance > 0).length;
-            const negative = allData.filter(item => item.balance < 0).length;
-            const average = total / allData.length;
-            const latest = allData[allData.length - 1];
+            const stats = calculateStats(data);
             
-            const stats = [
+            const statsConfig = [
                 {
                     label: '最新の差引',
-                    value: formatLargeNumber(latest.balance),
-                    subtext: latest.balance >= 0 ? '買い越し' : '売り越し',
-                    color: latest.balance >= 0 ? 'text-blue-600' : 'text-red-500'
+                    value: formatLargeNumber(stats.latest.balance),
+                    subtext: stats.latest.balance >= 0 ? '買い越し' : '売り越し',
+                    color: stats.latest.balance >= 0 ? 'text-blue-600' : 'text-red-500'
                 },
                 {
-                    label: '平均差引',
-                    value: formatLargeNumber(average),
-                    subtext: '全期間平均',
-                    color: average >= 0 ? 'text-blue-600' : 'text-red-500'
-                },
-                {
-                    label: '買い越し',
-                    value: positive,
-                    subtext: `${((positive / allData.length) * 100).toFixed(1)}%`,
+                    label: '買い越し 平均',
+                    value: formatLargeNumber(stats.positiveAvg),
+                    subtext: '表示範囲内',
                     color: 'text-blue-600'
                 },
                 {
-                    label: '売り越し',
-                    value: negative,
-                    subtext: `${((negative / allData.length) * 100).toFixed(1)}%`,
+                    label: '買い越し 中央値',
+                    value: formatLargeNumber(stats.positiveMedian),
+                    subtext: '表示範囲内',
+                    color: 'text-blue-600'
+                },
+                {
+                    label: '売り越し 平均',
+                    value: formatLargeNumber(stats.negativeAvg),
+                    subtext: '表示範囲内',
+                    color: 'text-red-500'
+                },
+                {
+                    label: '売り越し 中央値',
+                    value: formatLargeNumber(stats.negativeMedian),
+                    subtext: '表示範囲内',
                     color: 'text-red-500'
                 }
             ];
             
             const container = document.getElementById('stats-container');
-            container.innerHTML = stats.map(stat => `
+            container.innerHTML = statsConfig.map(stat => `
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <p class="text-slate-600 text-sm font-medium mb-2">${stat.label}</p>
                     <p class="text-3xl font-bold ${stat.color}">${stat.value}</p>
@@ -223,7 +283,11 @@
         function formatLargeNumber(value) {
             if (typeof value === 'number') {
                 const sign = value >= 0 ? '+' : '';
-                return sign + (value / 1000000).toFixed(0) + 'M';
+                const absValue = Math.abs(value);
+                if (absValue >= 100000000) {
+                    return sign + (value / 100000000).toFixed(1) + '億円';
+                }
+                return sign + (value / 1000000).toFixed(0) + 'M円';
             }
             return value.toString();
         }
@@ -270,10 +334,9 @@
                 data: {
                     labels: filteredData.map(d => d.displayDate),
                     datasets: [{
-                        label: '差引（円）',
+                        label: '差引（億円）',
                         data: filteredData.map(d => d.balance),
                         backgroundColor: function(context) {
-                            // ガード処理: context.parsed が undefined の場合はデフォルト色
                             if (!context.parsed || context.parsed.y === undefined) {
                                 return 'rgba(74, 134, 232, 0.5)';
                             }
@@ -281,7 +344,6 @@
                             return value >= 0 ? 'rgba(74, 134, 232, 0.5)' : 'rgba(230, 124, 115, 0.5)';
                         },
                         borderColor: function(context) {
-                            // ガード処理: context.parsed が undefined の場合はデフォルト色
                             if (!context.parsed || context.parsed.y === undefined) {
                                 return '#4A86E8';
                             }
@@ -309,14 +371,43 @@
                             padding: 12,
                             displayColors: false,
                             callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    return filteredData[index].tooltipDate;
+                                },
                                 label: function(context) {
                                     const value = context.parsed.y;
                                     const sign = value >= 0 ? '+' : '';
-                                    return sign + value.toLocaleString('ja-JP') + ' 円';
+                                    const oku = (value / 100000000).toFixed(2);
+                                    return `${sign}${oku}億円 (${sign}${value.toLocaleString('ja-JP')}円)`;
                                 },
                                 afterLabel: function(context) {
                                     const value = context.parsed.y;
                                     return value >= 0 ? '買い越し' : '売り越し';
+                                }
+                            }
+                        },
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'x'
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                    speed: 0.1
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'x',
+                                onZoomComplete: function({chart}) {
+                                    // ズーム後に表示範囲のデータで統計を更新
+                                    const xAxis = chart.scales.x;
+                                    const startIndex = Math.max(0, Math.floor(xAxis.min));
+                                    const endIndex = Math.min(filteredData.length - 1, Math.ceil(xAxis.max));
+                                    const visibleData = filteredData.slice(startIndex, endIndex + 1);
+                                    updateStats(visibleData);
                                 }
                             }
                         }
@@ -325,7 +416,7 @@
                         y: {
                             ticks: {
                                 callback: function(value) {
-                                    return (value / 1000000).toFixed(0) + 'M';
+                                    return (value / 100000000).toFixed(0) + '億円';
                                 }
                             },
                             grid: {
@@ -342,6 +433,18 @@
             };
             
             chart = new Chart(ctx, chartConfig);
+            
+            // 初期統計を更新
+            updateStats(filteredData);
+        }
+
+        // ズームリセット
+        function resetZoom() {
+            if (chart) {
+                chart.resetZoom();
+                const filteredData = getFilteredData();
+                updateStats(filteredData);
+            }
         }
 
         // コントロールボタンを初期化
