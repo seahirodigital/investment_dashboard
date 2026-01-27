@@ -35,6 +35,14 @@
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
+
+        /* チャートエリアのカーソル */
+        #mainChart {
+            cursor: grab;
+        }
+        #mainChart:active {
+            cursor: grabbing;
+        }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -53,26 +61,38 @@
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 pb-12">
-            <!-- 統計カード -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in-up" id="stats-container">
+            <!-- メインチャート（最上部） -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up">
+                <h2 class="text-xl font-bold text-slate-900 mb-4">
+                    差引推移
+                    <span class="text-sm font-normal text-slate-500 ml-2" id="data-count">
+                        (データ読み込み中...)
+                    </span>
+                </h2>
+                
+                <div style="position: relative; height: 500px;">
+                    <canvas id="mainChart"></canvas>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-200">
+                    <p class="text-xs text-slate-500">
+                        💡 PC: マウスホイールでズーム、ドラッグで移動 | スマホ: ピンチイン・アウトでズーム
+                    </p>
+                </div>
+            </div>
+
+            <!-- 統計カード（2番目） -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up" id="stats-container">
                 <!-- JavaScriptで動的生成 -->
             </div>
 
-            <!-- コントロールパネル -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 animate-fade-in-up">
+            <!-- コントロールパネル（最下部） -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up">
                 <div class="flex flex-wrap gap-4 items-center">
                     <!-- 期間選択 -->
                     <div class="flex items-center gap-2">
                         <span class="text-slate-600 text-sm font-medium">期間:</span>
                         <div class="flex gap-1" id="time-range-buttons">
-                            <!-- JavaScriptで動的生成 -->
-                        </div>
-                    </div>
-
-                    <!-- チャートタイプ選択 -->
-                    <div class="flex items-center gap-2">
-                        <span class="text-slate-600 text-sm font-medium">表示:</span>
-                        <div class="flex gap-1" id="chart-type-buttons">
                             <!-- JavaScriptで動的生成 -->
                         </div>
                     </div>
@@ -89,26 +109,6 @@
                 </div>
             </div>
 
-            <!-- メインチャート -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
-                <h2 class="text-xl font-bold text-slate-900 mb-4">
-                    差引推移
-                    <span class="text-sm font-normal text-slate-500 ml-2" id="data-count">
-                        (データ読み込み中...)
-                    </span>
-                </h2>
-                
-                <div style="position: relative; height: 500px;">
-                    <canvas id="mainChart"></canvas>
-                </div>
-
-                <div class="mt-4 pt-4 border-t border-slate-200">
-                    <p class="text-xs text-slate-500">
-                        💡 ヒント: マウスホイールで横スクロールして拡大・縮小できます
-                    </p>
-                </div>
-            </div>
-
             <!-- フッター情報 -->
             <div class="mt-8 text-center text-slate-500 text-sm">
                 <p>データソース: 日本取引所グループ (JPX)</p>
@@ -121,7 +121,6 @@
         let allData = [];
         let chart = null;
         let currentTimeRange = 'all';
-        let currentChartType = 'line';
 
         // 週番号を計算
         function getWeekNumber(date) {
@@ -165,9 +164,13 @@
                                 const month = date.getMonth() + 1;
                                 const weekOfMonth = getWeekOfMonth(date);
                                 
+                                // 元データは1,000円単位なので、億円にするには ÷100,000
+                                const balanceInOku = row.balance / 100000;
+                                
                                 return {
                                     date: row.date,
-                                    balance: row.balance,
+                                    balance: balanceInOku, // 億円単位
+                                    rawBalance: row.balance, // 元の1,000円単位
                                     year: year,
                                     weekNum: weekNum,
                                     month: month,
@@ -279,15 +282,11 @@
             `).join('');
         }
 
-        // 大きな数値をフォーマット
+        // 大きな数値をフォーマット（億円単位）
         function formatLargeNumber(value) {
             if (typeof value === 'number') {
                 const sign = value >= 0 ? '+' : '';
-                const absValue = Math.abs(value);
-                if (absValue >= 100000000) {
-                    return sign + (value / 100000000).toFixed(1) + '億円';
-                }
-                return sign + (value / 1000000).toFixed(0) + 'M円';
+                return sign + value.toFixed(0) + '億円';
             }
             return value.toString();
         }
@@ -330,7 +329,7 @@
             }
             
             const chartConfig = {
-                type: currentChartType,
+                type: 'bar',
                 data: {
                     labels: filteredData.map(d => d.displayDate),
                     datasets: [{
@@ -338,10 +337,10 @@
                         data: filteredData.map(d => d.balance),
                         backgroundColor: function(context) {
                             if (!context.parsed || context.parsed.y === undefined) {
-                                return 'rgba(74, 134, 232, 0.5)';
+                                return 'rgba(74, 134, 232, 0.7)';
                             }
                             const value = context.parsed.y;
-                            return value >= 0 ? 'rgba(74, 134, 232, 0.5)' : 'rgba(230, 124, 115, 0.5)';
+                            return value >= 0 ? 'rgba(74, 134, 232, 0.7)' : 'rgba(230, 124, 115, 0.7)';
                         },
                         borderColor: function(context) {
                             if (!context.parsed || context.parsed.y === undefined) {
@@ -350,9 +349,7 @@
                             const value = context.parsed.y;
                             return value >= 0 ? '#4A86E8' : '#E67C73';
                         },
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: currentChartType === 'line' ? false : true
+                        borderWidth: 1
                     }]
                 },
                 options: {
@@ -376,10 +373,11 @@
                                     return filteredData[index].tooltipDate;
                                 },
                                 label: function(context) {
-                                    const value = context.parsed.y;
+                                    const index = context.dataIndex;
+                                    const value = filteredData[index].balance;
+                                    const rawValue = filteredData[index].rawBalance;
                                     const sign = value >= 0 ? '+' : '';
-                                    const oku = (value / 100000000).toFixed(2);
-                                    return `${sign}${oku}億円 (${sign}${value.toLocaleString('ja-JP')}円)`;
+                                    return `${sign}${value.toFixed(0)}億円 (${sign}${(rawValue * 1000).toLocaleString('ja-JP')}円)`;
                                 },
                                 afterLabel: function(context) {
                                     const value = context.parsed.y;
@@ -390,19 +388,27 @@
                         zoom: {
                             pan: {
                                 enabled: true,
-                                mode: 'x'
+                                mode: 'x',
+                                modifierKey: null // ドラッグだけでパン可能
                             },
                             zoom: {
                                 wheel: {
                                     enabled: true,
-                                    speed: 0.1
+                                    speed: 0.1,
+                                    modifierKey: null
                                 },
                                 pinch: {
                                     enabled: true
                                 },
+                                drag: {
+                                    enabled: true,
+                                    backgroundColor: 'rgba(100, 116, 139, 0.1)',
+                                    borderColor: 'rgba(100, 116, 139, 0.5)',
+                                    borderWidth: 1,
+                                    modifierKey: 'shift' // Shift押しながらドラッグでズーム
+                                },
                                 mode: 'x',
                                 onZoomComplete: function({chart}) {
-                                    // ズーム後に表示範囲のデータで統計を更新
                                     const xAxis = chart.scales.x;
                                     const startIndex = Math.max(0, Math.floor(xAxis.min));
                                     const endIndex = Math.min(filteredData.length - 1, Math.ceil(xAxis.max));
@@ -416,7 +422,7 @@
                         y: {
                             ticks: {
                                 callback: function(value) {
-                                    return (value / 100000000).toFixed(0) + '億円';
+                                    return value.toFixed(0) + '億円';
                                 }
                             },
                             grid: {
@@ -469,37 +475,11 @@
                     ${option.label}
                 </button>
             `).join('');
-            
-            // チャートタイプ選択ボタン
-            const chartTypes = [
-                { value: 'line', label: 'ライン' },
-                { value: 'bar', label: 'バー' }
-            ];
-            
-            document.getElementById('chart-type-buttons').innerHTML = chartTypes.map(option => `
-                <button 
-                    onclick="setChartType('${option.value}')"
-                    class="px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        currentChartType === option.value
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }"
-                >
-                    ${option.label}
-                </button>
-            `).join('');
         }
 
         // 期間変更
         function setTimeRange(range) {
             currentTimeRange = range;
-            updateChart();
-            initControls();
-        }
-
-        // チャートタイプ変更
-        function setChartType(type) {
-            currentChartType = type;
             updateChart();
             initControls();
         }
