@@ -273,10 +273,18 @@
                         label: '差引（円）',
                         data: filteredData.map(d => d.balance),
                         backgroundColor: function(context) {
+                            // ガード処理: context.parsed が undefined の場合はデフォルト色
+                            if (!context.parsed || context.parsed.y === undefined) {
+                                return 'rgba(74, 134, 232, 0.5)';
+                            }
                             const value = context.parsed.y;
                             return value >= 0 ? 'rgba(74, 134, 232, 0.5)' : 'rgba(230, 124, 115, 0.5)';
                         },
                         borderColor: function(context) {
+                            // ガード処理: context.parsed が undefined の場合はデフォルト色
+                            if (!context.parsed || context.parsed.y === undefined) {
+                                return '#4A86E8';
+                            }
                             const value = context.parsed.y;
                             return value >= 0 ? '#4A86E8' : '#E67C73';
                         },
