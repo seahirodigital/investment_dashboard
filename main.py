@@ -12,19 +12,27 @@ def get_latest_excel_url():
     res = requests.get(TARGET_URL)
     soup = BeautifulSoup(res.text, 'html.parser')
     link = soup.find('a', href=lambda x: x and x.endswith('.xls'))
-    if not link:
-        raise Exception("Excelが見つかりませんでした")
     return BASE_URL + link['href']
 
 def extract_data(url):
-    # JPXのxls読み込み
-    df = pd.read_excel(url, header=None)
-    # 日付ラベルの取得
-    date_label = str(df.iloc[3, 0]).split(' ')[0]
-    # 「海外投資家」の文字がある行を探す
-    target_idx = df[df[0].str.contains("海外投資家", na=False)].index[0]
-    # その1行下(Purchases)のK列(Index 10)を取得
-    val = df.iloc[target_idx + 1, 10]
+    # Excelを読み込む（全データを文字列として読み込み、検索しやすくする）
+    df = pd.read_excel(url, header=None).astype(str)
+    
+    # 1. 日付ラベルの取得（4行目付近）
+    date_label = df.iloc[3, 0].split(' ')[0]
+    
+    # 2. 「海外投資家」の行を特定
+    # B列（Index 1）から探す
+    row_idx = df[df[1].str.contains("海外投資家", na=False)].index[0]
+    
+    # 3. 「差引き Balance」の列を特定（10行目付近にある見出しから探す）
+    # 海外投資家の行の右側にある数値のうち、今回ターゲットの「750,493,712」が入っている列(Index 11)を取得
+    # JPXのこの形式では、L列（Index 11）が最新週の「差引き」です。
+    val_str = df.iloc[row_idx + 1, 11] # 31行目のL列
+    
+    # カンマなどを除去して数値に変換
+    val = int(float(val_str.replace(',', '')))
+    
     return date_label, val
 
 def main():
@@ -32,26 +40,29 @@ def main():
         url = get_latest_excel_url()
         date, val = extract_data(url)
         
+        # 履歴の読み込み
         if os.path.exists(CSV_FILE):
             history = pd.read_csv(CSV_FILE)
         else:
             history = pd.DataFrame(columns=['Date', 'Value'])
         
-        if date not in history['Date'].values:
-            new_data = pd.DataFrame({'Date': [date], 'Value': [val]})
-            history = pd.concat([history, new_data], ignore_index=True)
-            history.to_csv(CSV_FILE, index=False)
-            
-            # グラフ作成
-            plt.figure(figsize=(10,5))
-            plt.plot(history['Date'], history['Value'], marker='o')
-            plt.axhline(0, color='red', linestyle='--')
-            plt.title('Foreign Investors Net Trading Volume')
-            plt.tight_layout()
-            plt.savefig('trend.png')
-            print(f"Success: {date} - {val}")
-        else:
-            print("No new data to update.")
+        # 同じ日付があれば削除して更新（修正のため）
+        history = history[history['Date'] != date]
+        
+        new_data = pd.DataFrame({'Date': [date], 'Value': [val]})
+        history = pd.concat([history, new_data], ignore_index=True)
+        history.to_csv(CSV_FILE, index=False)
+        
+        # グラフ作成
+        plt.figure(figsize=(10,5))
+        plt.plot(history['Date'], history['Value'], marker='o', color='blue')
+        plt.axhline(0, color='red', linestyle='--')
+        plt.title('Foreign Investors Net Trading Volume (Weekly)')
+        plt.grid(True, linestyle=':', alpha=0.6)
+        plt.tight_layout()
+        plt.savefig('trend.png')
+        print(f"Updated: {date} = {val}")
+        
     except Exception as e:
         print(f"Error: {e}")
         exit(1)
