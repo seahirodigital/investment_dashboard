@@ -164,12 +164,12 @@ def extract_from_pdf(pdf_path):
                             if cell:
                                 print(f"    列{i}: {cell}")
                         
-                        # 右から3つの列をチェック（最後、最後-1、最後-2）
+                        # 右から5列までチェック
                         sell_balance = None
                         balance_col_idx = None
                         
                         # 右端から順に負の数値を探す
-                        for offset in range(min(5, len(row))):  # 右から5列まで確認
+                        for offset in range(min(5, len(row))):
                             col_idx = len(row) - 1 - offset
                             if col_idx < 0:
                                 break
@@ -181,7 +181,7 @@ def extract_from_pdf(pdf_path):
                                 if match:
                                     try:
                                         value = int(match.group().replace(',', ''))
-                                        if value < 0 and abs(value) >= 1000:  # 負の数値で1000以上
+                                        if value < 0 and abs(value) >= 1000:
                                             sell_balance = value
                                             balance_col_idx = col_idx
                                             print(f"  売りの差引き: {sell_balance:,} (列{balance_col_idx})")
@@ -189,9 +189,9 @@ def extract_from_pdf(pdf_path):
                                     except ValueError:
                                         continue
                         
-                        if sell_balance is None or balance_col_idx is None:
-                            print("  警告: 売りの差引きが見つかりませんでした")
-                            continue
+                        # 売りの差引きが見つからない = 売り超なし
+                        if sell_balance is None:
+                            print("  売りの差引きが空白（売り超なし）")
                         
                         # 次の行を買い行として処理
                         buy_balance = None
@@ -204,8 +204,8 @@ def extract_from_pdf(pdf_path):
                             print(f"  列数: {len(next_row)}")
                             
                             if '買い' in next_row_text or 'Purchases' in next_row_text or 'Foreigners' in next_row_text:
-                                # 売り行と同じ列位置から取得
-                                if balance_col_idx < len(next_row):
+                                # 売り行と同じ列位置から取得（売りで列が特定されている場合）
+                                if balance_col_idx is not None and balance_col_idx < len(next_row):
                                     cell = next_row[balance_col_idx]
                                     print(f"  同じ列{balance_col_idx}の値: {cell}")
                                     
@@ -219,23 +219,54 @@ def extract_from_pdf(pdf_path):
                                                     print(f"  買いの差引き: {buy_balance:,}")
                                             except ValueError:
                                                 pass
-                                    
-                                    # 同じ列が空白または無効な場合、買い超がないとみなす
-                                    if buy_balance is None:
-                                        print(f"  買いの差引きは空白（買い超なし）")
-                                        buy_balance = 0
+                                
+                                # 列が特定できなかった、または値が空白の場合、右から探す
+                                if buy_balance is None:
+                                    for offset in range(min(5, len(next_row))):
+                                        col_idx = len(next_row) - 1 - offset
+                                        if col_idx < 0:
+                                            break
+                                        
+                                        cell = next_row[col_idx]
+                                        if cell and str(cell).strip():
+                                            # 正の数値を探す（買い超は正の値）
+                                            match = re.search(r'\d{1,3}(?:,\d{3})+|\d{3,}', str(cell))
+                                            if match:
+                                                # マイナス記号がないことを確認
+                                                if '-' not in str(cell):
+                                                    try:
+                                                        value = int(match.group().replace(',', ''))
+                                                        if value >= 100000:
+                                                            buy_balance = value
+                                                            print(f"  買いの差引き: {buy_balance:,} (列{col_idx})")
+                                                            break
+                                                    except ValueError:
+                                                        continue
+                                
+                                if buy_balance is None:
+                                    print(f"  買いの差引きは空白（買い超なし）")
                         
                         # 結果を判定
-                        if sell_balance is not None:
-                            # 絶対値が大きい方を返す
-                            if buy_balance is not None and abs(buy_balance) > abs(sell_balance):
+                        if sell_balance is not None and buy_balance is not None:
+                            # 両方ある場合は絶対値が大きい方
+                            if abs(buy_balance) > abs(sell_balance):
                                 print(f"\n✓ 買い超を採用: {buy_balance:,}")
                                 return buy_balance
                             else:
                                 print(f"\n✓ 売り超を採用: {sell_balance:,}")
                                 return sell_balance
+                        elif sell_balance is not None:
+                            print(f"\n✓ 売り超を採用: {sell_balance:,}")
+                            return sell_balance
+                        elif buy_balance is not None:
+                            print(f"\n✓ 買い超を採用: {buy_balance:,}")
+                            return buy_balance
+                        else:
+                            # 両方空白 = 均衡
+                            print(f"\n✓ 売り買い均衡: 0")
+                            return 0
         
-        raise ValueError("海外投資家の差引き金額が見つかりませんでした")
+        raise ValueError("海外投資家行が見つかりませんでした")
         
     except Exception as e:
         print(f"PDF抽出エラー: {e}")
