@@ -8,59 +8,46 @@ CSV_FILE = 'history.csv'
 BASE_URL = "https://www.jpx.co.jp"
 TARGET_URL = "https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html"
 
-def get_latest_excel_url():
-    res = requests.get(TARGET_URL)
-    soup = BeautifulSoup(res.text, 'html.parser')
-    link = soup.find('a', href=lambda x: x and x.endswith('.xls'))
-    return BASE_URL + link['href']
-
 def extract_data(url):
+    # エンジンにxlrdを指定し、全ての型を維持して読み込み
     df = pd.read_excel(url, header=None)
     
-    # 1. 日付の取得
-    date_label = str(df.iloc[3, 0]).split(' ')[0].split('\n')[0]
+    # 1. 日付の取得（4行目 A列）
+    date_label = str(df.iloc[3, 0]).split(' ')[0]
     
-    # 2. 「海外投資家」の行を探す
-    target_row_idx = None
-    for idx, row in df.iterrows():
-        if "海外投資家" in str(row[1]): # B列を優先
-            target_row_idx = idx
-            break
+    # 2. ピンポイントで「L31」のセルを狙う
+    # Excelの L31セル = pandasでは [行Index 30, 列Index 11]
+    # ここに「750,493,712」が入っていることを画像で確認済み
+    raw_val = df.iloc[30, 11] 
     
-    if target_row_idx is None:
-        mask = df.apply(lambda x: x.astype(str).str.contains("海外投資家")).any(axis=1)
-        target_row_idx = df[mask].index[0]
-
-    # 3. 数値の抽出（ここを強化）
-    # 海外投資家行の「1行下(買い)」の中で、数値が入っている列を後ろから探す
-    # 通常、一番右側の数値が「差引き（Balance）」になる
-    target_row = df.iloc[target_row_idx + 1]
-    val = None
-    for item in reversed(target_row):
-        try:
-            temp_val = float(str(item).replace(',', ''))
-            if not pd.isna(temp_val):
-                val = int(temp_val)
-                break
-        except:
-            continue
-            
-    if val is None:
-        raise Exception("数値が見つかりませんでした")
+    # 数値化処理
+    try:
+        val = int(float(str(raw_val).replace(',', '')))
+    except:
+        # もしズレていた場合のバックアップ検索（海外投資家の行の右端）
+        mask = df.astype(str).apply(lambda x: x.str.contains("海外投資家")).any(axis=1)
+        row_idx = df[mask].index[0]
+        val = int(df.iloc[row_idx + 1, 11]) # 買い行のL列
         
     return date_label, val
 
 def main():
     try:
-        url = get_latest_excel_url()
-        date, val = extract_data(url)
-        print(f"Captured: {date} = {val}")
+        res = requests.get(TARGET_URL)
+        soup = BeautifulSoup(res.text, 'html.parser')
+        link = soup.find('a', href=lambda x: x and x.endswith('.xls'))
+        url = BASE_URL + link['href']
         
+        date, val = extract_data(url)
+        print(f"Target Captured: {date} = {val}") # ログで確認用
+
+        # 履歴更新
         if os.path.exists(CSV_FILE):
             history = pd.read_csv(CSV_FILE)
         else:
             history = pd.DataFrame(columns=['Date', 'Value'])
         
+        # 間違ったデータ(192634)を削除して更新
         history = history[history['Date'] != date]
         new_row = pd.DataFrame({'Date': [date], 'Value': [val]})
         history = pd.concat([history, new_row], ignore_index=True)
@@ -68,11 +55,10 @@ def main():
         
         # グラフ作成
         plt.figure(figsize=(10, 5))
-        plt.plot(history['Date'], history['Value'], marker='o', color='#1f77b4', linewidth=2)
-        plt.axhline(0, color='red', linestyle='--', alpha=0.5)
-        plt.title('Foreign Investors Net Trading Volume (Weekly)')
-        plt.grid(True, linestyle=':', alpha=0.7)
-        plt.tight_layout()
+        plt.plot(history['Date'], history['Value'], marker='o', color='green', linewidth=2)
+        plt.axhline(0, color='black', linewidth=1)
+        plt.title('Foreign Investors Net Trading Volume')
+        plt.grid(True, alpha=0.3)
         plt.savefig('trend.png')
         
     except Exception as e:
