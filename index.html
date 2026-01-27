@@ -186,29 +186,40 @@
                     dynamicTyping: true,
                     skipEmptyLines: true,
                     complete: function(results) {
-                        allData = results.data
+                        // 週ごとにグループ化するためのマップ
+                        const weekMap = new Map();
+                        
+                        results.data
                             .filter(row => row.date && row.balance !== null && row.balance !== undefined)
-                            .map(row => {
+                            .forEach(row => {
                                 const date = new Date(row.date);
                                 const year = date.getFullYear();
                                 const month = date.getMonth() + 1;
-                                const day = date.getDate();
                                 const weekOfMonth = getWeekOfMonth(date);
+                                
+                                // 週の一意なキーを生成
+                                const weekKey = `${year}-${month}-${weekOfMonth}`;
                                 
                                 // 元データは1,000円単位なので、億円にするには ÷100,000
                                 const balanceInOku = row.balance / 100000;
                                 
-                                return {
-                                    date: row.date,
-                                    balance: balanceInOku, // 億円単位
-                                    rawBalance: row.balance, // 元の1,000円単位
-                                    year: year,
-                                    month: month,
-                                    day: day,
-                                    displayDate: `${year}年${month}月${weekOfMonth}週`,
-                                    tooltipDate: `${year}年${month}月第${weekOfMonth}週`
-                                };
-                            })
+                                // 週ごとに最初のデータのみを保持
+                                if (!weekMap.has(weekKey)) {
+                                    weekMap.set(weekKey, {
+                                        date: row.date,
+                                        balance: balanceInOku,
+                                        rawBalance: row.balance,
+                                        year: year,
+                                        month: month,
+                                        weekOfMonth: weekOfMonth,
+                                        displayDate: `${year}年${month}月${weekOfMonth}週`,
+                                        tooltipDate: `${year}年${month}月第${weekOfMonth}週`
+                                    });
+                                }
+                            });
+                        
+                        // マップから配列に変換してソート
+                        allData = Array.from(weekMap.values())
                             .sort((a, b) => new Date(a.date) - new Date(b.date));
                         
                         if (allData.length === 0) {
