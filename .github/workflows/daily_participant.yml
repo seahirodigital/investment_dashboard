@@ -1,0 +1,42 @@
+name: Daily JPX Participant Analysis
+
+on:
+  schedule:
+    # 日本時間 20:00 (UTC 11:00) 平日(月-金)のみ実行
+    - cron: '0 11 * * 1-5'
+  workflow_dispatch: # 手動実行ボタンを有効化
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Daily Analysis Script
+        # scriptsフォルダ内のPythonを実行
+        run: python scripts/daily_participant_analyzer.py
+
+      - name: Commit and Push Data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # dataフォルダ内のJSONファイルのみをコミット対象にする
+          git add data/daily_participant.json
+          
+          # 変更があった場合のみコミット・プッシュする（エラー回避）
+          git diff --staged --quiet || git commit -m "Update Daily Participant Data: $(date +'%Y-%m-%d')"
+          git push
