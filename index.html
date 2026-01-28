@@ -1,605 +1,959 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JPX 海外投資家動向 - Foreign Investors Balance Tracker</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Market Dashboard</title>
+    
+    <!-- デザイン・スタイル (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React本体 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Recharts依存 -->
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    
+    <!-- グラフ描画 (Recharts) -->
+    <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
+
+    <!-- CSV解析 (PapaParse) -->
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <!-- アイコン (Lucide) -->
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+
+    <!-- JPXチャート用 (Chart.js関連) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <!-- JSX変換 (Babel) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
-        /* スクロールバーのカスタマイズ */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        
-        /* アニメーション */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .animate-fade-in-up {
-            animation: fadeInUp 0.6s ease-out;
-        }
-        
-        /* グラデーション背景 */
+        body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; }
+
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-
-        /* チャートエリアのカーソル */
-        #mainChart {
-            cursor: grab;
-            touch-action: none; /* ブラウザのデフォルトスクロールを無効化 */
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
         }
-        #mainChart:active {
-            cursor: grabbing;
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .dragging {
+            opacity: 0.5;
+            background-color: #f1f5f9;
         }
     </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "papaparse": "https://esm.sh/papaparse@^5.5.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "recharts": "https://esm.sh/recharts@^3.7.0"
+  }
+}
+</script>
 </head>
-<body class="bg-slate-50">
-    <div id="app">
-        <!-- ヘッダー -->
-        <div class="gradient-bg text-white shadow-lg">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div class="animate-fade-in-up">
-                    <h1 class="text-4xl font-bold mb-2">JPX 海外投資家動向</h1>
-                    <p class="text-blue-100 text-lg">Foreign Investors Balance Tracker</p>
-                    <p class="text-blue-200 text-sm mt-2" id="last-update">
-                        読み込み中...
-                    </p>
-                </div>
-            </div>
-        </div>
+<body>
+    <div id="root"></div>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 pb-12">
-            <!-- メインチャート（最上部） -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up">
-                <h2 class="text-xl font-bold text-slate-900 mb-4">
-                    差引推移
-                    <span class="text-sm font-normal text-slate-500 ml-2" id="data-count">
-                        (データ読み込み中...)
-                    </span>
-                </h2>
-                
-                <div style="position: relative; height: 500px;">
-                    <canvas id="mainChart"></canvas>
-                    
-                    <!-- 拡大・縮小ボタン（チャートエリア左下、Y軸より右） -->
-                    <div style="position: absolute; bottom: 90px; left: 80px; display: flex; gap: 8px; z-index: 10;">
-                        <button onclick="zoomChart('in')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
-                            ＋
-                        </button>
-                        <button onclick="zoomChart('out')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
-                            ー
-                        </button>
-                    </div>
-                    
-                    <!-- 左右移動ボタン（チャートエリア内側の右下、X軸より十分上） -->
-                    <div style="position: absolute; bottom: 90px; right: 20px; display: flex; gap: 8px; z-index: 10;">
-                        <button onclick="panChart('left')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
-                            ← 左へ
-                        </button>
-                        <button onclick="panChart('right')" class="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">
-                            右へ →
-                        </button>
-                    </div>
-                </div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList } = Recharts;
 
-                <div class="mt-4 pt-4 border-t border-slate-200">
-                    <p class="text-xs text-slate-500">
-                        💡 PC: ドラッグで左右移動、ホイールでズーム | スマホ: ピンチイン・アウトでズーム、スワイプで移動
-                    </p>
-                </div>
-            </div>
+        // --- アイコン ---
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icons = {
+                Menu: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg>,
+                LayoutDashboard: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
+                LineChart: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>,
+                BarChart3: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
+                ExternalLink: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+                AlertTriangle: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>,
+                Upload: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+                ZoomIn: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
+                ZoomOut: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
+                RotateCcw: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+                MousePointer2: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 6-8 13 4.5-1.5 3 7 3-7 4.5 1.5L12 6Z"/><path d="m6 13 6-3 6 3"/></svg>,
+                Plus: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+                Trash2: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+                Link: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+                X: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+                GripVertical: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>,
+                FolderOpen: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>
+            };
+            return icons[name] || null;
+        };
 
-            <!-- 統計カード（2番目） -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up" id="stats-container">
-                <!-- JavaScriptで動的生成 -->
-            </div>
-
-            <!-- コントロールパネル（最下部） -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up">
-                <div class="flex flex-wrap gap-4 items-center">
-                    <!-- 期間選択 -->
-                    <div class="flex items-center gap-2">
-                        <span class="text-slate-600 text-sm font-medium">期間:</span>
-                        <div class="flex gap-1" id="time-range-buttons">
-                            <!-- JavaScriptで動的生成 -->
-                        </div>
-                    </div>
-
-                    <!-- リセットボタン -->
-                    <button onclick="resetZoom()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">
-                        🔄 ズームリセット
-                    </button>
-
-                    <!-- 更新ボタン -->
-                    <button onclick="loadData()" class="ml-auto px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">
-                        🔄 更新
-                    </button>
-                </div>
-            </div>
-
-            <!-- フッター情報 -->
-            <div class="mt-8 text-center text-slate-500 text-sm">
-                <p>データソース: <a href="https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">日本取引所グループ (JPX)</a></p>
-                <p class="mt-1">自動更新: 毎週木曜日 18:00 (JST)</p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // ★ chartjs-plugin-zoomを登録（必須）
-        Chart.register(ChartZoom);
-
-        let allData = [];
-        let chart = null;
-        let currentTimeRange = 'all';
-
-        // 数値をカンマ区切りでフォーマット
-        function formatNumber(num) {
-            return Math.round(num).toLocaleString('ja-JP');
-        }
-
-        // 週番号を計算（年内の通し番号）
-        function getWeekNumber(date) {
-            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-            const dayNum = d.getUTCDay() || 7;
-            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-            return weekNo;
-        }
-
-        // 月内での週番号を計算（各データポイントごとに連番を振る）
-        function calculateWeekLabels(data) {
-            const weekCounter = {};
+        // ==========================================
+        //  JPX Chart Component
+        // ==========================================
+        const ForeignInvestors = () => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
             
-            return data.map(row => {
-                const date = new Date(row.date);
-                const year = date.getFullYear();
-                const month = date.getMonth() + 1;
-                
-                // 年月のキーを作成
-                const yearMonthKey = `${year}-${month}`;
-                
-                // その年月で初めて出現した場合は1から開始
-                if (!weekCounter[yearMonthKey]) {
-                    weekCounter[yearMonthKey] = 1;
-                } else {
-                    weekCounter[yearMonthKey]++;
-                }
-                
-                const weekNum = weekCounter[yearMonthKey];
-                
-                return {
-                    ...row,
-                    year: year,
-                    month: month,
-                    weekNum: weekNum,
-                    displayDate: `${year}年${month}月${weekNum}週`,
-                    tooltipDate: `${year}年${month}月第${weekNum}週`
-                };
-            });
-        }
+            const [allData, setAllData] = useState([]);
+            const [currentTimeRange, setCurrentTimeRange] = useState('all');
+            const [stats, setStats] = useState(null);
+            const [dataCount, setDataCount] = useState(0);
+            const [lastUpdate, setLastUpdate] = useState('データ取得中...');
 
-        // データ読み込み
-        async function loadData() {
-            try {
-                const response = await fetch('history.csv');
-                if (!response.ok) {
-                    throw new Error('データの読み込みに失敗しました');
-                }
-                
-                const csvText = await response.text();
-                
-                Papa.parse(csvText, {
-                    header: true,
-                    dynamicTyping: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        const rawData = results.data
-                            .filter(row => row.date && row.balance !== null && row.balance !== undefined)
-                            .map(row => {
-                                // 元データは1,000円単位なので、億円にするには ÷100,000
-                                const balanceInOku = row.balance / 100000;
-                                
-                                return {
-                                    date: row.date,
-                                    balance: balanceInOku,
-                                    rawBalance: row.balance
-                                };
-                            })
-                            .sort((a, b) => new Date(a.date) - new Date(b.date));
-                        
-                        // 週番号を計算してラベルを付与
-                        allData = calculateWeekLabels(rawData);
-                        
-                        if (allData.length === 0) {
-                            alert('データが見つかりませんでした');
-                            return;
-                        }
-                        
-                        updateStats();
-                        updateChart();
-                        initControls();
-                        
-                        // 最終更新日時を表示
-                        const latest = allData[allData.length - 1];
-                        document.getElementById('last-update').textContent = 
-                            `最終更新: ${latest.date} | データ件数: ${allData.length}件`;
-                    },
-                    error: function(error) {
-                        console.error('CSVの解析に失敗しました:', error);
-                        alert('CSVの解析に失敗しました: ' + error.message);
+            useEffect(() => {
+                const canvas = chartRef.current;
+                if (!canvas) return;
+
+                const handleWheel = (e) => {
+                    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                        e.preventDefault();
                     }
-                });
-            } catch (err) {
-                console.error('エラー:', err);
-                alert('データの読み込みに失敗しました: ' + err.message);
-            }
-        }
+                };
 
-        // 統計情報を計算
-        function calculateStats(data) {
-            const positiveData = data.filter(item => item.balance > 0).map(item => item.balance);
-            const negativeData = data.filter(item => item.balance < 0).map(item => item.balance);
-            
-            const calcMedian = (arr) => {
-                if (arr.length === 0) return 0;
-                const sorted = [...arr].sort((a, b) => a - b);
-                const mid = Math.floor(sorted.length / 2);
-                return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-            };
-            
-            const calcAverage = (arr) => {
-                if (arr.length === 0) return 0;
-                return arr.reduce((sum, val) => sum + val, 0) / arr.length;
-            };
-            
-            return {
-                positiveAvg: calcAverage(positiveData),
-                positiveMedian: calcMedian(positiveData),
-                negativeAvg: calcAverage(negativeData),
-                negativeMedian: calcMedian(negativeData),
-                latest: data[data.length - 1]
-            };
-        }
+                canvas.addEventListener('wheel', handleWheel, { passive: false });
+                return () => canvas.removeEventListener('wheel', handleWheel);
+            }, [allData]);
 
-        // 統計情報を更新
-        function updateStats(visibleData = null) {
-            const data = visibleData || allData;
-            if (data.length === 0) return;
-            
-            const stats = calculateStats(data);
-            
-            const statsConfig = [
-                {
-                    label: '最新週（先週）の売買状況',
-                    value: formatLargeNumber(stats.latest.balance),
-                    subtext: stats.latest.balance >= 0 ? '買い越し' : '売り越し',
-                    color: stats.latest.balance >= 0 ? 'text-blue-600' : 'text-red-500'
-                },
-                {
-                    label: '買い越し 平均',
-                    value: formatLargeNumber(stats.positiveAvg),
-                    subtext: '表示範囲内',
-                    color: 'text-blue-600'
-                },
-                {
-                    label: '買い越し 中央値',
-                    value: formatLargeNumber(stats.positiveMedian),
-                    subtext: '表示範囲内',
-                    color: 'text-blue-600'
-                },
-                {
-                    label: '売り越し 平均',
-                    value: formatLargeNumber(stats.negativeAvg),
-                    subtext: '表示範囲内',
-                    color: 'text-red-500'
-                },
-                {
-                    label: '売り越し 中央値',
-                    value: formatLargeNumber(stats.negativeMedian),
-                    subtext: '表示範囲内',
-                    color: 'text-red-500'
+            // --- Helper Functions ---
+            const formatNumber = (num) => Math.round(num).toLocaleString('ja-JP');
+            const formatLargeNumber = (value) => {
+                if (typeof value === 'number') {
+                    const sign = value >= 0 ? '+' : '';
+                    return sign + formatNumber(value) + '億円';
                 }
-            ];
-            
-            const container = document.getElementById('stats-container');
-            container.innerHTML = statsConfig.map(stat => `
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <p class="text-slate-600 text-sm font-medium mb-2">${stat.label}</p>
-                    <p class="text-3xl font-bold ${stat.color}">${stat.value}</p>
-                    <p class="text-slate-400 text-xs mt-1">${stat.subtext}</p>
-                </div>
-            `).join('');
-        }
+                return value.toString();
+            };
 
-        // 大きな数値をフォーマット（億円単位）
-        function formatLargeNumber(value) {
-            if (typeof value === 'number') {
-                const sign = value >= 0 ? '+' : '';
-                return sign + formatNumber(value) + '億円';
-            }
-            return value.toString();
-        }
+            const calculateWeekLabels = (data) => {
+                const weekCounter = {};
+                return data.map(row => {
+                    const date = new Date(row.date);
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1;
+                    const yearMonthKey = `${year}-${month}`;
+                    if (!weekCounter[yearMonthKey]) weekCounter[yearMonthKey] = 1;
+                    else weekCounter[yearMonthKey]++;
+                    const weekNum = weekCounter[yearMonthKey];
+                    return {
+                        ...row,
+                        displayDate: `${year}年${month}月${weekNum}週`,
+                        tooltipDate: `${year}年${month}月第${weekNum}週`
+                    };
+                });
+            };
 
-        // 時間範囲でフィルタリング
-        function getFilteredData() {
-            if (currentTimeRange === 'all') return allData;
-            
-            const now = new Date();
-            const cutoffDate = new Date();
-            
-            switch (currentTimeRange) {
-                case '3m':
-                    cutoffDate.setMonth(now.getMonth() - 3);
-                    break;
-                case '6m':
-                    cutoffDate.setMonth(now.getMonth() - 6);
-                    break;
-                case '1y':
-                    cutoffDate.setFullYear(now.getFullYear() - 1);
-                    break;
-                default:
-                    return allData;
-            }
-            
-            return allData.filter(item => new Date(item.date) >= cutoffDate);
-        }
+            const calculateStats = (data) => {
+                const positiveData = data.filter(item => item.balance > 0).map(item => item.balance);
+                const negativeData = data.filter(item => item.balance < 0).map(item => item.balance);
+                const calcMedian = (arr) => {
+                    if (arr.length === 0) return 0;
+                    const sorted = [...arr].sort((a, b) => a - b);
+                    const mid = Math.floor(sorted.length / 2);
+                    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+                };
+                const calcAverage = (arr) => arr.length === 0 ? 0 : arr.reduce((sum, val) => sum + val, 0) / arr.length;
+                return {
+                    positiveAvg: calcAverage(positiveData),
+                    positiveMedian: calcMedian(positiveData),
+                    negativeAvg: calcAverage(negativeData),
+                    negativeMedian: calcMedian(negativeData),
+                    latest: data[data.length - 1]
+                };
+            };
 
-        // チャートを更新
-        function updateChart() {
-            const filteredData = getFilteredData();
-            
-            document.getElementById('data-count').textContent = 
-                `(${filteredData.length}件のデータ)`;
-            
-            const ctx = document.getElementById('mainChart');
-            
-            if (chart) {
-                chart.destroy();
-            }
-            
-            const chartConfig = {
-                type: 'bar',
-                data: {
-                    datasets: [{
-                        label: '差引（億円）',
-                        data: filteredData.map((d, index) => ({
-                            x: index,
-                            y: d.balance
-                        })),
-                        backgroundColor: function(context) {
-                            if (!context.parsed || context.parsed.y === undefined) {
-                                return 'rgba(74, 134, 232, 0.7)';
-                            }
-                            const value = context.parsed.y;
-                            return value >= 0 ? 'rgba(74, 134, 232, 0.7)' : 'rgba(230, 124, 115, 0.7)';
-                        },
-                        borderColor: function(context) {
-                            if (!context.parsed || context.parsed.y === undefined) {
-                                return '#4A86E8';
-                            }
-                            const value = context.parsed.y;
-                            return value >= 0 ? '#4A86E8' : '#E67C73';
-                        },
-                        borderWidth: 1,
-                        barPercentage: 0.9,
-                        categoryPercentage: 0.9
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: 'white',
-                            titleColor: '#334155',
-                            bodyColor: '#334155',
-                            borderColor: '#e2e8f0',
+            const getFormattedReleaseDate = (lastDateStr) => {
+                try {
+                    const date = new Date(lastDateStr);
+                    if (isNaN(date.getTime())) return lastDateStr;
+                    const releaseDate = new Date(date);
+                    releaseDate.setDate(date.getDate() + 6);
+                    const y = releaseDate.getFullYear();
+                    const m = String(releaseDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(releaseDate.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}-18:00`;
+                } catch (e) {
+                    return lastDateStr;
+                }
+            };
+
+            // --- Chart Actions ---
+            const zoomChart = (direction) => {
+                if (!chartInstance.current) return;
+                chartInstance.current.zoom(direction === 'in' ? 1.2 : 0.8);
+                updateStatsFromChart();
+            };
+            const panChart = (direction) => {
+                if (!chartInstance.current) return;
+                const chart = chartInstance.current;
+                const range = chart.scales.x.max - chart.scales.x.min;
+                chart.pan({ x: direction === 'left' ? range * 0.2 : -range * 0.2 });
+                updateStatsFromChart();
+            };
+            const resetZoom = () => {
+                if (!chartInstance.current) return;
+                chartInstance.current.resetZoom();
+                updateStatsFromChart();
+            };
+
+            const updateStatsFromChart = () => {
+                if (!chartInstance.current) return;
+                const chart = chartInstance.current;
+                const xScale = chart.scales.x;
+                const filtered = getFilteredData(allData, currentTimeRange);
+                const startIndex = Math.max(0, Math.floor(xScale.min));
+                const endIndex = Math.min(filtered.length - 1, Math.ceil(xScale.max));
+                const visibleData = filtered.slice(startIndex, endIndex + 1);
+                if (visibleData.length > 0) setStats(calculateStats(visibleData));
+            };
+
+            const getFilteredData = (data, range) => {
+                if (range === 'all') return data;
+                const now = new Date();
+                const cutoffDate = new Date();
+                if (range === '3m') cutoffDate.setMonth(now.getMonth() - 3);
+                else if (range === '6m') cutoffDate.setMonth(now.getMonth() - 6);
+                else if (range === '1y') cutoffDate.setFullYear(now.getFullYear() - 1);
+                return data.filter(item => new Date(item.date) >= cutoffDate);
+            };
+
+            const drawChart = (data) => {
+                if (!chartRef.current) return;
+                const ctx = chartRef.current.getContext('2d');
+                if (chartInstance.current) chartInstance.current.destroy();
+                const config = {
+                    type: 'bar',
+                    data: {
+                        datasets: [{
+                            label: '差引（億円）',
+                            data: data.map((d, index) => ({ x: index, y: d.balance })),
+                            backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(74, 134, 232, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(74, 134, 232, 0.7)' : 'rgba(230, 124, 115, 0.7)',
+                            borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#4A86E8' : ctx.parsed.y >= 0 ? '#4A86E8' : '#E67C73',
                             borderWidth: 1,
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                                title: function(context) {
-                                    const index = Math.round(context[0].parsed.x);
-                                    if (index >= 0 && index < filteredData.length) {
-                                        return filteredData[index].tooltipDate;
-                                    }
-                                    return '';
-                                },
-                                label: function(context) {
-                                    const index = Math.round(context.parsed.x);
-                                    if (index >= 0 && index < filteredData.length) {
-                                        const value = filteredData[index].balance;
-                                        const rawValue = filteredData[index].rawBalance;
-                                        const sign = value >= 0 ? '+' : '';
-                                        return `${sign}${formatNumber(value)}億円 (${sign}${(rawValue * 1000).toLocaleString('ja-JP')}円)`;
-                                    }
-                                    return '';
-                                },
-                                afterLabel: function(context) {
-                                    const value = context.parsed.y;
-                                    return value >= 0 ? '買い越し' : '売り越し';
+                            barPercentage: 0.9,
+                            categoryPercentage: 0.9
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'white',
+                                titleColor: '#334155',
+                                bodyColor: '#334155',
+                                borderColor: '#e2e8f0',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    title: (context) => data[Math.round(context[0].parsed.x)]?.tooltipDate || '',
+                                    label: (context) => {
+                                        const index = Math.round(context.parsed.x);
+                                        if (index >= 0 && index < data.length) {
+                                            const val = data[index].balance;
+                                            const raw = data[index].rawBalance;
+                                            const sign = val >= 0 ? '+' : '';
+                                            return `${sign}${formatNumber(val)}億円 (${sign}${(raw * 1000).toLocaleString('ja-JP')}円)`;
+                                        }
+                                        return '';
+                                    },
+                                    afterLabel: (context) => context.parsed.y >= 0 ? '買い越し' : '売り越し'
                                 }
-                            }
-                        },
-                        zoom: {
-                            pan: {
-                                enabled: true,
-                                mode: 'x',
-                                threshold: 0,          // 即座に反応
-                                modifierKey: null      // 修飾キー不要
                             },
                             zoom: {
-                                wheel: {
-                                    enabled: true,
-                                    speed: 0.1
-                                },
-                                pinch: {
-                                    enabled: true
-                                },
-                                mode: 'x',
-                                onZoomComplete: function({chart}) {
-                                    const xAxis = chart.scales.x;
-                                    const startIndex = Math.max(0, Math.floor(xAxis.min));
-                                    const endIndex = Math.min(filteredData.length - 1, Math.ceil(xAxis.max));
-                                    const visibleData = filteredData.slice(startIndex, endIndex + 1);
-                                    updateStats(visibleData);
-                                }
-                            },
-                            limits: {
-                                x: {min: 'original', max: 'original'}
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            ticks: {
-                                callback: function(value, index, ticks) {
-                                    // 最大値のみに「億円」を付ける
-                                    if (index === ticks.length - 1) {
-                                        return formatNumber(value) + '億円';
-                                    }
-                                    return formatNumber(value);
-                                }
-                            },
-                            grid: {
-                                color: '#e2e8f0'
+                                pan: { enabled: true, mode: 'x', threshold: 0 },
+                                zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x', onZoomComplete: updateStatsFromChart }
                             }
                         },
-                        x: {
-                            type: 'linear',
-                            min: 0,
-                            max: filteredData.length - 1,
-                            ticks: {
-                                callback: function(value, index) {
-                                    const dataIndex = Math.round(value);
-                                    if (dataIndex >= 0 && dataIndex < filteredData.length) {
-                                        return filteredData[dataIndex].displayDate;
-                                    }
-                                    return '';
-                                },
-                                maxRotation: 45,
-                                minRotation: 45,
-                                autoSkip: true,
-                                maxTicksLimit: 20
-                            },
-                            grid: {
-                                color: '#e2e8f0'
-                            }
+                        scales: {
+                            y: { ticks: { callback: (value, index, ticks) => index === ticks.length - 1 ? formatNumber(value) + '億円' : formatNumber(value) }, grid: { color: '#e2e8f0' } },
+                            x: { type: 'linear', min: 0, max: data.length - 1, ticks: { callback: (value) => data[Math.round(value)]?.displayDate || '', maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 20 }, grid: { color: '#e2e8f0' } }
                         }
+                    }
+                };
+                chartInstance.current = new Chart(ctx, config);
+            };
+
+            useEffect(() => {
+                const loadData = async () => {
+                    try {
+                        const res = await fetch('history.csv');
+                        const text = res.ok ? await res.text() : null;
+                        if (!text) throw new Error("CSV load failed");
+                        Papa.parse(text, {
+                            header: true,
+                            dynamicTyping: true,
+                            skipEmptyLines: true,
+                            complete: (results) => {
+                                const raw = results.data.filter(r => r.date && r.balance != null).map(r => ({ date: r.date, balance: r.balance / 100000, rawBalance: r.balance })).sort((a, b) => new Date(a.date) - new Date(b.date));
+                                const processed = calculateWeekLabels(raw);
+                                setAllData(processed);
+                                if (processed.length > 0) setLastUpdate(`最終更新: ${getFormattedReleaseDate(processed[processed.length - 1].date)}`);
+                            }
+                        });
+                    } catch (e) { console.error(e); setLastUpdate("データの読み込みに失敗しました"); }
+                };
+                loadData();
+                const interval = setInterval(loadData, 5 * 60 * 1000);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                if (allData.length === 0) return;
+                const filtered = getFilteredData(allData, currentTimeRange);
+                setDataCount(filtered.length);
+                drawChart(filtered);
+                setStats(calculateStats(filtered));
+            }, [allData, currentTimeRange]);
+
+            return (
+                <div className="space-y-6">
+                    <div className="gradient-bg text-white shadow-lg rounded-xl -mx-4 md:mx-0 p-6 md:p-8 mb-8 animate-fade-in-up">
+                        <h1 className="text-3xl md:text-4xl font-bold mb-2">JPX 海外投資家動向</h1>
+                        <p className="text-blue-100 text-sm mt-2">{lastUpdate}</p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up">
+                        <h2 className="text-xl font-bold text-slate-900 mb-4">差引推移 <span className="text-sm font-normal text-slate-500 ml-2">({dataCount}件のデータ)</span></h2>
+                        <div style={{ position: 'relative', height: '500px' }}>
+                            <canvas ref={chartRef}></canvas>
+                            <div style={{ position: 'absolute', bottom: '90px', left: '80px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                                <button onClick={() => zoomChart('in')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">＋</button>
+                                <button onClick={() => zoomChart('out')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">ー</button>
+                            </div>
+                            <div style={{ position: 'absolute', bottom: '90px', right: '20px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                                <button onClick={() => panChart('left')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">← 左へ</button>
+                                <button onClick={() => panChart('right')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">右へ →</button>
+                            </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-slate-200"><p className="text-xs text-slate-500">💡 PC: ドラッグで左右移動、ホイール(縦)でズーム | スマホ: ピンチイン・アウトでズーム、スワイプで移動</p></div>
+                    </div>
+                    {stats && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up">
+                            {[
+                                { label: '最新週（先週）の売買状況', value: stats.latest.balance, color: stats.latest.balance >= 0 ? 'text-blue-600' : 'text-red-500', sub: stats.latest.balance >= 0 ? '買い越し' : '売り越し' },
+                                { label: '買い越し 平均', value: stats.positiveAvg, color: 'text-blue-600', sub: '表示範囲内' },
+                                { label: '買い越し 中央値', value: stats.positiveMedian, color: 'text-blue-600', sub: '表示範囲内' },
+                                { label: '売り越し 平均', value: stats.negativeAvg, color: 'text-red-500', sub: '表示範囲内' },
+                                { label: '売り越し 中央値', value: stats.negativeMedian, color: 'text-red-500', sub: '表示範囲内' },
+                            ].map((s, i) => (
+                                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                    <p className="text-slate-600 text-sm font-medium mb-2">{s.label}</p>
+                                    <p className={`text-3xl font-bold ${s.color}`}>{formatLargeNumber(s.value)}</p>
+                                    <p className="text-slate-400 text-xs mt-1">{s.sub}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up">
+                        <div className="flex flex-wrap gap-4 items-center">
+                            <div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{ v: 'all', l: '全期間' }, { v: '1y', l: '1年' }, { v: '6m', l: '6ヶ月' }, { v: '3m', l: '3ヶ月' }].map(opt => (<button key={opt.v} onClick={() => setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange === opt.v ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div>
+                            <button onClick={resetZoom} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">🔄 ズームリセット</button>
+                        </div>
+                    </div>
+                    <div className="mt-8 text-center text-slate-500 text-sm"><p>データソース: <a href="https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html" target="_blank" className="text-blue-600 hover:underline">日本取引所グループ (JPX)</a></p></div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        //  Option OI Logic
+        // ==========================================
+        const processOptionData = (rawRows, step = 50) => {
+            if (!rawRows || rawRows.length < 2) return { data: [], error: 'データが不足しています。' };
+            const strikeRegex = /(strike|行使価格|koushi)/i;
+            const oiRegex = /(open\s*int|oi|建玉|tategyoku)/i;
+            const parseNum = (val) => {
+                if (typeof val === 'number') return val;
+                if (!val) return 0;
+                let str = String(val).toUpperCase();
+                let multiplier = 1;
+                if (str.endsWith('K')) multiplier = 1000;
+                else if (str.endsWith('M')) multiplier = 1000000;
+                str = str.replace(/[^0-9.-]/g, '').trim(); 
+                const num = parseFloat(str);
+                return isNaN(num) ? 0 : num * multiplier;
+            };
+
+            let reshapeHeaderIndex = -1;
+            let reshapeWidth = 0;
+            const getHeaderInfo = (row) => {
+                const sRow = row.map(c => String(c).trim());
+                let sCol = -1, oiCols = [];
+                sRow.forEach((cell, i) => { if (strikeRegex.test(cell)) sCol = i; else if (oiRegex.test(cell)) oiCols.push(i); });
+                return { sCol, oiCols, colCount: row.length };
+            };
+
+            for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
+                const info = getHeaderInfo(rawRows[r]);
+                if (info.sCol !== -1 && info.oiCols.length >= 2 && info.colCount > 1) {
+                    let singleColCount = 0;
+                    for(let k=1; k<=10 && (r+k)<rawRows.length; k++) { if (rawRows[r+k].length === 1 || rawRows[r+k].length < info.colCount / 2) singleColCount++; }
+                    if (singleColCount >= 5) { reshapeHeaderIndex = r; reshapeWidth = info.colCount; break; }
+                }
+            }
+
+            if (reshapeWidth > 0 && reshapeHeaderIndex !== -1) {
+                const headerRow = rawRows[reshapeHeaderIndex];
+                const flatData = [];
+                for (let i = reshapeHeaderIndex + 1; i < rawRows.length; i++) {
+                    const row = rawRows[i];
+                    for (const cell of row) { if (cell !== null && cell !== undefined && String(cell).trim() !== '') flatData.push(cell); }
+                }
+                const newRows = [headerRow];
+                let currentChunk = [];
+                for (const cell of flatData) {
+                    currentChunk.push(cell);
+                    if (currentChunk.length === reshapeWidth) { newRows.push(currentChunk); currentChunk = []; }
+                }
+                rawRows = newRows;
+            }
+
+            let bestCandidate = { headerIndex: -1, strikeCol: -1, callCol: -1, putCol: -1, score: 0 };
+            for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
+                const row = rawRows[r].map(c => String(c).trim());
+                let sCol = -1, oiCols = [];
+                row.forEach((cell, i) => { if (strikeRegex.test(cell)) sCol = i; else if (oiRegex.test(cell)) oiCols.push(i); });
+                if (sCol !== -1 && oiCols.length >= 2) {
+                    let cCol = -1, pCol = -1;
+                    const oi1 = row[oiCols[0]].toLowerCase();
+                    const oi2 = row[oiCols[1]].toLowerCase();
+                    if (oi1.includes('call') || oi1.includes('コール')) { cCol = oiCols[0]; }
+                    if (oi1.includes('put') || oi1.includes('プット')) { pCol = oiCols[0]; }
+                    if (oi2.includes('call') || oi2.includes('コール')) { cCol = oiCols[1]; }
+                    if (oi2.includes('put') || oi2.includes('プット')) { pCol = oiCols[1]; }
+                    if (cCol === -1 || pCol === -1) { cCol = oiCols[0]; pCol = oiCols[1]; }
+                    bestCandidate = { headerIndex: r, strikeCol: sCol, callCol: cCol, putCol: pCol, score: 10 };
+                    break;
+                }
+            }
+
+            if (bestCandidate.headerIndex === -1) return { data: [], error: 'ヘッダーが見つかりませんでした。' };
+
+            const { headerIndex, strikeCol, callCol, putCol } = bestCandidate;
+            const dataMap = new Map();
+            const safeStep = step > 0 ? step : 1;
+
+            for (let i = headerIndex + 1; i < rawRows.length; i++) {
+                const row = rawRows[i];
+                if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
+                const strike = parseNum(row[strikeCol]);
+                const oi1 = parseNum(row[callCol]);
+                const oi2 = parseNum(row[putCol]);
+                if (strike > 0) {
+                    const roundedStrike = Math.round(strike / safeStep) * safeStep;
+                    if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
+                    const d = dataMap.get(roundedStrike);
+                    d.call += oi1;
+                    d.put += oi2;
+                }
+            }
+
+            const sortedData = Array.from(dataMap.entries())
+                .sort((a, b) => b[0] - a[0])
+                .map(([strike, val]) => ({ strike, diff: val.call - val.put, call: val.call, put: val.put }));
+
+            return { data: sortedData, error: sortedData.length === 0 ? "有効なデータが見つかりませんでした" : null };
+        };
+
+        const DataInput = ({ onDataParsed }) => {
+            const [text, setText] = useState('');
+            const [dragActive, setDragActive] = useState(false);
+            const handleParse = (input) => {
+                Papa.parse(input, {
+                    complete: (results) => onDataParsed(results.data),
+                    skipEmptyLines: true,
+                    header: false 
+                });
+            };
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setDragActive(false);
+                if (e.dataTransfer.files?.[0]) handleParse(e.dataTransfer.files[0]);
+            };
+            return (
+                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
+                    <div 
+                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:bg-slate-50'}`}
+                        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                        onDragLeave={() => setDragActive(false)}
+                        onDrop={handleDrop}
+                    >
+                        <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
+                        <p className="text-slate-600 font-medium">CSVファイルをドラッグ＆ドロップ</p>
+                        <p className="text-slate-400 text-sm">または</p>
+                        <input type="file" className="mt-2 text-sm text-slate-500" onChange={(e) => e.target.files?.[0] && handleParse(e.target.files[0])} />
+                    </div>
+                    <div className="flex gap-2">
+                        <textarea 
+                            className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                            rows={4}
+                            placeholder="ここにデータを貼り付け..."
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                        />
+                        <button onClick={() => handleParse(text)} disabled={!text} className="bg-slate-800 text-white px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-medium">解析</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
+            const [data, setData] = useState(initialData);
+            const [step, setStep] = useState(initialStep);
+            
+            // Recharts Controls
+            const [zoomY, setZoomY] = useState(1);
+            const [zoomX, setZoomX] = useState(1);
+            const mainRef = useRef(null);
+            const leftRef = useRef(null);
+            const bottomRef = useRef(null);
+
+            // Step変更時に再計算
+            useEffect(() => {
+                if(rawRows && step !== initialStep) {
+                    const res = processOptionData(rawRows, step);
+                    if(!res.error) {
+                        setData(res.data);
+                        onStepChange(id, step, res.data); // 親のstateも更新
+                    }
+                }
+            }, [step]);
+
+            const handleScroll = () => {
+                if (mainRef.current && leftRef.current && bottomRef.current) {
+                    leftRef.current.scrollTop = mainRef.current.scrollTop;
+                    bottomRef.current.scrollLeft = mainRef.current.scrollLeft;
+                }
+            };
+            const barHeight = 30;
+            const totalHeight = Math.max(450, data.length * barHeight * zoomY);
+            const chartWidth = `${zoomX * 100}%`;
+            const maxVal = Math.max(...data.map(d => Math.abs(d.diff)), 100);
+            
+            const handleWheel = (e, axis) => {
+                if (e.ctrlKey || axis === 'main') return; 
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                if (axis === 'y') setZoomY(z => Math.max(0.1, Math.min(5, z + delta)));
+                if (axis === 'x') setZoomX(z => Math.max(0.5, Math.min(3, z + delta)));
+            };
+
+            const CustomTooltip = ({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0].payload;
+                return (
+                    <div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50">
+                        <p className="font-bold">Strike: {label}</p>
+                        <p className={d.diff >= 0 ? 'text-blue-600' : 'text-red-500'}>Diff: {d.diff.toLocaleString()}</p>
+                        <div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden mb-6 animate-fade-in-up">
+                    <div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-500">HEIGHT</span>
+                            <button onClick={()=>setZoomY(z=>Math.max(0.1, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
+                            <input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20" />
+                            <button onClick={()=>setZoomY(z=>Math.min(5, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-500">WIDTH</span>
+                            <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
+                            <button onClick={()=>setZoomX(z=>Math.min(3, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
+                        </div>
+                        {/* 刻み幅変更入力 */}
+                        <div className="flex items-center gap-2 border-l pl-4 border-slate-200">
+                            <span className="text-xs font-bold text-slate-500">STEP</span>
+                            <input 
+                                type="number" 
+                                className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-blue-500"
+                                value={step}
+                                onChange={(e) => setStep(parseFloat(e.target.value) || 0)}
+                                min="0.1"
+                            />
+                        </div>
+                        <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-blue-600 border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
+                    </div>
+                    <div className="flex-1 flex overflow-hidden relative">
+                        <div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e, 'y')}>
+                            <div style={{height: totalHeight, width: '100%'}}>
+                                <ResponsiveContainer>
+                                    <BarChart layout="vertical" data={data} margin={{top:10, bottom:0}}>
+                                        <YAxis type="category" dataKey="strike" width={90} tick={{fontSize:12, fontWeight:600}} interval={0} />
+                                        <Bar dataKey="diff" fill="transparent" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}>
+                            <div style={{width: chartWidth, height: totalHeight, minWidth: '100%'}}>
+                                <ResponsiveContainer>
+                                    <BarChart layout="vertical" data={data} margin={{top:10, right:30, left:0, bottom:0}}>
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
+                                        <XAxis type="number" domain={[-maxVal, maxVal]} hide />
+                                        <YAxis type="category" width={0} tick={false} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{fill:'rgba(0,0,0,0.05)'}} />
+                                        <ReferenceLine x={0} stroke="#334155" />
+                                        <Bar dataKey="diff" barSize={barHeight * 0.8}>
+                                            {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#4A86E8' : '#E67C73'} />))}
+                                            <LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11, fill:'#64748b'}} />
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="h-8 border-t border-slate-200 flex shrink-0">
+                        <div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14} /></div>
+                        <div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e)=>handleWheel(e, 'x')}>
+                            <div style={{width: chartWidth, minWidth:'100%', height:'100%'}}>
+                                <ResponsiveContainer>
+                                    <BarChart layout="vertical" data={[{}]} margin={{right:30, left:0}}>
+                                        <XAxis type="number" domain={[-maxVal, maxVal]} tick={{fontSize:10}} />
+                                        <YAxis type="category" width={0} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const OptionOI = ({ charts, setCharts }) => {
+            const [ticker, setTicker] = useState('');
+            const [error, setError] = useState(null);
+
+            // 新しいデータを追加処理
+            const handleData = (rows) => {
+                const step = 50; // デフォルトStep
+                const res = processOptionData(rows, step);
+                if (res.error) {
+                    setError(res.error);
+                } else {
+                    setError(null);
+                    // 既存のチャートリストに新しいチャートを追加
+                    const newChart = {
+                        id: Date.now().toString(), // ユニークID
+                        data: res.data,
+                        step: step,
+                        rawRows: rows
+                    };
+                    setCharts([...charts, newChart]);
+                }
+            };
+
+            // チャート側でStep変更があった場合に親のStateを更新
+            const handleStepChange = (id, newStep, newData) => {
+                setCharts(charts.map(c => 
+                    c.id === id ? { ...c, step: newStep, data: newData } : c
+                ));
+            };
+
+            const handleTickerNav = () => {
+                if(!ticker) return;
+                const symbol = ticker.trim().toUpperCase();
+                window.open(`https://optioncharts.io/options/${symbol}/option-chain`, '_blank');
+            };
+
+            const links = [
+                { label: 'QQQ', url: 'https://optioncharts.io/options/QQQ/option-chain' },
+                { label: 'SPY', url: 'https://optioncharts.io/options/SPY/option-chain' },
+                { label: 'DJI', url: 'https://optioncharts.io/options/$DJX/option-chain' },
+                { label: 'IWM', url: 'https://optioncharts.io/options/IWM/option-chain' },
+                { label: 'VIX', url: 'https://optioncharts.io/options/$VIX/option-chain' },
+                { label: 'NVIDIA', url: 'https://optioncharts.io/options/NVDA/option-chain' },
+                { label: 'APPL', url: 'https://optioncharts.io/options/AAPL/option-chain' },
+                { label: 'AMZN', url: 'https://optioncharts.io/options/AMZN/option-chain' },
+                { label: 'GLD', url: 'https://optioncharts.io/options/GLD/option-chain' },
+                { label: 'SLV', url: 'https://optioncharts.io/options/SLV/option-chain' },
+            ];
+
+            return (
+                <div className="h-full flex flex-col pb-20">
+                    <div className="flex justify-between items-center mb-6">
+                        <div><h2 className="text-2xl font-bold text-slate-800">Option 分析</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
+                        {charts.length > 0 && <button onClick={() => setCharts([])} className="text-sm text-red-500 hover:underline">データをクリア</button>}
+                    </div>
+
+                    {/* チャート一覧 */}
+                    {charts.map(chart => (
+                        <OIChart 
+                            key={chart.id} 
+                            id={chart.id}
+                            initialData={chart.data} 
+                            initialStep={chart.step}
+                            rawRows={chart.rawRows}
+                            onStepChange={handleStepChange}
+                        />
+                    ))}
+
+                    {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
+
+                    {/* 入力フォーム (常に最下部に表示) */}
+                    <div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl">
+                        <p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p>
+                         <div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">
+                            {links.map(l => (
+                                <a key={l.label} href={l.url} target="_blank" className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+                                    {l.label} <Icon name="ExternalLink" size={10} />
+                                </a>
+                            ))}
+                         </div>
+                         <div className="mb-10 flex items-center gap-2">
+                            <span className="text-sm text-slate-500 font-bold">Ticker:</span>
+                            <input 
+                                type="text" 
+                                className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-blue-500"
+                                placeholder="e.g. TSLA"
+                                value={ticker}
+                                onChange={(e)=>setTicker(e.target.value)}
+                                onKeyDown={(e)=>e.key === 'Enter' && handleTickerNav()}
+                            />
+                            <button onClick={handleTickerNav} className="bg-slate-800 text-white text-xs px-3 py-1.5 rounded hover:bg-slate-700 font-medium">Go</button>
+                         </div>
+                         <DataInput onDataParsed={handleData} />
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        //  Main Layout
+        // ==========================================
+        const App = () => {
+            const [view, setView] = useState('option');
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            
+            // --- Option Charts State (Persisted in App) ---
+            const [optionCharts, setOptionCharts] = useState([]);
+
+            // --- Custom Links State ---
+            const [customLinks, setCustomLinks] = useState(() => {
+                const saved = localStorage.getItem('market-dash-links');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [isAddingLink, setIsAddingLink] = useState(false);
+            const [newLinkLabel, setNewLinkLabel] = useState('');
+            const [newLinkUrl, setNewLinkUrl] = useState('');
+            const [linkType, setLinkType] = useState('link'); // 'link' | 'divider'
+
+            const addCustomLink = () => {
+                if (linkType === 'link') {
+                    if (newLinkLabel && newLinkUrl) {
+                        let url = newLinkUrl;
+                        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                        const updated = [...customLinks, { label: newLinkLabel, url, type: 'link' }];
+                        setCustomLinks(updated);
+                        localStorage.setItem('market-dash-links', JSON.stringify(updated));
+                        setNewLinkLabel('');
+                        setNewLinkUrl('');
+                        setIsAddingLink(false);
+                    }
+                } else {
+                    // Category
+                    if (newLinkLabel) {
+                        const updated = [...customLinks, { label: newLinkLabel, url: '', type: 'divider' }];
+                        setCustomLinks(updated);
+                        localStorage.setItem('market-dash-links', JSON.stringify(updated));
+                        setNewLinkLabel('');
+                        setNewLinkUrl('');
+                        setIsAddingLink(false);
                     }
                 }
             };
-            
-            chart = new Chart(ctx, chartConfig);
-            
-            // 初期統計を更新
-            updateStats(filteredData);
-        }
 
-        // ズームリセット
-        function resetZoom() {
-            if (chart) {
-                chart.resetZoom();
-                const filteredData = getFilteredData();
-                updateStats(filteredData);
-            }
-        }
+            const removeCustomLink = (index) => {
+                const updated = customLinks.filter((_, i) => i !== index);
+                setCustomLinks(updated);
+                localStorage.setItem('market-dash-links', JSON.stringify(updated));
+            };
 
-        // チャートを拡大・縮小
-        function zoomChart(direction) {
-            if (!chart) return;
-            
-            const zoomFactor = direction === 'in' ? 1.2 : 0.8;
-            
-            chart.zoom(zoomFactor);
-            
-            // 統計を更新
-            const filteredData = getFilteredData();
-            const xScale = chart.scales.x;
-            const startIndex = Math.max(0, Math.floor(xScale.min));
-            const endIndex = Math.min(filteredData.length - 1, Math.ceil(xScale.max));
-            const visibleData = filteredData.slice(startIndex, endIndex + 1);
-            updateStats(visibleData);
-        }
+            // --- Drag & Drop for Quick Links ---
+            const [draggedIndex, setDraggedIndex] = useState(null);
 
-        // チャートを左右に移動
-        function panChart(direction) {
-            if (!chart) return;
-            
-            const xScale = chart.scales.x;
-            const range = xScale.max - xScale.min;
-            const shift = range * 0.2; // 20%移動
-            
-            if (direction === 'left') {
-                chart.pan({ x: shift }, undefined, 'default');
-            } else if (direction === 'right') {
-                chart.pan({ x: -shift }, undefined, 'default');
-            }
-            
-            // 統計を更新
-            const filteredData = getFilteredData();
-            const startIndex = Math.max(0, Math.floor(xScale.min));
-            const endIndex = Math.min(filteredData.length - 1, Math.ceil(xScale.max));
-            const visibleData = filteredData.slice(startIndex, endIndex + 1);
-            updateStats(visibleData);
-        }
+            const handleDragStart = (e, index) => {
+                setDraggedIndex(index);
+                e.dataTransfer.effectAllowed = 'move';
+            };
 
-        // コントロールボタンを初期化
-        function initControls() {
-            // 期間選択ボタン
-            const timeRanges = [
-                { value: 'all', label: '全期間' },
-                { value: '1y', label: '1年' },
-                { value: '6m', label: '6ヶ月' },
-                { value: '3m', label: '3ヶ月' }
-            ];
-            
-            document.getElementById('time-range-buttons').innerHTML = timeRanges.map(option => `
-                <button 
-                    onclick="setTimeRange('${option.value}')"
-                    class="px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        currentTimeRange === option.value
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }"
-                >
-                    ${option.label}
+            const handleDragOver = (e, index) => {
+                e.preventDefault();
+                if (draggedIndex === null || draggedIndex === index) return;
+                
+                const newLinks = [...customLinks];
+                const [removed] = newLinks.splice(draggedIndex, 1);
+                newLinks.splice(index, 0, removed);
+                
+                setCustomLinks(newLinks);
+                setDraggedIndex(index);
+            };
+
+            const handleDragEnd = () => {
+                setDraggedIndex(null);
+                localStorage.setItem('market-dash-links', JSON.stringify(customLinks));
+            };
+
+            const NavItem = ({ id, label, icon }) => (
+                <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === id ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-100'}`}>
+                    <Icon name={icon} /><span className="font-medium">{label}</span>
                 </button>
-            `).join('');
-        }
+            );
 
-        // 期間変更
-        function setTimeRange(range) {
-            currentTimeRange = range;
-            updateChart();
-            initControls();
-        }
+            return (
+                <div className="flex h-screen overflow-hidden">
+                    <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-xl lg:shadow-none flex flex-col`}>
+                        <div className="h-6"></div>
+                        
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 flex flex-col relative">
+                            <div className="text-xs font-bold text-slate-400 px-2 mb-2">MENU</div>
+                            <NavItem id="option" label="Option 分析" icon="BarChart3" />
+                            <NavItem id="jpx" label="JPX 海外投資家動向" icon="LineChart" />
+                            
+                            <div className="flex-1 min-h-[20px]"></div>
 
-        // 初期ロード
-        window.addEventListener('DOMContentLoaded', loadData);
-        
-        // 5分ごとに自動更新
-        setInterval(loadData, 5 * 60 * 1000);
+                            {/* Reorderable Quick Links */}
+                            {customLinks.length > 0 && (
+                                <div className="space-y-1 mb-4 pb-12">
+                                    <div className="text-xs font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>
+                                    <div className="flex flex-col gap-1">
+                                        {customLinks.map((link, i) => {
+                                            const isDivider = link.type === 'divider';
+                                            return (
+                                                <div 
+                                                    key={i} 
+                                                    draggable
+                                                    onDragStart={(e) => handleDragStart(e, i)}
+                                                    onDragOver={(e) => handleDragOver(e, i)}
+                                                    onDragEnd={handleDragEnd}
+                                                    className={`group flex items-center gap-2 px-3 py-1 rounded-lg transition-colors cursor-move ${draggedIndex === i ? 'dragging' : ''} ${isDivider ? 'mt-2 mb-1' : 'hover:bg-slate-100'}`}
+                                                >
+                                                    <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing">
+                                                        <Icon name="GripVertical" size={14} />
+                                                    </div>
+                                                    
+                                                    {isDivider ? (
+                                                        <div className="flex-1 flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider overflow-hidden">
+                                                            <Icon name="FolderOpen" size={12} />
+                                                            <span className="truncate">{link.label}</span>
+                                                            <div className="flex-1 h-px bg-slate-200 ml-2"></div>
+                                                        </div>
+                                                    ) : (
+                                                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto">
+                                                            <Icon name="ExternalLink" size={14} className="shrink-0" />
+                                                            <span className="truncate">{link.label}</span>
+                                                        </a>
+                                                    )}
+
+                                                    <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity">
+                                                        <Icon name="Trash2" size={12} />
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">
+                                {!isAddingLink ? (
+                                    <button 
+                                        onClick={() => setIsAddingLink(true)}
+                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-md transition-all duration-200"
+                                        title="リンクを追加"
+                                    >
+                                        <Icon name="Plus" size={20} />
+                                    </button>
+                                ) : (
+                                    <div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <p className="text-xs font-bold text-slate-500 uppercase">Add Item</p>
+                                            <button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14}/></button>
+                                        </div>
+                                        
+                                        {/* Type Toggle */}
+                                        <div className="flex bg-slate-100 p-1 rounded-lg mb-3">
+                                            <button 
+                                                onClick={() => setLinkType('link')}
+                                                className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                LINK
+                                            </button>
+                                            <button 
+                                                onClick={() => setLinkType('divider')}
+                                                className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                CATEGORY
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Name" 
+                                                autoFocus
+                                                className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+                                                value={newLinkLabel}
+                                                onChange={(e) => setNewLinkLabel(e.target.value)}
+                                            />
+                                            {linkType === 'link' && (
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="URL" 
+                                                    className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+                                                    value={newLinkUrl}
+                                                    onChange={(e) => setNewLinkUrl(e.target.value)}
+                                                />
+                                            )}
+                                            <button 
+                                                onClick={addCustomLink}
+                                                disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)}
+                                                className="w-full bg-slate-800 text-white text-xs py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-bold transition-colors"
+                                            >
+                                                追加
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </aside>
+
+                    {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+                    
+                    <div className="flex-1 flex flex-col min-w-0">
+                        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
+                            <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
+                            <span className="ml-4 font-bold text-slate-700">{view === 'option' ? 'Option 分析' : 'JPX 海外投資家動向'}</span>
+                        </header>
+                        <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50">
+                            <div className="max-w-7xl mx-auto h-full">
+                                {view === 'jpx' ? <ForeignInvestors /> : <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
+                            </div>
+                        </main>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
