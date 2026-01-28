@@ -497,9 +497,9 @@
         };
 
         // ==========================================
-        //  Option OI Components (Preserved)
+        //  Option OI Components (Updated for Step)
         // ==========================================
-        const processOptionData = (rawRows) => {
+        const processOptionData = (rawRows, step = 50) => {
             if (!rawRows || rawRows.length < 2) return { data: [], error: 'データが不足しています。' };
             const strikeRegex = /(strike|行使価格|koushi)/i;
             const oiRegex = /(open\s*int|oi|建玉|tategyoku)/i;
@@ -590,6 +590,8 @@
 
             const { headerIndex, strikeCol, callCol, putCol } = bestCandidate;
             const dataMap = new Map();
+            const safeStep = step > 0 ? step : 1; // Prevent division by zero
+
             for (let i = headerIndex + 1; i < rawRows.length; i++) {
                 const row = rawRows[i];
                 if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
@@ -597,8 +599,8 @@
                 const oi1 = parseNum(row[callCol]);
                 const oi2 = parseNum(row[putCol]);
                 if (strike > 0) {
-                    // ここを変更: 10刻み -> 50刻み
-                    const roundedStrike = Math.round(strike / 50) * 50;
+                    // ここを変更: stepによる動的刻み
+                    const roundedStrike = Math.round(strike / safeStep) * safeStep;
                     if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
                     const d = dataMap.get(roundedStrike);
                     d.call += oi1;
@@ -655,7 +657,7 @@
             );
         };
 
-        const OIChart = ({ data }) => {
+        const OIChart = ({ data, step, setStep }) => {
             const [zoomY, setZoomY] = useState(1);
             const [zoomX, setZoomX] = useState(1);
             const mainRef = useRef(null);
@@ -702,6 +704,17 @@
                             <span className="text-xs font-bold text-slate-500">WIDTH</span>
                             <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
                             <button onClick={()=>setZoomX(z=>Math.min(3, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
+                        </div>
+                        {/* 刻み幅変更入力 */}
+                        <div className="flex items-center gap-2 border-l pl-4 border-slate-200">
+                            <span className="text-xs font-bold text-slate-500">STEP</span>
+                            <input 
+                                type="number" 
+                                className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-blue-500"
+                                value={step}
+                                onChange={(e) => setStep(parseFloat(e.target.value) || 0)}
+                                min="0.1"
+                            />
                         </div>
                         <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-blue-600 border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
                     </div>
@@ -756,13 +769,28 @@
             const [hasData, setHasData] = useState(false);
             const [error, setError] = useState(null);
             
-            // --- ティッカー入力用 State ---
+            // --- State ---
             const [ticker, setTicker] = useState('');
+            const [rawRows, setRawRows] = useState(null); // 生データを保存してStep変更時に再計算
+            const [step, setStep] = useState(50); // デフォルト50
+
+            // 生データまたはStepが変更されたら再計算
+            useEffect(() => {
+                if (rawRows) {
+                    const res = processOptionData(rawRows, step);
+                    if (res.error) {
+                        setError(res.error);
+                        setData([]);
+                    } else {
+                        setData(res.data);
+                        setError(null);
+                    }
+                }
+            }, [rawRows, step]);
 
             const handleData = (rows) => {
-                const res = processOptionData(rows);
-                if (res.error) setError(res.error);
-                else { setData(res.data); setHasData(true); setError(null); }
+                setRawRows(rows);
+                setHasData(true);
             };
 
             // --- 遷移ハンドラ ---
@@ -790,7 +818,7 @@
                 <div className="h-full flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <div><h2 className="text-2xl font-bold text-slate-800">Option 分析</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
-                        {hasData && <button onClick={()=>setHasData(false)} className="text-sm text-red-500 hover:underline">データをクリア</button>}
+                        {hasData && <button onClick={()=>{setHasData(false); setRawRows(null); setData([]);}} className="text-sm text-red-500 hover:underline">データをクリア</button>}
                     </div>
                     {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
                     {!hasData ? (
@@ -820,7 +848,7 @@
 
                              <DataInput onDataParsed={handleData} />
                         </div>
-                    ) : (<OIChart data={data} />)}
+                    ) : (<OIChart data={data} step={step} setStep={setStep} />)}
                 </div>
             );
         };
@@ -829,7 +857,8 @@
         //  Main Layout
         // ==========================================
         const App = () => {
-            const [view, setView] = useState('jpx');
+            // 初期ビューを 'option' に変更
+            const [view, setView] = useState('option');
             const [sidebarOpen, setSidebarOpen] = useState(false);
             
             // --- カスタムリンクの状態管理 ---
@@ -874,8 +903,9 @@
                         
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 flex flex-col relative">
                             <div className="text-xs font-bold text-slate-400 px-2 mb-2">MENU</div>
-                            <NavItem id="jpx" label="JPX 海外投資家動向" icon="LineChart" />
+                            {/* メニュー順序変更: Optionを上に */}
                             <NavItem id="option" label="Option 分析" icon="BarChart3" />
+                            <NavItem id="jpx" label="JPX 海外投資家動向" icon="LineChart" />
                             
                             {/* スペーサー */}
                             <div className="flex-1 min-h-[20px]"></div>
@@ -951,7 +981,8 @@
                     <div className="flex-1 flex flex-col min-w-0">
                         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
                             <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
-                            <span className="ml-4 font-bold text-slate-700">{view === 'jpx' ? 'JPX 海外投資家動向' : 'Option 分析'}</span>
+                            {/* タイトル表示ロジックもメニューに合わせる */}
+                            <span className="ml-4 font-bold text-slate-700">{view === 'option' ? 'Option 分析' : 'JPX 海外投資家動向'}</span>
                         </header>
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50">
                             <div className="max-w-7xl mx-auto h-full">
