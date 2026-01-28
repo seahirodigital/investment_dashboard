@@ -755,11 +755,37 @@
             const [data, setData] = useState([]);
             const [hasData, setHasData] = useState(false);
             const [error, setError] = useState(null);
+            
+            // --- ティッカー入力用 State ---
+            const [ticker, setTicker] = useState('');
+
             const handleData = (rows) => {
                 const res = processOptionData(rows);
                 if (res.error) setError(res.error);
                 else { setData(res.data); setHasData(true); setError(null); }
             };
+
+            // --- 遷移ハンドラ ---
+            const handleTickerNav = () => {
+                if(!ticker) return;
+                const symbol = ticker.trim().toUpperCase();
+                window.open(`https://optioncharts.io/options/${symbol}/option-chain`, '_blank');
+            };
+
+            // --- 固定リンク一覧 ---
+            const links = [
+                { label: 'QQQ', url: 'https://optioncharts.io/options/QQQ/option-chain' },
+                { label: 'SPY', url: 'https://optioncharts.io/options/SPY/option-chain' },
+                { label: 'DJI', url: 'https://optioncharts.io/options/$DJX/option-chain' },
+                { label: 'IWM', url: 'https://optioncharts.io/options/IWM/option-chain' },
+                { label: 'VIX', url: 'https://optioncharts.io/options/$VIX/option-chain' },
+                { label: 'NVIDIA', url: 'https://optioncharts.io/options/NVDA/option-chain' },
+                { label: 'APPL', url: 'https://optioncharts.io/options/AAPL/option-chain' },
+                { label: 'AMZN', url: 'https://optioncharts.io/options/AMZN/option-chain' },
+                { label: 'GLD', url: 'https://optioncharts.io/options/GLD/option-chain' },
+                { label: 'SLV', url: 'https://optioncharts.io/options/SLV/option-chain' },
+            ];
+
             return (
                 <div className="h-full flex flex-col">
                     <div className="flex justify-between items-center mb-6">
@@ -769,7 +795,29 @@
                     {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
                     {!hasData ? (
                         <div className="flex flex-col items-center justify-center py-12">
-                             <a href="https://optioncharts.io/options/$SPX/option-chain" target="_blank" className="mb-8 text-blue-600 flex items-center gap-1 hover:underline text-sm"><Icon name="ExternalLink" size={14}/> ソース例: optioncharts.io</a>
+                             {/* 固定リンク群 */}
+                             <div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">
+                                {links.map(l => (
+                                    <a key={l.label} href={l.url} target="_blank" className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+                                        {l.label} <Icon name="ExternalLink" size={10} />
+                                    </a>
+                                ))}
+                             </div>
+
+                             {/* ティッカー入力フォーム */}
+                             <div className="mb-10 flex items-center gap-2">
+                                <span className="text-sm text-slate-500 font-bold">Ticker:</span>
+                                <input 
+                                    type="text" 
+                                    className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-blue-500"
+                                    placeholder="e.g. TSLA"
+                                    value={ticker}
+                                    onChange={(e)=>setTicker(e.target.value)}
+                                    onKeyDown={(e)=>e.key === 'Enter' && handleTickerNav()}
+                                />
+                                <button onClick={handleTickerNav} className="bg-slate-800 text-white text-xs px-3 py-1.5 rounded hover:bg-slate-700 font-medium">Go</button>
+                             </div>
+
                              <DataInput onDataParsed={handleData} />
                         </div>
                     ) : (<OIChart data={data} />)}
