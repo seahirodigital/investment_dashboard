@@ -8,13 +8,13 @@
     <!-- デザイン・スタイル (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React本体 (UIを作るためのライブラリ) -->
+    <!-- React本体 -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- JSXをブラウザで動かすための変換ツール (Babel) -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
+    <!-- Rechartsが依存するProp-types (エラー解消のため必須) -->
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    
     <!-- グラフ描画ライブラリ (Recharts) -->
     <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
 
@@ -30,8 +30,10 @@
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
 
+    <!-- JSX変換ツール (Babel) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
-        /* スクロールバーのカスタマイズ */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
@@ -44,9 +46,9 @@
     "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
     "react/": "https://esm.sh/react@^19.2.4/",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
     "papaparse": "https://esm.sh/papaparse@^5.5.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0"
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "recharts": "https://esm.sh/recharts@^3.7.0"
   }
 }
 </script>
@@ -54,19 +56,14 @@
 <body>
     <div id="root"></div>
 
-    <!-- アプリケーションのロジック -->
     <script type="text/babel">
-        // --- ライブラリの準備 ---
+        // --- 1. グローバル変数の準備 ---
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList } = Recharts;
-        
-        // --- アイコン表示用コンポーネント ---
+
+        // --- 2. アイコンコンポーネント ---
         const Icon = ({ name, size = 20, className = "" }) => {
-            const lucide = window.lucide;
-            if (!lucide) return null;
-            
-            // LucideのcreateIconsを使ってSVGを生成するのはReact内では難しいので、
-            // 簡易的に主要なアイコンをSVGとして埋め込みます
+            // SVG定義 (LucideのUMD版はReactコンポーネントではないため、SVGを直接埋め込みます)
             const icons = {
                 Menu: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg>,
                 X: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
@@ -85,7 +82,7 @@
             return icons[name] || null;
         };
 
-        // --- データ解析ロジック (Analysis Logic) ---
+        // --- 3. データ解析ロジック ---
         const processOptionData = (rawRows) => {
             if (!rawRows || rawRows.length < 2) {
                 return { data: [], error: 'データが不足しています。' };
@@ -106,7 +103,60 @@
                 return isNaN(num) ? 0 : num * multiplier;
             };
 
-            // ヘッダー行を探す
+            // 縦持ちデータの整形ロジック (簡易版)
+            let reshapeHeaderIndex = -1;
+            let reshapeWidth = 0;
+
+            const getHeaderInfo = (row) => {
+                const sRow = row.map(c => String(c).trim());
+                let sCol = -1, oiCols = [];
+                sRow.forEach((cell, i) => {
+                    if (strikeRegex.test(cell)) sCol = i;
+                    else if (oiRegex.test(cell)) oiCols.push(i);
+                });
+                return { sCol, oiCols, colCount: row.length };
+            };
+
+            for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
+                const info = getHeaderInfo(rawRows[r]);
+                if (info.sCol !== -1 && info.oiCols.length >= 2 && info.colCount > 1) {
+                    // データが縦に細切れになっているかチェック
+                    let singleColCount = 0;
+                    const checkCount = 10;
+                    for(let k=1; k<=checkCount && (r+k)<rawRows.length; k++) {
+                        if (rawRows[r+k].length === 1 || rawRows[r+k].length < info.colCount / 2) singleColCount++;
+                    }
+                    if (singleColCount >= 5) {
+                        reshapeHeaderIndex = r;
+                        reshapeWidth = info.colCount;
+                        break;
+                    }
+                }
+            }
+
+            // 整形実行
+            if (reshapeWidth > 0 && reshapeHeaderIndex !== -1) {
+                const headerRow = rawRows[reshapeHeaderIndex];
+                const flatData = [];
+                for (let i = reshapeHeaderIndex + 1; i < rawRows.length; i++) {
+                    const row = rawRows[i];
+                    for (const cell of row) {
+                        if (cell !== null && cell !== undefined && String(cell).trim() !== '') flatData.push(cell);
+                    }
+                }
+                const newRows = [headerRow];
+                let currentChunk = [];
+                for (const cell of flatData) {
+                    currentChunk.push(cell);
+                    if (currentChunk.length === reshapeWidth) {
+                        newRows.push(currentChunk);
+                        currentChunk = [];
+                    }
+                }
+                rawRows = newRows;
+            }
+
+            // ヘッダー行を探す（再スキャン）
             let bestCandidate = { headerIndex: -1, strikeCol: -1, callCol: -1, putCol: -1, score: 0 };
             
             for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
@@ -118,10 +168,19 @@
                 });
 
                 if (sCol !== -1 && oiCols.length >= 2) {
-                    let cCol = oiCols[0], pCol = oiCols[1];
-                    // Call/Putの判定ロジック（簡易版）
-                    if (/put|プット/i.test(row[oiCols[0]])) { pCol = oiCols[0]; cCol = oiCols[1]; }
-                    else if (/put|プット/i.test(row[oiCols[1]])) { pCol = oiCols[1]; cCol = oiCols[0]; }
+                    let cCol = -1, pCol = -1;
+                    const oi1 = row[oiCols[0]].toLowerCase();
+                    const oi2 = row[oiCols[1]].toLowerCase();
+
+                    if (oi1.includes('call') || oi1.includes('コール')) { cCol = oiCols[0]; }
+                    if (oi1.includes('put') || oi1.includes('プット')) { pCol = oiCols[0]; }
+                    if (oi2.includes('call') || oi2.includes('コール')) { cCol = oiCols[1]; }
+                    if (oi2.includes('put') || oi2.includes('プット')) { pCol = oiCols[1]; }
+
+                    if (cCol === -1 || pCol === -1) {
+                         // Fallback: Left is Call, Right is Put
+                        cCol = oiCols[0]; pCol = oiCols[1];
+                    }
                     
                     bestCandidate = { headerIndex: r, strikeCol: sCol, callCol: cCol, putCol: pCol, score: 10 };
                     break;
@@ -129,9 +188,7 @@
             }
 
             if (bestCandidate.headerIndex === -1) {
-                // ヘッダーが見つからない場合、1行目をヘッダーと仮定して、
-                // 1列目=Strike, 2列目=Call, 3列目=Put という簡易ルールを適用
-                bestCandidate = { headerIndex: -1, strikeCol: 0, callCol: 1, putCol: 2, score: 5 };
+                return { data: [], error: 'ヘッダーが見つかりませんでした。「Strike」「Open Interest」等の列が必要です。' };
             }
 
             const { headerIndex, strikeCol, callCol, putCol } = bestCandidate;
@@ -139,7 +196,7 @@
 
             for (let i = headerIndex + 1; i < rawRows.length; i++) {
                 const row = rawRows[i];
-                if (!row || row.length < 2) continue;
+                if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
 
                 const strike = parseNum(row[strikeCol]);
                 const oi1 = parseNum(row[callCol]);
@@ -149,7 +206,6 @@
                     const roundedStrike = Math.round(strike / 10) * 10;
                     if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
                     const d = dataMap.get(roundedStrike);
-                    // 列の左右どちらがCall/Putか不明な場合のフォールバックは省略（左=Call, 右=Putと仮定）
                     d.call += oi1;
                     d.put += oi2;
                 }
@@ -168,7 +224,7 @@
         };
 
 
-        // --- コンポーネント: データ入力 (DataInput) ---
+        // --- 4. データ入力コンポーネント ---
         const DataInput = ({ onDataParsed }) => {
             const [text, setText] = useState('');
             const [dragActive, setDragActive] = useState(false);
@@ -223,7 +279,7 @@
             );
         };
 
-        // --- コンポーネント: チャート (OIChart) ---
+        // --- 5. チャートコンポーネント (OIChart) ---
         const OIChart = ({ data }) => {
             const [zoomY, setZoomY] = useState(1);
             const [zoomX, setZoomX] = useState(1);
@@ -247,7 +303,7 @@
 
             // マウスホイール操作のハンドリング
             const handleWheel = (e, axis) => {
-                if (e.ctrlKey || axis === 'main') return; // メインエリアのデフォルトスクロールはCtrlなしで許可
+                if (e.ctrlKey || axis === 'main') return; 
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? -0.1 : 0.1;
                 if (axis === 'y') setZoomY(z => Math.max(0.1, Math.min(5, z + delta)));
@@ -271,20 +327,20 @@
             return (
                 <div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden">
                     {/* Toolbar */}
-                    <div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0">
+                    <div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap">
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-500">HEIGHT</span>
                             <button onClick={()=>setZoomY(z=>Math.max(0.1, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
                             <input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20" />
                             <button onClick={()=>setZoomY(z=>Math.min(5, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
                         </div>
-                        <div className="h-4 w-px bg-slate-300"></div>
+                        <div className="h-4 w-px bg-slate-300 hidden md:block"></div>
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-500">WIDTH</span>
                             <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
                             <button onClick={()=>setZoomX(z=>Math.min(3, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
                         </div>
-                        <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-blue-600"><Icon name="RotateCcw" size={14}/> Reset</button>
+                        <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-blue-600 border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
                     </div>
 
                     {/* Chart Grid */}
@@ -351,7 +407,7 @@
             );
         };
 
-        // --- コンポーネント: Option OI Main ---
+        // --- 6. Option OI コンテナ ---
         const OptionOI = () => {
             const [data, setData] = useState([]);
             const [hasData, setHasData] = useState(false);
@@ -394,7 +450,7 @@
             );
         };
 
-        // --- コンポーネント: JPX 海外投資家動向 (Legacy Code Wrapped) ---
+        // --- 7. JPX 海外投資家動向 (Legacy Code Wrapped) ---
         const ForeignInvestors = () => {
             const chartRef = useRef(null);
             const chartInst = useRef(null);
@@ -483,7 +539,7 @@
             );
         };
 
-        // --- メインアプリ (Layout) ---
+        // --- 8. メインアプリ (App) ---
         const App = () => {
             const [view, setView] = useState('jpx');
             const [sidebarOpen, setSidebarOpen] = useState(false);
