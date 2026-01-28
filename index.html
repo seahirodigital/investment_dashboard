@@ -1,5 +1,3 @@
---- START OF FILE text/plain ---
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -42,7 +40,6 @@
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; }
 
-        /* 元のHTMLから引き継いだスタイル */
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -90,13 +87,14 @@
                 MousePointer2: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 6-8 13 4.5-1.5 3 7 3-7 4.5 1.5L12 6Z"/><path d="m6 13 6-3 6 3"/></svg>,
                 Plus: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
                 Trash2: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
-                Link: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Link: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+                X: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             };
             return icons[name] || null;
         };
 
         // ==========================================
-        //  JPX Chart Component (Original Logic)
+        //  JPX Chart Component
         // ==========================================
         const ForeignInvestors = () => {
             const chartRef = useRef(null);
@@ -106,7 +104,7 @@
             const [currentTimeRange, setCurrentTimeRange] = useState('all');
             const [stats, setStats] = useState(null);
             const [dataCount, setDataCount] = useState(0);
-            const [lastUpdate, setLastUpdate] = useState('読み込み中...');
+            const [lastUpdate, setLastUpdate] = useState('データ取得中...');
 
             // --- 縦ホイールのみ有効にする処理 ---
             useEffect(() => {
@@ -114,7 +112,7 @@
                 if (!canvas) return;
 
                 const handleWheel = (e) => {
-                    // 横ホイール（deltaXの絶対値がdeltaYより大きい場合）の入力を無視
+                    // 横ホイールの誤動作防止
                     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
                         e.preventDefault();
                     }
@@ -124,7 +122,7 @@
                 return () => canvas.removeEventListener('wheel', handleWheel);
             }, [allData]);
 
-            // --- Original Helper Functions ---
+            // --- Helper Functions ---
             const formatNumber = (num) => Math.round(num).toLocaleString('ja-JP');
             
             const formatLargeNumber = (value) => {
@@ -182,6 +180,26 @@
                     negativeMedian: calcMedian(negativeData),
                     latest: data[data.length - 1]
                 };
+            };
+
+            const getFormattedReleaseDate = (lastDateStr) => {
+                // CSVの日付（金曜日）から、発表日（翌週木曜日）を計算する
+                try {
+                    const date = new Date(lastDateStr);
+                    if (isNaN(date.getTime())) return lastDateStr;
+
+                    // +6日して木曜日とする (金曜前提)
+                    const releaseDate = new Date(date);
+                    releaseDate.setDate(date.getDate() + 6);
+
+                    const y = releaseDate.getFullYear();
+                    const m = String(releaseDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(releaseDate.getDate()).padStart(2, '0');
+                    
+                    return `${y}-${m}-${d}-18:00`;
+                } catch (e) {
+                    return lastDateStr;
+                }
             };
 
             // --- Chart Actions ---
@@ -364,13 +382,13 @@
                                 
                                 if (processed.length > 0) {
                                     const last = processed[processed.length - 1];
-                                    setLastUpdate(`最終更新: ${last.date}`);
+                                    const releaseStr = getFormattedReleaseDate(last.date);
+                                    setLastUpdate(`最終更新: ${releaseStr}`);
                                 }
                             }
                         });
                     } catch (e) {
                         console.error(e);
-                        // Mock data fallback if needed, or just show error
                         setLastUpdate("データの読み込みに失敗しました");
                     }
                 };
@@ -390,11 +408,10 @@
 
             return (
                 <div className="space-y-6">
-                    {/* Header (Replicating original gradient header) */}
+                    {/* Header */}
                     <div className="gradient-bg text-white shadow-lg rounded-xl -mx-4 md:mx-0 p-6 md:p-8 mb-8 animate-fade-in-up">
                         <h1 className="text-3xl md:text-4xl font-bold mb-2">JPX 海外投資家動向</h1>
-                        <p className="text-blue-100 text-lg">Foreign Investors Balance Tracker</p>
-                        <p className="text-blue-200 text-sm mt-2">{lastUpdate}</p>
+                        <p className="text-blue-100 text-sm mt-2">{lastUpdate}</p>
                     </div>
 
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up">
@@ -474,7 +491,6 @@
 
                     <div className="mt-8 text-center text-slate-500 text-sm">
                         <p>データソース: <a href="https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html" target="_blank" className="text-blue-600 hover:underline">日本取引所グループ (JPX)</a></p>
-                        <p className="mt-1">自動更新: 毎週木曜日 18:00 (JST)</p>
                     </div>
                 </div>
             );
@@ -772,6 +788,7 @@
                 const saved = localStorage.getItem('market-dash-links');
                 return saved ? JSON.parse(saved) : [];
             });
+            const [isAddingLink, setIsAddingLink] = useState(false);
             const [newLinkLabel, setNewLinkLabel] = useState('');
             const [newLinkUrl, setNewLinkUrl] = useState('');
 
@@ -784,6 +801,7 @@
                     localStorage.setItem('market-dash-links', JSON.stringify(updated));
                     setNewLinkLabel('');
                     setNewLinkUrl('');
+                    setIsAddingLink(false);
                 }
             };
 
@@ -802,12 +820,10 @@
             return (
                 <div className="flex h-screen overflow-hidden">
                     <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-xl lg:shadow-none flex flex-col`}>
-                        <div className="h-16 flex items-center px-6 border-b border-slate-100 shrink-0">
-                            <div className="bg-slate-900 text-white p-1.5 rounded mr-3"><Icon name="LayoutDashboard" size={20} /></div>
-                            <h1 className="font-bold text-slate-800">Market Dash</h1>
-                        </div>
+                        {/* シンプルな上部スペース (ロゴ削除) */}
+                        <div className="h-6"></div>
                         
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 flex flex-col">
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 flex flex-col relative">
                             <div className="text-xs font-bold text-slate-400 px-2 mb-2">MENU</div>
                             <NavItem id="jpx" label="海外投資家動向" icon="LineChart" />
                             <NavItem id="option" label="Option OI" icon="BarChart3" />
@@ -817,7 +833,7 @@
 
                             {/* カスタムリンク一覧 (下から積み上げ) */}
                             {customLinks.length > 0 && (
-                                <div className="space-y-1 mb-4">
+                                <div className="space-y-1 mb-4 pb-12">
                                     <div className="text-xs font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>
                                     <div className="flex flex-col-reverse gap-1">
                                         {customLinks.map((link, i) => (
@@ -835,32 +851,48 @@
                                 </div>
                             )}
 
-                            {/* リンク追加UI */}
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                                <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase">Add Link</p>
-                                <div className="space-y-2">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Name" 
-                                        className="w-full text-xs p-2 border border-slate-200 rounded-md outline-none focus:ring-1 focus:ring-blue-500" 
-                                        value={newLinkLabel}
-                                        onChange={(e) => setNewLinkLabel(e.target.value)}
-                                    />
-                                    <input 
-                                        type="text" 
-                                        placeholder="URL" 
-                                        className="w-full text-xs p-2 border border-slate-200 rounded-md outline-none focus:ring-1 focus:ring-blue-500" 
-                                        value={newLinkUrl}
-                                        onChange={(e) => setNewLinkUrl(e.target.value)}
-                                    />
+                            {/* リンク追加UI (最下部固定風) */}
+                            <div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">
+                                {!isAddingLink ? (
                                     <button 
-                                        onClick={addCustomLink}
-                                        disabled={!newLinkLabel || !newLinkUrl}
-                                        className="w-full bg-slate-800 text-white text-xs py-2 rounded-md hover:bg-slate-700 disabled:opacity-50 flex items-center justify-center gap-1 font-bold"
+                                        onClick={() => setIsAddingLink(true)}
+                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-md transition-all duration-200"
+                                        title="リンクを追加"
                                     >
-                                        <Icon name="Plus" size={12} /> 追加
+                                        <Icon name="Plus" size={20} />
                                     </button>
-                                </div>
+                                ) : (
+                                    <div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <p className="text-xs font-bold text-slate-500 uppercase">Add Link</p>
+                                            <button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14}/></button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Name" 
+                                                autoFocus
+                                                className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+                                                value={newLinkLabel}
+                                                onChange={(e) => setNewLinkLabel(e.target.value)}
+                                            />
+                                            <input 
+                                                type="text" 
+                                                placeholder="URL" 
+                                                className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+                                                value={newLinkUrl}
+                                                onChange={(e) => setNewLinkUrl(e.target.value)}
+                                            />
+                                            <button 
+                                                onClick={addCustomLink}
+                                                disabled={!newLinkLabel || !newLinkUrl}
+                                                className="w-full bg-slate-800 text-white text-xs py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-bold transition-colors"
+                                            >
+                                                追加
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </aside>
