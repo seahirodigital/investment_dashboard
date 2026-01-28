@@ -12,10 +12,10 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Rechartsが依存するProp-types (エラー解消のため必須) -->
+    <!-- Recharts依存 -->
     <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
     
-    <!-- グラフ描画ライブラリ (Recharts) -->
+    <!-- グラフ描画 (Recharts) -->
     <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
 
     <!-- CSV解析 (PapaParse) -->
@@ -30,22 +30,34 @@
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
 
-    <!-- JSX変換ツール (Babel) -->
+    <!-- JSX変換 (Babel) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; }
+
+        /* 元のHTMLから引き継いだスタイル */
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 <script type="importmap">
 {
   "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
     "papaparse": "https://esm.sh/papaparse@^5.5.3",
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
     "recharts": "https://esm.sh/recharts@^3.7.0"
@@ -57,16 +69,13 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- 1. グローバル変数の準備 ---
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList } = Recharts;
 
-        // --- 2. アイコンコンポーネント ---
+        // --- アイコン ---
         const Icon = ({ name, size = 20, className = "" }) => {
-            // SVG定義 (LucideのUMD版はReactコンポーネントではないため、SVGを直接埋め込みます)
             const icons = {
                 Menu: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg>,
-                X: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
                 LayoutDashboard: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
                 LineChart: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>,
                 BarChart3: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
@@ -76,21 +85,387 @@
                 ZoomIn: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
                 ZoomOut: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
                 RotateCcw: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
-                ArrowUpDown: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>,
                 MousePointer2: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 6-8 13 4.5-1.5 3 7 3-7 4.5 1.5L12 6Z"/><path d="m6 13 6-3 6 3"/></svg>
             };
             return icons[name] || null;
         };
 
-        // --- 3. データ解析ロジック ---
-        const processOptionData = (rawRows) => {
-            if (!rawRows || rawRows.length < 2) {
-                return { data: [], error: 'データが不足しています。' };
-            }
+        // ==========================================
+        //  JPX Chart Component (Original Logic)
+        // ==========================================
+        const ForeignInvestors = () => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            
+            const [allData, setAllData] = useState([]);
+            const [currentTimeRange, setCurrentTimeRange] = useState('all');
+            const [stats, setStats] = useState(null);
+            const [dataCount, setDataCount] = useState(0);
+            const [lastUpdate, setLastUpdate] = useState('読み込み中...');
 
+            // --- Original Helper Functions ---
+            const formatNumber = (num) => Math.round(num).toLocaleString('ja-JP');
+            
+            const formatLargeNumber = (value) => {
+                if (typeof value === 'number') {
+                    const sign = value >= 0 ? '+' : '';
+                    return sign + formatNumber(value) + '億円';
+                }
+                return value.toString();
+            };
+
+            const calculateWeekLabels = (data) => {
+                const weekCounter = {};
+                return data.map(row => {
+                    const date = new Date(row.date);
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1;
+                    const yearMonthKey = `${year}-${month}`;
+                    if (!weekCounter[yearMonthKey]) {
+                        weekCounter[yearMonthKey] = 1;
+                    } else {
+                        weekCounter[yearMonthKey]++;
+                    }
+                    const weekNum = weekCounter[yearMonthKey];
+                    return {
+                        ...row,
+                        year: year,
+                        month: month,
+                        weekNum: weekNum,
+                        displayDate: `${year}年${month}月${weekNum}週`,
+                        tooltipDate: `${year}年${month}月第${weekNum}週`
+                    };
+                });
+            };
+
+            const calculateStats = (data) => {
+                const positiveData = data.filter(item => item.balance > 0).map(item => item.balance);
+                const negativeData = data.filter(item => item.balance < 0).map(item => item.balance);
+                
+                const calcMedian = (arr) => {
+                    if (arr.length === 0) return 0;
+                    const sorted = [...arr].sort((a, b) => a - b);
+                    const mid = Math.floor(sorted.length / 2);
+                    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+                };
+                
+                const calcAverage = (arr) => {
+                    if (arr.length === 0) return 0;
+                    return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+                };
+                
+                return {
+                    positiveAvg: calcAverage(positiveData),
+                    positiveMedian: calcMedian(positiveData),
+                    negativeAvg: calcAverage(negativeData),
+                    negativeMedian: calcMedian(negativeData),
+                    latest: data[data.length - 1]
+                };
+            };
+
+            // --- Chart Actions ---
+            const zoomChart = (direction) => {
+                if (!chartInstance.current) return;
+                const zoomFactor = direction === 'in' ? 1.2 : 0.8;
+                chartInstance.current.zoom(zoomFactor);
+                updateStatsFromChart();
+            };
+
+            const panChart = (direction) => {
+                if (!chartInstance.current) return;
+                const chart = chartInstance.current;
+                const xScale = chart.scales.x;
+                const range = xScale.max - xScale.min;
+                const shift = range * 0.2;
+                if (direction === 'left') chart.pan({ x: shift });
+                else if (direction === 'right') chart.pan({ x: -shift });
+                updateStatsFromChart();
+            };
+
+            const resetZoom = () => {
+                if (!chartInstance.current) return;
+                chartInstance.current.resetZoom();
+                updateStatsFromChart();
+            };
+
+            const updateStatsFromChart = () => {
+                if (!chartInstance.current) return;
+                const chart = chartInstance.current;
+                const xScale = chart.scales.x;
+                const filtered = getFilteredData(allData, currentTimeRange);
+                
+                // Chart.jsのスケール範囲から表示データを特定
+                const startIndex = Math.max(0, Math.floor(xScale.min));
+                const endIndex = Math.min(filtered.length - 1, Math.ceil(xScale.max));
+                const visibleData = filtered.slice(startIndex, endIndex + 1);
+                
+                if (visibleData.length > 0) {
+                    const s = calculateStats(visibleData);
+                    setStats(s);
+                }
+            };
+
+            // --- Data Logic ---
+            const getFilteredData = (data, range) => {
+                if (range === 'all') return data;
+                const now = new Date();
+                const cutoffDate = new Date();
+                if (range === '3m') cutoffDate.setMonth(now.getMonth() - 3);
+                else if (range === '6m') cutoffDate.setMonth(now.getMonth() - 6);
+                else if (range === '1y') cutoffDate.setFullYear(now.getFullYear() - 1);
+                return data.filter(item => new Date(item.date) >= cutoffDate);
+            };
+
+            const drawChart = (data) => {
+                if (!chartRef.current) return;
+                const ctx = chartRef.current.getContext('2d');
+                if (chartInstance.current) chartInstance.current.destroy();
+
+                const config = {
+                    type: 'bar',
+                    data: {
+                        datasets: [{
+                            label: '差引（億円）',
+                            data: data.map((d, index) => ({ x: index, y: d.balance })),
+                            backgroundColor: (ctx) => {
+                                if (!ctx.parsed || ctx.parsed.y === undefined) return 'rgba(74, 134, 232, 0.7)';
+                                return ctx.parsed.y >= 0 ? 'rgba(74, 134, 232, 0.7)' : 'rgba(230, 124, 115, 0.7)';
+                            },
+                            borderColor: (ctx) => {
+                                if (!ctx.parsed || ctx.parsed.y === undefined) return '#4A86E8';
+                                return ctx.parsed.y >= 0 ? '#4A86E8' : '#E67C73';
+                            },
+                            borderWidth: 1,
+                            barPercentage: 0.9,
+                            categoryPercentage: 0.9
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'white',
+                                titleColor: '#334155',
+                                bodyColor: '#334155',
+                                borderColor: '#e2e8f0',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    title: (context) => {
+                                        const index = Math.round(context[0].parsed.x);
+                                        return data[index]?.tooltipDate || '';
+                                    },
+                                    label: (context) => {
+                                        const index = Math.round(context.parsed.x);
+                                        if (index >= 0 && index < data.length) {
+                                            const val = data[index].balance;
+                                            const raw = data[index].rawBalance;
+                                            const sign = val >= 0 ? '+' : '';
+                                            return `${sign}${formatNumber(val)}億円 (${sign}${(raw * 1000).toLocaleString('ja-JP')}円)`;
+                                        }
+                                        return '';
+                                    },
+                                    afterLabel: (context) => {
+                                        return context.parsed.y >= 0 ? '買い越し' : '売り越し';
+                                    }
+                                }
+                            },
+                            zoom: {
+                                pan: { enabled: true, mode: 'x', threshold: 0 },
+                                zoom: {
+                                    wheel: { enabled: true, speed: 0.1 },
+                                    pinch: { enabled: true },
+                                    mode: 'x',
+                                    onZoomComplete: updateStatsFromChart
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: (value, index, ticks) => {
+                                        return index === ticks.length - 1 ? formatNumber(value) + '億円' : formatNumber(value);
+                                    }
+                                },
+                                grid: { color: '#e2e8f0' }
+                            },
+                            x: {
+                                type: 'linear',
+                                min: 0,
+                                max: data.length - 1,
+                                ticks: {
+                                    callback: (value) => {
+                                        const idx = Math.round(value);
+                                        return data[idx]?.displayDate || '';
+                                    },
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    autoSkip: true,
+                                    maxTicksLimit: 20
+                                },
+                                grid: { color: '#e2e8f0' }
+                            }
+                        }
+                    }
+                };
+
+                chartInstance.current = new Chart(ctx, config);
+            };
+
+            // --- Effects ---
+            useEffect(() => {
+                const loadData = async () => {
+                    try {
+                        const res = await fetch('history.csv');
+                        const text = res.ok ? await res.text() : null;
+                        
+                        if (!text) throw new Error("CSV load failed");
+
+                        Papa.parse(text, {
+                            header: true,
+                            dynamicTyping: true,
+                            skipEmptyLines: true,
+                            complete: (results) => {
+                                const raw = results.data
+                                    .filter(r => r.date && r.balance != null)
+                                    .map(r => ({
+                                        date: r.date,
+                                        balance: r.balance / 100000,
+                                        rawBalance: r.balance
+                                    }))
+                                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                                
+                                const processed = calculateWeekLabels(raw);
+                                setAllData(processed);
+                                
+                                if (processed.length > 0) {
+                                    const last = processed[processed.length - 1];
+                                    setLastUpdate(`最終更新: ${last.date}`);
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error(e);
+                        // Mock data fallback if needed, or just show error
+                        setLastUpdate("データの読み込みに失敗しました");
+                    }
+                };
+                loadData();
+                const interval = setInterval(loadData, 5 * 60 * 1000);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                if (allData.length === 0) return;
+                const filtered = getFilteredData(allData, currentTimeRange);
+                setDataCount(filtered.length);
+                drawChart(filtered);
+                setStats(calculateStats(filtered));
+            }, [allData, currentTimeRange]);
+
+
+            return (
+                <div className="space-y-6">
+                    {/* Header (Replicating original gradient header) */}
+                    <div className="gradient-bg text-white shadow-lg rounded-xl -mx-4 md:mx-0 p-6 md:p-8 mb-8 animate-fade-in-up">
+                        <h1 className="text-3xl md:text-4xl font-bold mb-2">JPX 海外投資家動向</h1>
+                        <p className="text-blue-100 text-lg">Foreign Investors Balance Tracker</p>
+                        <p className="text-blue-200 text-sm mt-2">{lastUpdate}</p>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up">
+                        <h2 className="text-xl font-bold text-slate-900 mb-4">
+                            差引推移 <span className="text-sm font-normal text-slate-500 ml-2">({dataCount}件のデータ)</span>
+                        </h2>
+                        
+                        <div style={{ position: 'relative', height: '500px' }}>
+                            <canvas ref={chartRef}></canvas>
+                            
+                            {/* Zoom Buttons */}
+                            <div style={{ position: 'absolute', bottom: '90px', left: '80px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                                <button onClick={() => zoomChart('in')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">＋</button>
+                                <button onClick={() => zoomChart('out')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">ー</button>
+                            </div>
+                            
+                            {/* Pan Buttons */}
+                            <div style={{ position: 'absolute', bottom: '90px', right: '20px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                                <button onClick={() => panChart('left')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">← 左へ</button>
+                                <button onClick={() => panChart('right')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">右へ →</button>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-4 pt-4 border-t border-slate-200">
+                            <p className="text-xs text-slate-500">
+                                💡 PC: ドラッグで左右移動、ホイールでズーム | スマホ: ピンチイン・アウトでズーム、スワイプで移動
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Stats Cards */}
+                    {stats && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up">
+                            {[
+                                { label: '最新週（先週）の売買状況', value: stats.latest.balance, color: stats.latest.balance >= 0 ? 'text-blue-600' : 'text-red-500', sub: stats.latest.balance >= 0 ? '買い越し' : '売り越し' },
+                                { label: '買い越し 平均', value: stats.positiveAvg, color: 'text-blue-600', sub: '表示範囲内' },
+                                { label: '買い越し 中央値', value: stats.positiveMedian, color: 'text-blue-600', sub: '表示範囲内' },
+                                { label: '売り越し 平均', value: stats.negativeAvg, color: 'text-red-500', sub: '表示範囲内' },
+                                { label: '売り越し 中央値', value: stats.negativeMedian, color: 'text-red-500', sub: '表示範囲内' },
+                            ].map((s, i) => (
+                                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                    <p className="text-slate-600 text-sm font-medium mb-2">{s.label}</p>
+                                    <p className={`text-3xl font-bold ${s.color}`}>{formatLargeNumber(s.value)}</p>
+                                    <p className="text-slate-400 text-xs mt-1">{s.sub}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Controls */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up">
+                        <div className="flex flex-wrap gap-4 items-center">
+                            <div className="flex items-center gap-2">
+                                <span className="text-slate-600 text-sm font-medium">期間:</span>
+                                <div className="flex gap-1">
+                                    {[
+                                        { v: 'all', l: '全期間' },
+                                        { v: '1y', l: '1年' },
+                                        { v: '6m', l: '6ヶ月' },
+                                        { v: '3m', l: '3ヶ月' }
+                                    ].map(opt => (
+                                        <button 
+                                            key={opt.v}
+                                            onClick={() => setCurrentTimeRange(opt.v)}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange === opt.v ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                        >
+                                            {opt.l}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button onClick={resetZoom} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">
+                                🔄 ズームリセット
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 text-center text-slate-500 text-sm">
+                        <p>データソース: <a href="https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html" target="_blank" className="text-blue-600 hover:underline">日本取引所グループ (JPX)</a></p>
+                        <p className="mt-1">自動更新: 毎週木曜日 18:00 (JST)</p>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        //  Option OI Components (Preserved)
+        // ==========================================
+        const processOptionData = (rawRows) => {
+            if (!rawRows || rawRows.length < 2) return { data: [], error: 'データが不足しています。' };
             const strikeRegex = /(strike|行使価格|koushi)/i;
             const oiRegex = /(open\s*int|oi|建玉|tategyoku)/i;
-
             const parseNum = (val) => {
                 if (typeof val === 'number') return val;
                 if (!val) return 0;
@@ -103,10 +478,8 @@
                 return isNaN(num) ? 0 : num * multiplier;
             };
 
-            // 縦持ちデータの整形ロジック (簡易版)
             let reshapeHeaderIndex = -1;
             let reshapeWidth = 0;
-
             const getHeaderInfo = (row) => {
                 const sRow = row.map(c => String(c).trim());
                 let sCol = -1, oiCols = [];
@@ -120,7 +493,6 @@
             for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
                 const info = getHeaderInfo(rawRows[r]);
                 if (info.sCol !== -1 && info.oiCols.length >= 2 && info.colCount > 1) {
-                    // データが縦に細切れになっているかチェック
                     let singleColCount = 0;
                     const checkCount = 10;
                     for(let k=1; k<=checkCount && (r+k)<rawRows.length; k++) {
@@ -134,7 +506,6 @@
                 }
             }
 
-            // 整形実行
             if (reshapeWidth > 0 && reshapeHeaderIndex !== -1) {
                 const headerRow = rawRows[reshapeHeaderIndex];
                 const flatData = [];
@@ -156,9 +527,7 @@
                 rawRows = newRows;
             }
 
-            // ヘッダー行を探す（再スキャン）
             let bestCandidate = { headerIndex: -1, strikeCol: -1, callCol: -1, putCol: -1, score: 0 };
-            
             for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
                 const row = rawRows[r].map(c => String(c).trim());
                 let sCol = -1, oiCols = [];
@@ -166,42 +535,30 @@
                     if (strikeRegex.test(cell)) sCol = i;
                     else if (oiRegex.test(cell)) oiCols.push(i);
                 });
-
                 if (sCol !== -1 && oiCols.length >= 2) {
                     let cCol = -1, pCol = -1;
                     const oi1 = row[oiCols[0]].toLowerCase();
                     const oi2 = row[oiCols[1]].toLowerCase();
-
                     if (oi1.includes('call') || oi1.includes('コール')) { cCol = oiCols[0]; }
                     if (oi1.includes('put') || oi1.includes('プット')) { pCol = oiCols[0]; }
                     if (oi2.includes('call') || oi2.includes('コール')) { cCol = oiCols[1]; }
                     if (oi2.includes('put') || oi2.includes('プット')) { pCol = oiCols[1]; }
-
-                    if (cCol === -1 || pCol === -1) {
-                         // Fallback: Left is Call, Right is Put
-                        cCol = oiCols[0]; pCol = oiCols[1];
-                    }
-                    
+                    if (cCol === -1 || pCol === -1) { cCol = oiCols[0]; pCol = oiCols[1]; }
                     bestCandidate = { headerIndex: r, strikeCol: sCol, callCol: cCol, putCol: pCol, score: 10 };
                     break;
                 }
             }
 
-            if (bestCandidate.headerIndex === -1) {
-                return { data: [], error: 'ヘッダーが見つかりませんでした。「Strike」「Open Interest」等の列が必要です。' };
-            }
+            if (bestCandidate.headerIndex === -1) return { data: [], error: 'ヘッダーが見つかりませんでした。' };
 
             const { headerIndex, strikeCol, callCol, putCol } = bestCandidate;
             const dataMap = new Map();
-
             for (let i = headerIndex + 1; i < rawRows.length; i++) {
                 const row = rawRows[i];
                 if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
-
                 const strike = parseNum(row[strikeCol]);
                 const oi1 = parseNum(row[callCol]);
                 const oi2 = parseNum(row[putCol]);
-
                 if (strike > 0) {
                     const roundedStrike = Math.round(strike / 10) * 10;
                     if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
@@ -212,23 +569,15 @@
             }
 
             const sortedData = Array.from(dataMap.entries())
-                .sort((a, b) => b[0] - a[0]) // Strike降順
-                .map(([strike, val]) => ({
-                    strike,
-                    diff: val.call - val.put,
-                    call: val.call,
-                    put: val.put
-                }));
+                .sort((a, b) => b[0] - a[0])
+                .map(([strike, val]) => ({ strike, diff: val.call - val.put, call: val.call, put: val.put }));
 
             return { data: sortedData, error: sortedData.length === 0 ? "有効なデータが見つかりませんでした" : null };
         };
 
-
-        // --- 4. データ入力コンポーネント ---
         const DataInput = ({ onDataParsed }) => {
             const [text, setText] = useState('');
             const [dragActive, setDragActive] = useState(false);
-
             const handleParse = (input) => {
                 Papa.parse(input, {
                     complete: (results) => onDataParsed(results.data),
@@ -236,15 +585,11 @@
                     header: false 
                 });
             };
-
             const handleDrop = (e) => {
                 e.preventDefault();
                 setDragActive(false);
-                if (e.dataTransfer.files?.[0]) {
-                    handleParse(e.dataTransfer.files[0]);
-                }
+                if (e.dataTransfer.files?.[0]) handleParse(e.dataTransfer.files[0]);
             };
-
             return (
                 <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
                     <div 
@@ -258,50 +603,36 @@
                         <p className="text-slate-400 text-sm">または</p>
                         <input type="file" className="mt-2 text-sm text-slate-500" onChange={(e) => e.target.files?.[0] && handleParse(e.target.files[0])} />
                     </div>
-                    
                     <div className="flex gap-2">
                         <textarea 
                             className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none"
                             rows={4}
-                            placeholder="ここにスプレッドシートのデータを貼り付け..."
+                            placeholder="ここにデータを貼り付け..."
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                         />
-                        <button 
-                            onClick={() => handleParse(text)}
-                            disabled={!text}
-                            className="bg-slate-800 text-white px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-medium"
-                        >
-                            解析
-                        </button>
+                        <button onClick={() => handleParse(text)} disabled={!text} className="bg-slate-800 text-white px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-medium">解析</button>
                     </div>
                 </div>
             );
         };
 
-        // --- 5. チャートコンポーネント (OIChart) ---
         const OIChart = ({ data }) => {
             const [zoomY, setZoomY] = useState(1);
             const [zoomX, setZoomX] = useState(1);
-            
             const mainRef = useRef(null);
             const leftRef = useRef(null);
             const bottomRef = useRef(null);
-
-            // スクロール同期
             const handleScroll = () => {
                 if (mainRef.current && leftRef.current && bottomRef.current) {
                     leftRef.current.scrollTop = mainRef.current.scrollTop;
                     bottomRef.current.scrollLeft = mainRef.current.scrollLeft;
                 }
             };
-
             const barHeight = 30;
             const totalHeight = Math.max(600, data.length * barHeight * zoomY);
             const chartWidth = `${zoomX * 100}%`;
             const maxVal = Math.max(...data.map(d => Math.abs(d.diff)), 100);
-
-            // マウスホイール操作のハンドリング
             const handleWheel = (e, axis) => {
                 if (e.ctrlKey || axis === 'main') return; 
                 e.preventDefault();
@@ -309,7 +640,6 @@
                 if (axis === 'y') setZoomY(z => Math.max(0.1, Math.min(5, z + delta)));
                 if (axis === 'x') setZoomX(z => Math.max(0.5, Math.min(3, z + delta)));
             };
-
             const CustomTooltip = ({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
@@ -317,16 +647,12 @@
                     <div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50">
                         <p className="font-bold">Strike: {label}</p>
                         <p className={d.diff >= 0 ? 'text-blue-600' : 'text-red-500'}>Diff: {d.diff.toLocaleString()}</p>
-                        <div className="text-xs text-slate-500 mt-1 pt-1 border-t">
-                            C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}
-                        </div>
+                        <div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div>
                     </div>
                 );
             };
-
             return (
                 <div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden">
-                    {/* Toolbar */}
                     <div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap">
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-500">HEIGHT</span>
@@ -334,7 +660,6 @@
                             <input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20" />
                             <button onClick={()=>setZoomY(z=>Math.min(5, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
                         </div>
-                        <div className="h-4 w-px bg-slate-300 hidden md:block"></div>
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-500">WIDTH</span>
                             <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
@@ -342,15 +667,8 @@
                         </div>
                         <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-blue-600 border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
                     </div>
-
-                    {/* Chart Grid */}
                     <div className="flex-1 flex overflow-hidden relative">
-                        {/* Left Axis (Fixed) */}
-                        <div 
-                            className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" 
-                            ref={leftRef}
-                            onWheel={(e)=>handleWheel(e, 'y')}
-                        >
+                        <div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e, 'y')}>
                             <div style={{height: totalHeight, width: '100%'}}>
                                 <ResponsiveContainer>
                                     <BarChart layout="vertical" data={data} margin={{top:10, bottom:0}}>
@@ -360,13 +678,7 @@
                                 </ResponsiveContainer>
                             </div>
                         </div>
-
-                        {/* Main Chart */}
-                        <div 
-                            className="flex-1 overflow-auto bg-slate-50/30"
-                            ref={mainRef}
-                            onScroll={handleScroll}
-                        >
+                        <div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}>
                             <div style={{width: chartWidth, height: totalHeight, minWidth: '100%'}}>
                                 <ResponsiveContainer>
                                     <BarChart layout="vertical" data={data} margin={{top:10, right:30, left:0, bottom:0}}>
@@ -376,9 +688,7 @@
                                         <Tooltip content={<CustomTooltip />} cursor={{fill:'rgba(0,0,0,0.05)'}} />
                                         <ReferenceLine x={0} stroke="#334155" />
                                         <Bar dataKey="diff" barSize={barHeight * 0.8}>
-                                            {data.map((entry, index) => (
-                                                <Cell key={index} fill={entry.diff >= 0 ? '#4A86E8' : '#E67C73'} />
-                                            ))}
+                                            {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#4A86E8' : '#E67C73'} />))}
                                             <LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11, fill:'#64748b'}} />
                                         </Bar>
                                     </BarChart>
@@ -386,12 +696,8 @@
                             </div>
                         </div>
                     </div>
-
-                    {/* Bottom Axis */}
                     <div className="h-8 border-t border-slate-200 flex shrink-0">
-                        <div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400">
-                           <Icon name="MousePointer2" size={14} />
-                        </div>
+                        <div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14} /></div>
                         <div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e)=>handleWheel(e, 'x')}>
                             <div style={{width: chartWidth, minWidth:'100%', height:'100%'}}>
                                 <ResponsiveContainer>
@@ -407,156 +713,45 @@
             );
         };
 
-        // --- 6. Option OI コンテナ ---
         const OptionOI = () => {
             const [data, setData] = useState([]);
             const [hasData, setHasData] = useState(false);
             const [error, setError] = useState(null);
-
             const handleData = (rows) => {
                 const res = processOptionData(rows);
                 if (res.error) setError(res.error);
-                else {
-                    setData(res.data);
-                    setHasData(true);
-                    setError(null);
-                }
+                else { setData(res.data); setHasData(true); setError(null); }
             };
-
             return (
                 <div className="h-full flex flex-col">
                     <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <h2 className="text-2xl font-bold text-slate-800">Option OI Analyzer</h2>
-                            <p className="text-slate-500">建玉の壁を可視化</p>
-                        </div>
+                        <div><h2 className="text-2xl font-bold text-slate-800">Option OI Analyzer</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
                         {hasData && <button onClick={()=>setHasData(false)} className="text-sm text-red-500 hover:underline">データをクリア</button>}
                     </div>
-                    
                     {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
-
                     {!hasData ? (
                         <div className="flex flex-col items-center justify-center py-12">
                              <a href="https://optioncharts.io/options/$SPX/option-chain" target="_blank" className="mb-8 text-blue-600 flex items-center gap-1 hover:underline text-sm"><Icon name="ExternalLink" size={14}/> ソース例: optioncharts.io</a>
                              <DataInput onDataParsed={handleData} />
-                             <div className="mt-8 p-4 bg-slate-100 rounded text-xs font-mono text-slate-600">
-                                例: Strike, Call OI, Put OI の順で並んだCSVやテキスト
-                             </div>
                         </div>
-                    ) : (
-                        <OIChart data={data} />
-                    )}
+                    ) : (<OIChart data={data} />)}
                 </div>
             );
         };
 
-        // --- 7. JPX 海外投資家動向 (Legacy Code Wrapped) ---
-        const ForeignInvestors = () => {
-            const chartRef = useRef(null);
-            const chartInst = useRef(null);
-            const [stats, setStats] = useState([]);
-            const [msg, setMsg] = useState('読み込み中...');
-
-            // データ取得と描画
-            useEffect(() => {
-                fetch('history.csv')
-                    .then(res => res.ok ? res.text() : Promise.reject('CSV not found'))
-                    .then(text => {
-                        const parsed = Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true }).data;
-                        const data = parsed
-                            .filter(r => r.date && r.balance)
-                            .map(r => ({ x: r.date, y: r.balance / 100000 })) // 億円
-                            .sort((a,b) => new Date(a.x) - new Date(b.x));
-
-                        if(data.length === 0) throw new Error('No Data');
-                        
-                        // 統計計算
-                        const latest = data[data.length-1];
-                        setStats([
-                            { label: '最新週', value: latest.y, color: latest.y >=0 ? 'text-blue-600' : 'text-red-500' },
-                        ]);
-                        setMsg(`最終更新: ${latest.x}`);
-
-                        // Chart.js描画
-                        if(chartInst.current) chartInst.current.destroy();
-                        const ctx = chartRef.current.getContext('2d');
-                        chartInst.current = new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                datasets: [{
-                                    label: '差引(億円)',
-                                    data: data,
-                                    backgroundColor: c => c.raw.y >= 0 ? 'rgba(74, 134, 232, 0.7)' : 'rgba(230, 124, 115, 0.7)',
-                                    borderColor: c => c.raw.y >= 0 ? '#4A86E8' : '#E67C73',
-                                    borderWidth: 1
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    x: { type: 'time', time: { unit: 'month' }, grid: {display:false} },
-                                    y: { grid: {color: '#f1f5f9'} }
-                                },
-                                plugins: {
-                                    zoom: {
-                                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-                                        pan: { enabled: true, mode: 'x' }
-                                    },
-                                    legend: { display: false }
-                                }
-                            }
-                        });
-                    })
-                    .catch(e => {
-                        console.error(e);
-                        setMsg("データの読み込みに失敗しました (history.csvが見つかりません)");
-                    });
-
-                return () => chartInst.current?.destroy();
-            }, []);
-
-            return (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-slate-800">JPX 海外投資家動向</h2>
-                        <span className="text-sm text-slate-400">{msg}</span>
-                    </div>
-                    
-                    <div className="bg-white p-4 rounded-xl shadow border border-slate-200 h-[400px]">
-                        <canvas ref={chartRef}></canvas>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {stats.map((s, i) => (
-                            <div key={i} className="bg-white p-4 rounded shadow border border-slate-200">
-                                <p className="text-xs text-slate-500 font-bold">{s.label}</p>
-                                <p className={`text-2xl font-bold ${s.color}`}>{Math.round(s.value).toLocaleString()}億円</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        // --- 8. メインアプリ (App) ---
+        // ==========================================
+        //  Main Layout
+        // ==========================================
         const App = () => {
             const [view, setView] = useState('jpx');
             const [sidebarOpen, setSidebarOpen] = useState(false);
-
             const NavItem = ({ id, label, icon }) => (
-                <button 
-                    onClick={() => { setView(id); setSidebarOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === id ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-100'}`}
-                >
-                    <Icon name={icon} />
-                    <span className="font-medium">{label}</span>
+                <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === id ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-100'}`}>
+                    <Icon name={icon} /><span className="font-medium">{label}</span>
                 </button>
             );
-
             return (
                 <div className="flex h-screen overflow-hidden">
-                    {/* Sidebar */}
                     <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-xl lg:shadow-none`}>
                         <div className="h-16 flex items-center px-6 border-b border-slate-100">
                             <div className="bg-slate-900 text-white p-1.5 rounded mr-3"><Icon name="LayoutDashboard" size={20} /></div>
@@ -568,17 +763,12 @@
                             <NavItem id="option" label="Option OI" icon="BarChart3" />
                         </nav>
                     </aside>
-
-                    {/* Overlay */}
                     {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
-
-                    {/* Main Content */}
                     <div className="flex-1 flex flex-col min-w-0">
                         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
                             <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
                             <span className="ml-4 font-bold text-slate-700">{view === 'jpx' ? '海外投資家動向' : 'Option OI'}</span>
                         </header>
-
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50">
                             <div className="max-w-7xl mx-auto h-full">
                                 {view === 'jpx' ? <ForeignInvestors /> : <OptionOI />}
