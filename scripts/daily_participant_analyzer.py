@@ -18,7 +18,7 @@ OUTPUT_FILE = os.path.join(OUTPUT_DIR, "daily_participant.json")
 BROKER_CATEGORIES = {
     "US": ["Goldman", "Morgan", "Merrill", "BofA", "Citi", "JP Morgan", "JPMorgan", "Sachs", "モルガン", "ゴールドマン", "シティ", "アメリカ", "バンカメ"],
     "EU": ["ABN", "Societe", "Barclays", "BNP", "UBS", "Deutsche", "HSBC", "Credit Suisse", "ソシエテ", "バークレイズ", "ドイツ", "クレディ", "パリバ"],
-    "JP": ["Nomura", "Daiwa", "Mizuho", "SMBC", "Mitsubishi", "Nikko", "Okasan", "Tokai", "野村", "大和", "みずほ", "三菱", "日興", "岡三", "東海", "日産", "岩井"],
+    "JP": ["Nomura", "Daiwa", "Mizuho", "SMBC", "Mitsubishi", "Nikko", "Okasan", "Tokai", "野村", "大和", "みずほ", "三菱", "日興", "岡三", "東海", "日産", "岩井", "ちばぎん", "フィリップ"],
     "NET": ["SBI", "Rakuten", "Monex", "Matsui", "au", "kabu.com", "楽天", "マネックス", "松井", "カブコム", "GMO"]
 }
 
@@ -51,35 +51,50 @@ def download_file(url):
 def find_latest_links():
     """JPXページを解析し、最新のナイト/日中(立会)ファイルのURLを取得"""
     try:
-        resp = requests.get(TARGET_URL)
+        print(f"Accessing JPX page: {TARGET_URL}")
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+        resp = requests.get(TARGET_URL, headers=headers, timeout=30)
         resp.encoding = resp.apparent_encoding
         soup = BeautifulSoup(resp.text, 'html.parser')
 
-        # JPXのテーブル構造を特定 (tbody内の行)
-        table = soup.find('table')
-        if not table:
-            print("Error: Table not found on JPX page.")
-            return None, None, None
-            
-        rows = table.find_all('tr')
-        
+        # ページ内のすべての行(tr)を走査
+        rows = soup.find_all('tr')
+        print(f"Scanned {len(rows)} rows on the page.")
+
         target_row = None
         latest_date = None
         
-        # 最初の有効な日付行を探す
-        for row in rows:
-            cols = row.find_all('td')
-            if not cols:
+        # 上から順に走査し、最新の日付かつExcelリンクがある行を探す
+        for i, row in enumerate(rows):
+            cols = row.find_all(['td', 'th'])
+            # カラムが足りない行はスキップ（日付、ナイトx2、日中x2 で最低5列あるはず）
+            if len(cols) < 5:
                 continue
+
+            # 1列目のテキスト取得 (日付)
             date_text = cols[0].get_text(strip=True)
-            # YYYY/MM/DD 形式をチェック
-            if re.match(r'\d{4}/\d{2}/\d{2}', date_text):
-                latest_date = date_text
-                target_row = cols
-                break
+            
+            # 日付パターンチェック (YYYY/MM/DD または YYYY年MM月DD日)
+            # JPXは通常 YYYY/MM/DD だが念のため広く取る
+            date_match = re.search(r'(\d{4}[/年]\d{1,2}[/月]\d{1,2})', date_text)
+            
+            if date_match:
+                # さらに、この行に .xlsx または .xls へのリンクが含まれているか確認
+                links = row.find_all('a', href=True)
+                has_excel = any('xls' in link['href'].lower() for link in links)
+                
+                if has_excel:
+                    latest_date = date_match.group(1)
+                    target_row = cols
+                    print(f"Found valid data row at index {i}: {latest_date}")
+                    break
         
         if not target_row:
-            print("No valid date row found.")
+            print("Error: No valid data row found (Date + Excel link).")
+            # デバッグ用：最初の数行のテキストを表示してみる
+            print("Debug: Dumping first 5 rows content for check:")
+            for i, row in enumerate(rows[:5]):
+                print(f"Row {i}: {row.get_text(strip=True)[:50]}...")
             return None, None, None
 
         # JPXテーブル構造: [日付, ナイト(立会), ナイト(J-NET), 日中(立会), 日中(J-NET)]
@@ -87,13 +102,19 @@ def find_latest_links():
         night_link = None
         day_link = None
 
-        if len(target_row) > 1:
-            a = target_row[1].find('a')
-            if a: night_link = "https://www.jpx.co.jp" + a.get('href')
+        # リンク取得ヘルパー
+        def get_abs_url(col_idx):
+            if col_idx < len(target_row):
+                a_tag = target_row[col_idx].find('a', href=True)
+                if a_tag:
+                    href = a_tag['href']
+                    if href.startswith('http'):
+                        return href
+                    return "https://www.jpx.co.jp" + href
+            return None
 
-        if len(target_row) > 3:
-            a = target_row[3].find('a')
-            if a: day_link = "https://www.jpx.co.jp" + a.get('href')
+        night_link = get_abs_url(1) # ナイト・立会
+        day_link = get_abs_url(3)   # 日中・立会
 
         return latest_date, night_link, day_link
 
@@ -107,10 +128,10 @@ def parse_excel_data(file_content):
         return []
 
     try:
-        # Excelを読み込む (ヘッダー位置が不明なため、まずは全読み込み)
+        # Excelを読み込む
         df = pd.read_excel(file_content, header=None, engine='openpyxl')
         
-        # 「参加者」または「証券会社」という言葉が含まれる行をヘッダーとみなす
+        # ヘッダー行を探す
         header_row_idx = -1
         for i, row in df.iterrows():
             row_str = row.astype(str).values
@@ -123,14 +144,13 @@ def parse_excel_data(file_content):
             print("Warning: Header row not found in Excel.")
             return []
 
-        # ヘッダーを設定して再構成
+        # ヘッダーを設定
         df.columns = df.iloc[header_row_idx]
         df = df.iloc[header_row_idx + 1:].reset_index(drop=True)
-
-        # カラム名のクリーニング (改行削除など)
+        # カラム名の改行削除
         df.columns = [str(c).replace('\n', '').strip() for c in df.columns]
 
-        # 参加者名カラムを特定
+        # 参加者名カラム特定
         col_participant = None
         for col in df.columns:
             if "参加者" in col or "Participant" in col:
@@ -151,21 +171,16 @@ def parse_excel_data(file_content):
             p_name = str(p_name).strip()
             category = get_category(p_name)
 
-            # 各カラムの数値を抽出
             products = {}
             for col in df.columns:
                 if col == col_participant:
                     continue
-                
                 val = row[col]
-                # 数値変換処理
                 try:
-                    if pd.notna(val) and val != "-":
+                    # ハイフンや空文字の処理
+                    if pd.notna(val) and str(val).strip() not in ["-", ""]:
                         if isinstance(val, str):
-                            # カンマ削除
                             val = float(val.replace(',', ''))
-                        
-                        # 0以外のデータのみ保持
                         if val != 0:
                             products[col] = int(val)
                 except:
@@ -187,7 +202,7 @@ def parse_excel_data(file_content):
 def main():
     print("=== Starting Daily Participant Analysis ===")
     
-    # dataフォルダが存在しない場合は作成
+    # dataフォルダ作成
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
@@ -202,36 +217,5 @@ def main():
     print(f"Night Session URL: {night_url}")
     print(f"Day Session URL:   {day_url}")
 
-    # 2. データの取得と解析
-    night_data = []
-    day_data = []
-
-    if night_url:
-        print("\n--- Processing Night Session ---")
-        content = download_file(night_url)
-        night_data = parse_excel_data(content)
-        print(f"Parsed {len(night_data)} participants.")
-    
-    if day_url:
-        print("\n--- Processing Day Session ---")
-        content = download_file(day_url)
-        day_data = parse_excel_data(content)
-        print(f"Parsed {len(day_data)} participants.")
-
-    # 3. JSON保存
-    output_data = {
-        "date": date_str,
-        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "night_session": night_data,
-        "day_session": day_data
-    }
-
-    try:
-        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-            json.dump(output_data, f, ensure_ascii=False, indent=2)
-        print(f"\nSuccess! Data saved to: {OUTPUT_FILE}")
-    except Exception as e:
-        print(f"Error saving JSON: {e}")
-
-if __name__ == "__main__":
-    main()
+    # 2. データ取得と解析
+    night_da
