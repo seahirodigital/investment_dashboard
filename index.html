@@ -597,7 +597,8 @@
                 const oi1 = parseNum(row[callCol]);
                 const oi2 = parseNum(row[putCol]);
                 if (strike > 0) {
-                    const roundedStrike = Math.round(strike / 10) * 10;
+                    // ここを変更: 10刻み -> 50刻み
+                    const roundedStrike = Math.round(strike / 50) * 50;
                     if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
                     const d = dataMap.get(roundedStrike);
                     d.call += oi1;
@@ -762,7 +763,7 @@
             return (
                 <div className="h-full flex flex-col">
                     <div className="flex justify-between items-center mb-6">
-                        <div><h2 className="text-2xl font-bold text-slate-800">Option OI Analyzer</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
+                        <div><h2 className="text-2xl font-bold text-slate-800">Option 分析</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
                         {hasData && <button onClick={()=>setHasData(false)} className="text-sm text-red-500 hover:underline">データをクリア</button>}
                     </div>
                     {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
@@ -825,8 +826,8 @@
                         
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 flex flex-col relative">
                             <div className="text-xs font-bold text-slate-400 px-2 mb-2">MENU</div>
-                            <NavItem id="jpx" label="海外投資家動向" icon="LineChart" />
-                            <NavItem id="option" label="Option OI" icon="BarChart3" />
+                            <NavItem id="jpx" label="JPX 海外投資家動向" icon="LineChart" />
+                            <NavItem id="option" label="Option 分析" icon="BarChart3" />
                             
                             {/* スペーサー */}
                             <div className="flex-1 min-h-[20px]"></div>
@@ -902,7 +903,7 @@
                     <div className="flex-1 flex flex-col min-w-0">
                         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
                             <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
-                            <span className="ml-4 font-bold text-slate-700">{view === 'jpx' ? '海外投資家動向' : 'Option OI'}</span>
+                            <span className="ml-4 font-bold text-slate-700">{view === 'jpx' ? 'JPX 海外投資家動向' : 'Option 分析'}</span>
                         </header>
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50">
                             <div className="max-w-7xl mx-auto h-full">
