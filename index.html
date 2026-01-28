@@ -51,13 +51,20 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* チャートエリアのカーソル設定 */
+        canvas {
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
     "papaparse": "https://esm.sh/papaparse@^5.5.3",
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
     "recharts": "https://esm.sh/recharts@^3.7.0"
@@ -274,9 +281,13 @@
                                 }
                             },
                             zoom: {
-                                pan: { enabled: true, mode: 'x', threshold: 0 },
+                                pan: { 
+                                    enabled: true, 
+                                    mode: 'x', 
+                                    threshold: 0 // ドラッグ開始の感度を上げる
+                                },
                                 zoom: {
-                                    wheel: { enabled: true, speed: 0.1 },
+                                    wheel: { enabled: false }, // ホイール拡大縮小を無効化
                                     pinch: { enabled: true },
                                     mode: 'x',
                                     onZoomComplete: updateStatsFromChart
@@ -399,7 +410,7 @@
                         
                         <div className="mt-4 pt-4 border-t border-slate-200">
                             <p className="text-xs text-slate-500">
-                                💡 PC: ドラッグで左右移動、ホイールでズーム | スマホ: ピンチイン・アウトでズーム、スワイプで移動
+                                💡 PC: チャート全体をドラッグで左右移動 | スマホ: ピンチイン・アウトでズーム、スワイプで移動
                             </p>
                         </div>
                     </div>
@@ -560,7 +571,8 @@
                 const oi1 = parseNum(row[callCol]);
                 const oi2 = parseNum(row[putCol]);
                 if (strike > 0) {
-                    const roundedStrike = Math.round(strike / 10) * 10;
+                    // --- 変更点: 50刻みに変更 ---
+                    const roundedStrike = Math.round(strike / 50) * 50;
                     if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
                     const d = dataMap.get(roundedStrike);
                     d.call += oi1;
@@ -709,32 +721,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            );
-        };
-
-        const OptionOI = () => {
-            const [data, setData] = useState([]);
-            const [hasData, setHasData] = useState(false);
-            const [error, setError] = useState(null);
-            const handleData = (rows) => {
-                const res = processOptionData(rows);
-                if (res.error) setError(res.error);
-                else { setData(res.data); setHasData(true); setError(null); }
-            };
-            return (
-                <div className="h-full flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <div><h2 className="text-2xl font-bold text-slate-800">Option OI Analyzer</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
-                        {hasData && <button onClick={()=>setHasData(false)} className="text-sm text-red-500 hover:underline">データをクリア</button>}
-                    </div>
-                    {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
-                    {!hasData ? (
-                        <div className="flex flex-col items-center justify-center py-12">
-                             <a href="https://optioncharts.io/options/$SPX/option-chain" target="_blank" className="mb-8 text-blue-600 flex items-center gap-1 hover:underline text-sm"><Icon name="ExternalLink" size={14}/> ソース例: optioncharts.io</a>
-                             <DataInput onDataParsed={handleData} />
-                        </div>
-                    ) : (<OIChart data={data} />)}
                 </div>
             );
         };
