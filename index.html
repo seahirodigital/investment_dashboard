@@ -1,3 +1,5 @@
+--- START OF FILE text/plain ---
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -51,20 +53,13 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* チャートエリアのカーソル設定 */
-        canvas {
-            cursor: grab;
-        }
-        canvas:active {
-            cursor: grabbing;
-        }
     </style>
 <script type="importmap">
 {
   "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
     "papaparse": "https://esm.sh/papaparse@^5.5.3",
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
     "recharts": "https://esm.sh/recharts@^3.7.0"
@@ -92,7 +87,10 @@
                 ZoomIn: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
                 ZoomOut: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
                 RotateCcw: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
-                MousePointer2: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 6-8 13 4.5-1.5 3 7 3-7 4.5 1.5L12 6Z"/><path d="m6 13 6-3 6 3"/></svg>
+                MousePointer2: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 6-8 13 4.5-1.5 3 7 3-7 4.5 1.5L12 6Z"/><path d="m6 13 6-3 6 3"/></svg>,
+                Plus: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+                Trash2: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+                Link: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             };
             return icons[name] || null;
         };
@@ -109,6 +107,22 @@
             const [stats, setStats] = useState(null);
             const [dataCount, setDataCount] = useState(0);
             const [lastUpdate, setLastUpdate] = useState('読み込み中...');
+
+            // --- 縦ホイールのみ有効にする処理 ---
+            useEffect(() => {
+                const canvas = chartRef.current;
+                if (!canvas) return;
+
+                const handleWheel = (e) => {
+                    // 横ホイール（deltaXの絶対値がdeltaYより大きい場合）の入力を無視
+                    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                        e.preventDefault();
+                    }
+                };
+
+                canvas.addEventListener('wheel', handleWheel, { passive: false });
+                return () => canvas.removeEventListener('wheel', handleWheel);
+            }, [allData]);
 
             // --- Original Helper Functions ---
             const formatNumber = (num) => Math.round(num).toLocaleString('ja-JP');
@@ -281,13 +295,9 @@
                                 }
                             },
                             zoom: {
-                                pan: { 
-                                    enabled: true, 
-                                    mode: 'x', 
-                                    threshold: 0 // ドラッグ開始の感度を上げる
-                                },
+                                pan: { enabled: true, mode: 'x', threshold: 0 },
                                 zoom: {
-                                    wheel: { enabled: false }, // ホイール拡大縮小を無効化
+                                    wheel: { enabled: true, speed: 0.1 },
                                     pinch: { enabled: true },
                                     mode: 'x',
                                     onZoomComplete: updateStatsFromChart
@@ -410,7 +420,7 @@
                         
                         <div className="mt-4 pt-4 border-t border-slate-200">
                             <p className="text-xs text-slate-500">
-                                💡 PC: チャート全体をドラッグで左右移動 | スマホ: ピンチイン・アウトでズーム、スワイプで移動
+                                💡 PC: ドラッグで左右移動、ホイール(縦)でズーム | スマホ: ピンチイン・アウトでズーム、スワイプで移動
                             </p>
                         </div>
                     </div>
@@ -571,8 +581,7 @@
                 const oi1 = parseNum(row[callCol]);
                 const oi2 = parseNum(row[putCol]);
                 if (strike > 0) {
-                    // --- 変更点: 50刻みに変更 ---
-                    const roundedStrike = Math.round(strike / 50) * 50;
+                    const roundedStrike = Math.round(strike / 10) * 10;
                     if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
                     const d = dataMap.get(roundedStrike);
                     d.call += oi1;
@@ -725,31 +734,139 @@
             );
         };
 
+        const OptionOI = () => {
+            const [data, setData] = useState([]);
+            const [hasData, setHasData] = useState(false);
+            const [error, setError] = useState(null);
+            const handleData = (rows) => {
+                const res = processOptionData(rows);
+                if (res.error) setError(res.error);
+                else { setData(res.data); setHasData(true); setError(null); }
+            };
+            return (
+                <div className="h-full flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
+                        <div><h2 className="text-2xl font-bold text-slate-800">Option OI Analyzer</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
+                        {hasData && <button onClick={()=>setHasData(false)} className="text-sm text-red-500 hover:underline">データをクリア</button>}
+                    </div>
+                    {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
+                    {!hasData ? (
+                        <div className="flex flex-col items-center justify-center py-12">
+                             <a href="https://optioncharts.io/options/$SPX/option-chain" target="_blank" className="mb-8 text-blue-600 flex items-center gap-1 hover:underline text-sm"><Icon name="ExternalLink" size={14}/> ソース例: optioncharts.io</a>
+                             <DataInput onDataParsed={handleData} />
+                        </div>
+                    ) : (<OIChart data={data} />)}
+                </div>
+            );
+        };
+
         // ==========================================
         //  Main Layout
         // ==========================================
         const App = () => {
             const [view, setView] = useState('jpx');
             const [sidebarOpen, setSidebarOpen] = useState(false);
+            
+            // --- カスタムリンクの状態管理 ---
+            const [customLinks, setCustomLinks] = useState(() => {
+                const saved = localStorage.getItem('market-dash-links');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [newLinkLabel, setNewLinkLabel] = useState('');
+            const [newLinkUrl, setNewLinkUrl] = useState('');
+
+            const addCustomLink = () => {
+                if (newLinkLabel && newLinkUrl) {
+                    let url = newLinkUrl;
+                    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                    const updated = [...customLinks, { label: newLinkLabel, url }];
+                    setCustomLinks(updated);
+                    localStorage.setItem('market-dash-links', JSON.stringify(updated));
+                    setNewLinkLabel('');
+                    setNewLinkUrl('');
+                }
+            };
+
+            const removeCustomLink = (index) => {
+                const updated = customLinks.filter((_, i) => i !== index);
+                setCustomLinks(updated);
+                localStorage.setItem('market-dash-links', JSON.stringify(updated));
+            };
+
             const NavItem = ({ id, label, icon }) => (
                 <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === id ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-100'}`}>
                     <Icon name={icon} /><span className="font-medium">{label}</span>
                 </button>
             );
+
             return (
                 <div className="flex h-screen overflow-hidden">
-                    <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-xl lg:shadow-none`}>
-                        <div className="h-16 flex items-center px-6 border-b border-slate-100">
+                    <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-xl lg:shadow-none flex flex-col`}>
+                        <div className="h-16 flex items-center px-6 border-b border-slate-100 shrink-0">
                             <div className="bg-slate-900 text-white p-1.5 rounded mr-3"><Icon name="LayoutDashboard" size={20} /></div>
                             <h1 className="font-bold text-slate-800">Market Dash</h1>
                         </div>
-                        <nav className="p-4 space-y-2">
+                        
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 flex flex-col">
                             <div className="text-xs font-bold text-slate-400 px-2 mb-2">MENU</div>
                             <NavItem id="jpx" label="海外投資家動向" icon="LineChart" />
                             <NavItem id="option" label="Option OI" icon="BarChart3" />
-                        </nav>
+                            
+                            {/* スペーサー */}
+                            <div className="flex-1 min-h-[20px]"></div>
+
+                            {/* カスタムリンク一覧 (下から積み上げ) */}
+                            {customLinks.length > 0 && (
+                                <div className="space-y-1 mb-4">
+                                    <div className="text-xs font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>
+                                    <div className="flex flex-col-reverse gap-1">
+                                        {customLinks.map((link, i) => (
+                                            <div key={i} className="group flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+                                                <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden">
+                                                    <Icon name="ExternalLink" size={14} className="shrink-0" />
+                                                    <span className="truncate">{link.label}</span>
+                                                </a>
+                                                <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity">
+                                                    <Icon name="Trash2" size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* リンク追加UI */}
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase">Add Link</p>
+                                <div className="space-y-2">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Name" 
+                                        className="w-full text-xs p-2 border border-slate-200 rounded-md outline-none focus:ring-1 focus:ring-blue-500" 
+                                        value={newLinkLabel}
+                                        onChange={(e) => setNewLinkLabel(e.target.value)}
+                                    />
+                                    <input 
+                                        type="text" 
+                                        placeholder="URL" 
+                                        className="w-full text-xs p-2 border border-slate-200 rounded-md outline-none focus:ring-1 focus:ring-blue-500" 
+                                        value={newLinkUrl}
+                                        onChange={(e) => setNewLinkUrl(e.target.value)}
+                                    />
+                                    <button 
+                                        onClick={addCustomLink}
+                                        disabled={!newLinkLabel || !newLinkUrl}
+                                        className="w-full bg-slate-800 text-white text-xs py-2 rounded-md hover:bg-slate-700 disabled:opacity-50 flex items-center justify-center gap-1 font-bold"
+                                    >
+                                        <Icon name="Plus" size={12} /> 追加
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </aside>
+
                     {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+                    
                     <div className="flex-1 flex flex-col min-w-0">
                         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
                             <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
