@@ -11,6 +11,7 @@ from dateutil.relativedelta import relativedelta
 # ==========================================
 # JPXのデータソース (JSON形式)
 BASE_JSON_URL = "https://www.jpx.co.jp/automation/markets/derivatives/participant-volume/json/"
+JPX_DOMAIN = "https://www.jpx.co.jp"
 
 # 出力先設定
 OUTPUT_DIR = "data"
@@ -66,14 +67,20 @@ def fetch_json_data(url):
 
 def fetch_and_parse_excel(url):
     """ExcelファイルのURLから直接データを読み込んで解析 (強化版)"""
+    
+    # URLが相対パス(/automation...)ならドメインを付与
+    if url.startswith("/"):
+        full_url = JPX_DOMAIN + url
+    else:
+        full_url = url
+
     try:
-        print(f"  Downloading Excel: {url}")
+        print(f"  Downloading Excel: {full_url}")
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(full_url, headers=headers, timeout=30)
         response.raise_for_status()
         
-        # Excelを読み込む (エンジンは自動判定)
-        # header=Noneで全行読み込み、後で探す
+        # Excelを読み込む
         try:
             df = pd.read_excel(io.BytesIO(response.content), header=None)
         except Exception as e:
@@ -85,30 +92,25 @@ def fetch_and_parse_excel(url):
         keywords = ["参加者", "Participant", "証券会社", "Member", "Nan"]
         
         for i, row in df.iterrows():
-            # 最初の20行だけチェック（高速化）
-            if i > 20: break
-            
+            if i > 20: break # 最初の20行だけチェック
             row_str = row.astype(str).values
             if any(k in str(s) for s in row_str for k in keywords):
                 header_row_idx = i
                 break
         
-        # 2. ヘッダーが見つからない場合のフォールバック
-        # 「列数が多く、かつ数値データが多い行」の1つ上をヘッダーと仮定する、などの処理も可能だが
-        # ここでは「見つからなければ 0行目などを強制的にヘッダー扱い」して解析を試みる
+        # 見つからない場合は0行目を仮定
         if header_row_idx == -1:
             print("    Warning: Explicit header row not found. Trying auto-detection...")
-            # データが入っていそうな行を探す（NaNが少ない行）
             header_row_idx = 0 
 
         # データフレームの再構築
         df.columns = df.iloc[header_row_idx]
         df = df.iloc[header_row_idx + 1:].reset_index(drop=True)
         
-        # カラム名のクリーニング（改行削除、空白削除）
+        # カラム名のクリーニング
         df.columns = [str(c).replace('\n', '').strip() for c in df.columns]
 
-        # 3. 参加者名カラムを特定する
+        # 2. 参加者名カラムを特定する
         col_participant = None
         
         # A. キーワードで探す
@@ -117,14 +119,13 @@ def fetch_and_parse_excel(url):
                 col_participant = col
                 break
         
-        # B. 見つからない場合、最初の「文字列データが含まれる列」を参加者列とみなす (強力なフォールバック)
+        # B. 見つからない場合、最初の「文字列データが含まれる列」を参加者列とみなす
         if not col_participant:
             print("    Participant column not found by name. Searching by content...")
             for col in df.columns:
-                # その列のユニークな値の多くが文字列かどうか
                 sample_vals = df[col].dropna().head(10)
                 if len(sample_vals) > 0 and all(isinstance(x, str) for x in sample_vals):
-                    # 数字だけの列や "-" だけの列は除外したい
+                    # 数字だけの列や "-" だけの列は除外
                     if not all(x.replace(',','').replace('-','').isdigit() for x in sample_vals):
                         col_participant = col
                         print(f"    Guessed participant column: {col}")
@@ -134,7 +135,7 @@ def fetch_and_parse_excel(url):
             print("    Error: Could not identify participant column.")
             return []
 
-        # 4. データ抽出
+        # 3. データ抽出
         result = []
         for _, row in df.iterrows():
             p_name = row[col_participant]
@@ -159,23 +160,19 @@ def fetch_and_parse_excel(url):
                 
                 val = row[col]
                 try:
-                    # NaNチェック
                     if pd.isna(val): continue
-                    
                     val_str = str(val).strip()
                     if val_str in ["-", "", "nan"]: continue
 
-                    # カンマ削除して数値化
+                    # 数値化
                     val_clean = val_str.replace(',', '')
                     val_float = float(val_clean)
                     
                     if val_float != 0:
-                        # カラム名が長い場合があるので簡略化したり、そのままキーにしたり
                         products[col] = int(val_float)
                 except:
                     pass
             
-            # 有効なデータがあれば追加
             if products:
                 result.append({
                     "name": p_name_str,
@@ -191,20 +188,16 @@ def fetch_and_parse_excel(url):
         return []
 
 def main():
-    print("=== Starting Daily Participant Analysis (Enhanced) ===")
+    print("=== Starting Daily Participant Analysis (Corrected Keys) ===")
     
-    # フォルダ作成
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
-    # 1. 今月のJSON URLを構築
     current_ym = get_current_month_str()
     json_url = get_json_url("participant_volume", current_ym)
     
-    # 2. JSON取得
     data_obj = fetch_json_data(json_url)
     
-    # データがない場合（月初の更新前など）、先月のデータを試す
     if not data_obj:
         print("Trying previous month...")
         prev_date = datetime.now() - relativedelta(months=1)
@@ -216,37 +209,40 @@ def main():
         print("Error: Could not retrieve any valid JSON data from JPX.")
         return
 
-    # 3. 最新の日付データを探す
     table_datas = data_obj["TableDatas"]
     if not table_datas:
         print("Error: JSON 'TableDatas' is empty.")
         return
     
-    # 配列の先頭（最新の日付）を取得
     latest_entry = table_datas[0]
-    trade_date_str = latest_entry.get("TradeDate", "Unknown") # "20260128" format
+    trade_date_str = latest_entry.get("TradeDate", "Unknown")
     
-    # 表示用に日付整形 YYYY/MM/DD
     formatted_date = f"{trade_date_str[:4]}/{trade_date_str[4:6]}/{trade_date_str[6:8]}"
     print(f"Latest Data Date: {formatted_date}")
 
-    # 4. ExcelファイルのURLを取得して解析
     night_data = []
     day_data = []
 
-    # ナイトセッションURL (立会)
-    night_url = latest_entry.get("NightSession")
+    # =========================================================
+    # 修正箇所: JSONのキーを "Night", "WholeDay" に変更
+    # =========================================================
+    
+    # ナイトセッション (Night)
+    night_url = latest_entry.get("Night")
     if night_url and night_url != "-":
-        print(f"Processing Night Session... (URL: {night_url})")
+        print(f"Processing Night Session... (Path: {night_url})")
         night_data = fetch_and_parse_excel(night_url)
+    else:
+        print("Night session data not found in JSON.")
 
-    # 日中セッションURL (立会)
-    day_url = latest_entry.get("DaySession")
+    # 日中セッション (WholeDay = Day Session Regular)
+    day_url = latest_entry.get("WholeDay")
     if day_url and day_url != "-":
-        print(f"Processing Day Session... (URL: {day_url})")
+        print(f"Processing Day Session... (Path: {day_url})")
         day_data = fetch_and_parse_excel(day_url)
+    else:
+        print("Day session data not found in JSON.")
 
-    # 5. 結果を保存
     output_data = {
         "date": formatted_date,
         "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -260,9 +256,8 @@ def main():
         print(f"\nSuccess! Data saved to: {OUTPUT_FILE}")
         print(f"Stats: Night({len(night_data)}) / Day({len(day_data)}) participants")
         
-        # 簡易チェック: データが空なら警告
         if len(night_data) == 0 and len(day_data) == 0:
-            print("WARNING: Output data is empty! Check parsing logic.")
+            print("WARNING: Output data is still empty! Please check log for details.")
             
     except Exception as e:
         print(f"Error saving JSON file: {e}")
