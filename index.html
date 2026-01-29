@@ -64,14 +64,14 @@
         /* Calendar Specific Styles */
         .cal-grid {
             display: grid;
-            grid-template-columns: 80px repeat(5, 1fr) 100px; /* Sun(Labels), Mon-Fri, Sat(Total) */
+            grid-template-columns: 90px repeat(5, 1fr) 100px; /* Sun(Labels), Mon-Fri, Sat(Total) */
             gap: 1px;
             background-color: #e2e8f0;
             border: 1px solid #e2e8f0;
         }
         .cal-cell {
             background-color: white;
-            min-height: 100px;
+            min-height: 120px;
             padding: 4px;
             position: relative;
         }
@@ -84,15 +84,12 @@
             padding: 8px 0;
         }
         .cal-label-col {
-            background-color: #f1f5f9;
+            background-color: #f8fafc;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 4px;
-            font-size: 0.65rem;
-            color: #64748b;
-            padding-left: 8px;
-            font-weight: 600;
+            gap: 6px;
+            padding: 8px;
         }
         .cal-total-col {
             background-color: #f8fafc;
@@ -101,7 +98,20 @@
             justify-content: center;
             align-items: flex-end;
             padding-right: 8px;
+            gap: 6px;
         }
+
+        /* Markdown Preview Styles */
+        .markdown-preview h1 { font-size: 1.5em; font-weight: bold; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
+        .markdown-preview h2 { font-size: 1.3em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+        .markdown-preview h3 { font-size: 1.1em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+        .markdown-preview p { margin-bottom: 0.8em; line-height: 1.6; }
+        .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.8em; }
+        .markdown-preview ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.8em; }
+        .markdown-preview li { margin-bottom: 0.3em; }
+        .markdown-preview blockquote { border-left: 4px solid #e2e8f0; padding-left: 1em; color: #64748b; }
+        .markdown-preview code { background-color: #f1f5f9; padding: 0.2em 0.4em; rounded: 4px; font-family: monospace; font-size: 0.9em; }
+        .markdown-preview pre { background-color: #1e293b; color: #f8fafc; padding: 1em; border-radius: 8px; overflow-x: auto; margin-bottom: 1em; }
     </style>
 <script type="importmap">
 {
@@ -149,31 +159,35 @@
                 Check: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
                 Download: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
                 ChevronLeft: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
-                ChevronRight: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                ChevronRight: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+                FileCsv: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
             };
             return icons[name] || null;
         };
 
+        // カテゴリごとの配色設定 (カード形式)
+        const CATEGORY_STYLES = {
+            stocks: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '現物' },
+            margin: { bg: 'bg-amber-100', text: 'text-amber-800', label: '信用' },
+            foreign: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: '海外' },
+            cfd: { bg: 'bg-rose-100', text: 'text-rose-800', label: 'CFD' }
+        };
+
         // ==========================================
-        //  新規コンポーネント: 収益管理カレンダー (Profit Manager)
+        //  投資カレンダー (Profit Manager) - 独立ページ化
         // ==========================================
         const ProfitManager = () => {
-            // --- State ---
-            const [currentDate, setCurrentDate] = useState(new Date()); // 表示中の月
+            const [currentDate, setCurrentDate] = useState(new Date());
             const [historyData, setHistoryData] = useState({});
-            const [selectedDate, setSelectedDate] = useState(null); // モーダル表示用
+            const [selectedDate, setSelectedDate] = useState(null);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [editData, setEditData] = useState({ stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '' });
-            const [modalTab, setModalTab] = useState('edit'); // 'edit' or 'preview'
+            const [modalTab, setModalTab] = useState('edit'); 
             
-            // --- Helper Functions ---
             const formatMoney = (val) => val ? val.toLocaleString() : '0';
             const getMonthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            const getDateKey = (d) => {
-                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            };
+            const getDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             
-            // --- Persistence ---
             useEffect(() => {
                 const saved = localStorage.getItem('history_data');
                 if (saved) {
@@ -186,86 +200,53 @@
                 localStorage.setItem('history_data', JSON.stringify(newData));
             };
 
-            // --- Stats Calculation ---
             const stats = useMemo(() => {
                 let lifetime = 0;
                 let prevYear = 0;
                 let monthTotal = 0;
                 const currentMonthKey = getMonthKey(currentDate);
-                const prevYearKey = (currentDate.getFullYear() - 1).toString(); // "2025" etc.
+                const prevYearKey = (currentDate.getFullYear() - 1).toString();
 
-                // 履歴データから集計
                 Object.entries(historyData).forEach(([key, val]) => {
-                    // keyが日付 "YYYY-MM-DD" の場合
                     if (key.match(/^\d{4}-\d{2}-\d{2}$/)) {
                         const dayTotal = (val.stocks || 0) + (val.margin || 0) + (val.foreign || 0) + (val.cfd || 0);
                         lifetime += dayTotal;
-                        if (key.startsWith(currentMonthKey)) {
-                            monthTotal += dayTotal;
-                        }
-                        if (key.startsWith(prevYearKey)) {
-                             // 日付ベースの前年データがある場合
-                             prevYear += dayTotal;
-                        }
+                        if (key.startsWith(currentMonthKey)) monthTotal += dayTotal;
+                        if (key.startsWith(prevYearKey)) prevYear += dayTotal;
                     }
-                    // keyが年 "YYYY" の場合 (マニュアル入力の過去ログなど)
-                    else if (key === prevYearKey && val.total) {
-                         prevYear += val.total;
-                    }
-                    else if (val.total) {
-                        // その他の年合計
-                        lifetime += val.total;
-                    }
+                    else if (key === prevYearKey && val.total) prevYear += val.total;
+                    else if (val.total) lifetime += val.total;
                 });
-
                 return { lifetime, prevYear, monthTotal };
             }, [historyData, currentDate]);
 
-            // --- Calendar Generation Logic ---
             const calendarWeeks = useMemo(() => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
                 const firstDay = new Date(year, month, 1);
                 const lastDay = new Date(year, month + 1, 0);
-                
                 const weeks = [];
                 let currentWeek = [];
-                
-                // 月初めの空白パディング（日〜土の構造にあわせる）
-                // 日曜始まり: 0
-                for (let i = 0; i < firstDay.getDay(); i++) {
-                    currentWeek.push(null);
-                }
-                
-                // 日付埋め
+                for (let i = 0; i < firstDay.getDay(); i++) currentWeek.push(null);
                 for (let d = 1; d <= lastDay.getDate(); d++) {
                     const date = new Date(year, month, d);
                     currentWeek.push(date);
-                    
-                    if (date.getDay() === 6) { // 土曜で週終わり
-                        weeks.push(currentWeek);
-                        currentWeek = [];
-                    }
+                    if (date.getDay() === 6) { weeks.push(currentWeek); currentWeek = []; }
                 }
-                
-                // 月末のパディング
                 if (currentWeek.length > 0) {
-                    while (currentWeek.length < 7) {
-                        currentWeek.push(null);
-                    }
+                    while (currentWeek.length < 7) currentWeek.push(null);
                     weeks.push(currentWeek);
                 }
-                
                 return weeks;
             }, [currentDate]);
 
-            // --- Modal Handlers ---
             const openModal = (date) => {
                 if (!date) return;
                 const key = getDateKey(date);
                 const data = historyData[key] || { stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '' };
                 setSelectedDate(date);
-                setEditData({ ...data }); // Copy
+                setEditData({ ...data });
+                setModalTab('edit');
                 setIsModalOpen(true);
             };
 
@@ -277,26 +258,19 @@
                 setIsModalOpen(false);
             };
 
-            const handleExport = () => {
+            // Markdown出力
+            const handleExportMD = () => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth() + 1;
                 let md = `# 投資日記レポート：${year}年${month}月度\n`;
                 md += `（月間の総合計収支：${stats.monthTotal > 0 ? '+' : ''}${stats.monthTotal.toLocaleString()}円）\n\n`;
-
                 const sortedKeys = Object.keys(historyData).filter(k => k.startsWith(getMonthKey(currentDate))).sort();
-                
                 sortedKeys.forEach(key => {
                     const d = historyData[key];
                     const total = (d.stocks||0) + (d.margin||0) + (d.foreign||0) + (d.cfd||0);
                     if (total === 0 && !d.note) return;
-
-                    md += `## ${key}\n`;
-                    md += `### 収支データ\n`;
-                    md += `- 現物: ${d.stocks||0} / 信用: ${d.margin||0} / 海外: ${d.foreign||0} / CFD: ${d.cfd||0}\n`;
-                    md += `### 振り返り\n`;
-                    md += `${d.note || '（記載なし）'}\n\n`;
+                    md += `## ${key}\n### 収支データ\n- 現物: ${d.stocks||0} / 信用: ${d.margin||0} / 海外: ${d.foreign||0} / CFD: ${d.cfd||0}\n### 振り返り\n${d.note || '（記載なし）'}\n\n`;
                 });
-
                 const blob = new Blob([md], { type: 'text/markdown' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -305,31 +279,58 @@
                 a.click();
             };
 
-            // --- Calendar Cell Component ---
+            // CSV出力
+            const handleExportCSV = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth() + 1;
+                const sortedKeys = Object.keys(historyData).filter(k => k.startsWith(getMonthKey(currentDate))).sort();
+                
+                // BOM付与でExcelの文字化け回避
+                let csv = '\uFEFFDate,Stocks,Margin,Foreign,CFD,Total,Note\n';
+                
+                sortedKeys.forEach(key => {
+                    const d = historyData[key];
+                    const total = (d.stocks||0) + (d.margin||0) + (d.foreign||0) + (d.cfd||0);
+                    // ノート内の改行やカンマをエスケープ
+                    const escapedNote = d.note ? `"${d.note.replace(/"/g, '""')}"` : "";
+                    csv += `${key},${d.stocks||0},${d.margin||0},${d.foreign||0},${d.cfd||0},${total},${escapedNote}\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `investment_data_${year}_${month}.csv`;
+                a.click();
+            };
+
             const DayCell = ({ date }) => {
                 if (!date) return <div className="cal-cell bg-slate-50"></div>;
-                
                 const key = getDateKey(date);
                 const data = historyData[key];
-                const total = data ? (data.stocks||0) + (data.margin||0) + (data.foreign||0) + (data.cfd||0) : 0;
                 const hasNote = data && data.note && data.note.trim().length > 0;
                 const isToday = getDateKey(new Date()) === key;
 
+                // 各カテゴリの数値をカードスタイルで表示するヘルパー
+                const StatCard = ({ type, val }) => (
+                    <div className={`flex justify-between items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
+                        <span>{CATEGORY_STYLES[type].label.charAt(0)}</span>
+                        <span>{formatMoney(val)}</span>
+                    </div>
+                );
+
                 return (
-                    <div 
-                        onClick={() => openModal(date)}
-                        className={`cal-cell cursor-pointer hover:bg-blue-50 transition-colors border-r border-b border-slate-100 ${isToday ? 'bg-blue-50/50' : ''}`}
-                    >
-                        <div className="flex justify-between items-start mb-1">
+                    <div onClick={() => openModal(date)} className={`cal-cell cursor-pointer hover:bg-blue-50 transition-colors border-r border-b border-slate-100 ${isToday ? 'bg-blue-50/50' : ''}`}>
+                        <div className="flex justify-between items-start mb-2">
                             <span className={`text-xs font-bold ${isToday ? 'bg-blue-600 text-white px-1.5 py-0.5 rounded-full' : 'text-slate-500'}`}>{date.getDate()}</span>
                             {hasNote && <Icon name="FileText" size={12} className="text-slate-400" />}
                         </div>
                         {data && (
-                            <div className="space-y-0.5">
-                                <div className="flex justify-between text-[10px] text-slate-500"><span>現</span><span className={data.stocks > 0 ? 'text-blue-600' : data.stocks < 0 ? 'text-red-500' : ''}>{formatMoney(data.stocks)}</span></div>
-                                <div className="flex justify-between text-[10px] text-slate-500"><span>信</span><span className={data.margin > 0 ? 'text-blue-600' : data.margin < 0 ? 'text-red-500' : ''}>{formatMoney(data.margin)}</span></div>
-                                <div className="flex justify-between text-[10px] text-slate-500"><span>外</span><span className={data.foreign > 0 ? 'text-blue-600' : data.foreign < 0 ? 'text-red-500' : ''}>{formatMoney(data.foreign)}</span></div>
-                                <div className="flex justify-between text-[10px] text-slate-500"><span>C</span><span className={data.cfd > 0 ? 'text-blue-600' : data.cfd < 0 ? 'text-red-500' : ''}>{formatMoney(data.cfd)}</span></div>
+                            <div className="flex flex-col gap-0.5">
+                                <StatCard type="stocks" val={data.stocks || 0} />
+                                <StatCard type="margin" val={data.margin || 0} />
+                                <StatCard type="foreign" val={data.foreign || 0} />
+                                <StatCard type="cfd" val={data.cfd || 0} />
                             </div>
                         )}
                     </div>
@@ -338,65 +339,51 @@
 
             return (
                 <div className="space-y-6 mb-12">
-                    {/* Top Stats Panel */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up">
-                        {/* Lifetime */}
                         <div className="lifetime-bg rounded-xl p-6 text-white shadow-lg relative overflow-hidden group">
                             <div className="relative z-10">
                                 <p className="text-blue-100 text-sm font-medium mb-1">生涯収益 (Lifetime Profit)</p>
                                 <h3 className="text-3xl font-bold tracking-tight">¥ {stats.lifetime.toLocaleString()}</h3>
                                 <p className="text-xs text-blue-200 mt-2 opacity-80">全期間累計</p>
                             </div>
-                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4 group-hover:scale-110 transition-transform">
-                                <Icon name="LineChart" size={100} />
-                            </div>
+                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4 group-hover:scale-110 transition-transform"><Icon name="LineChart" size={100} /></div>
                         </div>
-                        
-                        {/* Last Year */}
                         <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
                             <p className="text-slate-500 text-sm font-medium mb-1">前年収支 (2025)</p>
-                            <h3 className={`text-3xl font-bold ${stats.prevYear >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
-                                {stats.prevYear >= 0 ? '+' : ''}{stats.prevYear.toLocaleString()}
-                            </h3>
+                            <h3 className={`text-3xl font-bold ${stats.prevYear >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{stats.prevYear >= 0 ? '+' : ''}{stats.prevYear.toLocaleString()}</h3>
                             <p className="text-xs text-slate-400 mt-2">年間確定損益</p>
                         </div>
-
-                        {/* This Month */}
                         <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
                             <div>
                                 <p className="text-slate-500 text-sm font-medium mb-1">今月収支 ({currentDate.getMonth() + 1}月)</p>
-                                <h3 className={`text-3xl font-bold ${stats.monthTotal >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
-                                    {stats.monthTotal >= 0 ? '+' : ''}{stats.monthTotal.toLocaleString()}
-                                </h3>
+                                <h3 className={`text-3xl font-bold ${stats.monthTotal >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{stats.monthTotal >= 0 ? '+' : ''}{stats.monthTotal.toLocaleString()}</h3>
                             </div>
-                            <div className="mt-2 flex justify-between items-end">
-                                <p className="text-xs text-slate-400">リアルタイム集計</p>
-                                <button onClick={handleExport} className="text-xs flex items-center gap-1 text-slate-500 hover:text-blue-600 border border-slate-200 rounded px-2 py-1 bg-slate-50 hover:bg-white transition-colors">
-                                    <Icon name="Download" size={12} /> MD出力
-                                </button>
-                            </div>
+                            <p className="text-xs text-slate-400 mt-2">リアルタイム集計</p>
                         </div>
                     </div>
 
-                    {/* Calendar Control & View */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
                         <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                             <div className="flex items-center gap-4">
-                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                    <Icon name="Calendar" size={20} />
-                                    {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月
-                                </h2>
+                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Icon name="Calendar" size={20} />{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h2>
                                 <div className="flex gap-1">
                                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronLeft" size={20} /></button>
                                     <button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white hover:shadow rounded">Today</button>
                                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronRight" size={20} /></button>
                                 </div>
                             </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleExportMD} className="text-xs flex items-center gap-1 text-slate-600 hover:text-blue-600 border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium">
+                                    <Icon name="Download" size={14} /> MD出力
+                                </button>
+                                <button onClick={handleExportCSV} className="text-xs flex items-center gap-1 text-slate-600 hover:text-green-600 border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium">
+                                    <Icon name="FileCsv" size={14} /> CSV出力
+                                </button>
+                            </div>
                         </div>
                         
                         <div className="cal-grid">
-                            {/* Header Row */}
-                            <div className="cal-header">Sun</div>
+                            <div className="cal-header">Category</div>
                             <div className="cal-header">Mon</div>
                             <div className="cal-header">Tue</div>
                             <div className="cal-header">Wed</div>
@@ -404,9 +391,7 @@
                             <div className="cal-header">Fri</div>
                             <div className="cal-header">Sat (Total)</div>
 
-                            {/* Body Rows */}
                             {calendarWeeks.map((week, wIdx) => {
-                                // Calculate Weekly Total
                                 const weekTotal = week.reduce((acc, date) => {
                                     if (!date) return acc;
                                     const d = historyData[getDateKey(date)];
@@ -422,27 +407,19 @@
 
                                 return (
                                     <React.Fragment key={wIdx}>
-                                        {/* Sunday Label Column */}
                                         <div className="cal-label-col border-r border-b border-slate-100">
-                                            <span>現物</span>
-                                            <span>信用</span>
-                                            <span>海外</span>
-                                            <span>CFD</span>
+                                            {Object.entries(CATEGORY_STYLES).map(([key, style]) => (
+                                                <div key={key} className={`text-[10px] font-bold text-center py-1 rounded ${style.bg} ${style.text}`}>{style.label}</div>
+                                            ))}
                                         </div>
-                                        
-                                        {/* Days Mon-Fri */}
-                                        {week.slice(1, 6).map((date, dIdx) => (
-                                            <DayCell key={dIdx} date={date} />
-                                        ))}
-
-                                        {/* Saturday Total Column */}
+                                        {week.slice(1, 6).map((date, dIdx) => (<DayCell key={dIdx} date={date} />))}
                                         <div className="cal-total-col border-b border-slate-100 bg-slate-50">
                                             <div className="flex flex-col gap-1 w-full text-xs">
                                                  <div className={`text-right ${weekTotal.stocks > 0 ? 'text-blue-600' : weekTotal.stocks < 0 ? 'text-red-500' : 'text-slate-400'}`}>{formatMoney(weekTotal.stocks)}</div>
                                                  <div className={`text-right ${weekTotal.margin > 0 ? 'text-blue-600' : weekTotal.margin < 0 ? 'text-red-500' : 'text-slate-400'}`}>{formatMoney(weekTotal.margin)}</div>
                                                  <div className={`text-right ${weekTotal.foreign > 0 ? 'text-blue-600' : weekTotal.foreign < 0 ? 'text-red-500' : 'text-slate-400'}`}>{formatMoney(weekTotal.foreign)}</div>
                                                  <div className={`text-right ${weekTotal.cfd > 0 ? 'text-blue-600' : weekTotal.cfd < 0 ? 'text-red-500' : 'text-slate-400'}`}>{formatMoney(weekTotal.cfd)}</div>
-                                                 <div className={`mt-1 pt-1 border-t border-slate-200 font-bold text-right ${weekSum >= 0 ? 'text-slate-800' : 'text-red-600'}`}>{formatMoney(weekSum)}</div>
+                                                 <div className={`mt-2 pt-1 border-t border-slate-200 font-bold text-right ${weekSum >= 0 ? 'text-slate-800' : 'text-red-600'}`}>{formatMoney(weekSum)}</div>
                                             </div>
                                         </div>
                                     </React.Fragment>
@@ -451,11 +428,9 @@
                         </div>
                     </div>
 
-                    {/* Editor Modal */}
                     {isModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up">
                             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
-                                {/* Header */}
                                 <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                                     <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
                                         <Icon name="FileText" size={20} />
@@ -463,9 +438,7 @@
                                     </h3>
                                     <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button>
                                 </div>
-                                
                                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                                    {/* Left: Numbers */}
                                     <div className="w-full md:w-1/3 p-6 border-r border-slate-200 bg-slate-50/50 overflow-y-auto">
                                         <h4 className="text-sm font-bold text-slate-500 uppercase mb-4">収支入力 (円)</h4>
                                         <div className="space-y-4">
@@ -477,65 +450,34 @@
                                             ].map(f => (
                                                 <div key={f.k}>
                                                     <label className="block text-xs font-bold text-slate-500 mb-1">{f.l}</label>
-                                                    <input 
-                                                        type="number" 
-                                                        value={editData[f.k] || ''}
-                                                        onChange={(e) => setEditData({...editData, [f.k]: parseInt(e.target.value) || 0})}
-                                                        className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    />
+                                                    <input type="number" value={editData[f.k] || ''} onChange={(e) => setEditData({...editData, [f.k]: parseInt(e.target.value) || 0})} className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-blue-500 outline-none" />
                                                 </div>
                                             ))}
                                             <div className="pt-4 border-t border-slate-200 mt-4">
                                                 <div className="flex justify-between items-center">
                                                     <span className="font-bold text-slate-700">合計</span>
-                                                    <span className={`text-xl font-bold font-mono ${(editData.stocks+editData.margin+editData.foreign+editData.cfd) >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
-                                                        {formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}
-                                                    </span>
+                                                    <span className={`text-xl font-bold font-mono ${(editData.stocks+editData.margin+editData.foreign+editData.cfd) >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Right: Diary */}
                                     <div className="flex-1 flex flex-col h-full bg-white">
-                                        <div className="flex border-b border-slate-200">
-                                            <button 
-                                                onClick={() => setModalTab('edit')}
-                                                className={`px-6 py-3 text-sm font-bold ${modalTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}
-                                            >
-                                                編集 (Markdown)
-                                            </button>
-                                            <button 
-                                                onClick={() => setModalTab('preview')}
-                                                className={`px-6 py-3 text-sm font-bold ${modalTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}
-                                            >
-                                                プレビュー
-                                            </button>
+                                        <div className="flex border-b border-slate-200 shrink-0">
+                                            <button onClick={() => setModalTab('edit')} className={`px-6 py-3 text-sm font-bold ${modalTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}>編集 (Markdown)</button>
+                                            <button onClick={() => setModalTab('preview')} className={`px-6 py-3 text-sm font-bold ${modalTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}>プレビュー</button>
                                         </div>
                                         <div className="flex-1 overflow-hidden relative">
                                             {modalTab === 'edit' ? (
-                                                <textarea 
-                                                    className="w-full h-full p-4 resize-none outline-none font-mono text-sm leading-relaxed"
-                                                    placeholder="# 今日の振り返り&#13;&#10;- トレード根拠: ...&#13;&#10;- 反省点: ..."
-                                                    value={editData.note}
-                                                    onChange={(e) => setEditData({...editData, note: e.target.value})}
-                                                />
+                                                <textarea className="w-full h-full p-4 resize-none outline-none font-mono text-sm leading-relaxed" placeholder="# 今日の振り返り..." value={editData.note} onChange={(e) => setEditData({...editData, note: e.target.value})} />
                                             ) : (
-                                                <div 
-                                                    className="w-full h-full p-4 overflow-y-auto prose prose-sm prose-slate max-w-none"
-                                                    dangerouslySetInnerHTML={{ __html: marked.parse(editData.note || '') }}
-                                                />
+                                                <div className="w-full h-full p-4 overflow-y-auto markdown-preview" dangerouslySetInnerHTML={{ __html: marked.parse(editData.note || '') }} />
                                             )}
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Footer */}
-                                <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                                <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
                                     <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-bold transition-colors">キャンセル</button>
-                                    <button onClick={handleSave} className="px-6 py-2 bg-slate-800 text-white hover:bg-slate-700 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
-                                        <Icon name="Check" size={16} /> 保存
-                                    </button>
+                                    <button onClick={handleSave} className="px-6 py-2 bg-slate-800 text-white hover:bg-slate-700 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Check" size={16} /> 保存</button>
                                 </div>
                             </div>
                         </div>
@@ -1309,7 +1251,7 @@
         //  Main Layout
         // ==========================================
         const App = () => {
-            const [view, setView] = useState('option');
+            const [view, setView] = useState('calendar'); // Default to Calendar
             const [sidebarOpen, setSidebarOpen] = useState(false);
             
             // --- Option Charts State (Persisted in App) ---
@@ -1394,6 +1336,7 @@
                         
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 flex flex-col relative">
                             <div className="text-xs font-bold text-slate-400 px-2 mb-2">MENU</div>
+                            <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
                             <NavItem id="option" label="Option 分析" icon="BarChart3" />
                             <NavItem id="jpx" label="JPX 海外投資家動向" icon="LineChart" />
                             <NavItem id="participant" label="取引参加者別取引高" icon="Briefcase" />
@@ -1513,16 +1456,13 @@
                         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
                             <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
                             <span className="ml-4 font-bold text-slate-700">
-                                {view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}
+                                {view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}
                             </span>
                         </header>
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50">
                             <div className="max-w-7xl mx-auto h-full">
-                                {/* Profit Management Dashboard (Always visible at top) */}
-                                <ProfitManager />
-                                
-                                {/* Switched Views */}
-                                {view === 'jpx' ? <ForeignInvestors /> : 
+                                {view === 'calendar' ? <ProfitManager /> : 
+                                 view === 'jpx' ? <ForeignInvestors /> : 
                                  view === 'participant' ? <ParticipantVolume /> : 
                                  <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
                             </div>
