@@ -3,14 +3,22 @@
 ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
-body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; }
+body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
 
-.gradient-bg {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
+/* --- Modern Purple Tone Definitions --- */
+.bg-primary { background-color: #7C4DFF; }
+.text-primary { color: #7C4DFF; }
+.border-primary { border-color: #7C4DFF; }
+
+.text-secondary { color: #536DFE; } /* Profit / Benefit */
+.text-danger { color: #FF4081; }    /* Loss / Negative */
+.text-neutral-deep { color: #64748B; }
+
+/* Gradient for Lifetime Card */
 .lifetime-bg {
-    background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%);
+    background: linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%);
 }
+
 .animate-fade-in-up {
     animation: fadeInUp 0.6s ease-out;
 }
@@ -33,9 +41,13 @@ body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-ser
 }
 .cal-cell {
     background-color: white;
-    min-height: 120px;
+    min-height: 140px; /* Increased height for 5 layers */
     padding: 4px;
     position: relative;
+    transition: background-color 0.2s;
+}
+.cal-cell:hover {
+    background-color: #F3E5F5; /* Very light purple hover */
 }
 .cal-header {
     background-color: #f8fafc;
@@ -50,7 +62,7 @@ body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-ser
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 6px;
+    gap: 4px; /* Tighter gap */
     padding: 8px;
 }
 .cal-total-col {
@@ -60,17 +72,69 @@ body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-ser
     justify-content: center;
     align-items: flex-end;
     padding-right: 8px;
-    gap: 6px;
+    gap: 4px;
 }
 
-/* Markdown Preview Styles */
-.markdown-preview h1 { font-size: 1.5em; font-weight: bold; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
-.markdown-preview h2 { font-size: 1.3em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
-.markdown-preview h3 { font-size: 1.1em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
-.markdown-preview p { margin-bottom: 0.8em; line-height: 1.6; }
+/* Markdown Preview Styles (Ensure H1 works) */
+.markdown-preview {
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.6;
+}
+.markdown-preview h1 { 
+    font-size: 1.8em; 
+    font-weight: 800; 
+    margin-top: 0; 
+    margin-bottom: 0.6em; 
+    border-bottom: 2px solid #e2e8f0; 
+    padding-bottom: 0.3em; 
+    color: #1e293b;
+}
+.markdown-preview h2 { 
+    font-size: 1.5em; 
+    font-weight: 700; 
+    margin-top: 1.2em; 
+    margin-bottom: 0.5em; 
+    color: #334155;
+    border-left: 4px solid #7C4DFF;
+    padding-left: 0.5em;
+}
+.markdown-preview h3 { 
+    font-size: 1.2em; 
+    font-weight: 600; 
+    margin-top: 1em; 
+    margin-bottom: 0.5em; 
+    color: #475569;
+}
+.markdown-preview p { margin-bottom: 0.8em; }
 .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.8em; }
 .markdown-preview ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.8em; }
 .markdown-preview li { margin-bottom: 0.3em; }
-.markdown-preview blockquote { border-left: 4px solid #e2e8f0; padding-left: 1em; color: #64748b; }
-.markdown-preview code { background-color: #f1f5f9; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
-.markdown-preview pre { background-color: #1e293b; color: #f8fafc; padding: 1em; border-radius: 8px; overflow-x: auto; margin-bottom: 1em; }
+.markdown-preview blockquote { 
+    border-left: 4px solid #cbd5e1; 
+    padding-left: 1em; 
+    color: #64748b; 
+    background-color: #f8fafc;
+    padding: 0.5em 1em;
+    border-radius: 0 4px 4px 0;
+}
+.markdown-preview code { 
+    background-color: #f1f5f9; 
+    padding: 0.2em 0.4em; 
+    border-radius: 4px; 
+    font-family: monospace; 
+    color: #d63384;
+}
+.markdown-preview pre { 
+    background-color: #1e293b; 
+    color: #f8fafc; 
+    padding: 1em; 
+    border-radius: 8px; 
+    overflow-x: auto; 
+    margin-bottom: 1em; 
+}
+.markdown-preview pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+}
