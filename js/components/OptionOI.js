@@ -120,7 +120,7 @@ const DataInput = ({ onDataParsed }) => {
     return (
         <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
             <div 
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:bg-slate-50'}`}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`}
                 onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                 onDragLeave={() => setDragActive(false)}
                 onDrop={handleDrop}
@@ -132,13 +132,13 @@ const DataInput = ({ onDataParsed }) => {
             </div>
             <div className="flex gap-2">
                 <textarea 
-                    className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none"
                     rows={4}
                     placeholder="ここにデータを貼り付け..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                 />
-                <button onClick={() => handleParse(text)} disabled={!text} className="bg-slate-800 text-white px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-medium">解析</button>
+                <button onClick={() => handleParse(text)} disabled={!text} className="bg-[#7C4DFF] text-white px-4 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-medium">解析</button>
             </div>
         </div>
     );
@@ -191,7 +191,7 @@ const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
         return (
             <div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50">
                 <p className="font-bold">Strike: {label}</p>
-                <p className={d.diff >= 0 ? 'text-blue-600' : 'text-red-500'}>Diff: {d.diff.toLocaleString()}</p>
+                <p className={d.diff >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p>
                 <div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div>
             </div>
         );
@@ -216,13 +216,13 @@ const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
                     <span className="text-xs font-bold text-slate-500">STEP</span>
                     <input 
                         type="number" 
-                        className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-blue-500"
+                        className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]"
                         value={step}
                         onChange={(e) => setStep(parseFloat(e.target.value) || 0)}
                         min="0.1"
                     />
                 </div>
-                <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-blue-600 border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
+                <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
             </div>
             <div className="flex-1 flex overflow-hidden relative">
                 <div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e, 'y')}>
@@ -245,7 +245,7 @@ const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
                                 <Tooltip content={<CustomTooltip />} cursor={{fill:'rgba(0,0,0,0.05)'}} />
                                 <ReferenceLine x={0} stroke="#334155" />
                                 <Bar dataKey="diff" barSize={barHeight * 0.8}>
-                                    {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#4A86E8' : '#E67C73'} />))}
+                                    {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#536DFE' : '#FF4081'} />))}
                                     <LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11, fill:'#64748b'}} />
                                 </Bar>
                             </BarChart>
@@ -345,7 +345,7 @@ const OptionOI = ({ charts, setCharts }) => {
                 <p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p>
                     <div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">
                     {links.map(l => (
-                        <a key={l.label} href={l.url} target="_blank" className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+                        <a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">
                             {l.label} <Icon name="ExternalLink" size={10} />
                         </a>
                     ))}
@@ -354,13 +354,13 @@ const OptionOI = ({ charts, setCharts }) => {
                     <span className="text-sm text-slate-500 font-bold">Ticker:</span>
                     <input 
                         type="text" 
-                        className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-blue-500"
+                        className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]"
                         placeholder="e.g. TSLA"
                         value={ticker}
                         onChange={(e)=>setTicker(e.target.value)}
                         onKeyDown={(e)=>e.key === 'Enter' && handleTickerNav()}
                     />
-                    <button onClick={handleTickerNav} className="bg-slate-800 text-white text-xs px-3 py-1.5 rounded hover:bg-slate-700 font-medium">Go</button>
+                    <button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button>
                     </div>
                     <DataInput onDataParsed={handleData} />
             </div>
