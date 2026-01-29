@@ -77,7 +77,7 @@ const App = () => {
     };
 
     const NavItem = ({ id, label, icon }) => (
-        <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === id ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-100'}`}>
+        <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}>
             <Icon name={icon} /><span className="font-medium">{label}</span>
         </button>
     );
@@ -142,7 +142,7 @@ const App = () => {
                         {!isAddingLink ? (
                             <button 
                                 onClick={() => setIsAddingLink(true)}
-                                className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-md transition-all duration-200"
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"
                                 title="リンクを追加"
                             >
                                 <Icon name="Plus" size={20} />
@@ -155,8 +155,8 @@ const App = () => {
                                 </div>
                                 
                                 <div className="flex bg-slate-100 p-1 rounded-lg mb-3">
-                                    <button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button>
-                                    <button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button>
+                                    <button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button>
+                                    <button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button>
                                 </div>
 
                                 <div className="space-y-3">
@@ -164,7 +164,7 @@ const App = () => {
                                         type="text" 
                                         placeholder="Name" 
                                         autoFocus
-                                        className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+                                        className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF] focus:border-[#7C4DFF] transition-all" 
                                         value={newLinkLabel}
                                         onChange={(e) => setNewLinkLabel(e.target.value)}
                                     />
@@ -172,7 +172,7 @@ const App = () => {
                                         <input 
                                             type="text" 
                                             placeholder="URL" 
-                                            className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+                                            className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF] focus:border-[#7C4DFF] transition-all" 
                                             value={newLinkUrl}
                                             onChange={(e) => setNewLinkUrl(e.target.value)}
                                         />
@@ -180,7 +180,7 @@ const App = () => {
                                     <button 
                                         onClick={addCustomLink}
                                         disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)}
-                                        className="w-full bg-slate-800 text-white text-xs py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-bold transition-colors"
+                                        className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold transition-colors"
                                     >
                                         追加
                                     </button>
@@ -196,7 +196,7 @@ const App = () => {
             <div className="flex-1 flex flex-col min-w-0">
                 <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
                     <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
-                    <span className="ml-4 font-bold text-slate-700">
+                    <span className="ml-4 font-bold text-[#334155]">
                         {view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}
                     </span>
                 </header>
