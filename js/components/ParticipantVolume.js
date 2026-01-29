@@ -30,12 +30,13 @@ const ParticipantVolume = () => {
     const targetData = session === 'night' ? data.night_session : data.day_session;
     const sessionLabel = session === 'night' ? 'ナイト・セッション (立会)' : '日中取引 (立会)';
 
+    // Modern colors for categories
     const categoryColors = {
-        'US': 'bg-blue-100 text-blue-800 border-blue-200',
-        'EU': 'bg-green-100 text-green-800 border-green-200',
-        'JP': 'bg-orange-100 text-orange-800 border-orange-200',
-        'NET': 'bg-purple-100 text-purple-800 border-purple-200',
-        'OTHERS': 'bg-slate-100 text-slate-800 border-slate-200'
+        'US': 'bg-blue-50 text-blue-800 border-blue-100',
+        'EU': 'bg-green-50 text-green-800 border-green-100',
+        'JP': 'bg-orange-50 text-orange-800 border-orange-100',
+        'NET': 'bg-purple-50 text-purple-800 border-purple-100',
+        'OTHERS': 'bg-slate-50 text-slate-800 border-slate-100'
     };
 
     const grouped = targetData.reduce((acc, item) => {
@@ -57,13 +58,13 @@ const ParticipantVolume = () => {
             <div className="flex space-x-2 bg-white p-2 rounded-lg shadow-sm border border-slate-200 w-fit">
                 <button 
                     onClick={() => setSession('night')}
-                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'night' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'night' ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}
                 >
                     🌙 ナイト・セッション
                 </button>
                 <button 
                     onClick={() => setSession('day')}
-                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'day' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}
+                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'day' ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}
                 >
                     ☀️ 日中取引
                 </button>
