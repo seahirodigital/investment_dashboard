@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// ★修正点: ./Icons.js ではなく ./js/components/Icons.js にする
-import { Icon } from './js/components/Icons.js';
+// ★修正: 同じcomponentsフォルダ内なので ./Icons.js
+import { Icon } from './Icons.js';
 
-// ... (残りのコードは変更なし。以下は以前と同じ内容ですが、importだけ直してください) ...
 const CATEGORY_STYLES = {
     stocks: { bg: 'bg-[#F3E5F5]', text: 'text-[#7E57C2]', label: '現物' },
     margin: { bg: 'bg-[#E8EAF6]', text: 'text-[#5C6BC0]', label: '信用' },
@@ -12,10 +11,6 @@ const CATEGORY_STYLES = {
 };
 
 const ProfitManager = () => {
-    // ... (中略: ロジックは変更ありません) ...
-    // このファイル全体を以前のコードのまま、最初の1行目のimportだけ書き換えてください。
-    // 長くなるため省略しますが、前回の回答にあるコードの import 部分だけ変更すればOKです。
-    // 面倒であれば、以下に全コードを再度載せます。
     const [currentDate, setCurrentDate] = useState(new Date());
     const [historyData, setHistoryData] = useState({});
     const [selectedDate, setSelectedDate] = useState(null);
@@ -191,3 +186,28 @@ const ProfitManager = () => {
             </div>
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
+                        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="FileText" size={20} />{selectedDate.getFullYear()}年{selectedDate.getMonth()+1}月{selectedDate.getDate()}日</h3><button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button></div>
+                        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                            <div className="w-full md:w-1/3 p-6 border-r border-slate-200 bg-slate-50/50 overflow-y-auto">
+                                <div className="mb-6"><label className="block text-xs font-bold text-[#7C4DFF] mb-1 uppercase">Event (Top Layer)</label><input type="text" placeholder="決算, FRB会合, etc." value={editData.event || ''} onChange={(e) => setEditData({...editData, event: e.target.value})} className="w-full border border-purple-200 rounded p-2 text-sm focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div>
+                                <h4 className="text-sm font-bold text-[#64748B] uppercase mb-4">収支入力 (円)</h4>
+                                <div className="space-y-4">
+                                    {[ { k: 'stocks', l: '現物収支' }, { k: 'margin', l: '信用収支' }, { k: 'foreign', l: '海外株収支' }, { k: 'cfd', l: 'CFD/先物' } ].map(f => (<div key={f.k}><label className="block text-xs font-bold text-slate-500 mb-1">{f.l}</label><input type="number" value={editData[f.k] || ''} onChange={(e) => setEditData({...editData, [f.k]: parseInt(e.target.value) || 0})} className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div>))}
+                                    <div className="pt-4 border-t border-slate-200 mt-4"><div className="flex justify-between items-center"><span className="font-bold text-slate-700">合計</span><span className={`text-xl font-bold font-mono ${(editData.stocks+editData.margin+editData.foreign+editData.cfd) >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span></div></div>
+                                </div>
+                            </div>
+                            <div className="flex-1 flex flex-col h-full bg-white">
+                                <div className="flex border-b border-slate-200 shrink-0"><button onClick={() => setModalTab('edit')} className={`px-6 py-3 text-sm font-bold ${modalTab === 'edit' ? 'text-[#7C4DFF] border-b-2 border-[#7C4DFF]' : 'text-slate-500 hover:bg-slate-50'}`}>編集 (Markdown)</button><button onClick={() => setModalTab('preview')} className={`px-6 py-3 text-sm font-bold ${modalTab === 'preview' ? 'text-[#7C4DFF] border-b-2 border-[#7C4DFF]' : 'text-slate-500 hover:bg-slate-50'}`}>プレビュー</button></div>
+                                <div className="flex-1 overflow-hidden relative">{modalTab === 'edit' ? ( <textarea className="w-full h-full p-4 resize-none outline-none font-mono text-sm leading-relaxed" value={editData.note} onChange={(e) => setEditData({...editData, note: e.target.value})} /> ) : ( <div className="w-full h-full p-4 overflow-y-auto markdown-preview" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(editData.note || '') : editData.note }} /> )}</div>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0"><button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-bold transition-colors">キャンセル</button><button onClick={handleSave} className="px-6 py-2 bg-[#7C4DFF] text-white hover:bg-[#651FFF] rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Check" size={16} /> 保存</button></div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default ProfitManager;
