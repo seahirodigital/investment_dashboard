@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// ★修正: 同じcomponentsフォルダ内なので ./Icons.js
+// ★修正: 同じcomponentsフォルダ内なので ./Icons.js に変更
 import { Icon } from './Icons.js';
 
+// 以下、ProfitManagerの全コード（変更なし）
 const CATEGORY_STYLES = {
     stocks: { bg: 'bg-[#F3E5F5]', text: 'text-[#7E57C2]', label: '現物' },
     margin: { bg: 'bg-[#E8EAF6]', text: 'text-[#5C6BC0]', label: '信用' },
