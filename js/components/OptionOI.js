@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Papa from 'papaparse';
 import { Chart } from 'recharts';
-// ★修正: 同じcomponentsフォルダ内なので ./Icons.js に変更
-import { Icon } from './Icons.js';
+// ★修正: 絶対パスに変更
+import { Icon } from '/investment_dashboard/js/components/Icons.js';
+
 
 // --- Logic Helpers ---
 const processOptionData = (rawRows, step = 50) => {
