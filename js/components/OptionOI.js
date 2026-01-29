@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList } from 'recharts';
 import Papa from 'papaparse';
-// ★修正点: ./Icons.js ではなく ./js/components/Icons.js にする
-import { Icon } from './js/components/Icons.js';
+// ★修正: 同じcomponentsフォルダ内なので ./Icons.js
+import { Icon } from './Icons.js';
 
-// ... (以下、コードは変更なし。import行だけ書き換えてください) ...
 // --- Logic Helpers ---
 const processOptionData = (rawRows, step = 50) => {
     if (!rawRows || rawRows.length < 2) return { data: [], error: 'データが不足しています。' };
@@ -272,48 +271,4 @@ const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
     );
 };
 
-const OptionOI = ({ charts, setCharts }) => {
-    const [ticker, setTicker] = useState('');
-    const [error, setError] = useState(null);
-
-    // 新しいデータを追加処理
-    const handleData = (rows) => {
-        const step = 50; // デフォルトStep
-        const res = processOptionData(rows, step);
-        if (res.error) {
-            setError(res.error);
-        } else {
-            setError(null);
-            // 既存のチャートリストに新しいチャートを追加
-            const newChart = {
-                id: Date.now().toString(), // ユニークID
-                data: res.data,
-                step: step,
-                rawRows: rows
-            };
-            setCharts([...charts, newChart]);
-        }
-    };
-
-    // チャート側でStep変更があった場合に親のStateを更新
-    const handleStepChange = (id, newStep, newData) => {
-        setCharts(charts.map(c => 
-            c.id === id ? { ...c, step: newStep, data: newData } : c
-        ));
-    };
-
-    const handleTickerNav = () => {
-        if(!ticker) return;
-        const symbol = ticker.trim().toUpperCase();
-        window.open(`https://optioncharts.io/options/${symbol}/option-chain`, '_blank');
-    };
-
-    const links = [
-        { label: 'QQQ', url: 'https://optioncharts.io/options/QQQ/option-chain' },
-        { label: 'SPY', url: 'https://optioncharts.io/options/SPY/option-chain' },
-        { label: 'DJI', url: 'https://optioncharts.io/options/$DJX/option-chain' },
-        { label: 'IWM', url: 'https://optioncharts.io/options/IWM/option-chain' },
-        { label: 'VIX', url: 'https://optioncharts.io/options/$VIX/option-chain' },
-        { label: 'NVIDIA', url: 'https://optioncharts.io/options/NVDA/option-chain' },
-        { label: 'APPL', url: 'https://optioncharts.io/options/AAPL/option-chain' },
-        { label: 'AMZN', url: 'https://optioncharts.io/options/AMZN/option-chain' },
+export default OptionOI;
