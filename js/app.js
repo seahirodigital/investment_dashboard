@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
-// ★★★ ここが修正ポイントです ★★★
-// index.html から見たパスを書く必要があります
+// ★修正点: すべて './js/components/...' から始める
 import { Icon } from './js/components/Icons.js';
 import ProfitManager from './js/components/ProfitManager.js';
 import ForeignInvestors from './js/components/ForeignInvestors.js';
