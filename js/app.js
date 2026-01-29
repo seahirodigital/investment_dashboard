@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
-// ★修正: jsフォルダ内にあるので、./components/ で参照するのが正解です
-import { Icon } from './components/Icons.js';
-import ProfitManager from './components/ProfitManager.js';
-import ForeignInvestors from './components/ForeignInvestors.js';
-import ParticipantVolume from './components/ParticipantVolume.js';
-import OptionOI from './components/OptionOI.js';
+// ★修正: 絶対パスに変更
+import { Icon } from '/investment_dashboard/js/components/Icons.js';
+import ProfitManager from '/investment_dashboard/js/components/ProfitManager.js';
+import ForeignInvestors from '/investment_dashboard/js/components/ForeignInvestors.js';
+import ParticipantVolume from '/investment_dashboard/js/components/ParticipantVolume.js';
+import OptionOI from '/investment_dashboard/js/components/OptionOI.js';
 
 const App = () => {
     const [view, setView] = useState('calendar');
