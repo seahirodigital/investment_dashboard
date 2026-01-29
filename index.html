@@ -8,65 +8,80 @@
     <!-- デザイン・スタイル (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React本体 -->
+    <!-- 依存ライブラリ -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Recharts依存 -->
     <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-    
-    <!-- グラフ描画 (Recharts) -->
     <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
-
-    <!-- CSV解析 (PapaParse) -->
     <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
-
-    <!-- アイコン (Lucide) -->
     <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
-
-    <!-- JPXチャート用 (Chart.js関連) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
-
-    <!-- JSX変換 (Babel) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
+        /* カスタムCSS */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; }
 
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .animate-fade-in-up {
-            animation: fadeInUp 0.6s ease-out;
-        }
+        body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
+
+        /* グラデーション定義 */
+        .gradient-bg { background: linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%); }
+        .lifetime-bg { background: linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%); }
+
+        .animate-fade-in-up { animation: fadeInUp 0.6s ease-out; }
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .dragging {
-            opacity: 0.5;
-            background-color: #f1f5f9;
+        .dragging { opacity: 0.5; background-color: #f1f5f9; }
+
+        /* カレンダーグリッド定義 */
+        .cal-grid {
+            display: grid;
+            grid-template-columns: 90px repeat(5, 1fr) 100px; /* Label, Mon-Fri, Total */
+            gap: 1px;
+            background-color: #e2e8f0;
+            border: 1px solid #e2e8f0;
         }
+        .cal-cell {
+            background-color: white;
+            min-height: 150px; /* 5層表示用に高さを確保 */
+            padding: 4px;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        .cal-cell:hover { background-color: #F3E5F5; }
+        
+        .cal-header {
+            background-color: #f8fafc; color: #64748b;
+            font-size: 0.75rem; font-weight: bold; text-align: center; padding: 8px 0;
+        }
+        .cal-label-col {
+            background-color: #f8fafc; display: flex; flex-direction: column;
+            justify-content: center; gap: 4px; padding: 8px;
+        }
+        .cal-total-col {
+            background-color: #f8fafc; display: flex; flex-direction: column;
+            justify-content: center; align-items: flex-end; padding-right: 8px; gap: 4px;
+        }
+
+        /* Markdownプレビュー用スタイル */
+        .markdown-preview { color: #334155; font-size: 14px; line-height: 1.6; }
+        .markdown-preview h1 { font-size: 1.8em; font-weight: 800; margin: 0 0 0.6em 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.3em; color: #1e293b; }
+        .markdown-preview h2 { font-size: 1.5em; font-weight: 700; margin: 1.2em 0 0.5em 0; color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; }
+        .markdown-preview h3 { font-size: 1.2em; font-weight: 600; margin: 1em 0 0.5em 0; color: #475569; }
+        .markdown-preview p { margin-bottom: 0.8em; }
+        .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.8em; }
+        .markdown-preview li { margin-bottom: 0.3em; }
+        .markdown-preview blockquote { border-left: 4px solid #cbd5e1; padding: 0.5em 1em; color: #64748b; background-color: #f8fafc; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "papaparse": "https://esm.sh/papaparse@^5.5.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "recharts": "https://esm.sh/recharts@^3.7.0"
-  }
-}
-</script>
 </head>
 <body>
     <div id="root"></div>
@@ -75,7 +90,7 @@
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList } = Recharts;
 
-        // --- アイコン ---
+        // --- アイコン定義 ---
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
                 Menu: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg>,
@@ -95,9 +110,390 @@
                 X: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
                 GripVertical: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>,
                 FolderOpen: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>,
-                Briefcase: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                Briefcase: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>,
+                Calendar: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+                FileText: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>,
+                Check: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+                Download: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+                ChevronLeft: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
+                ChevronRight: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+                FileCsv: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>,
+                Pencil: <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
             };
             return icons[name] || null;
+        };
+
+        // ==========================================
+        //  投資カレンダー (5層構造・イベント対応)
+        // ==========================================
+        const CATEGORY_STYLES = {
+            stocks: { bg: 'bg-[#F3E5F5]', text: 'text-[#7E57C2]', label: '現物' },
+            margin: { bg: 'bg-[#E8EAF6]', text: 'text-[#5C6BC0]', label: '信用' },
+            foreign: { bg: 'bg-[#EDE7F6]', text: 'text-[#673AB7]', label: '海外' },
+            cfd: { bg: 'bg-[#FCE4EC]', text: 'text-[#D81B60]', label: 'CFD' },
+            event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
+        };
+
+        const ProfitManager = () => {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [historyData, setHistoryData] = useState({});
+            const [selectedDate, setSelectedDate] = useState(null);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editData, setEditData] = useState({ event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '' });
+            const [modalTab, setModalTab] = useState('edit'); 
+            
+            const formatMoney = (val) => val ? val.toLocaleString() : '0';
+            const getMonthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const getDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            
+            useEffect(() => {
+                const saved = localStorage.getItem('history_data');
+                if (saved) {
+                    try { setHistoryData(JSON.parse(saved)); } catch (e) { console.error("Load failed", e); }
+                }
+            }, []);
+
+            const saveToStorage = (newData) => {
+                setHistoryData(newData);
+                localStorage.setItem('history_data', JSON.stringify(newData));
+            };
+
+            const stats = useMemo(() => {
+                let lifetime = 0;
+                let prevYear = 0;
+                let monthTotal = 0;
+                const currentMonthKey = getMonthKey(currentDate);
+                const prevYearKey = (currentDate.getFullYear() - 1).toString();
+
+                Object.entries(historyData).forEach(([key, val]) => {
+                    if (key.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        const dayTotal = (val.stocks || 0) + (val.margin || 0) + (val.foreign || 0) + (val.cfd || 0);
+                        lifetime += dayTotal;
+                        if (key.startsWith(currentMonthKey)) monthTotal += dayTotal;
+                        if (key.startsWith(prevYearKey)) prevYear += dayTotal;
+                    }
+                    else if (key === prevYearKey && val.total) prevYear += val.total;
+                    else if (val.total) lifetime += val.total;
+                });
+                return { lifetime, prevYear, monthTotal };
+            }, [historyData, currentDate]);
+
+            const calendarWeeks = useMemo(() => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const weeks = [];
+                let currentWeek = [];
+                for (let i = 0; i < firstDay.getDay(); i++) currentWeek.push(null);
+                for (let d = 1; d <= lastDay.getDate(); d++) {
+                    const date = new Date(year, month, d);
+                    currentWeek.push(date);
+                    if (date.getDay() === 6) { weeks.push(currentWeek); currentWeek = []; }
+                }
+                if (currentWeek.length > 0) {
+                    while (currentWeek.length < 7) currentWeek.push(null);
+                    weeks.push(currentWeek);
+                }
+                return weeks;
+            }, [currentDate]);
+
+            const openModal = (date) => {
+                if (!date) return;
+                const key = getDateKey(date);
+                const data = historyData[key] || { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '' };
+                
+                // デフォルトのMarkdownヘッダー（日付）をセット
+                if (!data.note) {
+                    data.note = `# ${key.replace(/-/g, '/')}`;
+                }
+
+                setSelectedDate(date);
+                setEditData({ ...data });
+                setModalTab('edit');
+                setIsModalOpen(true);
+            };
+
+            const handleSave = () => {
+                if (!selectedDate) return;
+                const key = getDateKey(selectedDate);
+                const newData = { ...historyData, [key]: editData };
+                saveToStorage(newData);
+                setIsModalOpen(false);
+            };
+
+            const handleDeleteEvent = (e, date) => {
+                e.stopPropagation();
+                if (!window.confirm("イベントを削除しますか？")) return;
+                const key = getDateKey(date);
+                const current = historyData[key];
+                if (current) {
+                    const newData = { ...historyData, [key]: { ...current, event: '' } };
+                    saveToStorage(newData);
+                }
+            };
+
+            const handleExportMD = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth() + 1;
+                let md = `# 投資日記レポート：${year}年${month}月度\n`;
+                md += `（月間の総合計収支：${stats.monthTotal > 0 ? '+' : ''}${stats.monthTotal.toLocaleString()}円）\n\n`;
+                const sortedKeys = Object.keys(historyData).filter(k => k.startsWith(getMonthKey(currentDate))).sort();
+                sortedKeys.forEach(key => {
+                    const d = historyData[key];
+                    const total = (d.stocks||0) + (d.margin||0) + (d.foreign||0) + (d.cfd||0);
+                    if (total === 0 && !d.note && !d.event) return;
+                    md += `## ${key} ${d.event ? `(${d.event})` : ''}\n### 収支データ\n- 現物: ${d.stocks||0} / 信用: ${d.margin||0} / 海外: ${d.foreign||0} / CFD: ${d.cfd||0}\n### 振り返り\n${d.note || '（記載なし）'}\n\n`;
+                });
+                const blob = new Blob([md], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `investment_diary_${year}_${month}.md`;
+                a.click();
+            };
+
+            const handleExportCSV = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth() + 1;
+                const sortedKeys = Object.keys(historyData).filter(k => k.startsWith(getMonthKey(currentDate))).sort();
+                
+                let csv = '\uFEFFDate,Event,Stocks,Margin,Foreign,CFD,Total,Note\n';
+                
+                sortedKeys.forEach(key => {
+                    const d = historyData[key];
+                    const total = (d.stocks||0) + (d.margin||0) + (d.foreign||0) + (d.cfd||0);
+                    const escapedNote = d.note ? `"${d.note.replace(/"/g, '""')}"` : "";
+                    const escapedEvent = d.event ? `"${d.event.replace(/"/g, '""')}"` : "";
+                    csv += `${key},${escapedEvent},${d.stocks||0},${d.margin||0},${d.foreign||0},${d.cfd||0},${total},${escapedNote}\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `investment_data_${year}_${month}.csv`;
+                a.click();
+            };
+
+            const DayCell = ({ date }) => {
+                if (!date) return <div className="cal-cell bg-slate-50"></div>;
+                const key = getDateKey(date);
+                const data = historyData[key];
+                const hasNote = data && data.note && data.note.trim().length > 0;
+                const hasEvent = data && data.event && data.event.trim().length > 0;
+                const isToday = getDateKey(new Date()) === key;
+
+                const StatCard = ({ type, val }) => (
+                    <div className={`flex justify-between items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
+                        <span>{CATEGORY_STYLES[type].label.charAt(0)}</span>
+                        <span className={val < 0 ? 'text-[#FF4081]' : ''}>{formatMoney(val)}</span>
+                    </div>
+                );
+
+                return (
+                    <div onClick={() => openModal(date)} className={`cal-cell cursor-pointer hover:bg-[#F3E5F5] transition-colors border-r border-b border-slate-100 ${isToday ? 'bg-[#F3E5F5]/30 ring-2 ring-inset ring-[#7C4DFF]/20' : ''}`}>
+                        <div className="flex justify-between items-start mb-1">
+                            <span className={`text-xs font-bold ${isToday ? 'bg-[#7C4DFF] text-white px-1.5 py-0.5 rounded-full' : 'text-slate-500'}`}>{date.getDate()}</span>
+                            {hasNote && <Icon name="FileText" size={12} className="text-[#64748B]" />}
+                        </div>
+                        
+                        <div className="flex flex-col gap-0.5">
+                            {/* Layer 1: Event */}
+                            {hasEvent ? (
+                                <div className="group relative flex justify-between items-center px-1.5 py-1 rounded text-[10px] font-bold mb-1 bg-white border-l-4 border-[#7C4DFF] shadow-sm text-[#7C4DFF]">
+                                    <span className="truncate">{data.event}</span>
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex gap-1 bg-white pl-1">
+                                        <button onClick={(e) => { e.stopPropagation(); openModal(date); }} className="hover:text-[#7C4DFF]"><Icon name="Pencil" size={10} /></button>
+                                        <button onClick={(e) => handleDeleteEvent(e, date)} className="hover:text-[#FF4081]"><Icon name="X" size={10} /></button>
+                                    </div>
+                                </div>
+                            ) : (
+                                 <div className="h-[22px] mb-1"></div>
+                            )}
+
+                            {/* Layers 2-5: Financials */}
+                            {data ? (
+                                <>
+                                    <StatCard type="stocks" val={data.stocks || 0} />
+                                    <StatCard type="margin" val={data.margin || 0} />
+                                    <StatCard type="foreign" val={data.foreign || 0} />
+                                    <StatCard type="cfd" val={data.cfd || 0} />
+                                </>
+                            ) : (
+                                <>
+                                    <div className="h-[18px]"></div>
+                                    <div className="h-[18px]"></div>
+                                    <div className="h-[18px]"></div>
+                                    <div className="h-[18px]"></div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="space-y-6 mb-12">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up">
+                        <div className="lifetime-bg rounded-xl p-6 text-white shadow-lg relative overflow-hidden group">
+                            <div className="relative z-10">
+                                <p className="text-white/80 text-sm font-medium mb-1">生涯収益 (Lifetime Profit)</p>
+                                <h3 className="text-3xl font-bold tracking-tight">¥ {stats.lifetime.toLocaleString()}</h3>
+                                <p className="text-xs text-white/60 mt-2">全期間累計</p>
+                            </div>
+                            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4 group-hover:scale-110 transition-transform"><Icon name="LineChart" size={100} /></div>
+                        </div>
+                        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                            <p className="text-[#64748B] text-sm font-medium mb-1">前年収支 (2025)</p>
+                            <h3 className={`text-3xl font-bold ${stats.prevYear >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{stats.prevYear >= 0 ? '+' : ''}{stats.prevYear.toLocaleString()}</h3>
+                            <p className="text-xs text-slate-400 mt-2">年間確定損益</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <p className="text-[#64748B] text-sm font-medium mb-1">今月収支 ({currentDate.getMonth() + 1}月)</p>
+                                <h3 className={`text-3xl font-bold ${stats.monthTotal >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{stats.monthTotal >= 0 ? '+' : ''}{stats.monthTotal.toLocaleString()}</h3>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-2">リアルタイム集計</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
+                        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-xl font-bold text-[#334155] flex items-center gap-2"><Icon name="Calendar" size={20} />{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h2>
+                                <div className="flex gap-1">
+                                    <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronLeft" size={20} /></button>
+                                    <button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white hover:shadow rounded">Today</button>
+                                    <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronRight" size={20} /></button>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleExportMD} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium">
+                                    <Icon name="Download" size={14} /> MD出力
+                                </button>
+                                <button onClick={handleExportCSV} className="text-xs flex items-center gap-1 text-slate-600 hover:text-green-600 border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium">
+                                    <Icon name="FileCsv" size={14} /> CSV出力
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="cal-grid">
+                            <div className="cal-header">Category</div>
+                            <div className="cal-header">Mon</div>
+                            <div className="cal-header">Tue</div>
+                            <div className="cal-header">Wed</div>
+                            <div className="cal-header">Thu</div>
+                            <div className="cal-header">Fri</div>
+                            <div className="cal-header">週計</div>
+
+                            {calendarWeeks.map((week, wIdx) => {
+                                const weekTotal = week.reduce((acc, date) => {
+                                    if (!date) return acc;
+                                    const d = historyData[getDateKey(date)];
+                                    if (!d) return acc;
+                                    return {
+                                        stocks: acc.stocks + (d.stocks || 0),
+                                        margin: acc.margin + (d.margin || 0),
+                                        foreign: acc.foreign + (d.foreign || 0),
+                                        cfd: acc.cfd + (d.cfd || 0),
+                                    };
+                                }, { stocks: 0, margin: 0, foreign: 0, cfd: 0 });
+                                const weekSum = weekTotal.stocks + weekTotal.margin + weekTotal.foreign + weekTotal.cfd;
+
+                                return (
+                                    <React.Fragment key={wIdx}>
+                                        <div className="cal-label-col border-r border-b border-slate-100">
+                                            <div className="h-[26px] mb-1"></div> {/* Spacer for Event layer */}
+                                            {Object.entries(CATEGORY_STYLES).filter(([k]) => k !== 'event').map(([key, style]) => (
+                                                <div key={key} className={`text-[10px] font-bold text-center py-0.5 rounded ${style.bg} ${style.text}`}>{style.label}</div>
+                                            ))}
+                                        </div>
+                                        {week.slice(1, 6).map((date, dIdx) => (<DayCell key={dIdx} date={date} />))}
+                                        <div className="cal-total-col border-b border-slate-100 bg-slate-50">
+                                            <div className="flex flex-col gap-0.5 w-full text-xs">
+                                                    <div className="h-[26px] mb-1"></div>
+                                                    <div className={`text-right ${weekTotal.stocks < 0 ? 'text-[#FF4081]' : weekTotal.stocks > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.stocks)}</div>
+                                                    <div className={`text-right ${weekTotal.margin < 0 ? 'text-[#FF4081]' : weekTotal.margin > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.margin)}</div>
+                                                    <div className={`text-right ${weekTotal.foreign < 0 ? 'text-[#FF4081]' : weekTotal.foreign > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.foreign)}</div>
+                                                    <div className={`text-right ${weekTotal.cfd < 0 ? 'text-[#FF4081]' : weekTotal.cfd > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.cfd)}</div>
+                                                    <div className={`mt-1 pt-1 border-t border-slate-200 font-bold text-right ${weekSum < 0 ? 'text-[#FF4081]' : 'text-[#334155]'}`}>{formatMoney(weekSum)}</div>
+                                            </div>
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                                    <h3 className="font-bold text-lg text-[#334155] flex items-center gap-2">
+                                        <Icon name="FileText" size={20} />
+                                        {selectedDate.getFullYear()}年{selectedDate.getMonth()+1}月{selectedDate.getDate()}日
+                                    </h3>
+                                    <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button>
+                                </div>
+                                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                                    <div className="w-full md:w-1/3 p-6 border-r border-slate-200 bg-slate-50/50 overflow-y-auto">
+                                        {/* Event Input */}
+                                        <div className="mb-6">
+                                            <label className="block text-xs font-bold text-[#7C4DFF] mb-1 uppercase">Event (Top Layer)</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="決算, FRB会合, etc."
+                                                value={editData.event || ''}
+                                                onChange={(e) => setEditData({...editData, event: e.target.value})}
+                                                className="w-full border border-purple-200 rounded p-2 text-sm focus:ring-2 focus:ring-[#7C4DFF] outline-none"
+                                            />
+                                        </div>
+
+                                        <h4 className="text-sm font-bold text-[#64748B] uppercase mb-4">収支入力 (円)</h4>
+                                        <div className="space-y-4">
+                                            {[
+                                                { k: 'stocks', l: '現物収支' },
+                                                { k: 'margin', l: '信用収支' },
+                                                { k: 'foreign', l: '海外株収支' },
+                                                { k: 'cfd', l: 'CFD/先物' }
+                                            ].map(f => (
+                                                <div key={f.k}>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1">{f.l}</label>
+                                                    <input type="number" value={editData[f.k] || ''} onChange={(e) => setEditData({...editData, [f.k]: parseInt(e.target.value) || 0})} className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-[#7C4DFF] outline-none" />
+                                                </div>
+                                            ))}
+                                            <div className="pt-4 border-t border-slate-200 mt-4">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-bold text-slate-700">合計</span>
+                                                    <span className={`text-xl font-bold font-mono ${(editData.stocks+editData.margin+editData.foreign+editData.cfd) >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 flex flex-col h-full bg-white">
+                                        <div className="flex border-b border-slate-200 shrink-0">
+                                            <button onClick={() => setModalTab('edit')} className={`px-6 py-3 text-sm font-bold ${modalTab === 'edit' ? 'text-[#7C4DFF] border-b-2 border-[#7C4DFF]' : 'text-slate-500 hover:bg-slate-50'}`}>編集 (Markdown)</button>
+                                            <button onClick={() => setModalTab('preview')} className={`px-6 py-3 text-sm font-bold ${modalTab === 'preview' ? 'text-[#7C4DFF] border-b-2 border-[#7C4DFF]' : 'text-slate-500 hover:bg-slate-50'}`}>プレビュー</button>
+                                        </div>
+                                        <div className="flex-1 overflow-hidden relative">
+                                            {modalTab === 'edit' ? (
+                                                <textarea className="w-full h-full p-4 resize-none outline-none font-mono text-sm leading-relaxed" value={editData.note} onChange={(e) => setEditData({...editData, note: e.target.value})} />
+                                            ) : (
+                                                <div className="w-full h-full p-4 overflow-y-auto markdown-preview" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(editData.note || '') : editData.note }} />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
+                                    <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-bold transition-colors">キャンセル</button>
+                                    <button onClick={handleSave} className="px-6 py-2 bg-[#7C4DFF] text-white hover:bg-[#651FFF] rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Check" size={16} /> 保存</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
         };
 
         // ==========================================
@@ -111,7 +507,6 @@
             useEffect(() => {
                 const fetchData = async () => {
                     try {
-                        // GitHub Actionsで生成されたJSONを読み込む
                         const res = await fetch('./data/daily_participant.json');
                         if (res.ok) {
                             const json = await res.json();
@@ -134,7 +529,6 @@
             const targetData = session === 'night' ? data.night_session : data.day_session;
             const sessionLabel = session === 'night' ? 'ナイト・セッション (立会)' : '日中取引 (立会)';
 
-            // カテゴリごとの色
             const categoryColors = {
                 'US': 'bg-blue-100 text-blue-800 border-blue-200',
                 'EU': 'bg-green-100 text-green-800 border-green-200',
@@ -143,7 +537,6 @@
                 'OTHERS': 'bg-slate-100 text-slate-800 border-slate-200'
             };
 
-            // グルーピング
             const grouped = targetData.reduce((acc, item) => {
                 const cat = item.category || 'OTHERS';
                 if (!acc[cat]) acc[cat] = [];
@@ -160,17 +553,16 @@
                         <p className="text-blue-100 text-sm">データ日付: {data.date} (最終更新: {data.updated_at})</p>
                     </div>
 
-                    {/* セッション切り替えタブ */}
                     <div className="flex space-x-2 bg-white p-2 rounded-lg shadow-sm border border-slate-200 w-fit">
                         <button 
                             onClick={() => setSession('night')}
-                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'night' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}
+                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'night' ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}
                         >
                             🌙 ナイト・セッション
                         </button>
                         <button 
                             onClick={() => setSession('day')}
-                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'day' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}
+                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'day' ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}
                         >
                             ☀️ 日中取引
                         </button>
@@ -178,7 +570,6 @@
 
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
                         <h2 className="text-xl font-bold text-slate-800 mb-4">{sessionLabel}</h2>
-                        
                         {targetData.length === 0 ? (
                             <p className="text-slate-500">このセッションのデータはありません。</p>
                         ) : (
@@ -196,10 +587,9 @@
                                             </div>
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-sm text-left">
-                                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                                    <thead className="bg-slate-5 text-slate-500 border-b border-slate-200">
                                                         <tr>
                                                             <th className="px-4 py-2 w-48">証券会社</th>
-                                                            {/* データ内のキーを動的に取得してヘッダーにする */}
                                                             {Object.keys(grouped[cat][0].data).map(key => (
                                                                 <th key={key} className="px-4 py-2 text-right whitespace-nowrap">{key}</th>
                                                             ))}
@@ -226,14 +616,14 @@
                         )}
                     </div>
                      <div className="mt-4 text-right text-xs text-slate-400">
-                        ※JPX公表のExcelファイルより自動取得・集計。単位: 枚 (または金額)。詳細はJPX公式サイトをご確認ください。
+                        ※JPX公表のExcelファイルより自動取得・集計。単位: 枚 (または金額)。
                     </div>
                 </div>
             );
         };
 
         // ==========================================
-        //  既存コンポーネント: JPX Chart (変更なし)
+        //  既存コンポーネント: JPX Chart
         // ==========================================
         const ForeignInvestors = () => {
             const chartRef = useRef(null);
@@ -371,8 +761,8 @@
                         datasets: [{
                             label: '差引（億円）',
                             data: data.map((d, index) => ({ x: index, y: d.balance })),
-                            backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(74, 134, 232, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(74, 134, 232, 0.7)' : 'rgba(230, 124, 115, 0.7)',
-                            borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#4A86E8' : ctx.parsed.y >= 0 ? '#4A86E8' : '#E67C73',
+                            backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(83, 109, 254, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(83, 109, 254, 0.7)' : 'rgba(255, 64, 129, 0.7)',
+                            borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#536DFE' : ctx.parsed.y >= 0 ? '#536DFE' : '#FF4081',
                             borderWidth: 1,
                             barPercentage: 0.9,
                             categoryPercentage: 0.9
@@ -476,11 +866,11 @@
                     {stats && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up">
                             {[
-                                { label: '最新週（先週）の売買状況', value: stats.latest.balance, color: stats.latest.balance >= 0 ? 'text-blue-600' : 'text-red-500', sub: stats.latest.balance >= 0 ? '買い越し' : '売り越し' },
-                                { label: '買い越し 平均', value: stats.positiveAvg, color: 'text-blue-600', sub: '表示範囲内' },
-                                { label: '買い越し 中央値', value: stats.positiveMedian, color: 'text-blue-600', sub: '表示範囲内' },
-                                { label: '売り越し 平均', value: stats.negativeAvg, color: 'text-red-500', sub: '表示範囲内' },
-                                { label: '売り越し 中央値', value: stats.negativeMedian, color: 'text-red-500', sub: '表示範囲内' },
+                                { label: '最新週（先週）の売買状況', value: stats.latest.balance, color: stats.latest.balance >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]', sub: stats.latest.balance >= 0 ? '買い越し' : '売り越し' },
+                                { label: '買い越し 平均', value: stats.positiveAvg, color: 'text-[#536DFE]', sub: '表示範囲内' },
+                                { label: '買い越し 中央値', value: stats.positiveMedian, color: 'text-[#536DFE]', sub: '表示範囲内' },
+                                { label: '売り越し 平均', value: stats.negativeAvg, color: 'text-[#FF4081]', sub: '表示範囲内' },
+                                { label: '売り越し 中央値', value: stats.negativeMedian, color: 'text-[#FF4081]', sub: '表示範囲内' },
                             ].map((s, i) => (
                                 <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                                     <p className="text-slate-600 text-sm font-medium mb-2">{s.label}</p>
@@ -492,11 +882,11 @@
                     )}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up">
                         <div className="flex flex-wrap gap-4 items-center">
-                            <div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{ v: 'all', l: '全期間' }, { v: '1y', l: '1年' }, { v: '6m', l: '6ヶ月' }, { v: '3m', l: '3ヶ月' }].map(opt => (<button key={opt.v} onClick={() => setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange === opt.v ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div>
+                            <div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{ v: 'all', l: '全期間' }, { v: '1y', l: '1年' }, { v: '6m', l: '6ヶ月' }, { v: '3m', l: '3ヶ月' }].map(opt => (<button key={opt.v} onClick={() => setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange === opt.v ? 'bg-[#7C4DFF] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div>
                             <button onClick={resetZoom} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">🔄 ズームリセット</button>
                         </div>
                     </div>
-                    <div className="mt-8 text-center text-slate-500 text-sm"><p>データソース: <a href="https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html" target="_blank" className="text-blue-600 hover:underline">日本取引所グループ (JPX)</a></p></div>
+                    <div className="mt-8 text-center text-slate-500 text-sm"><p>データソース: <a href="https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html" target="_blank" className="text-[#536DFE] hover:underline">日本取引所グループ (JPX)</a></p></div>
                 </div>
             );
         };
@@ -619,7 +1009,7 @@
             return (
                 <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
                     <div 
-                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:bg-slate-50'}`}
+                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`}
                         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                         onDragLeave={() => setDragActive(false)}
                         onDrop={handleDrop}
@@ -631,13 +1021,13 @@
                     </div>
                     <div className="flex gap-2">
                         <textarea 
-                            className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none"
                             rows={4}
                             placeholder="ここにデータを貼り付け..."
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                         />
-                        <button onClick={() => handleParse(text)} disabled={!text} className="bg-slate-800 text-white px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-medium">解析</button>
+                        <button onClick={() => handleParse(text)} disabled={!text} className="bg-[#7C4DFF] text-white px-4 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-medium">解析</button>
                     </div>
                 </div>
             );
@@ -690,7 +1080,7 @@
                 return (
                     <div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50">
                         <p className="font-bold">Strike: {label}</p>
-                        <p className={d.diff >= 0 ? 'text-blue-600' : 'text-red-500'}>Diff: {d.diff.toLocaleString()}</p>
+                        <p className={d.diff >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p>
                         <div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div>
                     </div>
                 );
@@ -715,13 +1105,13 @@
                             <span className="text-xs font-bold text-slate-500">STEP</span>
                             <input 
                                 type="number" 
-                                className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-blue-500"
+                                className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]"
                                 value={step}
                                 onChange={(e) => setStep(parseFloat(e.target.value) || 0)}
                                 min="0.1"
                             />
                         </div>
-                        <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-blue-600 border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
+                        <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
                     </div>
                     <div className="flex-1 flex overflow-hidden relative">
                         <div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e, 'y')}>
@@ -744,7 +1134,7 @@
                                         <Tooltip content={<CustomTooltip />} cursor={{fill:'rgba(0,0,0,0.05)'}} />
                                         <ReferenceLine x={0} stroke="#334155" />
                                         <Bar dataKey="diff" barSize={barHeight * 0.8}>
-                                            {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#4A86E8' : '#E67C73'} />))}
+                                            {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#536DFE' : '#FF4081'} />))}
                                             <LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11, fill:'#64748b'}} />
                                         </Bar>
                                     </BarChart>
@@ -844,7 +1234,7 @@
                         <p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p>
                          <div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">
                             {links.map(l => (
-                                <a key={l.label} href={l.url} target="_blank" className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1">
+                                <a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">
                                     {l.label} <Icon name="ExternalLink" size={10} />
                                 </a>
                             ))}
@@ -853,13 +1243,13 @@
                             <span className="text-sm text-slate-500 font-bold">Ticker:</span>
                             <input 
                                 type="text" 
-                                className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-blue-500"
+                                className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]"
                                 placeholder="e.g. TSLA"
                                 value={ticker}
                                 onChange={(e)=>setTicker(e.target.value)}
                                 onKeyDown={(e)=>e.key === 'Enter' && handleTickerNav()}
                             />
-                            <button onClick={handleTickerNav} className="bg-slate-800 text-white text-xs px-3 py-1.5 rounded hover:bg-slate-700 font-medium">Go</button>
+                            <button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button>
                          </div>
                          <DataInput onDataParsed={handleData} />
                     </div>
@@ -871,7 +1261,7 @@
         //  Main Layout
         // ==========================================
         const App = () => {
-            const [view, setView] = useState('option');
+            const [view, setView] = useState('calendar'); // Default to Calendar
             const [sidebarOpen, setSidebarOpen] = useState(false);
             
             // --- Option Charts State (Persisted in App) ---
@@ -944,7 +1334,7 @@
             };
 
             const NavItem = ({ id, label, icon }) => (
-                <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === id ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-100'}`}>
+                <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}>
                     <Icon name={icon} /><span className="font-medium">{label}</span>
                 </button>
             );
@@ -956,9 +1346,9 @@
                         
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 flex flex-col relative">
                             <div className="text-xs font-bold text-slate-400 px-2 mb-2">MENU</div>
+                            <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
                             <NavItem id="option" label="Option 分析" icon="BarChart3" />
                             <NavItem id="jpx" label="JPX 海外投資家動向" icon="LineChart" />
-                            {/* NEW: 参加者別取引高 */}
                             <NavItem id="participant" label="取引参加者別取引高" icon="Briefcase" />
                             
                             <div className="flex-1 min-h-[20px]"></div>
@@ -1010,7 +1400,7 @@
                                 {!isAddingLink ? (
                                     <button 
                                         onClick={() => setIsAddingLink(true)}
-                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-md transition-all duration-200"
+                                        className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"
                                         title="リンクを追加"
                                     >
                                         <Icon name="Plus" size={20} />
@@ -1026,13 +1416,13 @@
                                         <div className="flex bg-slate-100 p-1 rounded-lg mb-3">
                                             <button 
                                                 onClick={() => setLinkType('link')}
-                                                className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                             >
                                                 LINK
                                             </button>
                                             <button 
                                                 onClick={() => setLinkType('divider')}
-                                                className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                             >
                                                 CATEGORY
                                             </button>
@@ -1043,7 +1433,7 @@
                                                 type="text" 
                                                 placeholder="Name" 
                                                 autoFocus
-                                                className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+                                                className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF] focus:border-[#7C4DFF] transition-all" 
                                                 value={newLinkLabel}
                                                 onChange={(e) => setNewLinkLabel(e.target.value)}
                                             />
@@ -1051,7 +1441,7 @@
                                                 <input 
                                                     type="text" 
                                                     placeholder="URL" 
-                                                    className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+                                                    className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF] focus:border-[#7C4DFF] transition-all" 
                                                     value={newLinkUrl}
                                                     onChange={(e) => setNewLinkUrl(e.target.value)}
                                                 />
@@ -1059,7 +1449,7 @@
                                             <button 
                                                 onClick={addCustomLink}
                                                 disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)}
-                                                className="w-full bg-slate-800 text-white text-xs py-2 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-bold transition-colors"
+                                                className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold transition-colors"
                                             >
                                                 追加
                                             </button>
@@ -1075,13 +1465,14 @@
                     <div className="flex-1 flex flex-col min-w-0">
                         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
                             <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
-                            <span className="ml-4 font-bold text-slate-700">
-                                {view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}
+                            <span className="ml-4 font-bold text-[#334155]">
+                                {view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}
                             </span>
                         </header>
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50">
                             <div className="max-w-7xl mx-auto h-full">
-                                {view === 'jpx' ? <ForeignInvestors /> : 
+                                {view === 'calendar' ? <ProfitManager /> : 
+                                 view === 'jpx' ? <ForeignInvestors /> : 
                                  view === 'participant' ? <ParticipantVolume /> : 
                                  <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
                             </div>
