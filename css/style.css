@@ -3,52 +3,74 @@
 ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
-body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
+body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; }
 
-/* Modern Purple Tone Definitions */
-.lifetime-bg { background: linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%); }
-.animate-fade-in-up { animation: fadeInUp 0.6s ease-out; }
+.gradient-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.lifetime-bg {
+    background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%);
+}
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
-.dragging { opacity: 0.5; background-color: #f1f5f9; }
+.dragging {
+    opacity: 0.5;
+    background-color: #f1f5f9;
+}
 
-/* Calendar Styles */
+/* Calendar Specific Styles */
 .cal-grid {
     display: grid;
-    grid-template-columns: 90px repeat(5, 1fr) 100px;
+    grid-template-columns: 90px repeat(5, 1fr) 100px; /* Sun(Labels), Mon-Fri, Sat(Total) */
     gap: 1px;
     background-color: #e2e8f0;
     border: 1px solid #e2e8f0;
 }
 .cal-cell {
     background-color: white;
-    min-height: 140px;
+    min-height: 120px;
     padding: 4px;
     position: relative;
-    transition: background-color 0.2s;
 }
-.cal-cell:hover { background-color: #F3E5F5; }
 .cal-header {
-    background-color: #f8fafc; color: #64748b;
-    font-size: 0.75rem; font-weight: bold; text-align: center; padding: 8px 0;
+    background-color: #f8fafc;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-align: center;
+    padding: 8px 0;
 }
 .cal-label-col {
-    background-color: #f8fafc; display: flex; flex-direction: column;
-    justify-content: center; gap: 4px; padding: 8px;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
 }
 .cal-total-col {
-    background-color: #f8fafc; display: flex; flex-direction: column;
-    justify-content: center; align-items: flex-end; padding-right: 8px; gap: 4px;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    padding-right: 8px;
+    gap: 6px;
 }
 
-/* Markdown Preview */
-.markdown-preview { color: #334155; font-size: 14px; line-height: 1.6; }
-.markdown-preview h1 { font-size: 1.8em; font-weight: 800; margin: 0 0 0.6em 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.3em; color: #1e293b; }
-.markdown-preview h2 { font-size: 1.5em; font-weight: 700; margin: 1.2em 0 0.5em 0; color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; }
-.markdown-preview h3 { font-size: 1.2em; font-weight: 600; margin: 1em 0 0.5em 0; color: #475569; }
-.markdown-preview p { margin-bottom: 0.8em; }
+/* Markdown Preview Styles */
+.markdown-preview h1 { font-size: 1.5em; font-weight: bold; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
+.markdown-preview h2 { font-size: 1.3em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+.markdown-preview h3 { font-size: 1.1em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+.markdown-preview p { margin-bottom: 0.8em; line-height: 1.6; }
 .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.8em; }
+.markdown-preview ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.8em; }
 .markdown-preview li { margin-bottom: 0.3em; }
-.markdown-preview blockquote { border-left: 4px solid #cbd5e1; padding: 0.5em 1em; color: #64748b; background-color: #f8fafc; }
+.markdown-preview blockquote { border-left: 4px solid #e2e8f0; padding-left: 1em; color: #64748b; }
+.markdown-preview code { background-color: #f1f5f9; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+.markdown-preview pre { background-color: #1e293b; color: #f8fafc; padding: 1em; border-radius: 8px; overflow-x: auto; margin-bottom: 1em; }
