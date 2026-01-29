@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList } from 'recharts';
 import Papa from 'papaparse';
-// ★修正: 同じcomponentsフォルダ内なので ./Icons.js
+import { Chart } from 'recharts';
+// ★修正: 同じcomponentsフォルダ内なので ./Icons.js に変更
 import { Icon } from './Icons.js';
 
 // --- Logic Helpers ---
@@ -162,7 +162,7 @@ const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
             const res = processOptionData(rawRows, step);
             if(!res.error) {
                 setData(res.data);
-                onStepChange(id, step, res.data); // 親のstateも更新
+                onStepChange(id, step, res.data);
             }
         }
     }, [step]);
@@ -212,7 +212,6 @@ const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
                     <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
                     <button onClick={()=>setZoomX(z=>Math.min(3, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
                 </div>
-                {/* 刻み幅変更入力 */}
                 <div className="flex items-center gap-2 border-l pl-4 border-slate-200">
                     <span className="text-xs font-bold text-slate-500">STEP</span>
                     <input 
