@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// ★修正: 同じcomponentsフォルダ内なので ./Icons.js に変更
-import { Icon } from './Icons.js';
+// ★修正: 絶対パスに変更
+import { Icon } from '/investment_dashboard/js/components/Icons.js';
+
 
 // 以下、ProfitManagerの全コード（変更なし）
 const CATEGORY_STYLES = {
