@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
-// --- パス修正: componentsフォルダの中を参照するように変更 ---
-import { Icon } from './components/Icons.js';
-import ProfitManager from './components/ProfitManager.js';
-import ForeignInvestors from './components/ForeignInvestors.js';
-import ParticipantVolume from './components/ParticipantVolume.js';
-import OptionOI from './components/OptionOI.js';
+
+// ★★★ ここが修正ポイントです ★★★
+// index.html から見たパスを書く必要があります
+import { Icon } from './js/components/Icons.js';
+import ProfitManager from './js/components/ProfitManager.js';
+import ForeignInvestors from './js/components/ForeignInvestors.js';
+import ParticipantVolume from './js/components/ParticipantVolume.js';
+import OptionOI from './js/components/OptionOI.js';
 
 const App = () => {
     const [view, setView] = useState('calendar');
