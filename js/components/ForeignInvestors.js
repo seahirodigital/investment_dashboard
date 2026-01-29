@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Papa from 'papaparse';
-// Note: Chart.js is loaded via CDN
+import { Chart } from 'recharts'; // Dummy import to keep linter happy if using import map
 
 const ForeignInvestors = () => {
     const chartRef = useRef(null);
@@ -26,6 +26,7 @@ const ForeignInvestors = () => {
         return () => canvas.removeEventListener('wheel', handleWheel);
     }, [allData]);
 
+    // --- Helper Functions ---
     const formatNumber = (num) => Math.round(num).toLocaleString('ja-JP');
     const formatLargeNumber = (value) => {
         if (typeof value === 'number') {
@@ -87,6 +88,7 @@ const ForeignInvestors = () => {
         }
     };
 
+    // --- Chart Actions ---
     const zoomChart = (direction) => {
         if (!chartInstance.current) return;
         chartInstance.current.zoom(direction === 'in' ? 1.2 : 0.8);
@@ -130,16 +132,15 @@ const ForeignInvestors = () => {
         if (!chartRef.current) return;
         const ctx = chartRef.current.getContext('2d');
         if (chartInstance.current) chartInstance.current.destroy();
-        
-        // Colors: #536DFE (Positive), #FF4081 (Negative)
+        // window.Chart is available via CDN
         const config = {
             type: 'bar',
             data: {
                 datasets: [{
                     label: '差引（億円）',
                     data: data.map((d, index) => ({ x: index, y: d.balance })),
-                    backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(83, 109, 254, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(83, 109, 254, 0.7)' : 'rgba(255, 64, 129, 0.7)',
-                    borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#536DFE' : ctx.parsed.y >= 0 ? '#536DFE' : '#FF4081',
+                    backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(74, 134, 232, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(74, 134, 232, 0.7)' : 'rgba(230, 124, 115, 0.7)',
+                    borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#4A86E8' : ctx.parsed.y >= 0 ? '#4A86E8' : '#E67C73',
                     borderWidth: 1,
                     barPercentage: 0.9,
                     categoryPercentage: 0.9
@@ -184,6 +185,7 @@ const ForeignInvestors = () => {
                 }
             }
         };
+        // Use window.Chart because it's loaded via CDN script tag in index.html for chart.js
         chartInstance.current = new window.Chart(ctx, config);
     };
 
@@ -243,11 +245,11 @@ const ForeignInvestors = () => {
             {stats && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up">
                     {[
-                        { label: '最新週（先週）の売買状況', value: stats.latest.balance, color: stats.latest.balance >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]', sub: stats.latest.balance >= 0 ? '買い越し' : '売り越し' },
-                        { label: '買い越し 平均', value: stats.positiveAvg, color: 'text-[#536DFE]', sub: '表示範囲内' },
-                        { label: '買い越し 中央値', value: stats.positiveMedian, color: 'text-[#536DFE]', sub: '表示範囲内' },
-                        { label: '売り越し 平均', value: stats.negativeAvg, color: 'text-[#FF4081]', sub: '表示範囲内' },
-                        { label: '売り越し 中央値', value: stats.negativeMedian, color: 'text-[#FF4081]', sub: '表示範囲内' },
+                        { label: '最新週（先週）の売買状況', value: stats.latest.balance, color: stats.latest.balance >= 0 ? 'text-blue-600' : 'text-red-500', sub: stats.latest.balance >= 0 ? '買い越し' : '売り越し' },
+                        { label: '買い越し 平均', value: stats.positiveAvg, color: 'text-blue-600', sub: '表示範囲内' },
+                        { label: '買い越し 中央値', value: stats.positiveMedian, color: 'text-blue-600', sub: '表示範囲内' },
+                        { label: '売り越し 平均', value: stats.negativeAvg, color: 'text-red-500', sub: '表示範囲内' },
+                        { label: '売り越し 中央値', value: stats.negativeMedian, color: 'text-red-500', sub: '表示範囲内' },
                     ].map((s, i) => (
                         <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                             <p className="text-slate-600 text-sm font-medium mb-2">{s.label}</p>
@@ -259,11 +261,11 @@ const ForeignInvestors = () => {
             )}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up">
                 <div className="flex flex-wrap gap-4 items-center">
-                    <div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{ v: 'all', l: '全期間' }, { v: '1y', l: '1年' }, { v: '6m', l: '6ヶ月' }, { v: '3m', l: '3ヶ月' }].map(opt => (<button key={opt.v} onClick={() => setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange === opt.v ? 'bg-[#7C4DFF] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div>
+                    <div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{ v: 'all', l: '全期間' }, { v: '1y', l: '1年' }, { v: '6m', l: '6ヶ月' }, { v: '3m', l: '3ヶ月' }].map(opt => (<button key={opt.v} onClick={() => setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange === opt.v ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div>
                     <button onClick={resetZoom} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">🔄 ズームリセット</button>
                 </div>
             </div>
-            <div className="mt-8 text-center text-slate-500 text-sm"><p>データソース: <a href="https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html" target="_blank" className="text-[#536DFE] hover:underline">日本取引所グループ (JPX)</a></p></div>
+            <div className="mt-8 text-center text-slate-500 text-sm"><p>データソース: <a href="https://www.jpx.co.jp/markets/statistics-equities/investor-type/00-00-archives-00.html" target="_blank" className="text-blue-600 hover:underline">日本取引所グループ (JPX)</a></p></div>
         </div>
     );
 };
