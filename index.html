@@ -202,7 +202,8 @@
                     data.push({
                         day: d, // X軸表示用
                         date: key, // ツールチップ用
-                        total: total
+                        total: total,
+                        dayOfWeek: dateObj.getDay() // 曜日情報を追加（0=日曜, 6=土曜）
                     });
                 }
                 return data;
@@ -468,7 +469,7 @@
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
                         <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                             <div className="flex items-center gap-4">
-                                <h2 className="text-xl font-bold text-[#334155] flex items-center gap-2"><Icon name="Calendar" size={20} />{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h2>
+                                <h2 className="text-xl font-bold text-[#7C4DFF] flex items-center gap-2"><Icon name="Calendar" size={20} />{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h2>
                                 <div className="flex gap-1">
                                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronLeft" size={20} /></button>
                                     <button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white hover:shadow rounded">Today</button>
@@ -516,12 +517,12 @@
                                         {week.slice(1, 6).map((date, dIdx) => (<DayCell key={dIdx} date={date} />))}
                                         <div className="cal-total-col border-b border-slate-100 bg-slate-50">
                                             <div className="flex flex-col gap-0.5 w-full text-xs">
-                                                    <div className="h-[26px] mb-1"></div>
-                                                    <div className={`text-right ${weekTotal.stocks < 0 ? 'text-[#FF4081]' : weekTotal.stocks > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.stocks)}</div>
-                                                    <div className={`text-right ${weekTotal.margin < 0 ? 'text-[#FF4081]' : weekTotal.margin > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.margin)}</div>
-                                                    <div className={`text-right ${weekTotal.foreign < 0 ? 'text-[#FF4081]' : weekTotal.foreign > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.foreign)}</div>
-                                                    <div className={`text-right ${weekTotal.cfd < 0 ? 'text-[#FF4081]' : weekTotal.cfd > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.cfd)}</div>
-                                                    <div className={`mt-1 pt-1 border-t border-slate-200 font-bold text-right ${weekSum < 0 ? 'text-[#FF4081]' : 'text-[#334155]'}`}>{formatMoney(weekSum)}</div>
+                                                <div className="h-[26px] mb-1"></div>
+                                                <div className={`text-right ${weekTotal.stocks < 0 ? 'text-[#FF4081]' : 'text-slate-600'}`}>{formatMoney(weekTotal.stocks)}</div>
+                                                <div className={`text-right ${weekTotal.margin < 0 ? 'text-[#FF4081]' : 'text-slate-600'}`}>{formatMoney(weekTotal.margin)}</div>
+                                                <div className={`text-right ${weekTotal.foreign < 0 ? 'text-[#FF4081]' : 'text-slate-600'}`}>{formatMoney(weekTotal.foreign)}</div>
+                                                <div className={`text-right ${weekTotal.cfd < 0 ? 'text-[#FF4081]' : 'text-slate-600'}`}>{formatMoney(weekTotal.cfd)}</div>
+                                                <div className={`mt-1 pt-1 border-t border-slate-200 font-bold text-right ${weekSum < 0 ? 'text-[#FF4081]' : 'text-[#334155]'}`}>{formatMoney(weekSum)}</div>
                                             </div>
                                         </div>
                                     </React.Fragment>
@@ -530,24 +531,57 @@
                         </div>
                     </div>
                     
-                    {/* --- JPX Style Profit Chart (Added) --- */}
+                    {/* --- JPX Style Profit Chart (Modified) --- */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
-                        <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2"><Icon name="BarChart3" size={18} />月間日次推移 ({currentDate.getMonth()+1}月)</h3>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold text-[#7C4DFF] flex items-center gap-2">
+                                <Icon name="BarChart3" size={18} />
+                                月間日次推移 ({currentDate.getFullYear()}年{currentDate.getMonth()+1}月)
+                            </h3>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronLeft" size={18} /></button>
+                                    <button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white hover:shadow rounded">Today</button>
+                                    <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronRight" size={18} /></button>
+                                </div>
+                                <div className={`text-2xl font-bold ${stats.monthTotal >= 0 ? 'text-[#673AB7]' : 'text-[#D81B60]'}`}>
+                                    {stats.monthTotal >= 0 ? '+' : ''}{stats.monthTotal.toLocaleString()}
+                                </div>
+                            </div>
+                        </div>
                         <div className="h-64 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={dailyChartData} margin={{top: 5, right: 30, left: 20, bottom: 5}}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                                    <YAxis tickFormatter={(val) => `¥${val/1000}k`} tickLine={false} axisLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                                    <XAxis 
+                                        dataKey="day" 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        tick={(props) => {
+                                            const { x, y, payload } = props;
+                                            const dataPoint = dailyChartData.find(d => d.day === payload.value);
+                                            const dow = dataPoint ? dataPoint.dayOfWeek : null;
+                                            let color = '#64748b';
+                                            if (dow === 6) color = '#673AB7'; // 土曜日
+                                            if (dow === 0) color = '#D81B60'; // 日曜日
+                                            return <text x={x} y={y} dy={16} textAnchor="middle" fill={color} fontSize={12}>{payload.value}</text>;
+                                        }}
+                                    />
+                                    <YAxis 
+                                        tickFormatter={(val) => `${(val/10000).toFixed(0)}万円`}
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        tick={{fill: '#64748b', fontSize: 12}} 
+                                    />
                                     <Tooltip 
                                         cursor={{fill: '#f1f5f9'}}
                                         formatter={(val) => [`¥${val.toLocaleString()}`, "損益"]}
                                         contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
                                     />
                                     <ReferenceLine y={0} stroke="#94a3b8" />
-                                    <Bar dataKey="total">
+                                    <Bar dataKey="total" barSize={20}>
                                         {dailyChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.total >= 0 ? '#536DFE' : '#FF4081'} />
+                                            <Cell key={`cell-${index}`} fill={entry.total >= 0 ? '#673AB7' : '#D81B60'} />
                                         ))}
                                     </Bar>
                                 </BarChart>
@@ -1105,429 +1139,436 @@
 
             for (let i = headerIndex + 1; i < rawRows.length; i++) {
                 const row = rawRows[i];
-                if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
-                const strike = parseNum(row[strikeCol]);
-                const oi1 = parseNum(row[callCol]);
-                const oi2 = parseNum(row[putCol]);
-                if (strike > 0) {
-                    const roundedStrike = Math.round(strike / safeStep) * safeStep;
-                    if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
-                    const d = dataMap.get(roundedStrike);
-                    d.call += oi1;
-                    d.put += oi2;
+
+if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
+            const strike = parseNum(row[strikeCol]);
+            const oi1 = parseNum(row[callCol]);
+            const oi2 = parseNum(row[putCol]);
+            if (strike > 0) {
+                const roundedStrike = Math.round(strike / safeStep) * safeStep;
+                if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
+                const d = dataMap.get(roundedStrike);
+                d.call += oi1;
+                d.put += oi2;
+            }
+        }
+
+        const sortedData = Array.from(dataMap.entries())
+            .sort((a, b) => b[0] - a[0])
+            .map(([strike, val]) => ({ strike, diff: val.call - val.put, call: val.call, put: val.put }));
+
+        return { data: sortedData, error: sortedData.length === 0 ? "有効なデータが見つかりませんでした" : null };
+    };
+
+    const DataInput = ({ onDataParsed }) => {
+        const [text, setText] = useState('');
+        const [dragActive, setDragActive] = useState(false);
+        const handleParse = (input) => {
+            Papa.parse(input, {
+                complete: (results) => onDataParsed(results.data),
+                skipEmptyLines: true,
+                header: false 
+            });
+        };
+        const handleDrop = (e) => {
+            e.preventDefault();
+            setDragActive(false);
+            if (e.dataTransfer.files?.[0]) handleParse(e.dataTransfer.files[0]);
+        };
+        return (
+            <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
+                <div 
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`}
+                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                    onDragLeave={() => setDragActive(false)}
+                    onDrop={handleDrop}
+                >
+                    <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
+                    <p className="text-slate-600 font-medium">CSVファイルをドラッグ＆ドロップ</p>
+                    <p className="text-slate-400 text-sm">または</p>
+                    <input type="file" className="mt-2 text-sm text-slate-500" onChange={(e) => e.target.files?.[0] && handleParse(e.target.files[0])} />
+                </div>
+                <div className="flex gap-2">
+                    <textarea 
+                        className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none"
+                        rows={4}
+                        placeholder="ここにデータを貼り付け..."
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                    />
+                    <button onClick={() => handleParse(text)} disabled={!text} className="bg-[#7C4DFF] text-white px-4 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-medium">解析</button>
+                </div>
+            </div>
+        );
+    };
+
+    const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
+        const [data, setData] = useState(initialData);
+        const [step, setStep] = useState(initialStep);
+        const [zoomY, setZoomY] = useState(1);
+        const [zoomX, setZoomX] = useState(1);
+        const mainRef = useRef(null);
+        const leftRef = useRef(null);
+        const bottomRef = useRef(null);
+
+        useEffect(() => {
+            if(rawRows && step !== initialStep) {
+                const res = processOptionData(rawRows, step);
+                if(!res.error) {
+                    setData(res.data);
+                    onStepChange(id, step, res.data);
                 }
             }
+        }, [step]);
 
-            const sortedData = Array.from(dataMap.entries())
-                .sort((a, b) => b[0] - a[0])
-                .map(([strike, val]) => ({ strike, diff: val.call - val.put, call: val.call, put: val.put }));
-
-            return { data: sortedData, error: sortedData.length === 0 ? "有効なデータが見つかりませんでした" : null };
+        const handleScroll = () => {
+            if (mainRef.current && leftRef.current && bottomRef.current) {
+                leftRef.current.scrollTop = mainRef.current.scrollTop;
+                bottomRef.current.scrollLeft = mainRef.current.scrollLeft;
+            }
+        };
+        const barHeight = 30;
+        const totalHeight = Math.max(450, data.length * barHeight * zoomY);
+        const chartWidth = `${zoomX * 100}%`;
+        const maxVal = Math.max(...data.map(d => Math.abs(d.diff)), 100);
+        
+        const handleWheel = (e, axis) => {
+            if (e.ctrlKey || axis === 'main') return; 
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            if (axis === 'y') setZoomY(z => Math.max(0.1, Math.min(5, z + delta)));
+            if (axis === 'x') setZoomX(z => Math.max(0.5, Math.min(3, z + delta)));
         };
 
-        const DataInput = ({ onDataParsed }) => {
-            const [text, setText] = useState('');
-            const [dragActive, setDragActive] = useState(false);
-            const handleParse = (input) => {
-                Papa.parse(input, {
-                    complete: (results) => onDataParsed(results.data),
-                    skipEmptyLines: true,
-                    header: false 
-                });
-            };
-            const handleDrop = (e) => {
-                e.preventDefault();
-                setDragActive(false);
-                if (e.dataTransfer.files?.[0]) handleParse(e.dataTransfer.files[0]);
-            };
+        const CustomTooltip = ({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            const d = payload[0].payload;
             return (
-                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
-                    <div 
-                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`}
-                        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                        onDragLeave={() => setDragActive(false)}
-                        onDrop={handleDrop}
-                    >
-                        <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
-                        <p className="text-slate-600 font-medium">CSVファイルをドラッグ＆ドロップ</p>
-                        <p className="text-slate-400 text-sm">または</p>
-                        <input type="file" className="mt-2 text-sm text-slate-500" onChange={(e) => e.target.files?.[0] && handleParse(e.target.files[0])} />
-                    </div>
-                    <div className="flex gap-2">
-                        <textarea 
-                            className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none"
-                            rows={4}
-                            placeholder="ここにデータを貼り付け..."
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                        />
-                        <button onClick={() => handleParse(text)} disabled={!text} className="bg-[#7C4DFF] text-white px-4 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-medium">解析</button>
-                    </div>
+                <div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50">
+                    <p className="font-bold">Strike: {label}</p>
+                    <p className={d.diff >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p>
+                    <div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div>
                 </div>
             );
         };
 
-        const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
-            const [data, setData] = useState(initialData);
-            const [step, setStep] = useState(initialStep);
-            const [zoomY, setZoomY] = useState(1);
-            const [zoomX, setZoomX] = useState(1);
-            const mainRef = useRef(null);
-            const leftRef = useRef(null);
-            const bottomRef = useRef(null);
-
-            useEffect(() => {
-                if(rawRows && step !== initialStep) {
-                    const res = processOptionData(rawRows, step);
-                    if(!res.error) {
-                        setData(res.data);
-                        onStepChange(id, step, res.data);
-                    }
-                }
-            }, [step]);
-
-            const handleScroll = () => {
-                if (mainRef.current && leftRef.current && bottomRef.current) {
-                    leftRef.current.scrollTop = mainRef.current.scrollTop;
-                    bottomRef.current.scrollLeft = mainRef.current.scrollLeft;
-                }
-            };
-            const barHeight = 30;
-            const totalHeight = Math.max(450, data.length * barHeight * zoomY);
-            const chartWidth = `${zoomX * 100}%`;
-            const maxVal = Math.max(...data.map(d => Math.abs(d.diff)), 100);
-            
-            const handleWheel = (e, axis) => {
-                if (e.ctrlKey || axis === 'main') return; 
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                if (axis === 'y') setZoomY(z => Math.max(0.1, Math.min(5, z + delta)));
-                if (axis === 'x') setZoomX(z => Math.max(0.5, Math.min(3, z + delta)));
-            };
-
-            const CustomTooltip = ({ active, payload, label }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0].payload;
-                return (
-                    <div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50">
-                        <p className="font-bold">Strike: {label}</p>
-                        <p className={d.diff >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p>
-                        <div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div>
+        return (
+            <div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden mb-6 animate-fade-in-up">
+                <div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">HEIGHT</span>
+                        <button onClick={()=>setZoomY(z=>Math.max(0.1, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
+                        <input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20" />
+                        <button onClick={()=>setZoomY(z=>Math.min(5, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
                     </div>
-                );
-            };
-
-            return (
-                <div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden mb-6 animate-fade-in-up">
-                    <div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-500">HEIGHT</span>
-                            <button onClick={()=>setZoomY(z=>Math.max(0.1, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
-                            <input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20" />
-                            <button onClick={()=>setZoomY(z=>Math.min(5, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-500">WIDTH</span>
-                            <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
-                            <button onClick={()=>setZoomX(z=>Math.min(3, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
-                        </div>
-                        <div className="flex items-center gap-2 border-l pl-4 border-slate-200">
-                            <span className="text-xs font-bold text-slate-500">STEP</span>
-                            <input type="number" className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]" value={step} onChange={(e) => setStep(parseFloat(e.target.value) || 0)} min="0.1"/>
-                        </div>
-                        <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">WIDTH</span>
+                        <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
+                        <button onClick={()=>setZoomX(z=>Math.min(3, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
                     </div>
-                    <div className="flex-1 flex overflow-hidden relative">
-                        <div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e, 'y')}>
-                            <div style={{height: totalHeight, width: '100%'}}>
-                                <ResponsiveContainer>
-                                    <BarChart layout="vertical" data={data} margin={{top:10, bottom:0}}>
-                                        <YAxis type="category" dataKey="strike" width={90} tick={{fontSize:12, fontWeight:600}} interval={0} />
-                                        <Bar dataKey="diff" fill="transparent" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}>
-                            <div style={{width: chartWidth, height: totalHeight, minWidth: '100%'}}>
-                                <ResponsiveContainer>
-                                    <BarChart layout="vertical" data={data} margin={{top:10, right:30, left:0, bottom:0}}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
-                                        <XAxis type="number" domain={[-maxVal, maxVal]} hide />
-                                        <YAxis type="category" width={0} tick={false} />
-                                        <Tooltip content={<CustomTooltip />} cursor={{fill:'rgba(0,0,0,0.05)'}} />
-                                        <ReferenceLine x={0} stroke="#334155" />
-                                        <Bar dataKey="diff" barSize={barHeight * 0.8}>
-                                            {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#536DFE' : '#FF4081'} />))}
-                                            <LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11, fill:'#64748b'}} />
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
+                    <div className="flex items-center gap-2 border-l pl-4 border-slate-200">
+                        <span className="text-xs font-bold text-slate-500">STEP</span>
+                        <input type="number" className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]" value={step} onChange={(e) => setStep(parseFloat(e.target.value) || 0)} min="0.1"/>
+                    </div>
+                    <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
+                </div>
+                <div className="flex-1 flex overflow-hidden relative">
+                    <div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e, 'y')}>
+                        <div style={{height: totalHeight, width: '100%'}}>
+                            <ResponsiveContainer>
+                                <BarChart layout="vertical" data={data} margin={{top:10, bottom:0}}>
+                                    <YAxis type="category" dataKey="strike" width={90} tick={{fontSize:12, fontWeight:600}} interval={0} />
+                                    <Bar dataKey="diff" fill="transparent" />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
-                    <div className="h-8 border-t border-slate-200 flex shrink-0">
-                        <div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14} /></div>
-                        <div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e)=>handleWheel(e, 'x')}>
-                            <div style={{width: chartWidth, minWidth:'100%', height:'100%'}}>
-                                <ResponsiveContainer>
-                                    <BarChart layout="vertical" data={[{}]} margin={{right:30, left:0}}>
-                                        <XAxis type="number" domain={[-maxVal, maxVal]} tick={{fontSize:10}} />
-                                        <YAxis type="category" width={0} />
-                            </BarChart>
-                                </ResponsiveContainer>
-                            </div>
+                    <div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}>
+                        <div style={{width: chartWidth, height: totalHeight, minWidth: '100%'}}>
+                            <ResponsiveContainer>
+                                <BarChart layout="vertical" data={data} margin={{top:10, right:30, left:0, bottom:0}}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
+                                    <XAxis type="number" domain={[-maxVal, maxVal]} hide />
+                                    <YAxis type="category" width={0} tick={false} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{fill:'rgba(0,0,0,0.05)'}} />
+                                    <ReferenceLine x={0} stroke="#334155" />
+                                    <Bar dataKey="diff" barSize={barHeight * 0.8}>
+                                        {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#536DFE' : '#FF4081'} />))}
+                                        <LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11, fill:'#64748b'}} />
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
                 </div>
-            );
-        };
-
-        const OptionOI = ({ charts, setCharts }) => {
-            const [ticker, setTicker] = useState('');
-            const [error, setError] = useState(null);
-
-            const handleData = (rows) => {
-                const step = 50; 
-                const res = processOptionData(rows, step);
-                if (res.error) { setError(res.error); } else { setError(null); const newChart = { id: Date.now().toString(), data: res.data, step: step, rawRows: rows }; setCharts([...charts, newChart]); }
-            };
-
-            const handleStepChange = (id, newStep, newData) => {
-                setCharts(charts.map(c => c.id === id ? { ...c, step: newStep, data: newData } : c));
-            };
-
-            const handleTickerNav = () => { if(!ticker) return; const symbol = ticker.trim().toUpperCase(); window.open(`https://optioncharts.io/options/${symbol}/option-chain`, '_blank'); };
-
-            const links = [
-                { label: 'QQQ', url: 'https://optioncharts.io/options/QQQ/option-chain' },
-                { label: 'SPY', url: 'https://optioncharts.io/options/SPY/option-chain' },
-                { label: 'DJI', url: 'https://optioncharts.io/options/$DJX/option-chain' },
-                { label: 'IWM', url: 'https://optioncharts.io/options/IWM/option-chain' },
-                { label: 'VIX', url: 'https://optioncharts.io/options/$VIX/option-chain' },
-                { label: 'NVIDIA', url: 'https://optioncharts.io/options/NVDA/option-chain' },
-                { label: 'APPL', url: 'https://optioncharts.io/options/AAPL/option-chain' },
-                { label: 'AMZN', url: 'https://optioncharts.io/options/AMZN/option-chain' },
-                { label: 'GLD', url: 'https://optioncharts.io/options/GLD/option-chain' },
-                { label: 'SLV', url: 'https://optioncharts.io/options/SLV/option-chain' },
-            ];
-
-            return (
-                <div className="h-full flex flex-col pb-20">
-                    <div className="flex justify-between items-center mb-6">
-                        <div><h2 className="text-2xl font-bold text-slate-800">Option 分析</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
-                        {charts.length > 0 && <button onClick={() => setCharts([])} className="text-sm text-red-500 hover:underline">データをクリア</button>}
-                    </div>
-                    {charts.map(chart => (<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange} />))}
-                    {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
-                    <div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl">
-                        <p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p>
-                         <div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">
-                            {links.map(l => (<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10} /></a>))}
-                         </div>
-                         <div className="mb-10 flex items-center gap-2">
-                            <span className="text-sm text-slate-500 font-bold">Ticker:</span>
-                            <input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key === 'Enter' && handleTickerNav()}/>
-                            <button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button>
-                         </div>
-                         <DataInput onDataParsed={handleData} />
+                <div className="h-8 border-t border-slate-200 flex shrink-0">
+                    <div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14} /></div>
+                    <div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e)=>handleWheel(e, 'x')}>
+                        <div style={{width: chartWidth, minWidth:'100%', height:'100%'}}>
+                            <ResponsiveContainer>
+                                <BarChart layout="vertical" data={[{}]} margin={{right:30, left:0}}>
+                                    <XAxis type="number" domain={[-maxVal, maxVal]} tick={{fontSize:10}} />
+                                    <YAxis type="category" width={0} />
+                        </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
-            );
+            </div>
+        );
+    };
+
+    const OptionOI = ({ charts, setCharts }) => {
+        const [ticker, setTicker] = useState('');
+        const [error, setError] = useState(null);
+
+        const handleData = (rows) => {
+            const step = 50; 
+            const res = processOptionData(rows, step);
+            if (res.error) { setError(res.error); } else { setError(null); const newChart = { id: Date.now().toString(), data: res.data, step: step, rawRows: rows }; setCharts([...charts, newChart]); }
         };
 
-        // ==========================================
-        //  Main Layout (修正：Sidebarリサイズ・階層化リンク)
-        // ==========================================
-        const App = () => {
-            const [view, setView] = useState('calendar');
-            const [sidebarOpen, setSidebarOpen] = useState(false); 
-            
-            // Sidebar Resizable & Collapse State
-            const [sidebarWidth, setSidebarWidth] = useState(260);
-            const [isCollapsed, setIsCollapsed] = useState(false);
-            const [isResizing, setIsResizing] = useState(false);
+        const handleStepChange = (id, newStep, newData) => {
+            setCharts(charts.map(c => c.id === id ? { ...c, step: newStep, data: newData } : c));
+        };
 
-            const [optionCharts, setOptionCharts] = useState([]);
+        const handleTickerNav = () => { if(!ticker) return; const symbol = ticker.trim().toUpperCase(); window.open(`https://optioncharts.io/options/${symbol}/option-chain`, '_blank'); };
 
-            // Quick Links
-            const [customLinks, setCustomLinks] = useState(() => {
-                const saved = localStorage.getItem('market-dash-links');
-                return saved ? JSON.parse(saved) : [];
-            });
-            const [isAddingLink, setIsAddingLink] = useState(false);
-            const [newLinkLabel, setNewLinkLabel] = useState('');
-            const [newLinkUrl, setNewLinkUrl] = useState('');
-            const [linkType, setLinkType] = useState('link');
-            
-            // Quick Links Logic: Category Toggle State
-            const [collapsedCategories, setCollapsedCategories] = useState({});
+        const links = [
+            { label: 'QQQ', url: 'https://optioncharts.io/options/QQQ/option-chain' },
+            { label: 'SPY', url: 'https://optioncharts.io/options/SPY/option-chain' },
+            { label: 'DJI', url: 'https://optioncharts.io/options/$DJX/option-chain' },
+            { label: 'IWM', url: 'https://optioncharts.io/options/IWM/option-chain' },
+            { label: 'VIX', url: 'https://optioncharts.io/options/$VIX/option-chain' },
+            { label: 'NVIDIA', url: 'https://optioncharts.io/options/NVDA/option-chain' },
+            { label: 'APPL', url: 'https://optioncharts.io/options/AAPL/option-chain' },
+            { label: 'AMZN', url: 'https://optioncharts.io/options/AMZN/option-chain' },
+            { label: 'GLD', url: 'https://optioncharts.io/options/GLD/option-chain' },
+            { label: 'SLV', url: 'https://optioncharts.io/options/SLV/option-chain' },
+        ];
 
-            const toggleCategory = (categoryIndex) => {
-                setCollapsedCategories(prev => ({ ...prev, [categoryIndex]: !prev[categoryIndex] }));
-            };
+        return (
+            <div className="space-y-6">
+                <div className="gradient-bg text-white shadow-lg rounded-xl p-6 md:p-8 animate-fade-in-up">
+                    <h1 className="text-3xl md:text-4xl font-bold mb-2">Option 分析</h1>
+                    <p className="text-blue-100 text-sm mt-2">建玉の壁を可視化</p>
+                </div>
 
-            const openAllInGroup = (startIndex) => {
-                for (let i = startIndex + 1; i < customLinks.length; i++) {
-                    const link = customLinks[i];
-                    if (link.type === 'divider') break;
-                    if (link.url) window.open(link.url, '_blank');
+                {charts.map(chart => (<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange} />))}
+                {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
+                <div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl">
+                    <p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p>
+                     <div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">
+                        {links.map(l => (<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10} /></a>))}
+                     </div>
+                     <div className="mb-10 flex items-center gap-2">
+                        <span className="text-sm text-slate-500 font-bold">Ticker:</span>
+                        <input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key === 'Enter' && handleTickerNav()}/>
+                        <button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button>
+                     </div>
+                     <DataInput onDataParsed={handleData} />
+                </div>
+            </div>
+        );
+    };
+
+    // ==========================================
+    //  Main Layout (修正：Sidebarリサイズ・階層化リンク)
+    // ==========================================
+    const App = () => {
+        const [view, setView] = useState('calendar');
+        const [sidebarOpen, setSidebarOpen] = useState(false); 
+        
+        // Sidebar Resizable & Collapse State
+        const [sidebarWidth, setSidebarWidth] = useState(260);
+        const [isCollapsed, setIsCollapsed] = useState(false);
+        const [isResizing, setIsResizing] = useState(false);
+
+        const [optionCharts, setOptionCharts] = useState([]);
+
+        // Quick Links
+        const [customLinks, setCustomLinks] = useState(() => {
+            const saved = localStorage.getItem('market-dash-links');
+            return saved ? JSON.parse(saved) : [];
+        });
+        const [isAddingLink, setIsAddingLink] = useState(false);
+        const [newLinkLabel, setNewLinkLabel] = useState('');
+        const [newLinkUrl, setNewLinkUrl] = useState('');
+        const [linkType, setLinkType] = useState('link');
+        
+        // Quick Links Logic: Category Toggle State
+        const [collapsedCategories, setCollapsedCategories] = useState({});
+
+        const toggleCategory = (categoryIndex) => {
+            setCollapsedCategories(prev => ({ ...prev, [categoryIndex]: !prev[categoryIndex] }));
+        };
+
+        const openAllInGroup = (categoryIndex) => {
+            // カテゴリの次の項目から、次のカテゴリ（divider）が現れるまでのリンクを全て開く
+            for (let i = categoryIndex + 1; i < customLinks.length; i++) {
+                const link = customLinks[i];
+                // 次のカテゴリに到達したら終了
+                if (link.type === 'divider') break;
+                // リンクタイプで、URLが存在する場合のみ開く
+                if (link.type === 'link' && link.url) {
+                    window.open(link.url, '_blank');
                 }
-            };
+            }
+        };
 
-            const addCustomLink = () => {
-                if (linkType === 'link') {
-                    if (newLinkLabel && newLinkUrl) {
-                        let url = newLinkUrl;
-                        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-                        const updated = [...customLinks, { label: newLinkLabel, url, type: 'link' }];
-                        setCustomLinks(updated);
-                        localStorage.setItem('market-dash-links', JSON.stringify(updated));
-                        setNewLinkLabel('');
-                        setNewLinkUrl('');
-                        setIsAddingLink(false);
-                    }
+        const addCustomLink = () => {
+            if (linkType === 'link') {
+                if (newLinkLabel && newLinkUrl) {
+                    let url = newLinkUrl;
+                    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                    const updated = [...customLinks, { label: newLinkLabel, url, type: 'link' }];
+                    setCustomLinks(updated);
+                    localStorage.setItem('market-dash-links', JSON.stringify(updated));
+                    setNewLinkLabel('');
+                    setNewLinkUrl('');
+                    setIsAddingLink(false);
+                }
+            } else {
+                if (newLinkLabel) {
+                    const updated = [...customLinks, { label: newLinkLabel, url: '', type: 'divider' }];
+                    setCustomLinks(updated);
+                    localStorage.setItem('market-dash-links', JSON.stringify(updated));
+                    setNewLinkLabel('');
+                    setNewLinkUrl('');
+                    setIsAddingLink(false);
+                }
+            }
+        };
+
+        const removeCustomLink = (index) => {
+            const updated = customLinks.filter((_, i) => i !== index);
+            setCustomLinks(updated);
+            localStorage.setItem('market-dash-links', JSON.stringify(updated));
+        };
+
+        // Drag & Drop
+        const [draggedIndex, setDraggedIndex] = useState(null);
+        const handleDragStart = (e, index) => { setDraggedIndex(index); e.dataTransfer.effectAllowed = 'move'; };
+        const handleDragOver = (e, index) => { e.preventDefault(); if (draggedIndex === null || draggedIndex === index) return; const newLinks = [...customLinks]; const [removed] = newLinks.splice(draggedIndex, 1); newLinks.splice(index, 0, removed); setCustomLinks(newLinks); setDraggedIndex(index); };
+        const handleDragEnd = () => { setDraggedIndex(null); localStorage.setItem('market-dash-links', JSON.stringify(customLinks)); };
+
+        // Resize Logic
+        const startResizing = useCallback((e) => { e.preventDefault(); setIsResizing(true); }, []);
+        useEffect(() => {
+            const handleMouseMove = (e) => { if (isResizing) { let newWidth = e.clientX; if (newWidth < 150) newWidth = 150; if (newWidth > 400) newWidth = 400; setSidebarWidth(newWidth); } };
+            const handleMouseUp = () => { if (isResizing) setIsResizing(false); };
+            if (isResizing) { document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', handleMouseUp); }
+            return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); };
+        }, [isResizing]);
+
+        const NavItem = ({ id, label, icon }) => (
+            <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? label : ''}>
+                <Icon name={icon} size={20} />
+                {!isCollapsed && <span className="font-medium text-sm">{label}</span>}
+            </button>
+        );
+
+        const renderCustomLinks = () => {
+            const elements = [];
+            let currentCategoryHidden = false; 
+
+            customLinks.forEach((link, i) => {
+                const isDivider = link.type === 'divider';
+                if (isDivider) {
+                    currentCategoryHidden = collapsedCategories[i] || false;
+                    elements.push(
+                        <div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mt-3 mb-1 cursor-move transition-colors hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
+                            <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={14} /></div>
+                            <div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => toggleCategory(i)}>
+                                <Icon name={currentCategoryHidden ? "ChevronRight" : "ChevronLeft"} size={14} className="text-slate-400 transition-transform" style={{transform: currentCategoryHidden ? 'rotate(0deg)' : 'rotate(-90deg)'}} />
+                                <Icon name="FolderOpen" size={14} className="text-[#7C4DFF]" />
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate select-none">{link.label}</span>
+                            </div>
+                            <button onClick={() => openAllInGroup(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[#7C4DFF] transition-opacity" title="このカテゴリのリンクを全て開く"><Icon name="ExternalLink" size={12} /></button>
+                            <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button>
+                        </div>
+                    );
                 } else {
-                    if (newLinkLabel) {
-                        const updated = [...customLinks, { label: newLinkLabel, url: '', type: 'divider' }];
-                        setCustomLinks(updated);
-                        localStorage.setItem('market-dash-links', JSON.stringify(updated));
-                        setNewLinkLabel('');
-                        setNewLinkUrl('');
-                        setIsAddingLink(false);
-                    }
-                }
-            };
-
-            const removeCustomLink = (index) => {
-                const updated = customLinks.filter((_, i) => i !== index);
-                setCustomLinks(updated);
-                localStorage.setItem('market-dash-links', JSON.stringify(updated));
-            };
-
-            // Drag & Drop
-            const [draggedIndex, setDraggedIndex] = useState(null);
-            const handleDragStart = (e, index) => { setDraggedIndex(index); e.dataTransfer.effectAllowed = 'move'; };
-            const handleDragOver = (e, index) => { e.preventDefault(); if (draggedIndex === null || draggedIndex === index) return; const newLinks = [...customLinks]; const [removed] = newLinks.splice(draggedIndex, 1); newLinks.splice(index, 0, removed); setCustomLinks(newLinks); setDraggedIndex(index); };
-            const handleDragEnd = () => { setDraggedIndex(null); localStorage.setItem('market-dash-links', JSON.stringify(customLinks)); };
-
-            // Resize Logic
-            const startResizing = useCallback((e) => { e.preventDefault(); setIsResizing(true); }, []);
-            useEffect(() => {
-                const handleMouseMove = (e) => { if (isResizing) { let newWidth = e.clientX; if (newWidth < 150) newWidth = 150; if (newWidth > 400) newWidth = 400; setSidebarWidth(newWidth); } };
-                const handleMouseUp = () => { if (isResizing) setIsResizing(false); };
-                if (isResizing) { document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', handleMouseUp); }
-                return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); };
-            }, [isResizing]);
-
-            const NavItem = ({ id, label, icon }) => (
-                <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? label : ''}>
-                    <Icon name={icon} size={20} />
-                    {!isCollapsed && <span className="font-medium text-sm">{label}</span>}
-                </button>
-            );
-
-            const renderCustomLinks = () => {
-                const elements = [];
-                let currentCategoryHidden = false; 
-
-                customLinks.forEach((link, i) => {
-                    const isDivider = link.type === 'divider';
-                    if (isDivider) {
-                        currentCategoryHidden = collapsedCategories[i] || false;
+                    if (!currentCategoryHidden) {
                         elements.push(
-                            <div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mt-3 mb-1 cursor-move transition-colors hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
-                                <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={14} /></div>
-                                <div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => toggleCategory(i)}>
-                                    <Icon name={currentCategoryHidden ? "ChevronRight" : "ChevronLeft"} size={14} className="text-slate-400 transition-transform" style={{transform: currentCategoryHidden ? 'rotate(0deg)' : 'rotate(-90deg)'}} />
-                                    <Icon name="FolderOpen" size={14} className="text-[#7C4DFF]" />
-                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate select-none">{link.label}</span>
-                                </div>
-                                <button onClick={() => openAllInGroup(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[#7C4DFF] transition-opacity" title="このカテゴリのリンクを全て開く"><Icon name="ExternalLink" size={12} /></button>
+                            <div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-3 py-1 ml-4 rounded-lg transition-colors cursor-move hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
+                                <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={12} /></div>
+                                <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto">
+                                    <Icon name="Link" size={12} className="shrink-0 text-slate-400" />
+                                    <span className="truncate">{link.label}</span>
+                                </a>
                                 <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button>
                             </div>
                         );
-                    } else {
-                        if (!currentCategoryHidden) {
-                            elements.push(
-                                <div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-3 py-1 ml-4 rounded-lg transition-colors cursor-move hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
-                                    <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={12} /></div>
-                                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto">
-                                        <Icon name="Link" size={12} className="shrink-0 text-slate-400" />
-                                        <span className="truncate">{link.label}</span>
-                                    </a>
-                                    <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button>
-                                </div>
-                            );
-                        }
                     }
-                });
-                return elements;
-            };
-
-            return (
-                <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
-                    <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-75 shadow-xl lg:shadow-none flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`} style={{ width: isCollapsed ? 70 : sidebarWidth }}>
-                        <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
-                            {!isCollapsed && <span className="font-bold text-lg tracking-tight text-[#334155]">Dashboard</span>}
-                            <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 text-slate-400 hover:text-[#7C4DFF] hover:bg-slate-50 rounded mx-auto lg:mx-0"><Icon name={isCollapsed ? "ChevronRight" : "ChevronLeft"} size={20} /></button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
-                            {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
-                            <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
-                            <NavItem id="option" label="Option 分析" icon="BarChart3" />
-                            <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
-                            <NavItem id="participant" label="手口上位" icon="Briefcase" />
-                            {!isCollapsed && (
-                                <>
-                                    <div className="flex-1 min-h-[20px]"></div>
-                                    <div className="pb-16">
-                                        {customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}
-                                    </div>
-                                    <div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">
-                                        {!isAddingLink ? (
-                                            <button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200" title="リンクを追加"><Icon name="Plus" size={20} /></button>
-                                        ) : (
-                                            <div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up">
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <p className="text-xs font-bold text-slate-500 uppercase">Add Item</p>
-                                                    <button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14}/></button>
-                                                </div>
-                                                <div className="flex bg-slate-100 p-1 rounded-lg mb-3">
-                                                    <button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button>
-                                                    <button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button>
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />
-                                                    {linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}
-                                                    <button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                        {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
-                    </aside>
-                    {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
-                    <div className="flex-1 flex flex-col min-w-0">
-                        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
-                            <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
-                            <span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}</span>
-                        </header>
-                        <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
-                            <div className="max-w-7xl mx-auto h-full">
-                                {view === 'calendar' ? <ProfitManager /> : view === 'jpx' ? <ForeignInvestors /> : view === 'participant' ? <ParticipantVolume /> : <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
-                            </div>
-                        </main>
-                    </div>
-                </div>
-            );
+                }
+            });
+            return elements;
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+        return (
+            <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+                <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-75 shadow-xl lg:shadow-none flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`} style={{ width: isCollapsed ? 70 : sidebarWidth }}>
+                    <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
+                        {!isCollapsed && <span className="font-bold text-lg tracking-tight text-[#334155]">Dashboard</span>}
+                        <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 text-slate-400 hover:text-[#7C4DFF] hover:bg-slate-50 rounded mx-auto lg:mx-0"><Icon name={isCollapsed ? "ChevronRight" : "ChevronLeft"} size={20} /></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
+                        {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
+                        <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
+                        <NavItem id="option" label="Option 分析" icon="BarChart3" />
+                        <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
+                        <NavItem id="participant" label="手口上位" icon="Briefcase" />
+                        {!isCollapsed && (
+                            <>
+                                <div className="flex-1 min-h-[20px]"></div>
+                                <div className="pb-16">
+                                    {customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}
+                                </div>
+                                <div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">
+                                    {!isAddingLink ? (
+                                        <button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200" title="リンクを追加"><Icon name="Plus" size={20} /></button>
+                                    ) : (
+                                        <div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <p className="text-xs font-bold text-slate-500 uppercase">Add Item</p>
+                                                <button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14}/></button>
+                                            </div>
+                                            <div className="flex bg-slate-100 p-1 rounded-lg mb-3">
+                                                <button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button>
+                                                <button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />
+                                                {linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}
+                                                <button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
+                </aside>
+                {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+                <div className="flex-1 flex flex-col min-w-0">
+                    <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
+                        <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
+                        <span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}</span>
+                    </header>
+                    <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
+                        <div className="max-w-7xl mx-auto h-full">
+                            {view === 'calendar' ? <ProfitManager /> : view === 'jpx' ? <ForeignInvestors /> : view === 'participant' ? <ParticipantVolume /> : <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
+                        </div>
+                    </main>
+                </div>
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
 </body>
 </html>
