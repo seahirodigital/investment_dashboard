@@ -7,6 +7,8 @@
     
     <!-- デザイン・スタイル (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- EasyMDE (Markdown Editor) CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
     
     <!-- 依存ライブラリ -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -19,7 +21,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- EasyMDE (Markdown Editor) JS -->
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
@@ -75,16 +78,6 @@
             justify-content: center; align-items: flex-end; padding-right: 8px; gap: 4px;
         }
 
-        /* Markdownプレビュー用スタイル */
-        .markdown-preview { color: #334155; font-size: 14px; line-height: 1.6; }
-        .markdown-preview h1 { font-size: 1.6em; font-weight: 800; margin: 0.5em 0 0.3em 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.2em; color: #1e293b; }
-        .markdown-preview h2 { font-size: 1.4em; font-weight: 700; margin: 1em 0 0.3em 0; color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; }
-        .markdown-preview h3 { font-size: 1.2em; font-weight: 600; margin: 0.8em 0 0.3em 0; color: #475569; }
-        .markdown-preview p { margin-bottom: 0.6em; }
-        .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.6em; }
-        .markdown-preview li { margin-bottom: 0.2em; }
-        .markdown-preview blockquote { border-left: 4px solid #cbd5e1; padding: 0.5em 1em; color: #64748b; background-color: #f8fafc; font-style: italic; }
-
         /* ツールチップ (銘柄詳細用) */
         .stock-tooltip {
             visibility: hidden;
@@ -96,10 +89,10 @@
             z-index: 100;
             background-color: rgba(255, 255, 255, 0.98);
             border: 1px solid #cbd5e1;
-            padding: 8px;
+            padding: 0;
             border-radius: 8px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            width: 220px;
+            width: 240px;
             max-height: 300px;
             overflow-y: auto;
             font-size: 11px;
@@ -111,6 +104,12 @@
             opacity: 1;
             transform: translateX(-50%) translateY(-10px);
         }
+
+        /* EasyMDE Customization */
+        .EasyMDEContainer { background: white; border-radius: 0.5rem; height: 100%; display: flex; flex-direction: column; }
+        .CodeMirror { border: 1px solid #e2e8f0; border-radius: 0.5rem; flex: 1; font-family: monospace; font-size: 14px; }
+        .editor-toolbar { border: 1px solid #e2e8f0; border-radius: 0.5rem 0.5rem 0 0; background-color: #f8fafc; opacity: 1; }
+        .editor-statusbar { display: none; }
     </style>
 </head>
 <body>
@@ -166,52 +165,32 @@
             event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
         };
 
-        // --- 新しいClick-to-Editコンポーネント ---
-        const MarkdownEditor = ({ value, onChange }) => {
-            const [isEditing, setIsEditing] = useState(false);
-            const containerRef = useRef(null);
-
-            // フォーカスが外れたらプレビューに戻す
-            const handleBlur = () => {
-                setIsEditing(false);
-            };
-
-            // プレビュークリックで編集モードへ
-            const handleClick = () => {
-                setIsEditing(true);
-            };
+        // --- EasyMDE Wrapper ---
+        const EasyMDEEditor = ({ value, onChange }) => {
+            const textareaRef = useRef(null);
+            const mdeRef = useRef(null);
 
             useEffect(() => {
-                if (isEditing && containerRef.current) {
-                    const textarea = containerRef.current.querySelector('textarea');
-                    if(textarea) textarea.focus();
-                }
-            }, [isEditing]);
-
-            return (
-                <div className="w-full h-full relative group" ref={containerRef}>
-                    {isEditing ? (
-                        <textarea
-                            className="w-full h-full p-4 resize-none outline-none font-mono text-sm leading-relaxed bg-white text-slate-800 border-2 border-[#7C4DFF] rounded-lg"
-                            value={value}
-                            onChange={(e) => onChange(e.target.value)}
-                            onBlur={handleBlur}
-                            placeholder="# 本日の振り返り..."
-                        />
-                    ) : (
-                        <div 
-                            className="w-full h-full p-6 markdown-preview cursor-text hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 rounded-lg overflow-y-auto"
-                            onClick={handleClick}
-                            dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(value || '（クリックして日記を入力...）') : value }}
-                        />
-                    )}
-                    {!isEditing && (
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded shadow text-xs text-slate-400 pointer-events-none">
-                            Click to Edit
-                        </div>
-                    )}
-                </div>
-            );
+                if (!textareaRef.current) return;
+                mdeRef.current = new EasyMDE({
+                    element: textareaRef.current,
+                    initialValue: value,
+                    spellChecker: false,
+                    status: false,
+                    toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "side-by-side", "fullscreen"],
+                    placeholder: "# 本日の振り返り...",
+                    forceSync: true,
+                });
+                mdeRef.current.codemirror.on("change", () => {
+                    onChange(mdeRef.current.value());
+                });
+                return () => {
+                    mdeRef.current.toTextArea();
+                    mdeRef.current = null;
+                };
+            }, []); 
+            
+            return <textarea ref={textareaRef} />;
         };
 
         // ==========================================
@@ -430,12 +409,12 @@
                 let plColIndex = -1;
                 let nameColIndex = -1;
 
-                // Detect Columns
-                for (let i = 0; i < Math.min(rows.length, 20); i++) {
+                // Detect Columns (Enhanced for various brokers)
+                for (let i = 0; i < Math.min(rows.length, 50); i++) {
                     const row = rows[i].map(c => String(c).trim());
                     const dIdx = row.findIndex(c => c.includes('約定日'));
                     const pIdx = row.findIndex(c => (c.includes('実現損益') || c.includes('損益金額')) && (c.includes('円') || c.includes('金額')));
-                    const nIdx = row.findIndex(c => c.includes('銘柄名') || c.includes('銘柄'));
+                    const nIdx = row.findIndex(c => c.includes('銘柄') || c.includes('銘柄名'));
                     
                     if (dIdx !== -1 && pIdx !== -1) {
                         headerRowIndex = i;
@@ -469,7 +448,7 @@
                         // Total Sum
                         aggregatedData[dateKey] = (aggregatedData[dateKey] || 0) + val;
                         
-                        // Detail Breakdown (同日・同銘柄は合算)
+                        // Detail Breakdown (Same name sum)
                         if (nameColIndex !== -1) {
                             const name = String(row[nameColIndex]).trim();
                             if (!detailData[dateKey]) detailData[dateKey] = {};
@@ -482,7 +461,6 @@
                 let count = 0;
                 Object.entries(aggregatedData).forEach(([key, val]) => {
                     const existingDetails = newHistory[key]?.details || [];
-                    // Convert detail map to array for storage
                     let newDetails = [];
                     if (detailData[key]) {
                          newDetails = Object.entries(detailData[key]).map(([name, amount]) => ({ name, amount }));
@@ -596,19 +574,21 @@
                 if (data && data.details && data.details.length > 0) {
                     tooltipContent = (
                         <div className="stock-tooltip">
-                            <div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600 bg-slate-50 -m-2 mb-1 p-2 rounded-t-lg">損益内訳</div>
-                            {data.details.map((d, i) => (
-                                <div key={i} className="flex justify-between items-center py-0.5 border-b border-slate-50 last:border-0">
-                                    <span className="truncate w-28 text-slate-600 font-medium">{d.name}</span>
-                                    <span className={`text-[10px] font-mono ${d.amount >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span>
-                                </div>
-                            ))}
+                            <div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600 bg-slate-50 -m-2 mb-1 p-2 rounded-t-lg">損益内訳 (CSV)</div>
+                            <div className="max-h-[250px] overflow-y-auto">
+                                {data.details.map((d, i) => (
+                                    <div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
+                                        <span className="truncate w-28 text-slate-600 font-medium">{d.name}</span>
+                                        <span className={`text-[10px] font-mono ${d.amount >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     );
                 }
 
                 return (
-                    <div onClick={() => openModal(date)} className={`cal-cell cursor-pointer hover:bg-[#F3E5F5] transition-colors border-r border-b border-slate-100 ${isToday ? 'bg-[#F3E5F5]/30 ring-2 ring-inset ring-[#7C4DFF]/20' : ''}`}>
+                    <div onClick={() => openModal(date)} className={`cal-cell cursor-pointer hover:bg-[#F3E5F5] transition-colors border-r border-b border-slate-100 group ${isToday ? 'bg-[#F3E5F5]/30 ring-2 ring-inset ring-[#7C4DFF]/20' : ''}`}>
                         {tooltipContent}
                         <div className="flex justify-between items-start mb-1">
                             <span className={`text-xs font-bold ${isToday ? 'bg-[#7C4DFF] text-white px-1.5 py-0.5 rounded-full' : 'text-slate-500'}`}>{date.getDate()}</span>
@@ -616,9 +596,9 @@
                         </div>
                         <div className="flex flex-col gap-0.5">
                             {hasEvent ? (
-                                <div className="group relative flex justify-between items-center px-1.5 py-1 rounded text-[10px] font-bold mb-1 bg-white border-l-4 border-[#7C4DFF] shadow-sm text-[#7C4DFF]">
+                                <div className="group/event relative flex justify-between items-center px-1.5 py-1 rounded text-[10px] font-bold mb-1 bg-white border-l-4 border-[#7C4DFF] shadow-sm text-[#7C4DFF]">
                                     <span className="truncate">{data.event}</span>
-                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex gap-1 bg-white pl-1">
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover/event:flex gap-1 bg-white pl-1">
                                         <button onClick={(e) => { e.stopPropagation(); openModal(date); }} className="hover:text-[#7C4DFF]"><Icon name="Pencil" size={10} /></button>
                                         <button onClick={(e) => handleDeleteEvent(e, date)} className="hover:text-[#FF4081]"><Icon name="X" size={10} /></button>
                                     </div>
@@ -801,7 +781,7 @@
                                                 </div>
                                             </div>
 
-                                            {/* 損益詳細表示エリア (修正：合算値) */}
+                                            {/* 損益詳細表示エリア (銘柄合算・詳細) */}
                                             {editData.details && editData.details.length > 0 && (
                                                 <div className="mt-6 pt-4 border-t border-slate-200">
                                                     <h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV取込・合算)</h4>
@@ -818,17 +798,16 @@
                                         </div>
                                     </div>
                                     
-                                    {/* Main: Markdown Click-to-Edit */}
+                                    {/* Main: EasyMDE Editor (Realtime Preview in Editor) */}
                                     <div className="flex-1 bg-white overflow-hidden p-6 flex flex-col">
                                         <div className="flex justify-between items-center mb-2">
                                             <div className="flex items-center gap-2">
                                                 <Icon name="Pencil" size={14} className="text-slate-500"/>
-                                                <span className="text-xs font-bold text-slate-500 uppercase">Investment Diary</span>
+                                                <span className="text-xs font-bold text-slate-500 uppercase">Investment Diary (Markdown)</span>
                                             </div>
-                                            <span className="text-[10px] text-slate-400">クリックして編集 / フォーカスを外してプレビュー</span>
                                         </div>
                                         <div className="flex-1 overflow-hidden relative">
-                                            <MarkdownEditor 
+                                            <EasyMDEEditor 
                                                 value={editData.note} 
                                                 onChange={(val) => setEditData({...editData, note: val})} 
                                             />
@@ -916,673 +895,6 @@
                             </div>
                         </div>
                     )}
-                </div>
-            );
-        };
-
-        // ==========================================
-        //  取引参加者別取引高
-        // ==========================================
-        const ParticipantVolume = () => {
-            const [data, setData] = useState(null);
-            const [session, setSession] = useState('night'); 
-            const [loading, setLoading] = useState(true);
-
-            useEffect(() => {
-                const fetchData = async () => {
-                    try {
-                        const res = await fetch('./data/daily_participant.json');
-                        if (res.ok) {
-                            const json = await res.json();
-                            setData(json);
-                        } else {
-                            console.warn("Daily participant data not found.");
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    } finally {
-                        setLoading(false);
-                    }
-                };
-                fetchData();
-            }, []);
-
-            if (loading) return <div className="p-8 text-center text-slate-500">データを読み込み中...</div>;
-            if (!data) return <div className="p-8 text-center text-red-500 bg-red-50 rounded-lg">最新の手口データが見つかりませんでした。<br/>平日20時以降に更新されます。</div>;
-
-            const targetData = session === 'night' ? data.night_session : data.day_session;
-            const sessionLabel = session === 'night' ? 'ナイト・セッション (立会)' : '日中取引 (立会)';
-
-            const categoryColors = {
-                'US': 'bg-blue-100 text-blue-800 border-blue-200',
-                'EU': 'bg-green-100 text-green-800 border-green-200',
-                'JP': 'bg-orange-100 text-orange-800 border-orange-200',
-                'NET': 'bg-purple-100 text-purple-800 border-purple-200',
-                'OTHERS': 'bg-slate-100 text-slate-800 border-slate-200'
-            };
-
-            const grouped = targetData.reduce((acc, item) => {
-                const cat = item.category || 'OTHERS';
-                if (!acc[cat]) acc[cat] = [];
-                acc[cat].push(item);
-                return acc;
-            }, {});
-            const categories = ['US', 'EU', 'JP', 'NET', 'OTHERS'];
-
-            return (
-                <div className="space-y-6">
-                    <div className="gradient-bg text-white shadow-lg rounded-xl p-6 md:p-8 animate-fade-in-up">
-                        <h1 className="text-3xl font-bold mb-2">取引参加者別取引高 (手口上位)</h1>
-                        <p className="text-blue-100 text-sm">データ日付: {data.date} (最終更新: {data.updated_at})</p>
-                    </div>
-
-                    <div className="flex space-x-2 bg-white p-2 rounded-lg shadow-sm border border-slate-200 w-fit">
-                        <button onClick={() => setSession('night')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'night' ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}>🌙 ナイト・セッション</button>
-                        <button onClick={() => setSession('day')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'day' ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}>☀️ 日中取引</button>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
-                        <h2 className="text-xl font-bold text-slate-800 mb-4">{sessionLabel}</h2>
-                        {targetData.length === 0 ? (
-                            <p className="text-slate-500">このセッションのデータはありません。</p>
-                        ) : (
-                            <div className="space-y-8">
-                                {categories.map(cat => {
-                                    if (!grouped[cat]) return null;
-                                    return (
-                                        <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden">
-                                            <div className={`px-4 py-2 font-bold text-sm border-b ${categoryColors[cat]}`}>
-                                                {cat === 'US' && '🇺🇸 米系証券'}
-                                                {cat === 'EU' && '🇪🇺 欧州系証券'}
-                                                {cat === 'JP' && '🇯🇵 日系証券'}
-                                                {cat === 'NET' && '🌐 ネット証券'}
-                                                {cat === 'OTHERS' && 'その他'}
-                                            </div>
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-sm text-left">
-                                                    <thead className="bg-slate-5 text-slate-500 border-b border-slate-200">
-                                                        <tr>
-                                                            <th className="px-4 py-2 w-48">証券会社</th>
-                                                            {Object.keys(grouped[cat][0].data).map(key => (<th key={key} className="px-4 py-2 text-right whitespace-nowrap">{key}</th>))}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-slate-100">
-                                                        {grouped[cat].map((item, idx) => (
-                                                            <tr key={idx} className="hover:bg-slate-50">
-                                                                <td className="px-4 py-2 font-medium text-slate-700">{item.name}</td>
-                                                                {Object.entries(item.data).map(([k, val], i) => (<td key={i} className="px-4 py-2 text-right font-mono">{val.toLocaleString()}</td>))}
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                     <div className="mt-4 text-right text-xs text-slate-400">※JPX公表のExcelファイルより自動取得・集計。単位: 枚 (または金額)。</div>
-                </div>
-            );
-        };
-
-        // ==========================================
-        //  JPX Chart, Option OI, Layout ... (unchanged core logic, just styles)
-        // ==========================================
-        const ForeignInvestors = () => {
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
-            
-            const [allData, setAllData] = useState([]);
-            const [currentTimeRange, setCurrentTimeRange] = useState('all');
-            const [stats, setStats] = useState(null);
-            const [dataCount, setDataCount] = useState(0);
-            const [lastUpdate, setLastUpdate] = useState('データ取得中...');
-
-            useEffect(() => {
-                const canvas = chartRef.current;
-                if (!canvas) return;
-                const handleWheel = (e) => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { e.preventDefault(); } };
-                canvas.addEventListener('wheel', handleWheel, { passive: false });
-                return () => canvas.removeEventListener('wheel', handleWheel);
-            }, [allData]);
-
-            const formatNumber = (num) => Math.round(num).toLocaleString('ja-JP');
-            const formatLargeNumber = (value) => {
-                if (typeof value === 'number') {
-                    const sign = value >= 0 ? '+' : '';
-                    return sign + formatNumber(value) + '億円';
-                }
-                return value.toString();
-            };
-
-            const calculateWeekLabels = (data) => {
-                const weekCounter = {};
-                return data.map(row => {
-                    const date = new Date(row.date);
-                    const year = date.getFullYear();
-                    const month = date.getMonth() + 1;
-                    const yearMonthKey = `${year}-${month}`;
-                    if (!weekCounter[yearMonthKey]) weekCounter[yearMonthKey] = 1;
-                    else weekCounter[yearMonthKey]++;
-                    const weekNum = weekCounter[yearMonthKey];
-                    return { ...row, displayDate: `${year}年${month}月${weekNum}週`, tooltipDate: `${year}年${month}月第${weekNum}週` };
-                });
-            };
-
-            const calculateStats = (data) => {
-                const positiveData = data.filter(item => item.balance > 0).map(item => item.balance);
-                const negativeData = data.filter(item => item.balance < 0).map(item => item.balance);
-                const calcMedian = (arr) => {
-                    if (arr.length === 0) return 0;
-                    const sorted = [...arr].sort((a, b) => a - b);
-                    const mid = Math.floor(sorted.length / 2);
-                    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-                };
-                const calcAverage = (arr) => arr.length === 0 ? 0 : arr.reduce((sum, val) => sum + val, 0) / arr.length;
-                return {
-                    positiveAvg: calcAverage(positiveData),
-                    positiveMedian: calcMedian(positiveData),
-                    negativeAvg: calcAverage(negativeData),
-                    negativeMedian: calcMedian(negativeData),
-                    latest: data[data.length - 1]
-                };
-            };
-
-            const getFormattedReleaseDate = (lastDateStr) => {
-                try {
-                    const date = new Date(lastDateStr);
-                    if (isNaN(date.getTime())) return lastDateStr;
-                    const releaseDate = new Date(date);
-                    releaseDate.setDate(date.getDate() + 6);
-                    const y = releaseDate.getFullYear();
-                    const m = String(releaseDate.getMonth() + 1).padStart(2, '0');
-                    const d = String(releaseDate.getDate()).padStart(2, '0');
-                    return `${y}-${m}-${d}-18:00`;
-                } catch (e) { return lastDateStr; }
-            };
-
-            const zoomChart = (direction) => {
-                if (!chartInstance.current) return;
-                chartInstance.current.zoom(direction === 'in' ? 1.2 : 0.8);
-                updateStatsFromChart();
-            };
-            const panChart = (direction) => {
-                if (!chartInstance.current) return;
-                const chart = chartInstance.current;
-                const range = chart.scales.x.max - chart.scales.x.min;
-                chart.pan({ x: direction === 'left' ? range * 0.2 : -range * 0.2 });
-                updateStatsFromChart();
-            };
-            const resetZoom = () => {
-                if (!chartInstance.current) return;
-                chartInstance.current.resetZoom();
-                updateStatsFromChart();
-            };
-            const updateStatsFromChart = () => {
-                if (!chartInstance.current) return;
-                const chart = chartInstance.current;
-                const xScale = chart.scales.x;
-                const filtered = getFilteredData(allData, currentTimeRange);
-                const startIndex = Math.max(0, Math.floor(xScale.min));
-                const endIndex = Math.min(filtered.length - 1, Math.ceil(xScale.max));
-                const visibleData = filtered.slice(startIndex, endIndex + 1);
-                if (visibleData.length > 0) setStats(calculateStats(visibleData));
-            };
-            const getFilteredData = (data, range) => {
-                if (range === 'all') return data;
-                const now = new Date();
-                const cutoffDate = new Date();
-                if (range === '3m') cutoffDate.setMonth(now.getMonth() - 3);
-                else if (range === '6m') cutoffDate.setMonth(now.getMonth() - 6);
-                else if (range === '1y') cutoffDate.setFullYear(now.getFullYear() - 1);
-                return data.filter(item => new Date(item.date) >= cutoffDate);
-            };
-
-            const drawChart = (data) => {
-                if (!chartRef.current) return;
-                const ctx = chartRef.current.getContext('2d');
-                if (chartInstance.current) chartInstance.current.destroy();
-                const config = {
-                    type: 'bar',
-                    data: {
-                        datasets: [{
-                            label: '差引（億円）',
-                            data: data.map((d, index) => ({ x: index, y: d.balance })),
-                            backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(83, 109, 254, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(83, 109, 254, 0.7)' : 'rgba(255, 64, 129, 0.7)',
-                            borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#536DFE' : ctx.parsed.y >= 0 ? '#536DFE' : '#FF4081',
-                            borderWidth: 1,
-                            barPercentage: 0.9,
-                            categoryPercentage: 0.9
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: 'white',
-                                titleColor: '#334155',
-                                bodyColor: '#334155',
-                                borderColor: '#e2e8f0',
-                                borderWidth: 1,
-                                padding: 12,
-                                displayColors: false,
-                                callbacks: {
-                                    title: (context) => data[Math.round(context[0].parsed.x)]?.tooltipDate || '',
-                                    label: (context) => {
-                                        const index = Math.round(context.parsed.x);
-                                        if (index >= 0 && index < data.length) {
-                                            const val = data[index].balance;
-                                            const raw = data[index].rawBalance;
-                                            const sign = val >= 0 ? '+' : '';
-                                            return `${sign}${formatNumber(val)}億円 (${sign}${(raw * 1000).toLocaleString('ja-JP')}円)`;
-                                        }
-                                        return '';
-                                    },
-                                    afterLabel: (context) => context.parsed.y >= 0 ? '買い越し' : '売り越し'
-                                }
-                            },
-                            zoom: {
-                                pan: { enabled: true, mode: 'x', threshold: 0 },
-                                zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x', onZoomComplete: updateStatsFromChart }
-                            }
-                        },
-                        scales: {
-                            y: { ticks: { callback: (value, index, ticks) => index === ticks.length - 1 ? formatNumber(value) + '億円' : formatNumber(value) }, grid: { color: '#e2e8f0' } },
-                            x: { type: 'linear', min: 0, max: data.length - 1, ticks: { callback: (value) => data[Math.round(value)]?.displayDate || '', maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 20 }, grid: { color: '#e2e8f0' } }
-                        }
-                    }
-                };
-                chartInstance.current = new Chart(ctx, config);
-            };
-
-            useEffect(() => {
-                const loadData = async () => {
-                    try {
-                        const res = await fetch('history.csv');
-                        const text = res.ok ? await res.text() : null;
-                        if (!text) throw new Error("CSV load failed");
-                        Papa.parse(text, {
-                            header: true,
-                            dynamicTyping: true,
-                            skipEmptyLines: true,
-                            complete: (results) => {
-                                const raw = results.data.filter(r => r.date && r.balance != null).map(r => ({ date: r.date, balance: r.balance / 100000, rawBalance: r.balance })).sort((a, b) => new Date(a.date) - new Date(b.date));
-                                const processed = calculateWeekLabels(raw);
-                                setAllData(processed);
-                                if (processed.length > 0) setLastUpdate(`最終更新: ${getFormattedReleaseDate(processed[processed.length - 1].date)}`);
-                            }
-                        });
-                    } catch (e) { console.error(e); setLastUpdate("データの読み込みに失敗しました"); }
-                };
-                loadData();
-            }, []);
-
-            useEffect(() => {
-                if (allData.length === 0) return;
-                const filtered = getFilteredData(allData, currentTimeRange);
-                setDataCount(filtered.length);
-                drawChart(filtered);
-                setStats(calculateStats(filtered));
-            }, [allData, currentTimeRange]);
-
-            return (
-                <div className="space-y-6">
-                    <div className="gradient-bg text-white shadow-lg rounded-xl -mx-4 md:mx-0 p-6 md:p-8 mb-8 animate-fade-in-up">
-                        <h1 className="text-3xl md:text-4xl font-bold mb-2">JPX 海外投資家動向</h1>
-                        <p className="text-blue-100 text-sm mt-2">{lastUpdate}</p>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up">
-                        <h2 className="text-xl font-bold text-slate-900 mb-4">差引推移 <span className="text-sm font-normal text-slate-500 ml-2">({dataCount}件のデータ)</span></h2>
-                        <div style={{ position: 'relative', height: '500px' }}>
-                            <canvas ref={chartRef}></canvas>
-                            <div style={{ position: 'absolute', bottom: '90px', left: '80px', display: 'flex', gap: '8px', zIndex: 10 }}>
-                                <button onClick={() => zoomChart('in')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">＋</button>
-                                <button onClick={() => zoomChart('out')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">ー</button>
-                            </div>
-                            <div style={{ position: 'absolute', bottom: '90px', right: '20px', display: 'flex', gap: '8px', zIndex: 10 }}>
-                                <button onClick={() => panChart('left')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">← 左へ</button>
-                                <button onClick={() => panChart('right')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">右へ →</button>
-                            </div>
-                        </div>
-                    </div>
-                    {stats && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up">
-                            {[
-                                { label: '最新週（先週）の売買状況', value: stats.latest.balance, color: stats.latest.balance >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]', sub: stats.latest.balance >= 0 ? '買い越し' : '売り越し' },
-                                { label: '買い越し 平均', value: stats.positiveAvg, color: 'text-[#536DFE]', sub: '表示範囲内' },
-                                { label: '買い越し 中央値', value: stats.positiveMedian, color: 'text-[#536DFE]', sub: '表示範囲内' },
-                                { label: '売り越し 平均', value: stats.negativeAvg, color: 'text-[#FF4081]', sub: '表示範囲内' },
-                                { label: '売り越し 中央値', value: stats.negativeMedian, color: 'text-[#FF4081]', sub: '表示範囲内' },
-                            ].map((s, i) => (
-                                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                    <p className="text-slate-600 text-sm font-medium mb-2">{s.label}</p>
-                                    <p className={`text-3xl font-bold ${s.color}`}>{formatLargeNumber(s.value)}</p>
-                                    <p className="text-slate-400 text-xs mt-1">{s.sub}</p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up">
-                        <div className="flex flex-wrap gap-4 items-center">
-                            <div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{ v: 'all', l: '全期間' }, { v: '1y', l: '1年' }, { v: '6m', l: '6ヶ月' }, { v: '3m', l: '3ヶ月' }].map(opt => (<button key={opt.v} onClick={() => setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange === opt.v ? 'bg-[#7C4DFF] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div>
-                            <button onClick={resetZoom} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">🔄 ズームリセット</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // ==========================================
-        //  Option OI
-        // ==========================================
-        const processOptionData = (rawRows, step = 50) => {
-            if (!rawRows || rawRows.length < 2) return { data: [], error: 'データが不足しています。' };
-            const strikeRegex = /(strike|行使価格|koushi)/i;
-            const oiRegex = /(open\s*int|oi|建玉|tategyoku)/i;
-            const parseNum = (val) => {
-                if (typeof val === 'number') return val;
-                if (!val) return 0;
-                let str = String(val).toUpperCase();
-                let multiplier = 1;
-                if (str.endsWith('K')) multiplier = 1000;
-                else if (str.endsWith('M')) multiplier = 1000000;
-                str = str.replace(/[^0-9.-]/g, '').trim(); 
-                const num = parseFloat(str);
-                return isNaN(num) ? 0 : num * multiplier;
-            };
-
-            let reshapeHeaderIndex = -1;
-            let reshapeWidth = 0;
-            const getHeaderInfo = (row) => {
-                const sRow = row.map(c => String(c).trim());
-                let sCol = -1, oiCols = [];
-                sRow.forEach((cell, i) => { if (strikeRegex.test(cell)) sCol = i; else if (oiRegex.test(cell)) oiCols.push(i); });
-                return { sCol, oiCols, colCount: row.length };
-            };
-
-            for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
-                const info = getHeaderInfo(rawRows[r]);
-                if (info.sCol !== -1 && info.oiCols.length >= 2 && info.colCount > 1) {
-                    let singleColCount = 0;
-                    for(let k=1; k<=10 && (r+k)<rawRows.length; k++) { if (rawRows[r+k].length === 1 || rawRows[r+k].length < info.colCount / 2) singleColCount++; }
-                    if (singleColCount >= 5) { reshapeHeaderIndex = r; reshapeWidth = info.colCount; break; }
-                }
-            }
-
-            if (reshapeWidth > 0 && reshapeHeaderIndex !== -1) {
-                const headerRow = rawRows[reshapeHeaderIndex];
-                const flatData = [];
-                for (let i = reshapeHeaderIndex + 1; i < rawRows.length; i++) {
-                    const row = rawRows[i];
-                    for (const cell of row) { if (cell !== null && cell !== undefined && String(cell).trim() !== '') flatData.push(cell); }
-                }
-                const newRows = [headerRow];
-                let currentChunk = [];
-                for (const cell of flatData) {
-                    currentChunk.push(cell);
-                    if (currentChunk.length === reshapeWidth) { newRows.push(currentChunk); currentChunk = []; }
-                }
-                rawRows = newRows;
-            }
-
-            let bestCandidate = { headerIndex: -1, strikeCol: -1, callCol: -1, putCol: -1, score: 0 };
-            for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
-                const row = rawRows[r].map(c => String(c).trim());
-                let sCol = -1, oiCols = [];
-                row.forEach((cell, i) => { if (strikeRegex.test(cell)) sCol = i; else if (oiRegex.test(cell)) oiCols.push(i); });
-                if (sCol !== -1 && oiCols.length >= 2) {
-                    let cCol = -1, pCol = -1;
-                    const oi1 = row[oiCols[0]].toLowerCase();
-                    const oi2 = row[oiCols[1]].toLowerCase();
-                    if (oi1.includes('call') || oi1.includes('コール')) { cCol = oiCols[0]; }
-                    if (oi1.includes('put') || oi1.includes('プット')) { pCol = oiCols[0]; }
-                    if (oi2.includes('call') || oi2.includes('コール')) { cCol = oiCols[1]; }
-                    if (oi2.includes('put') || oi2.includes('プット')) { pCol = oiCols[1]; }
-                    if (cCol === -1 || pCol === -1) { cCol = oiCols[0]; pCol = oiCols[1]; }
-                    bestCandidate = { headerIndex: r, strikeCol: sCol, callCol: cCol, putCol: pCol, score: 10 };
-                    break;
-                }
-            }
-
-            if (bestCandidate.headerIndex === -1) return { data: [], error: 'ヘッダーが見つかりませんでした。' };
-
-            const { headerIndex, strikeCol, callCol, putCol } = bestCandidate;
-            const dataMap = new Map();
-            const safeStep = step > 0 ? step : 1;
-
-            for (let i = headerIndex + 1; i < rawRows.length; i++) {
-                const row = rawRows[i];
-                if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
-                const strike = parseNum(row[strikeCol]);
-                const oi1 = parseNum(row[callCol]);
-                const oi2 = parseNum(row[putCol]);
-                if (strike > 0) {
-                    const roundedStrike = Math.round(strike / safeStep) * safeStep;
-                    if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
-                    const d = dataMap.get(roundedStrike);
-                    d.call += oi1;
-                    d.put += oi2;
-                }
-            }
-
-            const sortedData = Array.from(dataMap.entries())
-                .sort((a, b) => b[0] - a[0])
-                .map(([strike, val]) => ({ strike, diff: val.call - val.put, call: val.call, put: val.put }));
-
-            return { data: sortedData, error: sortedData.length === 0 ? "有効なデータが見つかりませんでした" : null };
-        };
-
-        const DataInput = ({ onDataParsed }) => {
-            const [text, setText] = useState('');
-            const [dragActive, setDragActive] = useState(false);
-            const handleParse = (input) => {
-                Papa.parse(input, {
-                    complete: (results) => onDataParsed(results.data),
-                    skipEmptyLines: true,
-                    header: false 
-                });
-            };
-            const handleDrop = (e) => {
-                e.preventDefault();
-                setDragActive(false);
-                if (e.dataTransfer.files?.[0]) handleParse(e.dataTransfer.files[0]);
-            };
-            return (
-                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
-                    <div 
-                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`}
-                        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                        onDragLeave={() => setDragActive(false)}
-                        onDrop={handleDrop}
-                    >
-                        <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
-                        <p className="text-slate-600 font-medium">CSVファイルをドラッグ＆ドロップ</p>
-                        <p className="text-slate-400 text-sm">または</p>
-                        <input type="file" className="mt-2 text-sm text-slate-500" onChange={(e) => e.target.files?.[0] && handleParse(e.target.files[0])} />
-                    </div>
-                    <div className="flex gap-2">
-                        <textarea 
-                            className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none"
-                            rows={4}
-                            placeholder="ここにデータを貼り付け..."
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                        />
-                        <button onClick={() => handleParse(text)} disabled={!text} className="bg-[#7C4DFF] text-white px-4 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-medium">解析</button>
-                    </div>
-                </div>
-            );
-        };
-
-        const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
-            const [data, setData] = useState(initialData);
-            const [step, setStep] = useState(initialStep);
-            const [zoomY, setZoomY] = useState(1);
-            const [zoomX, setZoomX] = useState(1);
-            const mainRef = useRef(null);
-            const leftRef = useRef(null);
-            const bottomRef = useRef(null);
-
-            useEffect(() => {
-                if(rawRows && step !== initialStep) {
-                    const res = processOptionData(rawRows, step);
-                    if(!res.error) {
-                        setData(res.data);
-                        onStepChange(id, step, res.data);
-                    }
-                }
-            }, [step]);
-
-            const handleScroll = () => {
-                if (mainRef.current && leftRef.current && bottomRef.current) {
-                    leftRef.current.scrollTop = mainRef.current.scrollTop;
-                    bottomRef.current.scrollLeft = mainRef.current.scrollLeft;
-                }
-            };
-            const barHeight = 30;
-            const totalHeight = Math.max(450, data.length * barHeight * zoomY);
-            const chartWidth = `${zoomX * 100}%`;
-            const maxVal = Math.max(...data.map(d => Math.abs(d.diff)), 100);
-            
-            const handleWheel = (e, axis) => {
-                if (e.ctrlKey || axis === 'main') return; 
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                if (axis === 'y') setZoomY(z => Math.max(0.1, Math.min(5, z + delta)));
-                if (axis === 'x') setZoomX(z => Math.max(0.5, Math.min(3, z + delta)));
-            };
-
-            const CustomTooltip = ({ active, payload, label }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0].payload;
-                return (
-                    <div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50">
-                        <p className="font-bold">Strike: {label}</p>
-                        <p className={d.diff >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p>
-                        <div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div>
-                    </div>
-                );
-            };
-
-            return (
-                <div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden mb-6 animate-fade-in-up">
-                    <div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-500">HEIGHT</span>
-                            <button onClick={()=>setZoomY(z=>Math.max(0.1, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
-                            <input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20" />
-                            <button onClick={()=>setZoomY(z=>Math.min(5, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-500">WIDTH</span>
-                            <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
-                            <button onClick={()=>setZoomX(z=>Math.min(3, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
-                        </div>
-                        <div className="flex items-center gap-2 border-l pl-4 border-slate-200">
-                            <span className="text-xs font-bold text-slate-500">STEP</span>
-                            <input type="number" className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]" value={step} onChange={(e) => setStep(parseFloat(e.target.value) || 0)} min="0.1"/>
-                        </div>
-                        <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
-                    </div>
-                    <div className="flex-1 flex overflow-hidden relative">
-                        <div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e, 'y')}>
-                            <div style={{height: totalHeight, width: '100%'}}>
-                                <ResponsiveContainer>
-                                    <BarChart layout="vertical" data={data} margin={{top:10, bottom:0}}>
-                                        <YAxis type="category" dataKey="strike" width={90} tick={{fontSize:12, fontWeight:600}} interval={0} />
-                                        <Bar dataKey="diff" fill="transparent" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}>
-                            <div style={{width: chartWidth, height: totalHeight, minWidth: '100%'}}>
-                                <ResponsiveContainer>
-                                    <BarChart layout="vertical" data={data} margin={{top:10, right:30, left:0, bottom:0}}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
-                                        <XAxis type="number" domain={[-maxVal, maxVal]} hide />
-                                        <YAxis type="category" width={0} tick={false} />
-                                        <Tooltip content={<CustomTooltip />} cursor={{fill:'rgba(0,0,0,0.05)'}} />
-                                        <ReferenceLine x={0} stroke="#334155" />
-                                        <Bar dataKey="diff" barSize={barHeight * 0.8}>
-                                            {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#536DFE' : '#FF4081'} />))}
-                                            <LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11, fill:'#64748b'}} />
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="h-8 border-t border-slate-200 flex shrink-0">
-                        <div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14} /></div>
-                        <div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e)=>handleWheel(e, 'x')}>
-                            <div style={{width: chartWidth, minWidth:'100%', height:'100%'}}>
-                                <ResponsiveContainer>
-                                    <BarChart layout="vertical" data={[{}]} margin={{right:30, left:0}}>
-                                        <XAxis type="number" domain={[-maxVal, maxVal]} tick={{fontSize:10}} />
-                                        <YAxis type="category" width={0} />
-                            </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const OptionOI = ({ charts, setCharts }) => {
-            const [ticker, setTicker] = useState('');
-            const [error, setError] = useState(null);
-
-            const handleData = (rows) => {
-                const step = 50; 
-                const res = processOptionData(rows, step);
-                if (res.error) { setError(res.error); } else { setError(null); const newChart = { id: Date.now().toString(), data: res.data, step: step, rawRows: rows }; setCharts([...charts, newChart]); }
-            };
-
-            const handleStepChange = (id, newStep, newData) => {
-                setCharts(charts.map(c => c.id === id ? { ...c, step: newStep, data: newData } : c));
-            };
-
-            const handleTickerNav = () => { if(!ticker) return; const symbol = ticker.trim().toUpperCase(); window.open(`https://optioncharts.io/options/${symbol}/option-chain`, '_blank'); };
-
-            const links = [
-                { label: 'QQQ', url: 'https://optioncharts.io/options/QQQ/option-chain' },
-                { label: 'SPY', url: 'https://optioncharts.io/options/SPY/option-chain' },
-                { label: 'DJI', url: 'https://optioncharts.io/options/$DJX/option-chain' },
-                { label: 'IWM', url: 'https://optioncharts.io/options/IWM/option-chain' },
-                { label: 'VIX', url: 'https://optioncharts.io/options/$VIX/option-chain' },
-                { label: 'NVIDIA', url: 'https://optioncharts.io/options/NVDA/option-chain' },
-                { label: 'APPL', url: 'https://optioncharts.io/options/AAPL/option-chain' },
-                { label: 'AMZN', url: 'https://optioncharts.io/options/AMZN/option-chain' },
-                { label: 'GLD', url: 'https://optioncharts.io/options/GLD/option-chain' },
-                { label: 'SLV', url: 'https://optioncharts.io/options/SLV/option-chain' },
-            ];
-
-            return (
-                <div className="h-full flex flex-col pb-20">
-                    <div className="flex justify-between items-center mb-6">
-                        <div><h2 className="text-2xl font-bold text-slate-800">Option 分析</h2><p className="text-slate-500">建玉の壁を可視化</p></div>
-                        {charts.length > 0 && <button onClick={() => setCharts([])} className="text-sm text-red-500 hover:underline">データをクリア</button>}
-                    </div>
-                    {charts.map(chart => (<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange} />))}
-                    {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
-                    <div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl">
-                        <p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p>
-                         <div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">
-                            {links.map(l => (<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10} /></a>))}
-                         </div>
-                         <div className="mb-10 flex items-center gap-2">
-                            <span className="text-sm text-slate-500 font-bold">Ticker:</span>
-                            <input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key === 'Enter' && handleTickerNav()}/>
-                            <button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button>
-                         </div>
-                         <DataInput onDataParsed={handleData} />
-                    </div>
                 </div>
             );
         };
