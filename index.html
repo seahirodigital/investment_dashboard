@@ -60,7 +60,7 @@
             position: relative;
             transition: background-color 0.2s;
         }
-        .cal-cell:hover { background-color: #F3E5F5; }
+        .cal-cell:hover { background-color: #F3E5F5; z-index: 20; }
         
         .cal-header {
             background-color: #f8fafc; color: #64748b;
@@ -77,32 +77,40 @@
 
         /* Markdownプレビュー用スタイル */
         .markdown-preview { color: #334155; font-size: 14px; line-height: 1.6; }
-        .markdown-preview h1 { font-size: 1.8em; font-weight: 800; margin: 0 0 0.6em 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.3em; color: #1e293b; }
-        .markdown-preview h2 { font-size: 1.5em; font-weight: 700; margin: 1.2em 0 0.5em 0; color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; }
-        .markdown-preview h3 { font-size: 1.2em; font-weight: 600; margin: 1em 0 0.5em 0; color: #475569; }
-        .markdown-preview p { margin-bottom: 0.8em; }
-        .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.8em; }
-        .markdown-preview li { margin-bottom: 0.3em; }
-        .markdown-preview blockquote { border-left: 4px solid #cbd5e1; padding: 0.5em 1em; color: #64748b; background-color: #f8fafc; }
-        
+        .markdown-preview h1 { font-size: 1.6em; font-weight: 800; margin: 0.5em 0 0.3em 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.2em; color: #1e293b; }
+        .markdown-preview h2 { font-size: 1.4em; font-weight: 700; margin: 1em 0 0.3em 0; color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; }
+        .markdown-preview h3 { font-size: 1.2em; font-weight: 600; margin: 0.8em 0 0.3em 0; color: #475569; }
+        .markdown-preview p { margin-bottom: 0.6em; }
+        .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.6em; }
+        .markdown-preview li { margin-bottom: 0.2em; }
+        .markdown-preview blockquote { border-left: 4px solid #cbd5e1; padding: 0.5em 1em; color: #64748b; background-color: #f8fafc; font-style: italic; }
+
         /* ツールチップ (銘柄詳細用) */
         .stock-tooltip {
             visibility: hidden;
+            opacity: 0;
             position: absolute;
-            z-index: 50;
-            background-color: rgba(255, 255, 255, 0.95);
+            bottom: 100%; /* セルの上に表示 */
+            left: 50%;
+            transform: translateX(-50%) translateY(-5px);
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.98);
             border: 1px solid #cbd5e1;
             padding: 8px;
-            border-radius: 6px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            width: 200px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 220px;
+            max-height: 300px;
+            overflow-y: auto;
             font-size: 11px;
             pointer-events: none;
+            transition: opacity 0.15s, transform 0.15s;
         }
-        .cal-cell:hover .stock-tooltip { visibility: visible; }
+        .cal-cell:hover .stock-tooltip { 
+            visibility: visible; 
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
     </style>
 </head>
 <body>
@@ -158,8 +166,56 @@
             event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
         };
 
+        // --- 新しいClick-to-Editコンポーネント ---
+        const MarkdownEditor = ({ value, onChange }) => {
+            const [isEditing, setIsEditing] = useState(false);
+            const containerRef = useRef(null);
+
+            // フォーカスが外れたらプレビューに戻す
+            const handleBlur = () => {
+                setIsEditing(false);
+            };
+
+            // プレビュークリックで編集モードへ
+            const handleClick = () => {
+                setIsEditing(true);
+            };
+
+            useEffect(() => {
+                if (isEditing && containerRef.current) {
+                    const textarea = containerRef.current.querySelector('textarea');
+                    if(textarea) textarea.focus();
+                }
+            }, [isEditing]);
+
+            return (
+                <div className="w-full h-full relative group" ref={containerRef}>
+                    {isEditing ? (
+                        <textarea
+                            className="w-full h-full p-4 resize-none outline-none font-mono text-sm leading-relaxed bg-white text-slate-800 border-2 border-[#7C4DFF] rounded-lg"
+                            value={value}
+                            onChange={(e) => onChange(e.target.value)}
+                            onBlur={handleBlur}
+                            placeholder="# 本日の振り返り..."
+                        />
+                    ) : (
+                        <div 
+                            className="w-full h-full p-6 markdown-preview cursor-text hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 rounded-lg overflow-y-auto"
+                            onClick={handleClick}
+                            dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(value || '（クリックして日記を入力...）') : value }}
+                        />
+                    )}
+                    {!isEditing && (
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded shadow text-xs text-slate-400 pointer-events-none">
+                            Click to Edit
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         // ==========================================
-        //  投資カレンダー (修正：Gist同期、CSV詳細取込、Tooltip)
+        //  投資カレンダー
         // ==========================================
         const ProfitManager = ({ customLinks, setCustomLinks }) => {
             const [currentDate, setCurrentDate] = useState(new Date());
@@ -188,7 +244,6 @@
                 if (saved) {
                     try { setHistoryData(JSON.parse(saved)); } catch (e) { console.error("Load failed", e); }
                 }
-                // 初回ロード時にGistから同期
                 if (gistToken && gistId) {
                     syncFromGist();
                 }
@@ -197,21 +252,22 @@
             const saveToStorage = (newData, newLinks = customLinks) => {
                 setHistoryData(newData);
                 localStorage.setItem('history_data', JSON.stringify(newData));
-                // 自動同期
                 if (gistToken && gistId) {
                     syncToGist(newData, newLinks);
                 }
             };
 
             const syncToGist = async (data = historyData, links = customLinks) => {
-                if (!gistToken || !gistId) return;
+                const cleanToken = gistToken.trim();
+                const cleanId = gistId.trim();
+                if (!cleanToken || !cleanId) return;
                 setIsSyncing(true);
                 try {
                     const content = JSON.stringify({ history: data, links: links });
-                    await fetch(`https://api.github.com/gists/${gistId}`, {
+                    await fetch(`https://api.github.com/gists/${cleanId}`, {
                         method: 'PATCH',
                         headers: {
-                            'Authorization': `token ${gistToken}`,
+                            'Authorization': `token ${cleanToken}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
@@ -226,11 +282,13 @@
             };
 
             const syncFromGist = async () => {
-                if (!gistToken || !gistId) return;
+                const cleanToken = gistToken.trim();
+                const cleanId = gistId.trim();
+                if (!cleanToken || !cleanId) return;
                 setIsSyncing(true);
                 try {
-                    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-                        headers: { 'Authorization': `token ${gistToken}` }
+                    const res = await fetch(`https://api.github.com/gists/${cleanId}`, {
+                        headers: { 'Authorization': `token ${cleanToken}` }
                     });
                     if (res.ok) {
                         const json = await res.json();
@@ -254,8 +312,8 @@
             };
 
             const handleSaveSettings = () => {
-                localStorage.setItem('gist_token', gistToken);
-                localStorage.setItem('gist_id', gistId);
+                localStorage.setItem('gist_token', gistToken.trim());
+                localStorage.setItem('gist_id', gistId.trim());
                 setIsSettingsOpen(false);
                 syncFromGist();
             };
@@ -394,7 +452,7 @@
                 }
 
                 const aggregatedData = {};
-                const detailData = {}; // { "2026-01-30": { "Toyota": 5000, "Honda": -2000 } }
+                const detailData = {}; 
 
                 for (let i = headerRowIndex + 1; i < rows.length; i++) {
                     const row = rows[i];
@@ -411,7 +469,7 @@
                         // Total Sum
                         aggregatedData[dateKey] = (aggregatedData[dateKey] || 0) + val;
                         
-                        // Detail Breakdown
+                        // Detail Breakdown (同日・同銘柄は合算)
                         if (nameColIndex !== -1) {
                             const name = String(row[nameColIndex]).trim();
                             if (!detailData[dateKey]) detailData[dateKey] = {};
@@ -424,7 +482,7 @@
                 let count = 0;
                 Object.entries(aggregatedData).forEach(([key, val]) => {
                     const existingDetails = newHistory[key]?.details || [];
-                    // Convert detail object to array for storage
+                    // Convert detail map to array for storage
                     let newDetails = [];
                     if (detailData[key]) {
                          newDetails = Object.entries(detailData[key]).map(([name, amount]) => ({ name, amount }));
@@ -507,7 +565,6 @@
             };
 
             const handleExportCSV = () => {
-                // Full JSON Backup for System
                 const backupData = {
                     history: historyData,
                     links: customLinks
@@ -539,11 +596,11 @@
                 if (data && data.details && data.details.length > 0) {
                     tooltipContent = (
                         <div className="stock-tooltip">
-                            <div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600">損益内訳 (CSV取込)</div>
+                            <div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600 bg-slate-50 -m-2 mb-1 p-2 rounded-t-lg">損益内訳</div>
                             {data.details.map((d, i) => (
-                                <div key={i} className="flex justify-between">
-                                    <span className="truncate w-24 text-slate-500">{d.name}</span>
-                                    <span className={d.amount >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}>{formatMoney(d.amount)}</span>
+                                <div key={i} className="flex justify-between items-center py-0.5 border-b border-slate-50 last:border-0">
+                                    <span className="truncate w-28 text-slate-600 font-medium">{d.name}</span>
+                                    <span className={`text-[10px] font-mono ${d.amount >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span>
                                 </div>
                             ))}
                         </div>
@@ -676,7 +733,6 @@
                         </div>
                     </div>
                     
-                    {/* --- JPX Style Profit Chart --- */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
                         <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2"><Icon name="BarChart3" size={18} />月間日次推移 ({currentDate.getMonth()+1}月)</h3>
                         <div className="h-64 w-full">
@@ -745,15 +801,15 @@
                                                 </div>
                                             </div>
 
-                                            {/* 損益詳細表示エリア */}
+                                            {/* 損益詳細表示エリア (修正：合算値) */}
                                             {editData.details && editData.details.length > 0 && (
                                                 <div className="mt-6 pt-4 border-t border-slate-200">
-                                                    <h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV取込分)</h4>
+                                                    <h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV取込・合算)</h4>
                                                     <div className="bg-white border border-slate-200 rounded p-2 space-y-1 text-xs max-h-40 overflow-y-auto">
                                                         {editData.details.map((d, i) => (
-                                                            <div key={i} className="flex justify-between">
-                                                                <span className="text-slate-600 truncate w-32">{d.name}</span>
-                                                                <span className={d.amount >= 0 ? 'text-blue-600' : 'text-red-500'}>{formatMoney(d.amount)}</span>
+                                                            <div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
+                                                                <span className="text-slate-600 truncate flex-1">{d.name}</span>
+                                                                <span className={`font-mono ${d.amount >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{formatMoney(d.amount)}</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -762,29 +818,20 @@
                                         </div>
                                     </div>
                                     
-                                    {/* Main: Markdown Split View */}
-                                    <div className="flex-1 flex flex-col bg-white overflow-hidden">
-                                        <div className="flex border-b border-slate-200 bg-slate-50 px-4 py-2 items-center gap-2">
-                                            <Icon name="Pencil" size={14} className="text-slate-500"/>
-                                            <span className="text-xs font-bold text-slate-500 uppercase">Markdown Editor & Preview</span>
+                                    {/* Main: Markdown Click-to-Edit */}
+                                    <div className="flex-1 bg-white overflow-hidden p-6 flex flex-col">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Icon name="Pencil" size={14} className="text-slate-500"/>
+                                                <span className="text-xs font-bold text-slate-500 uppercase">Investment Diary</span>
+                                            </div>
+                                            <span className="text-[10px] text-slate-400">クリックして編集 / フォーカスを外してプレビュー</span>
                                         </div>
-                                        <div className="flex-1 flex flex-row h-full overflow-hidden">
-                                            {/* Left: Editor */}
-                                            <div className="w-1/2 h-full border-r border-slate-200">
-                                                <textarea 
-                                                    className="w-full h-full p-4 resize-none outline-none font-mono text-sm leading-relaxed bg-white text-slate-800" 
-                                                    placeholder="# 本日の振り返り..."
-                                                    value={editData.note} 
-                                                    onChange={(e) => setEditData({...editData, note: e.target.value})} 
-                                                />
-                                            </div>
-                                            {/* Right: Preview */}
-                                            <div className="w-1/2 h-full bg-slate-50/30 overflow-y-auto">
-                                                <div 
-                                                    className="w-full h-full p-6 markdown-preview" 
-                                                    dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(editData.note || '') : editData.note }} 
-                                                />
-                                            </div>
+                                        <div className="flex-1 overflow-hidden relative">
+                                            <MarkdownEditor 
+                                                value={editData.note} 
+                                                onChange={(val) => setEditData({...editData, note: val})} 
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -981,7 +1028,7 @@
         };
 
         // ==========================================
-        //  JPX Chart
+        //  JPX Chart, Option OI, Layout ... (unchanged core logic, just styles)
         // ==========================================
         const ForeignInvestors = () => {
             const chartRef = useRef(null);
@@ -1541,7 +1588,7 @@
         };
 
         // ==========================================
-        //  Main Layout (修正：Sidebarリサイズ・階層化リンク)
+        //  Main Layout (unchanged core logic, just styles)
         // ==========================================
         const App = () => {
             const [view, setView] = useState('calendar');
