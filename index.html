@@ -459,7 +459,7 @@
                 const hasEvent = data && data.event && data.event.trim().length > 0;
                 const isToday = getDateKey(new Date()) === key;
                 const StatCard = ({ type, val }) => (
-                    <div className={`flex justify-between items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
+                    <div className={`flex justify-end items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
                         <span className={val < 0 ? 'text-[#FF4081]' : ''}>{formatMoney(val)}</span>
                     </div>
                 );
