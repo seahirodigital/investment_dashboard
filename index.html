@@ -7,6 +7,8 @@
     
     <!-- デザイン・スタイル (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- EasyMDE (Markdown Editor) CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
     
     <!-- 依存ライブラリ -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -19,7 +21,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- EasyMDE (Markdown Editor) JS -->
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
@@ -55,12 +58,12 @@
         }
         .cal-cell {
             background-color: white;
-            min-height: 150px; /* 5層表示用に高さを確保 */
+            min-height: 150px;
             padding: 4px;
             position: relative;
             transition: background-color 0.2s;
         }
-        .cal-cell:hover { background-color: #F3E5F5; }
+        .cal-cell:hover { background-color: #F3E5F5; z-index: 20; }
         
         .cal-header {
             background-color: #f8fafc; color: #64748b;
@@ -75,39 +78,38 @@
             justify-content: center; align-items: flex-end; padding-right: 8px; gap: 4px;
         }
 
-        /* Markdownプレビュー用スタイル */
-        .markdown-preview { color: #334155; font-size: 14px; line-height: 1.6; }
-        .markdown-preview h1 { font-size: 1.8em; font-weight: 800; margin: 0 0 0.6em 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.3em; color: #1e293b; }
-        .markdown-preview h2 { font-size: 1.5em; font-weight: 700; margin: 1.2em 0 0.5em 0; color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; }
-        .markdown-preview h3 { font-size: 1.2em; font-weight: 600; margin: 1em 0 0.5em 0; color: #475569; }
-        .markdown-preview p { margin-bottom: 0.8em; }
-        .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.8em; }
-        .markdown-preview li { margin-bottom: 0.3em; }
-        .markdown-preview blockquote { border-left: 4px solid #cbd5e1; padding: 0.5em 1em; color: #64748b; background-color: #f8fafc; }
-
-        /* リッチテキストエディタ風スタイル */
-        .rich-editor {
-            min-height: 400px;
-            padding: 1.5rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.5rem;
-            background: white;
-            outline: none;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            line-height: 1.6;
-            color: #334155;
+        /* ツールチップ (銘柄詳細用) */
+        .stock-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: 100%; /* セルの上に表示 */
+            left: 50%;
+            transform: translateX(-50%) translateY(-5px);
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.98);
+            border: 1px solid #cbd5e1;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 240px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 11px;
+            pointer-events: none;
+            transition: opacity 0.15s, transform 0.15s;
         }
-        .rich-editor:focus { border-color: #7C4DFF; box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1); }
-        .rich-editor h1 { font-size: 1.8em; font-weight: 800; margin: 0 0 0.6em 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.3em; color: #1e293b; }
-        .rich-editor h2 { font-size: 1.5em; font-weight: 700; margin: 1.2em 0 0.5em 0; color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; }
-        .rich-editor h3 { font-size: 1.2em; font-weight: 600; margin: 1em 0 0.5em 0; color: #475569; }
-        .rich-editor p { margin-bottom: 0.8em; }
-        .rich-editor ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.8em; }
-        .rich-editor li { margin-bottom: 0.3em; }
-        .rich-editor blockquote { border-left: 4px solid #cbd5e1; padding: 0.5em 1em; color: #64748b; background-color: #f8fafc; margin: 1em 0; }
-        .rich-editor strong { font-weight: 700; }
-        .rich-editor em { font-style: italic; }
-        .rich-editor code { background: #f1f5f9; padding: 0.2em 0.4em; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; }
+        .cal-cell:hover .stock-tooltip { 
+            visibility: visible; 
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+
+        /* EasyMDE Customization */
+        .EasyMDEContainer { background: white; border-radius: 0.5rem; height: 100%; display: flex; flex-direction: column; }
+        .CodeMirror { border: 1px solid #e2e8f0; border-radius: 0.5rem; flex: 1; font-family: monospace; font-size: 14px; }
+        .editor-toolbar { border: 1px solid #e2e8f0; border-radius: 0.5rem 0.5rem 0 0; background-color: #f8fafc; opacity: 1; }
+        .editor-statusbar { display: none; }
     </style>
 </head>
 <body>
@@ -146,7 +148,11 @@
                 ChevronRight: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
                 FileCsv: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>,
                 Pencil: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>,
-                FileUp: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                FileUp: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,
+                Save: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+                Settings: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+                Database: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
+                RefreshCw: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
             };
             return icons[name] || null;
         };
@@ -159,24 +165,55 @@
             event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
         };
 
+        // --- EasyMDE Wrapper ---
+        const EasyMDEEditor = ({ value, onChange }) => {
+            const textareaRef = useRef(null);
+            const mdeRef = useRef(null);
+
+            useEffect(() => {
+                if (!textareaRef.current) return;
+                mdeRef.current = new EasyMDE({
+                    element: textareaRef.current,
+                    initialValue: value,
+                    spellChecker: false,
+                    status: false,
+                    toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "side-by-side", "fullscreen"],
+                    placeholder: "# 本日の振り返り...",
+                    forceSync: true,
+                });
+                mdeRef.current.codemirror.on("change", () => {
+                    onChange(mdeRef.current.value());
+                });
+                return () => {
+                    mdeRef.current.toTextArea();
+                    mdeRef.current = null;
+                };
+            }, []); 
+            
+            return <textarea ref={textareaRef} />;
+        };
+
         // ==========================================
         //  投資カレンダー
         // ==========================================
-        const ProfitManager = () => {
+        const ProfitManager = ({ customLinks, setCustomLinks }) => {
             const [currentDate, setCurrentDate] = useState(new Date());
             const [historyData, setHistoryData] = useState({});
             const [selectedDate, setSelectedDate] = useState(null);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-            const [editData, setEditData] = useState({ event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '' });
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [editData, setEditData] = useState({ event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', details: [] });
             
             // CSV Import State
             const [importCategory, setImportCategory] = useState('stocks');
             const [dragActive, setDragActive] = useState(false);
             
-            // リッチエディタ用のref
-            const editorRef = useRef(null);
-            
+            // Gist State
+            const [gistToken, setGistToken] = useState(localStorage.getItem('gist_token') || '');
+            const [gistId, setGistId] = useState(localStorage.getItem('gist_id') || '');
+            const [isSyncing, setIsSyncing] = useState(false);
+
             const formatMoney = (val) => val ? val.toLocaleString() : '0';
             const getMonthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             const getDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -186,11 +223,78 @@
                 if (saved) {
                     try { setHistoryData(JSON.parse(saved)); } catch (e) { console.error("Load failed", e); }
                 }
+                if (gistToken && gistId) {
+                    syncFromGist();
+                }
             }, []);
 
-            const saveToStorage = (newData) => {
+            const saveToStorage = (newData, newLinks = customLinks) => {
                 setHistoryData(newData);
                 localStorage.setItem('history_data', JSON.stringify(newData));
+                if (gistToken && gistId) {
+                    syncToGist(newData, newLinks);
+                }
+            };
+
+            const syncToGist = async (data = historyData, links = customLinks) => {
+                const cleanToken = gistToken.trim();
+                const cleanId = gistId.trim();
+                if (!cleanToken || !cleanId) return;
+                setIsSyncing(true);
+                try {
+                    const content = JSON.stringify({ history: data, links: links });
+                    await fetch(`https://api.github.com/gists/${cleanId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `token ${cleanToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            files: { 'market_data.json': { content: content } }
+                        })
+                    });
+                } catch (e) {
+                    console.error("Gist Sync Failed", e);
+                } finally {
+                    setIsSyncing(false);
+                }
+            };
+
+            const syncFromGist = async () => {
+                const cleanToken = gistToken.trim();
+                const cleanId = gistId.trim();
+                if (!cleanToken || !cleanId) return;
+                setIsSyncing(true);
+                try {
+                    const res = await fetch(`https://api.github.com/gists/${cleanId}`, {
+                        headers: { 'Authorization': `token ${cleanToken}` }
+                    });
+                    if (res.ok) {
+                        const json = await res.json();
+                        if (json.files && json.files['market_data.json']) {
+                            const content = JSON.parse(json.files['market_data.json'].content);
+                            if (content.history) {
+                                setHistoryData(content.history);
+                                localStorage.setItem('history_data', JSON.stringify(content.history));
+                            }
+                            if (content.links) {
+                                setCustomLinks(content.links);
+                                localStorage.setItem('market-dash-links', JSON.stringify(content.links));
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Gist Load Failed", e);
+                } finally {
+                    setIsSyncing(false);
+                }
+            };
+
+            const handleSaveSettings = () => {
+                localStorage.setItem('gist_token', gistToken.trim());
+                localStorage.setItem('gist_id', gistId.trim());
+                setIsSettingsOpen(false);
+                syncFromGist();
             };
 
             const stats = useMemo(() => {
@@ -213,7 +317,6 @@
                 return { lifetime, prevYear, monthTotal };
             }, [historyData, currentDate]);
 
-            // JPXスタイルチャートデータ作成
             const dailyChartData = useMemo(() => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
@@ -229,8 +332,7 @@
                     data.push({
                         day: d,
                         date: key,
-                        total: total,
-                        dayOfWeek: dateObj.getDay()
+                        total: total
                     });
                 }
                 return data;
@@ -256,9 +358,35 @@
                 return weeks;
             }, [currentDate]);
 
-            // --- CSV Import Logic ---
+            // --- CSV / JSON Import Logic ---
             const handleFileImport = (file) => {
                 if (!file) return;
+                
+                // JSON Backup (System Data)
+                if (file.name.endsWith('.json') || importCategory === 'backup') {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const json = JSON.parse(e.target.result);
+                            if (json.history) {
+                                setHistoryData(json.history);
+                                localStorage.setItem('history_data', JSON.stringify(json.history));
+                            }
+                            if (json.links) {
+                                setCustomLinks(json.links);
+                                localStorage.setItem('market-dash-links', JSON.stringify(json.links));
+                            }
+                            setIsImportModalOpen(false);
+                            alert('データの復元が完了しました。');
+                        } catch (err) {
+                            alert('JSONファイルの読み込みに失敗しました。');
+                        }
+                    };
+                    reader.readAsText(file);
+                    return;
+                }
+
+                // Brokerage CSV Import
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const csvData = event.target.result;
@@ -279,16 +407,20 @@
                 let headerRowIndex = -1;
                 let dateColIndex = -1;
                 let plColIndex = -1;
+                let nameColIndex = -1;
 
-                for (let i = 0; i < Math.min(rows.length, 20); i++) {
+                // Detect Columns (Enhanced for various brokers)
+                for (let i = 0; i < Math.min(rows.length, 50); i++) {
                     const row = rows[i].map(c => String(c).trim());
                     const dIdx = row.findIndex(c => c.includes('約定日'));
                     const pIdx = row.findIndex(c => (c.includes('実現損益') || c.includes('損益金額')) && (c.includes('円') || c.includes('金額')));
+                    const nIdx = row.findIndex(c => c.includes('銘柄') || c.includes('銘柄名'));
                     
                     if (dIdx !== -1 && pIdx !== -1) {
                         headerRowIndex = i;
                         dateColIndex = dIdx;
                         plColIndex = pIdx;
+                        nameColIndex = nIdx;
                         break;
                     }
                 }
@@ -299,6 +431,7 @@
                 }
 
                 const aggregatedData = {};
+                const detailData = {}; 
 
                 for (let i = headerRowIndex + 1; i < rows.length; i++) {
                     const row = rows[i];
@@ -307,22 +440,39 @@
                     const parts = dateStr.split('-');
                     if (parts.length !== 3) continue;
                     const dateKey = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                    
                     let valStr = String(row[plColIndex]).replace(/,/g, '').trim();
                     const val = parseInt(valStr, 10);
+                    
                     if (!isNaN(val)) {
+                        // Total Sum
                         aggregatedData[dateKey] = (aggregatedData[dateKey] || 0) + val;
+                        
+                        // Detail Breakdown (Same name sum)
+                        if (nameColIndex !== -1) {
+                            const name = String(row[nameColIndex]).trim();
+                            if (!detailData[dateKey]) detailData[dateKey] = {};
+                            detailData[dateKey][name] = (detailData[dateKey][name] || 0) + val;
+                        }
                     }
                 }
 
                 const newHistory = { ...historyData };
                 let count = 0;
                 Object.entries(aggregatedData).forEach(([key, val]) => {
+                    const existingDetails = newHistory[key]?.details || [];
+                    let newDetails = [];
+                    if (detailData[key]) {
+                         newDetails = Object.entries(detailData[key]).map(([name, amount]) => ({ name, amount }));
+                    }
+
                     if (!newHistory[key]) {
-                        newHistory[key] = { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '' };
+                        newHistory[key] = { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', details: [] };
                     }
                     newHistory[key] = {
                         ...newHistory[key],
-                        [importCategory]: val 
+                        [importCategory]: val,
+                        details: newDetails.length > 0 ? newDetails : existingDetails
                     };
                     count++;
                 });
@@ -333,58 +483,30 @@
             };
 
             const handleDrag = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (e.type === "dragenter" || e.type === "dragover") {
-                    setDragActive(true);
-                } else if (e.type === "dragleave") {
-                    setDragActive(false);
-                }
+                e.preventDefault(); e.stopPropagation();
+                if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+                else if (e.type === "dragleave") setDragActive(false);
             };
 
             const handleDrop = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setDragActive(false);
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    handleFileImport(e.dataTransfer.files[0]);
-                }
+                e.preventDefault(); e.stopPropagation(); setDragActive(false);
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFileImport(e.dataTransfer.files[0]);
             };
 
             const openModal = (date) => {
                 if (!date) return;
                 const key = getDateKey(date);
-                const data = historyData[key] || { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '' };
-                if (!data.note) {
-                    data.note = `# ${key.replace(/-/g, '/')}`;
-                }
+                const data = historyData[key] || { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', details: [] };
+                if (!data.note) data.note = `# ${key.replace(/-/g, '/')}`;
                 setSelectedDate(date);
                 setEditData({ ...data });
                 setIsModalOpen(true);
-                
-                // モーダルが開いたら少し遅延してからエディタにHTMLを設定
-                setTimeout(() => {
-                    if (editorRef.current && window.marked) {
-                        editorRef.current.innerHTML = window.marked.parse(data.note || '');
-                    }
-                }, 100);
             };
 
             const handleSave = () => {
                 if (!selectedDate) return;
-                
-                // エディタのHTMLからMarkdownテキストを復元
-                // 簡易的な方法: innerTextを使用（完全な復元は難しいため、実用上はユーザーがMarkdown形式で入力することを前提とする）
-                // より高度な実装では、HTMLからMarkdownへの変換ライブラリを使用
-                let markdownText = '';
-                if (editorRef.current) {
-                    // innerTextではなく、textContentとinnerHTMLから簡易的にMarkdownを再構築
-                    // ここでは単純にinnerTextを使用（実際にはユーザーがMarkdown形式で入力していることを前提）
-                    markdownText = editorRef.current.innerText;
-                }
-                
                 const key = getDateKey(selectedDate);
-                const newData = { ...historyData, [key]: { ...editData, note: markdownText } };
+                const newData = { ...historyData, [key]: editData };
                 saveToStorage(newData);
                 setIsModalOpen(false);
             };
@@ -421,34 +543,16 @@
             };
 
             const handleExportCSV = () => {
-                const year = currentDate.getFullYear();
-                const month = currentDate.getMonth() + 1;
-                const sortedKeys = Object.keys(historyData).filter(k => k.startsWith(getMonthKey(currentDate))).sort();
-                let csv = '\uFEFFDate,Event,Stocks,Margin,Foreign,CFD,Total,Note\n';
-                sortedKeys.forEach(key => {
-                    const d = historyData[key];
-                    const total = (d.stocks||0) + (d.margin||0) + (d.foreign||0) + (d.cfd||0);
-                    const escapedNote = d.note ? `"${d.note.replace(/"/g, '""')}"` : "";
-                    const escapedEvent = d.event ? `"${d.event.replace(/"/g, '""')}"` : "";
-                    csv += `${key},${escapedEvent},${d.stocks||0},${d.margin||0},${d.foreign||0},${d.cfd||0},${total},${escapedNote}\n`;
-                });
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const backupData = {
+                    history: historyData,
+                    links: customLinks
+                };
+                const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `investment_data_${year}_${month}.csv`;
+                a.download = `market_dashboard_full_backup.json`;
                 a.click();
-            };
-
-            // リッチエディタのinput処理
-            const handleEditorInput = () => {
-                if (editorRef.current) {
-                    // contentEditableの内容が変更された際、Markdownテキストを更新
-                    // 実際にはユーザーがMarkdown形式で入力することを前提とするため、
-                    // ここではinnerTextをそのままmarkdownとして扱う
-                    const text = editorRef.current.innerText;
-                    setEditData({...editData, note: text});
-                }
             };
 
             const DayCell = ({ date }) => {
@@ -459,21 +563,42 @@
                 const hasEvent = data && data.event && data.event.trim().length > 0;
                 const isToday = getDateKey(new Date()) === key;
                 const StatCard = ({ type, val }) => (
-                    <div className={`flex justify-end items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
+                    <div className={`flex justify-between items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
+                        <span>{CATEGORY_STYLES[type].label.charAt(0)}</span>
                         <span className={val < 0 ? 'text-[#FF4081]' : ''}>{formatMoney(val)}</span>
                     </div>
                 );
+                
+                // Tooltip Content Generation
+                let tooltipContent = null;
+                if (data && data.details && data.details.length > 0) {
+                    tooltipContent = (
+                        <div className="stock-tooltip">
+                            <div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600 bg-slate-50 -m-2 mb-1 p-2 rounded-t-lg">損益内訳 (CSV)</div>
+                            <div className="max-h-[250px] overflow-y-auto">
+                                {data.details.map((d, i) => (
+                                    <div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
+                                        <span className="truncate w-28 text-slate-600 font-medium">{d.name}</span>
+                                        <span className={`text-[10px] font-mono ${d.amount >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                }
+
                 return (
-                    <div onClick={() => openModal(date)} className={`cal-cell cursor-pointer hover:bg-[#F3E5F5] transition-colors border-r border-b border-slate-100 ${isToday ? 'bg-[#F3E5F5]/30 ring-2 ring-inset ring-[#7C4DFF]/20' : ''}`}>
+                    <div onClick={() => openModal(date)} className={`cal-cell cursor-pointer hover:bg-[#F3E5F5] transition-colors border-r border-b border-slate-100 group ${isToday ? 'bg-[#F3E5F5]/30 ring-2 ring-inset ring-[#7C4DFF]/20' : ''}`}>
+                        {tooltipContent}
                         <div className="flex justify-between items-start mb-1">
-                            <span className={`text-xs font-bold ${isToday ? 'bg-[#7C4DFF] text-white px-1.5 py-0.5 rounded-full' : 'text-slate-500'} mx-auto`}>{date.getDate()}</span>
+                            <span className={`text-xs font-bold ${isToday ? 'bg-[#7C4DFF] text-white px-1.5 py-0.5 rounded-full' : 'text-slate-500'}`}>{date.getDate()}</span>
                             {hasNote && <Icon name="FileText" size={12} className="text-[#64748B]" />}
                         </div>
                         <div className="flex flex-col gap-0.5">
                             {hasEvent ? (
-                                <div className="group relative flex justify-between items-center px-1.5 py-1 rounded text-[10px] font-bold mb-1 bg-white border-l-4 border-[#7C4DFF] shadow-sm text-[#7C4DFF]">
+                                <div className="group/event relative flex justify-between items-center px-1.5 py-1 rounded text-[10px] font-bold mb-1 bg-white border-l-4 border-[#7C4DFF] shadow-sm text-[#7C4DFF]">
                                     <span className="truncate">{data.event}</span>
-                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex gap-1 bg-white pl-1">
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover/event:flex gap-1 bg-white pl-1">
                                         <button onClick={(e) => { e.stopPropagation(); openModal(date); }} className="hover:text-[#7C4DFF]"><Icon name="Pencil" size={10} /></button>
                                         <button onClick={(e) => handleDeleteEvent(e, date)} className="hover:text-[#FF4081]"><Icon name="X" size={10} /></button>
                                     </div>
@@ -509,13 +634,13 @@
                         </div>
                         <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
                             <p className="text-[#64748B] text-sm font-medium mb-1">前年収支 (2025)</p>
-                            <h3 className={`text-3xl font-bold ${stats.prevYear >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{stats.prevYear >= 0 ? '+' : ''}{stats.prevYear.toLocaleString()}</h3>
+                            <h3 className={`text-3xl font-bold ${stats.prevYear >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{stats.prevYear >= 0 ? '+' : ''}{stats.prevYear.toLocaleString()}</h3>
                             <p className="text-xs text-slate-400 mt-2">年間確定損益</p>
                         </div>
                         <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
                             <div>
                                 <p className="text-[#64748B] text-sm font-medium mb-1">今月収支 ({currentDate.getMonth() + 1}月)</p>
-                                <h3 className={`text-3xl font-bold ${stats.monthTotal >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{stats.monthTotal >= 0 ? '+' : ''}{stats.monthTotal.toLocaleString()}</h3>
+                                <h3 className={`text-3xl font-bold ${stats.monthTotal >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{stats.monthTotal >= 0 ? '+' : ''}{stats.monthTotal.toLocaleString()}</h3>
                             </div>
                             <p className="text-xs text-slate-400 mt-2">リアルタイム集計</p>
                         </div>
@@ -524,7 +649,7 @@
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
                         <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                             <div className="flex items-center gap-4">
-                                <h2 className="text-xl font-bold text-[#7C4DFF] flex items-center gap-2"><Icon name="Calendar" size={20} />{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h2>
+                                <h2 className="text-xl font-bold text-[#334155] flex items-center gap-2"><Icon name="Calendar" size={20} />{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h2>
                                 <div className="flex gap-1">
                                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronLeft" size={20} /></button>
                                     <button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white hover:shadow rounded">Today</button>
@@ -532,9 +657,11 @@
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => setIsImportModalOpen(true)} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="FileUp" size={14} /> CSV読込</button>
+                                <button onClick={() => setIsSettingsOpen(true)} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="Settings" size={14} /> 設定(Gist)</button>
+                                <button onClick={syncFromGist} className={`text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium ${isSyncing ? 'animate-pulse' : ''}`}><Icon name="RefreshCw" size={14} /> {isSyncing ? '同期中' : '同期'}</button>
+                                <button onClick={() => setIsImportModalOpen(true)} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="FileUp" size={14} /> インポート</button>
                                 <button onClick={handleExportMD} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="Download" size={14} /> MD出力</button>
-                                <button onClick={handleExportCSV} className="text-xs flex items-center gap-1 text-slate-600 hover:text-green-600 border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="FileCsv" size={14} /> CSV出力</button>
+                                <button onClick={handleExportCSV} className="text-xs flex items-center gap-1 text-white bg-[#7C4DFF] hover:bg-[#651FFF] border border-transparent rounded px-3 py-1.5 transition-colors shadow-sm font-medium"><Icon name="Database" size={14} /> 完全バックアップ(JSON)</button>
                             </div>
                         </div>
                         
@@ -572,12 +699,12 @@
                                         {week.slice(1, 6).map((date, dIdx) => (<DayCell key={dIdx} date={date} />))}
                                         <div className="cal-total-col border-b border-slate-100 bg-slate-50">
                                             <div className="flex flex-col gap-0.5 w-full text-xs">
-                                                <div className="h-[26px] mb-1"></div>
-                                                <div className={`text-right ${weekTotal.stocks < 0 ? 'text-[#FF4081]' : 'text-slate-600'}`}>{formatMoney(weekTotal.stocks)}</div>
-                                                <div className={`text-right ${weekTotal.margin < 0 ? 'text-[#FF4081]' : 'text-slate-600'}`}>{formatMoney(weekTotal.margin)}</div>
-                                                <div className={`text-right ${weekTotal.foreign < 0 ? 'text-[#FF4081]' : 'text-slate-600'}`}>{formatMoney(weekTotal.foreign)}</div>
-                                                <div className={`text-right ${weekTotal.cfd < 0 ? 'text-[#FF4081]' : 'text-slate-600'}`}>{formatMoney(weekTotal.cfd)}</div>
-                                                <div className={`mt-1 pt-1 border-t border-slate-200 font-bold text-right ${weekSum < 0 ? 'text-[#FF4081]' : 'text-[#7C4DFF]'}`}>{formatMoney(weekSum)}</div>
+                                                    <div className="h-[26px] mb-1"></div>
+                                                    <div className={`text-right ${weekTotal.stocks < 0 ? 'text-[#FF4081]' : weekTotal.stocks > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.stocks)}</div>
+                                                    <div className={`text-right ${weekTotal.margin < 0 ? 'text-[#FF4081]' : weekTotal.margin > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.margin)}</div>
+                                                    <div className={`text-right ${weekTotal.foreign < 0 ? 'text-[#FF4081]' : weekTotal.foreign > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.foreign)}</div>
+                                                    <div className={`text-right ${weekTotal.cfd < 0 ? 'text-[#FF4081]' : weekTotal.cfd > 0 ? 'text-[#536DFE]' : 'text-slate-400'}`}>{formatMoney(weekTotal.cfd)}</div>
+                                                    <div className={`mt-1 pt-1 border-t border-slate-200 font-bold text-right ${weekSum < 0 ? 'text-[#FF4081]' : 'text-[#334155]'}`}>{formatMoney(weekSum)}</div>
                                             </div>
                                         </div>
                                     </React.Fragment>
@@ -586,61 +713,23 @@
                         </div>
                     </div>
                     
-                    {/* --- JPX Style Profit Chart (Modified) --- */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="flex items-center gap-4">
-                                <h3 className="text-lg font-bold text-[#7C4DFF] flex items-center gap-2">
-                                    <Icon name="BarChart3" size={18} />
-                                    月間日次推移 ({currentDate.getFullYear()}年{currentDate.getMonth()+1}月)
-                                </h3>
-                                <div className="flex gap-1">
-                                    <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronLeft" size={18} /></button>
-                                    <button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white hover:shadow rounded">Today</button>
-                                    <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronRight" size={18} /></button>
-                                </div>
-                            </div>
-                            <div className={`text-2xl font-bold ${stats.monthTotal >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>
-                                {stats.monthTotal >= 0 ? '+' : ''}{stats.monthTotal.toLocaleString()}
-                            </div>
-                        </div>
+                        <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2"><Icon name="BarChart3" size={18} />月間日次推移 ({currentDate.getMonth()+1}月)</h3>
                         <div className="h-64 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={dailyChartData} margin={{top: 5, right: 30, left: 20, bottom: 5}}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <XAxis 
-                                        dataKey="day" 
-                                        tickLine={false} 
-                                        axisLine={false} 
-                                        tick={(props) => {
-                                            const { x, y, payload } = props;
-                                            const dataPoint = dailyChartData.find(d => d.day === payload.value);
-                                            const dow = dataPoint ? dataPoint.dayOfWeek : null;
-                                            let color = '#64748b';
-                                            if (dow === 6) color = '#673AB7';
-                                            if (dow === 0) color = '#D81B60';
-                                            return <text x={x} y={y} dy={16} textAnchor="middle" fill={color} fontSize={12}>{payload.value}</text>;
-                                        }}
-                                    />
-                                    <YAxis 
-                                        tickFormatter={(val) => `${(val/10000).toFixed(0)}万円`}
-                                        tickLine={false} 
-                                        axisLine={false} 
-                                        tick={{fill: '#64748b', fontSize: 12}} 
-                                    />
+                                    <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                                    <YAxis tickFormatter={(val) => `¥${val/1000}k`} tickLine={false} axisLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                                     <Tooltip 
                                         cursor={{fill: '#f1f5f9'}}
                                         formatter={(val) => [`¥${val.toLocaleString()}`, "損益"]}
                                         contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                                        labelFormatter={(label) => {
-                                            const dataPoint = dailyChartData.find(d => d.day === label);
-                                            return dataPoint ? `${label}日 (${dataPoint.date})` : `${label}日`;
-                                        }}
                                     />
                                     <ReferenceLine y={0} stroke="#94a3b8" />
-                                    <Bar dataKey="total" barSize={10}>
+                                    <Bar dataKey="total">
                                         {dailyChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.total >= 0 ? '#7C4DFF' : '#FF4081'} />
+                                            <Cell key={`cell-${index}`} fill={entry.total >= 0 ? '#536DFE' : '#FF4081'} />
                                         ))}
                                     </Bar>
                                 </BarChart>
@@ -688,26 +777,39 @@
                                             <div className="pt-4 border-t border-slate-200 mt-4">
                                                 <div className="flex justify-between items-center">
                                                     <span className="font-bold text-slate-700">合計</span>
-                                                    <span className={`text-xl font-bold font-mono ${(editData.stocks+editData.margin+editData.foreign+editData.cfd) >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span>
+                                                    <span className={`text-xl font-bold font-mono ${(editData.stocks+editData.margin+editData.foreign+editData.cfd) >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span>
                                                 </div>
                                             </div>
+
+                                            {/* 損益詳細表示エリア (銘柄合算・詳細) */}
+                                            {editData.details && editData.details.length > 0 && (
+                                                <div className="mt-6 pt-4 border-t border-slate-200">
+                                                    <h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV取込・合算)</h4>
+                                                    <div className="bg-white border border-slate-200 rounded p-2 space-y-1 text-xs max-h-40 overflow-y-auto">
+                                                        {editData.details.map((d, i) => (
+                                                            <div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
+                                                                <span className="text-slate-600 truncate flex-1">{d.name}</span>
+                                                                <span className={`font-mono ${d.amount >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{formatMoney(d.amount)}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     
-                                    {/* Main: Rich Editor (統合型Markdownエディタ) */}
-                                    <div className="flex-1 flex flex-col bg-white overflow-hidden">
-                                        <div className="flex border-b border-slate-200 bg-slate-50 px-4 py-2 items-center gap-2">
-                                            <Icon name="Pencil" size={14} className="text-slate-500"/>
-                                            <span className="text-xs font-bold text-slate-500 uppercase">Markdown Editor</span>
+                                    {/* Main: EasyMDE Editor (Realtime Preview in Editor) */}
+                                    <div className="flex-1 bg-white overflow-hidden p-6 flex flex-col">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Icon name="Pencil" size={14} className="text-slate-500"/>
+                                                <span className="text-xs font-bold text-slate-500 uppercase">Investment Diary (Markdown)</span>
+                                            </div>
                                         </div>
-                                        <div className="flex-1 overflow-y-auto p-6">
-                                            <div 
-                                                ref={editorRef}
-                                                className="rich-editor"
-                                                contentEditable
-                                                suppressContentEditableWarning
-                                                onInput={handleEditorInput}
-                                                data-placeholder="# 本日の振り返り..."
+                                        <div className="flex-1 overflow-hidden relative">
+                                            <EasyMDEEditor 
+                                                value={editData.note} 
+                                                onChange={(val) => setEditData({...editData, note: val})} 
                                             />
                                         </div>
                                     </div>
@@ -720,18 +822,33 @@
                         </div>
                     )}
 
+                    {/* Import Modal */}
                     {isImportModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up">
-                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
                                 <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                                    <h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="FileUp" size={20} /> CSVインポート</h3>
+                                    <h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="FileUp" size={20} /> データインポート</h3>
                                     <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button>
                                 </div>
-                                <div className="p-6">
-                                    <p className="text-sm text-slate-500 mb-4">証券会社のCSVファイルをアップロードしてください。日付ごとに損益が集計され、選択したカテゴリに上書きされます（日記やイベントは保持されます）。</p>
-                                    <div className="mb-4">
-                                        <label className="block text-xs font-bold text-[#7C4DFF] mb-2 uppercase">インポート先カテゴリを選択</label>
-                                        <div className="grid grid-cols-2 gap-2">
+                                <div className="p-6 flex flex-col md:flex-row gap-6">
+                                    {/* Left: System Backup */}
+                                    <div className="flex-1 border-r border-slate-200 pr-6">
+                                        <h4 className="text-sm font-bold text-[#334155] mb-2 flex items-center gap-2"><Icon name="Database" size={16} /> システムデータ復元</h4>
+                                        <p className="text-xs text-slate-500 mb-4">完全バックアップ(JSON)を読み込み、カレンダー、日記、Quick Linksを含む全ての状態を復元します。</p>
+                                        <button 
+                                            onClick={() => setImportCategory('backup')}
+                                            className={`w-full py-3 px-3 rounded text-sm font-bold border transition-all flex items-center justify-between mb-4 ${importCategory === 'backup' ? `bg-[#7C4DFF] text-white border-[#7C4DFF]` : `bg-white text-slate-500 border-slate-200 hover:bg-slate-50`}`}
+                                        >
+                                            <span>完全バックアップ (JSON)</span>
+                                            {importCategory === 'backup' && <Icon name="Check" size={14} />}
+                                        </button>
+                                    </div>
+
+                                    {/* Right: Brokerage CSV */}
+                                    <div className="flex-1">
+                                        <h4 className="text-sm font-bold text-[#334155] mb-2 flex items-center gap-2"><Icon name="FileCsv" size={16} /> 証券データ取込</h4>
+                                        <p className="text-xs text-slate-500 mb-4">証券会社のCSV(約定日・損益)を読み込みます。銘柄ごとの詳細も自動集計されます。</p>
+                                        <div className="grid grid-cols-1 gap-2 mb-4">
                                             {Object.entries(CATEGORY_STYLES).filter(([k]) => k !== 'event').map(([key, style]) => (
                                                 <button key={key} onClick={() => setImportCategory(key)} className={`py-2 px-3 rounded text-sm font-bold border transition-all flex items-center justify-between ${importCategory === key ? `bg-[#7C4DFF] text-white border-[#7C4DFF]` : `bg-white text-slate-500 border-slate-200 hover:bg-slate-50`}`}>
                                                     <span>{style.label}</span>
@@ -740,11 +857,39 @@
                                             ))}
                                         </div>
                                     </div>
+                                </div>
+                                <div className="px-6 pb-6">
                                     <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors relative ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
                                         <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
                                         <p className="text-slate-600 font-bold mb-1">ファイルをここにドラッグ</p>
-                                        <p className="text-xs text-slate-400">またはクリックして選択</p>
-                                        <input type="file" accept=".csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files && handleFileImport(e.target.files[0])} />
+                                        <p className="text-xs text-slate-400">またはクリックして選択 (.csv / .json)</p>
+                                        <input type="file" accept=".csv,.json" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files && handleFileImport(e.target.files[0])} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Settings Modal (Gist) */}
+                    {isSettingsOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+                                <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                                    <h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="Settings" size={20} /> クラウド同期設定 (GitHub Gist)</h3>
+                                    <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-xs text-slate-500">GitHub Gistを利用して、複数端末間でデータを同期します。データは自動的にバックアップされます。</p>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">GitHub Personal Access Token (gist scope)</label>
+                                        <input type="password" value={gistToken} onChange={(e) => setGistToken(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="ghp_..." />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">Gist ID</label>
+                                        <input type="text" value={gistId} onChange={(e) => setGistId(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="32桁のID" />
+                                    </div>
+                                    <div className="pt-2 flex justify-end">
+                                        <button onClick={handleSaveSettings} className="bg-[#7C4DFF] text-white px-4 py-2 rounded text-sm font-bold hover:bg-[#651FFF]">保存して同期</button>
                                     </div>
                                 </div>
                             </div>
@@ -755,867 +900,197 @@
         };
 
         // ==========================================
-        //  取引参加者別取引高
+        //  Main Layout (unchanged core logic, just styles)
         // ==========================================
-        const ParticipantVolume = () => {
-            const [data, setData] = useState(null);
-            const [session, setSession] = useState('night'); 
-            const [loading, setLoading] = useState(true);
-
-            useEffect(() => {
-                const fetchData = async () => {
-                    try {
-                        const res = await fetch('./data/daily_participant.json');
-                        if (res.ok) {
-                            const json = await res.json();
-                            setData(json);
-                        } else {
-                            console.warn("Daily participant data not found.");
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    } finally {
-                        setLoading(false);
-                    }
-                };
-                fetchData();
-            }, []);
-
-            if (loading) return <div className="p-8 text-center text-slate-500">データを読み込み中...</div>;
-            if (!data) return <div className="p-8 text-center text-red-500 bg-red-50 rounded-lg">最新の手口データが見つかりませんでした。<br/>平日20時以降に更新されます。</div>;
-
-            const targetData = session === 'night' ? data.night_session : data.day_session;
-            const sessionLabel = session === 'night' ? 'ナイト・セッション (立会)' : '日中取引 (立会)';
-
-            const categoryColors = {
-                'US': 'bg-blue-100 text-blue-800 border-blue-200',
-                'EU': 'bg-green-100 text-green-800 border-green-200',
-                'JP': 'bg-orange-100 text-orange-800 border-orange-200',
-                'NET': 'bg-purple-100 text-purple-800 border-purple-200',
-                'OTHERS': 'bg-slate-100 text-slate-800 border-slate-200'
-            };
-
-            const grouped = targetData.reduce((acc, item) => {
-                const cat = item.category || 'OTHERS';
-                if (!acc[cat]) acc[cat] = [];
-                acc[cat].push(item);
-                return acc;
-            }, {});
-            const categories = ['US', 'EU', 'JP', 'NET', 'OTHERS'];
-
-            return (
-                <div className="space-y-6">
-                    <div className="gradient-bg text-white shadow-lg rounded-xl p-6 md:p-8 animate-fade-in-up">
-                        <h1 className="text-3xl font-bold mb-2">取引参加者別取引高 (手口上位)</h1>
-                        <p className="text-blue-100 text-sm">データ日付: {data.date} (最終更新: {data.updated_at})</p>
-                    </div>
-
-                    <div className="flex space-x-2 bg-white p-2 rounded-lg shadow-sm border border-slate-200 w-fit">
-                        <button onClick={() => setSession('night')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'night' ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}>🌙 ナイト・セッション</button>
-                        <button onClick={() => setSession('day')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${session === 'day' ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'}`}>☀️ 日中取引</button>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
-                        <h2 className="text-xl font-bold text-slate-800 mb-4">{sessionLabel}</h2>
-                        {targetData.length === 0 ? (
-                            <p className="text-slate-500">このセッションのデータはありません。</p>
-                        ) : (
-                            <div className="space-y-8">
-                                {categories.map(cat => {
-                                    if (!grouped[cat]) return null;
-                                    return (
-                                        <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden">
-                                            <div className={`px-4 py-2 font-bold text-sm border-b ${categoryColors[cat]}`}>
-                                                {cat === 'US' && '🇺🇸 米系証券'}
-                                                {cat === 'EU' && '🇪🇺 欧州系証券'}
-                                                {cat === 'JP' && '🇯🇵 日系証券'}
-                                                {cat === 'NET' && '🌐 ネット証券'}
-                                                {cat === 'OTHERS' && 'その他'}
-                                            </div>
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-sm text-left">
-                                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                                        <tr>
-                                                            <th className="px-4 py-2 w-48">証券会社</th>
-                                                            {Object.keys(grouped[cat][0].data).map(key => (<th key={key} className="px-4 py-2 text-right whitespace-nowrap">{key}</th>))}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-slate-100">
-                                                        {grouped[cat].map((item, idx) => (
-                                                            <tr key={idx} className="hover:bg-slate-50">
-                                                                <td className="px-4 py-2 font-medium text-slate-700">{item.name}</td>
-                                                                {Object.entries(item.data).map(([k, val], i) => (<td key={i} className="px-4 py-2 text-right font-mono">{val.toLocaleString()}</td>))}
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                     <div className="mt-4 text-right text-xs text-slate-400">※JPX公表のExcelファイルより自動取得・集計。単位: 枚 (または金額)。</div>
-                </div>
-            );
-        };
-
-        // ==========================================
-        //  JPX Chart
-        // ==========================================
-        const ForeignInvestors = () => {
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
+        const App = () => {
+            const [view, setView] = useState('calendar');
+            const [sidebarOpen, setSidebarOpen] = useState(false); 
             
-            const [allData, setAllData] = useState([]);
-            const [currentTimeRange, setCurrentTimeRange] = useState('all');
-            const [stats, setStats] = useState(null);
-            const [dataCount, setDataCount] = useState(0);
-            const [lastUpdate, setLastUpdate] = useState('データ取得中...');
+            // Sidebar Resizable & Collapse State
+            const [sidebarWidth, setSidebarWidth] = useState(260);
+            const [isCollapsed, setIsCollapsed] = useState(false);
+            const [isResizing, setIsResizing] = useState(false);
 
-            useEffect(() => {
-                const canvas = chartRef.current;
-                if (!canvas) return;
-                const handleWheel = (e) => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { e.preventDefault(); } };
-                canvas.addEventListener('wheel', handleWheel, { passive: false });
-                return () => canvas.removeEventListener('wheel', handleWheel);
-            }, [allData]);
+            const [optionCharts, setOptionCharts] = useState([]);
 
-            const formatNumber = (num) => Math.round(num).toLocaleString('ja-JP');
-            const formatLargeNumber = (value) => {
-                if (typeof value === 'number') {
-                    const sign = value >= 0 ? '+' : '';
-                    return sign + formatNumber(value) + '億円';
-                }
-                return value.toString();
-            };
-
-            const calculateWeekLabels = (data) => {
-                const weekCounter = {};
-                return data.map(row => {
-                    const date = new Date(row.date);
-                    const year = date.getFullYear();
-                    const month = date.getMonth() + 1;
-                    const yearMonthKey = `${year}-${month}`;
-                    if (!weekCounter[yearMonthKey]) weekCounter[yearMonthKey] = 1;
-                    else weekCounter[yearMonthKey]++;
-                    const weekNum = weekCounter[yearMonthKey];
-                    return { ...row, displayDate: `${year}年${month}月${weekNum}週`, tooltipDate: `${year}年${month}月第${weekNum}週` };
-                });
-            };
-
-            const calculateStats = (data) => {
-                const positiveData = data.filter(item => item.balance > 0).map(item => item.balance);
-                const negativeData = data.filter(item => item.balance < 0).map(item => item.balance);
-                const calcMedian = (arr) => {
-                    if (arr.length === 0) return 0;
-                    const sorted = [...arr].sort((a, b) => a - b);
-                    const mid = Math.floor(sorted.length / 2);
-                    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-                };
-                const calcAverage = (arr) => arr.length === 0 ? 0 : arr.reduce((sum, val) => sum + val, 0) / arr.length;
-                return {
-                    positiveAvg: calcAverage(positiveData),
-                    positiveMedian: calcMedian(positiveData),
-                    negativeAvg: calcAverage(negativeData),
-                    negativeMedian: calcMedian(negativeData),
-                    latest: data[data.length - 1]
-                };
-            };
-
-            const getFormattedReleaseDate = (lastDateStr) => {
-                try {
-                    const date = new Date(lastDateStr);
-                    if (isNaN(date.getTime())) return lastDateStr;
-                    const releaseDate = new Date(date);
-                    releaseDate.setDate(date.getDate() + 6);
-                    const y = releaseDate.getFullYear();
-                    const m = String(releaseDate.getMonth() + 1).padStart(2, '0');
-                    const d = String(releaseDate.getDate()).padStart(2, '0');
-                    return `${y}-${m}-${d}-18:00`;
-                } catch (e) { return lastDateStr; }
-            };
-
-            const zoomChart = (direction) => {
-                if (!chartInstance.current) return;
-                chartInstance.current.zoom(direction === 'in' ? 1.2 : 0.8);
-                updateStatsFromChart();
-            };
-            const panChart = (direction) => {
-                if (!chartInstance.current) return;
-                const chart = chartInstance.current;
-                const range = chart.scales.x.max - chart.scales.x.min;
-                chart.pan({ x: direction === 'left' ? range * 0.2 : -range * 0.2 });
-                updateStatsFromChart();
-            };
-            const resetZoom = () => {
-                if (!chartInstance.current) return;
-                chartInstance.current.resetZoom();
-                updateStatsFromChart();
-            };
-            const updateStatsFromChart = () => {
-                if (!chartInstance.current) return;
-                const chart = chartInstance.current;
-                const xScale = chart.scales.x;
-                const filtered = getFilteredData(allData, currentTimeRange);
-                const startIndex = Math.max(0, Math.floor(xScale.min));
-                const endIndex = Math.min(filtered.length - 1, Math.ceil(xScale.max));
-                const visibleData = filtered.slice(startIndex, endIndex + 1);
-                if (visibleData.length > 0) setStats(calculateStats(visibleData));
-            };
-            const getFilteredData = (data, range) => {
-                if (range === 'all') return data;
-                const now = new Date();
-                const cutoffDate = new Date();
-                if (range === '3m') cutoffDate.setMonth(now.getMonth() - 3);
-                else if (range === '6m') cutoffDate.setMonth(now.getMonth() - 6);
-                else if (range === '1y') cutoffDate.setFullYear(now.getFullYear() - 1);
-                return data.filter(item => new Date(item.date) >= cutoffDate);
-            };
-
-            const drawChart = (data) => {
-                if (!chartRef.current) return;
-                const ctx = chartRef.current.getContext('2d');
-                if (chartInstance.current) chartInstance.current.destroy();
-                const config = {
-                    type: 'bar',
-                    data: {
-                        datasets: [{
-                            label: '差引（億円）',
-                            data: data.map((d, index) => ({ x: index, y: d.balance })),
-                            backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(83, 109, 254, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(83, 109, 254, 0.7)' : 'rgba(255, 64, 129, 0.7)',
-                            borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#536DFE' : ctx.parsed.y >= 0 ? '#536DFE' : '#FF4081',
-                            borderWidth: 1,
-                            barPercentage: 0.9,
-                            categoryPercentage: 0.9
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: 'white',
-                                titleColor: '#334155',
-                                bodyColor: '#334155',
-                                borderColor: '#e2e8f0',
-                                borderWidth: 1,
-                                padding: 12,
-                                displayColors: false,
-                                callbacks: {
-                                    title: (context) => data[Math.round(context[0].parsed.x)]?.tooltipDate || '',
-                                    label: (context) => {
-                                        const index = Math.round(context.parsed.x);
-                                        if (index >= 0 && index < data.length) {
-                                            const val = data[index].balance;
-                                            const raw = data[index].rawBalance;
-                                            const sign = val >= 0 ? '+' : '';
-                                            return `${sign}${formatNumber(val)}億円 (${sign}${(raw * 1000).toLocaleString('ja-JP')}円)`;
-                                        }
-                                        return '';
-                                    },
-                                    afterLabel: (context) => context.parsed.y >= 0 ? '買い越し' : '売り越し'
-                                }
-                            },
-                            zoom: {
-                                pan: { enabled: true, mode: 'x', threshold: 0 },
-                                zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x', onZoomComplete: updateStatsFromChart }
-                            }
-                        },
-                        scales: {
-                            y: { ticks: { callback: (value, index, ticks) => index === ticks.length - 1 ? formatNumber(value) + '億円' : formatNumber(value) }, grid: { color: '#e2e8f0' } },
-                            x: { type: 'linear', min: 0, max: data.length - 1, ticks: { callback: (value) => data[Math.round(value)]?.displayDate || '', maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 20 }, grid: { color: '#e2e8f0' } }
-                        }
-                    }
-                };
-                chartInstance.current = new Chart(ctx, config);
-            };
-
-            useEffect(() => {
-                const loadData = async () => {
-                    try {
-                        const res = await fetch('history.csv');
-                        const text = res.ok ? await res.text() : null;
-                        if (!text) throw new Error("CSV load failed");
-                        Papa.parse(text, {
-                            header: true,
-                            dynamicTyping: true,
-                            skipEmptyLines: true,
-                            complete: (results) => {
-                                const raw = results.data.filter(r => r.date && r.balance != null).map(r => ({ date: r.date, balance: r.balance / 100000, rawBalance: r.balance })).sort((a, b) => new Date(a.date) - new Date(b.date));
-                                const processed = calculateWeekLabels(raw);
-                                setAllData(processed);
-                                if (processed.length > 0) setLastUpdate(`最終更新: ${getFormattedReleaseDate(processed[processed.length - 1].date)}`);
-                            }
-                        });
-                    } catch (e) { console.error(e); setLastUpdate("データの読み込みに失敗しました"); }
-                };
-                loadData();
-            }, []);
-
-            useEffect(() => {
-                if (allData.length === 0) return;
-                const filtered = getFilteredData(allData, currentTimeRange);
-                setDataCount(filtered.length);
-                drawChart(filtered);
-                setStats(calculateStats(filtered));
-            }, [allData, currentTimeRange]);
-
-            return (
-                <div className="space-y-6">
-                    <div className="gradient-bg text-white shadow-lg rounded-xl -mx-4 md:mx-0 p-6 md:p-8 mb-8 animate-fade-in-up">
-                        <h1 className="text-3xl md:text-4xl font-bold mb-2">JPX 海外投資家動向</h1>
-                        <p className="text-blue-100 text-sm mt-2">{lastUpdate}</p>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up">
-                        <h2 className="text-xl font-bold text-slate-900 mb-4">差引推移 <span className="text-sm font-normal text-slate-500 ml-2">({dataCount}件のデータ)</span></h2>
-                        <div style={{ position: 'relative', height: '500px' }}>
-                            <canvas ref={chartRef}></canvas>
-                            <div style={{ position: 'absolute', bottom: '90px', left: '80px', display: 'flex', gap: '8px', zIndex: 10 }}>
-                                <button onClick={() => zoomChart('in')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">＋</button>
-                                <button onClick={() => zoomChart('out')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">ー</button>
-                            </div>
-                            <div style={{ position: 'absolute', bottom: '90px', right: '20px', display: 'flex', gap: '8px', zIndex: 10 }}>
-                                <button onClick={() => panChart('left')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">← 左へ</button>
-                                <button onClick={() => panChart('right')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">右へ →</button>
-                            </div>
-                        </div>
-                    </div>
-                    {stats && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up">
-                            {[
-                                { label: '最新週（先週）の売買状況', value: stats.latest.balance, color: stats.latest.balance >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]', sub: stats.latest.balance >= 0 ? '買い越し' : '売り越し' },
-                                { label: '買い越し 平均', value: stats.positiveAvg, color: 'text-[#536DFE]', sub: '表示範囲内' },
-                                { label: '買い越し 中央値', value: stats.positiveMedian, color: 'text-[#536DFE]', sub: '表示範囲内' },
-                                { label: '売り越し 平均', value: stats.negativeAvg, color: 'text-[#FF4081]', sub: '表示範囲内' },
-                                { label: '売り越し 中央値', value: stats.negativeMedian, color: 'text-[#FF4081]', sub: '表示範囲内' },
-                            ].map((s, i) => (
-                                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                    <p className="text-slate-600 text-sm font-medium mb-2">{s.label}</p>
-                                    <p className={`text-3xl font-bold ${s.color}`}>{formatLargeNumber(s.value)}</p>
-                                    <p className="text-slate-400 text-xs mt-1">{s.sub}</p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up">
-                        <div className="flex flex-wrap gap-4 items-center">
-                            <div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{ v: 'all', l: '全期間' }, { v: '1y', l: '1年' }, { v: '6m', l: '6ヶ月' }, { v: '3m', l: '3ヶ月' }].map(opt => (<button key={opt.v} onClick={() => setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange === opt.v ? 'bg-[#7C4DFF] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div>
-                            <button onClick={resetZoom} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">🔄 ズームリセット</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // ==========================================
-        //  Option OI
-        // ==========================================
-        const processOptionData = (rawRows, step = 50) => {
-            if (!rawRows || rawRows.length < 2) return { data: [], error: 'データが不足しています。' };
-            const strikeRegex = /(strike|行使価格|koushi)/i;
-            const oiRegex = /(open\s*int|oi|建玉|tategyoku)/i;
-            const parseNum = (val) => {
-                if (typeof val === 'number') return val;
-                if (!val) return 0;
-                let str = String(val).toUpperCase();
-                let multiplier = 1;
-                if (str.endsWith('K')) multiplier = 1000;
-                else if (str.endsWith('M')) multiplier = 1000000;
-                str = str.replace(/[^0-9.-]/g, '').trim();
-                const num = parseFloat(str);
-                return isNaN(num) ? 0 : num * multiplier;
-                };
-        let reshapeHeaderIndex = -1;
-        let reshapeWidth = 0;
-        const getHeaderInfo = (row) => {
-            const sRow = row.map(c => String(c).trim());
-            let sCol = -1, oiCols = [];
-            sRow.forEach((cell, i) => { if (strikeRegex.test(cell)) sCol = i; else if (oiRegex.test(cell)) oiCols.push(i); });
-            return { sCol, oiCols, colCount: row.length };
-        };
-
-        for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
-            const info = getHeaderInfo(rawRows[r]);
-            if (info.sCol !== -1 && info.oiCols.length >= 2 && info.colCount > 1) {
-                let singleColCount = 0;
-                for(let k=1; k<=10 && (r+k)<rawRows.length; k++) { if (rawRows[r+k].length === 1 || rawRows[r+k].length < info.colCount / 2) singleColCount++; }
-                if (singleColCount >= 5) { reshapeHeaderIndex = r; reshapeWidth = info.colCount; break; }
-            }
-        }
-
-        if (reshapeWidth > 0 && reshapeHeaderIndex !== -1) {
-            const headerRow = rawRows[reshapeHeaderIndex];
-            const flatData = [];
-            for (let i = reshapeHeaderIndex + 1; i < rawRows.length; i++) {
-                const row = rawRows[i];
-                for (const cell of row) { if (cell !== null && cell !== undefined && String(cell).trim() !== '') flatData.push(cell); }
-            }
-            const newRows = [headerRow];
-            let currentChunk = [];
-            for (const cell of flatData) {
-                currentChunk.push(cell);
-                if (currentChunk.length === reshapeWidth) { newRows.push(currentChunk); currentChunk = []; }
-            }
-            rawRows = newRows;
-        }
-
-        let bestCandidate = { headerIndex: -1, strikeCol: -1, callCol: -1, putCol: -1, score: 0 };
-        for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
-            const row = rawRows[r].map(c => String(c).trim());
-            let sCol = -1, oiCols = [];
-            row.forEach((cell, i) => { if (strikeRegex.test(cell)) sCol = i; else if (oiRegex.test(cell)) oiCols.push(i); });
-            if (sCol !== -1 && oiCols.length >= 2) {
-                let cCol = -1, pCol = -1;
-                const oi1 = row[oiCols[0]].toLowerCase();
-                const oi2 = row[oiCols[1]].toLowerCase();
-                if (oi1.includes('call') || oi1.includes('コール')) { cCol = oiCols[0]; }
-                if (oi1.includes('put') || oi1.includes('プット')) { pCol = oiCols[0]; }
-                if (oi2.includes('call') || oi2.includes('コール')) { cCol = oiCols[1]; }
-                if (oi2.includes('put') || oi2.includes('プット')) { pCol = oiCols[1]; }
-                if (cCol === -1 || pCol === -1) { cCol = oiCols[0]; pCol = oiCols[1]; }
-                bestCandidate = { headerIndex: r, strikeCol: sCol, callCol: cCol, putCol: pCol, score: 10 };
-                break;
-            }
-        }
-
-        if (bestCandidate.headerIndex === -1) return { data: [], error: 'ヘッダーが見つかりませんでした。' };
-
-        const { headerIndex, strikeCol, callCol, putCol } = bestCandidate;
-        const dataMap = new Map();
-        const safeStep = step > 0 ? step : 1;
-
-        for (let i = headerIndex + 1; i < rawRows.length; i++) {
-            const row = rawRows[i];
-
-            if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
-            const strike = parseNum(row[strikeCol]);
-            const oi1 = parseNum(row[callCol]);
-            const oi2 = parseNum(row[putCol]);
-            if (strike > 0) {
-                const roundedStrike = Math.round(strike / safeStep) * safeStep;
-                if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
-                const d = dataMap.get(roundedStrike);
-                d.call += oi1;
-                d.put += oi2;
-            }
-        }
-
-        const sortedData = Array.from(dataMap.entries())
-            .sort((a, b) => b[0] - a[0])
-            .map(([strike, val]) => ({ strike, diff: val.call - val.put, call: val.call, put: val.put }));
-
-        return { data: sortedData, error: sortedData.length === 0 ? "有効なデータが見つかりませんでした" : null };
-    };
-
-    const DataInput = ({ onDataParsed }) => {
-        const [text, setText] = useState('');
-        const [dragActive, setDragActive] = useState(false);
-        const handleParse = (input) => {
-            Papa.parse(input, {
-                complete: (results) => onDataParsed(results.data),
-                skipEmptyLines: true,
-                header: false 
+            // Quick Links
+            const [customLinks, setCustomLinks] = useState(() => {
+                const saved = localStorage.getItem('market-dash-links');
+                return saved ? JSON.parse(saved) : [];
             });
-        };
-        const handleDrop = (e) => {
-            e.preventDefault();
-            setDragActive(false);
-            if (e.dataTransfer.files?.[0]) handleParse(e.dataTransfer.files[0]);
-        };
-        return (
-            <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
-                <div 
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`}
-                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                    onDragLeave={() => setDragActive(false)}
-                    onDrop={handleDrop}
-                >
-                    <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
-                    <p className="text-slate-600 font-medium">CSVファイルをドラッグ＆ドロップ</p>
-                    <p className="text-slate-400 text-sm">または</p>
-                    <input type="file" className="mt-2 text-sm text-slate-500" onChange={(e) => e.target.files?.[0] && handleParse(e.target.files[0])} />
-                </div>
-                <div className="flex gap-2">
-                    <textarea 
-                        className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none"
-                        rows={4}
-                        placeholder="ここにデータを貼り付け..."
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                    />
-                    <button onClick={() => handleParse(text)} disabled={!text} className="bg-[#7C4DFF] text-white px-4 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-medium">解析</button>
-                </div>
-            </div>
-        );
-    };
+            const [isAddingLink, setIsAddingLink] = useState(false);
+            const [newLinkLabel, setNewLinkLabel] = useState('');
+            const [newLinkUrl, setNewLinkUrl] = useState('');
+            const [linkType, setLinkType] = useState('link');
+            
+            // Quick Links Logic: Category Toggle State
+            const [collapsedCategories, setCollapsedCategories] = useState({});
 
-    const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => {
-        const [data, setData] = useState(initialData);
-        const [step, setStep] = useState(initialStep);
-        const [zoomY, setZoomY] = useState(1);
-        const [zoomX, setZoomX] = useState(1);
-        const mainRef = useRef(null);
-        const leftRef = useRef(null);
-        const bottomRef = useRef(null);
+            const toggleCategory = (categoryIndex) => {
+                setCollapsedCategories(prev => ({ ...prev, [categoryIndex]: !prev[categoryIndex] }));
+            };
 
-        useEffect(() => {
-            if(rawRows && step !== initialStep) {
-                const res = processOptionData(rawRows, step);
-                if(!res.error) {
-                    setData(res.data);
-                    onStepChange(id, step, res.data);
+            const openAllInGroup = (startIndex) => {
+                for (let i = startIndex + 1; i < customLinks.length; i++) {
+                    const link = customLinks[i];
+                    if (link.type === 'divider') break;
+                    if (link.url) window.open(link.url, '_blank');
                 }
-            }
-        }, [step]);
+            };
 
-        const handleScroll = () => {
-            if (mainRef.current && leftRef.current && bottomRef.current) {
-                leftRef.current.scrollTop = mainRef.current.scrollTop;
-                bottomRef.current.scrollLeft = mainRef.current.scrollLeft;
-            }
-        };
-        const barHeight = 30;
-        const totalHeight = Math.max(450, data.length * barHeight * zoomY);
-        const chartWidth = `${zoomX * 100}%`;
-        const maxVal = Math.max(...data.map(d => Math.abs(d.diff)), 100);
-        
-        const handleWheel = (e, axis) => {
-            if (e.ctrlKey || axis === 'main') return; 
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            if (axis === 'y') setZoomY(z => Math.max(0.1, Math.min(5, z + delta)));
-            if (axis === 'x') setZoomX(z => Math.max(0.5, Math.min(3, z + delta)));
-        };
-
-        const CustomTooltip = ({ active, payload, label }) => {
-            if (!active || !payload?.length) return null;
-            const d = payload[0].payload;
-            return (
-                <div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50">
-                    <p className="font-bold">Strike: {label}</p>
-                    <p className={d.diff >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p>
-                    <div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div>
-                </div>
-            );
-        };
-
-        return (
-            <div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden mb-6 animate-fade-in-up">
-                <div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500">HEIGHT</span>
-                        <button onClick={()=>setZoomY(z=>Math.max(0.1, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
-                        <input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20" />
-                        <button onClick={()=>setZoomY(z=>Math.min(5, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500">WIDTH</span>
-                        <button onClick={()=>setZoomX(z=>Math.max(0.5, z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
-                        <button onClick={()=>setZoomX(z=>Math.min(3, z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
-                    </div>
-                    <div className="flex items-center gap-2 border-l pl-4 border-slate-200">
-                        <span className="text-xs font-bold text-slate-500">STEP</span>
-                        <input type="number" className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]" value={step} onChange={(e) => setStep(parseFloat(e.target.value) || 0)} min="0.1"/>
-                    </div>
-                    <button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button>
-                </div>
-                <div className="flex-1 flex overflow-hidden relative">
-                    <div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e, 'y')}>
-                        <div style={{height: totalHeight, width: '100%'}}>
-                            <ResponsiveContainer>
-                                <BarChart layout="vertical" data={data} margin={{top:10, bottom:0}}>
-                                    <YAxis type="category" dataKey="strike" width={90} tick={{fontSize:12, fontWeight:600}} interval={0} />
-                                    <Bar dataKey="diff" fill="transparent" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}>
-                        <div style={{width: chartWidth, height: totalHeight, minWidth: '100%'}}>
-                            <ResponsiveContainer>
-                                <BarChart layout="vertical" data={data} margin={{top:10, right:30, left:0, bottom:0}}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
-                                    <XAxis type="number" domain={[-maxVal, maxVal]} hide />
-                                    <YAxis type="category" width={0} tick={false} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{fill:'rgba(0,0,0,0.05)'}} />
-                                    <ReferenceLine x={0} stroke="#334155" />
-                                    <Bar dataKey="diff" barSize={barHeight * 0.8}>
-                                        {data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#536DFE' : '#FF4081'} />))}
-                                        <LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11, fill:'#64748b'}} />
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-                <div className="h-8 border-t border-slate-200 flex shrink-0">
-                    <div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14} /></div>
-                    <div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e)=>handleWheel(e, 'x')}>
-                        <div style={{width: chartWidth, minWidth:'100%', height:'100%'}}>
-                            <ResponsiveContainer>
-                                <BarChart layout="vertical" data={[{}]} margin={{right:30, left:0}}>
-                                    <XAxis type="number" domain={[-maxVal, maxVal]} tick={{fontSize:10}} />
-                                    <YAxis type="category" width={0} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const OptionOI = ({ charts, setCharts }) => {
-        const [ticker, setTicker] = useState('');
-        const [error, setError] = useState(null);
-
-        const handleData = (rows) => {
-            const step = 50; 
-            const res = processOptionData(rows, step);
-            if (res.error) { setError(res.error); } else { setError(null); const newChart = { id: Date.now().toString(), data: res.data, step: step, rawRows: rows }; setCharts([...charts, newChart]); }
-        };
-
-        const handleStepChange = (id, newStep, newData) => {
-            setCharts(charts.map(c => c.id === id ? { ...c, step: newStep, data: newData } : c));
-        };
-
-        const handleTickerNav = () => { if(!ticker) return; const symbol = ticker.trim().toUpperCase(); window.open(`https://optioncharts.io/options/${symbol}/option-chain`, '_blank'); };
-
-        const links = [
-            { label: 'QQQ', url: 'https://optioncharts.io/options/QQQ/option-chain' },
-            { label: 'SPY', url: 'https://optioncharts.io/options/SPY/option-chain' },
-            { label: 'DJI', url: 'https://optioncharts.io/options/$DJX/option-chain' },
-            { label: 'IWM', url: 'https://optioncharts.io/options/IWM/option-chain' },
-            { label: 'VIX', url: 'https://optioncharts.io/options/$VIX/option-chain' },
-            { label: 'NVIDIA', url: 'https://optioncharts.io/options/NVDA/option-chain' },
-            { label: 'APPL', url: 'https://optioncharts.io/options/AAPL/option-chain' },
-            { label: 'AMZN', url: 'https://optioncharts.io/options/AMZN/option-chain' },
-            { label: 'GLD', url: 'https://optioncharts.io/options/GLD/option-chain' },
-            { label: 'SLV', url: 'https://optioncharts.io/options/SLV/option-chain' },
-        ];
-
-        return (
-            <div className="space-y-6">
-                <div className="gradient-bg text-white shadow-lg rounded-xl p-6 md:p-8 animate-fade-in-up">
-                    <h1 className="text-3xl md:text-4xl font-bold mb-2">Option 分析</h1>
-                    <p className="text-blue-100 text-sm mt-2">建玉の壁を可視化</p>
-                </div>
-
-                {charts.map(chart => (<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange} />))}
-                {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle" />{error}</div>}
-                <div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl">
-                    <p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p>
-                     <div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">
-                        {links.map(l => (<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10} /></a>))}
-                     </div>
-                     <div className="mb-10 flex items-center gap-2">
-                        <span className="text-sm text-slate-500 font-bold">Ticker:</span>
-                        <input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key === 'Enter' && handleTickerNav()}/>
-                        <button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button>
-                     </div>
-                     <DataInput onDataParsed={handleData} />
-                </div>
-            </div>
-        );
-    };
-
-    // ==========================================
-    //  Main Layout
-    // ==========================================
-    const App = () => {
-        const [view, setView] = useState('calendar');
-        const [sidebarOpen, setSidebarOpen] = useState(false); 
-        
-        // Sidebar Resizable & Collapse State
-        const [sidebarWidth, setSidebarWidth] = useState(260);
-        const [isCollapsed, setIsCollapsed] = useState(false);
-        const [isResizing, setIsResizing] = useState(false);
-
-        const [optionCharts, setOptionCharts] = useState([]);
-
-        // Quick Links
-        const [customLinks, setCustomLinks] = useState(() => {
-            const saved = localStorage.getItem('market-dash-links');
-            return saved ? JSON.parse(saved) : [];
-        });
-        const [isAddingLink, setIsAddingLink] = useState(false);
-        const [newLinkLabel, setNewLinkLabel] = useState('');
-        const [newLinkUrl, setNewLinkUrl] = useState('');
-        const [linkType, setLinkType] = useState('link');
-        
-        // Quick Links Logic: Category Toggle State
-        const [collapsedCategories, setCollapsedCategories] = useState({});
-
-        const toggleCategory = (categoryIndex) => {
-            setCollapsedCategories(prev => ({ ...prev, [categoryIndex]: !prev[categoryIndex] }));
-        };
-
-        const openAllInGroup = (categoryIndex) => {
-            for (let i = categoryIndex + 1; i < customLinks.length; i++) {
-                const link = customLinks[i];
-                if (link.type === 'divider') break;
-                if (link.type === 'link' && link.url) {
-                    window.open(link.url, '_blank');
-                }
-            }
-        };
-
-        const addCustomLink = () => {
-            if (linkType === 'link') {
-                if (newLinkLabel && newLinkUrl) {
-                    let url = newLinkUrl;
-                    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-                    const updated = [...customLinks, { label: newLinkLabel, url, type: 'link' }];
-                    setCustomLinks(updated);
-                    localStorage.setItem('market-dash-links', JSON.stringify(updated));
-                    setNewLinkLabel('');
-                    setNewLinkUrl('');
-                    setIsAddingLink(false);
-                }
-            } else {
-                if (newLinkLabel) {
-                    const updated = [...customLinks, { label: newLinkLabel, url: '', type: 'divider' }];
-                    setCustomLinks(updated);
-                    localStorage.setItem('market-dash-links', JSON.stringify(updated));
-                    setNewLinkLabel('');
-                    setNewLinkUrl('');
-                    setIsAddingLink(false);
-                }
-            }
-        };
-
-        const removeCustomLink = (index) => {
-            const updated = customLinks.filter((_, i) => i !== index);
-            setCustomLinks(updated);
-            localStorage.setItem('market-dash-links', JSON.stringify(updated));
-        };
-
-        // Drag & Drop
-        const [draggedIndex, setDraggedIndex] = useState(null);
-        const handleDragStart = (e, index) => { setDraggedIndex(index); e.dataTransfer.effectAllowed = 'move'; };
-        const handleDragOver = (e, index) => { e.preventDefault(); if (draggedIndex === null || draggedIndex === index) return; const newLinks = [...customLinks]; const [removed] = newLinks.splice(draggedIndex, 1); newLinks.splice(index, 0, removed); setCustomLinks(newLinks); setDraggedIndex(index); };
-        const handleDragEnd = () => { setDraggedIndex(null); localStorage.setItem('market-dash-links', JSON.stringify(customLinks)); };
-
-        // Resize Logic
-        const startResizing = useCallback((e) => { e.preventDefault(); setIsResizing(true); }, []);
-        useEffect(() => {
-            const handleMouseMove = (e) => { if (isResizing) { let newWidth = e.clientX; if (newWidth < 150) newWidth = 150; if (newWidth > 400) newWidth = 400; setSidebarWidth(newWidth); } };
-            const handleMouseUp = () => { if (isResizing) setIsResizing(false); };
-            if (isResizing) { document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', handleMouseUp); }
-            return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); };
-        }, [isResizing]);
-
-        const NavItem = ({ id, label, icon }) => (
-            <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? label : ''}>
-                <Icon name={icon} size={20} />
-                {!isCollapsed && <span className="font-medium text-sm">{label}</span>}
-            </button>
-        );
-
-        const renderCustomLinks = () => {
-            const elements = [];
-            let currentCategoryHidden = false; 
-
-            customLinks.forEach((link, i) => {
-                const isDivider = link.type === 'divider';
-                if (isDivider) {
-                    currentCategoryHidden = collapsedCategories[i] || false;
-                    elements.push(
-                        <div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mt-3 mb-1 cursor-move transition-colors hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
-                            <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={14} /></div>
-                            <div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => toggleCategory(i)}>
-                                <Icon name={currentCategoryHidden ? "ChevronRight" : "ChevronLeft"} size={14} className="text-slate-400 transition-transform" style={{transform: currentCategoryHidden ? 'rotate(0deg)' : 'rotate(-90deg)'}} />
-                                <Icon name="FolderOpen" size={14} className="text-[#7C4DFF]" />
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate select-none">{link.label}</span>
-                            </div>
-                            <button onClick={() => openAllInGroup(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[#7C4DFF] transition-opacity" title="このカテゴリのリンクを全て開く"><Icon name="ExternalLink" size={12} /></button>
-                            <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button>
-                        </div>
-                    );
+            const addCustomLink = () => {
+                if (linkType === 'link') {
+                    if (newLinkLabel && newLinkUrl) {
+                        let url = newLinkUrl;
+                        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                        const updated = [...customLinks, { label: newLinkLabel, url, type: 'link' }];
+                        setCustomLinks(updated);
+                        localStorage.setItem('market-dash-links', JSON.stringify(updated));
+                        setNewLinkLabel('');
+                        setNewLinkUrl('');
+                        setIsAddingLink(false);
+                    }
                 } else {
-                    if (!currentCategoryHidden) {
+                    if (newLinkLabel) {
+                        const updated = [...customLinks, { label: newLinkLabel, url: '', type: 'divider' }];
+                        setCustomLinks(updated);
+                        localStorage.setItem('market-dash-links', JSON.stringify(updated));
+                        setNewLinkLabel('');
+                        setNewLinkUrl('');
+                        setIsAddingLink(false);
+                    }
+                }
+            };
+
+            const removeCustomLink = (index) => {
+                const updated = customLinks.filter((_, i) => i !== index);
+                setCustomLinks(updated);
+                localStorage.setItem('market-dash-links', JSON.stringify(updated));
+            };
+
+            // Drag & Drop
+            const [draggedIndex, setDraggedIndex] = useState(null);
+            const handleDragStart = (e, index) => { setDraggedIndex(index); e.dataTransfer.effectAllowed = 'move'; };
+            const handleDragOver = (e, index) => { e.preventDefault(); if (draggedIndex === null || draggedIndex === index) return; const newLinks = [...customLinks]; const [removed] = newLinks.splice(draggedIndex, 1); newLinks.splice(index, 0, removed); setCustomLinks(newLinks); setDraggedIndex(index); };
+            const handleDragEnd = () => { setDraggedIndex(null); localStorage.setItem('market-dash-links', JSON.stringify(customLinks)); };
+
+            // Resize Logic
+            const startResizing = useCallback((e) => { e.preventDefault(); setIsResizing(true); }, []);
+            useEffect(() => {
+                const handleMouseMove = (e) => { if (isResizing) { let newWidth = e.clientX; if (newWidth < 150) newWidth = 150; if (newWidth > 400) newWidth = 400; setSidebarWidth(newWidth); } };
+                const handleMouseUp = () => { if (isResizing) setIsResizing(false); };
+                if (isResizing) { document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', handleMouseUp); }
+                return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); };
+            }, [isResizing]);
+
+            const NavItem = ({ id, label, icon }) => (
+                <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? label : ''}>
+                    <Icon name={icon} size={20} />
+                    {!isCollapsed && <span className="font-medium text-sm">{label}</span>}
+                </button>
+            );
+
+            const renderCustomLinks = () => {
+                const elements = [];
+                let currentCategoryHidden = false; 
+
+                customLinks.forEach((link, i) => {
+                    const isDivider = link.type === 'divider';
+                    if (isDivider) {
+                        currentCategoryHidden = collapsedCategories[i] || false;
                         elements.push(
-                            <div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-3 py-1 ml-4 rounded-lg transition-colors cursor-move hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
-                                <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={12} /></div>
-                                <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto">
-                                    <Icon name="Link" size={12} className="shrink-0 text-slate-400" />
-                                    <span className="truncate">{link.label}</span>
-                                </a>
+                            <div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mt-3 mb-1 cursor-move transition-colors hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
+                                <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={14} /></div>
+                                <div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => toggleCategory(i)}>
+                                    <Icon name={currentCategoryHidden ? "ChevronRight" : "ChevronLeft"} size={14} className="text-slate-400 transition-transform" style={{transform: currentCategoryHidden ? 'rotate(0deg)' : 'rotate(-90deg)'}} />
+                                    <Icon name="FolderOpen" size={14} className="text-[#7C4DFF]" />
+                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate select-none">{link.label}</span>
+                                </div>
+                                <button onClick={() => openAllInGroup(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[#7C4DFF] transition-opacity" title="このカテゴリのリンクを全て開く"><Icon name="ExternalLink" size={12} /></button>
                                 <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button>
                             </div>
                         );
+                    } else {
+                        if (!currentCategoryHidden) {
+                            elements.push(
+                                <div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-3 py-1 ml-4 rounded-lg transition-colors cursor-move hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
+                                    <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={12} /></div>
+                                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto">
+                                        <Icon name="Link" size={12} className="shrink-0 text-slate-400" />
+                                        <span className="truncate">{link.label}</span>
+                                    </a>
+                                    <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button>
+                                </div>
+                            );
+                        }
                     }
-                }
-            });
-            return elements;
+                });
+                return elements;
+            };
+
+            return (
+                <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+                    <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-75 shadow-xl lg:shadow-none flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`} style={{ width: isCollapsed ? 70 : sidebarWidth }}>
+                        <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
+                            {!isCollapsed && <span className="font-bold text-lg tracking-tight text-[#334155]">Dashboard</span>}
+                            <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 text-slate-400 hover:text-[#7C4DFF] hover:bg-slate-50 rounded mx-auto lg:mx-0"><Icon name={isCollapsed ? "ChevronRight" : "ChevronLeft"} size={20} /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
+                            {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
+                            <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
+                            <NavItem id="option" label="Option 分析" icon="BarChart3" />
+                            <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
+                            <NavItem id="participant" label="手口上位" icon="Briefcase" />
+                            {!isCollapsed && (
+                                <>
+                                    <div className="flex-1 min-h-[20px]"></div>
+                                    <div className="pb-16">
+                                        {customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}
+                                    </div>
+                                    <div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">
+                                        {!isAddingLink ? (
+                                            <button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200" title="リンクを追加"><Icon name="Plus" size={20} /></button>
+                                        ) : (
+                                            <div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <p className="text-xs font-bold text-slate-500 uppercase">Add Item</p>
+                                                    <button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14}/></button>
+                                                </div>
+                                                <div className="flex bg-slate-100 p-1 rounded-lg mb-3">
+                                                    <button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button>
+                                                    <button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />
+                                                    {linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}
+                                                    <button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
+                    </aside>
+                    {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+                    <div className="flex-1 flex flex-col min-w-0">
+                        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
+                            <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
+                            <span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}</span>
+                        </header>
+                        <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
+                            <div className="max-w-7xl mx-auto h-full">
+                                {view === 'calendar' ? <ProfitManager customLinks={customLinks} setCustomLinks={setCustomLinks} /> : view === 'jpx' ? <ForeignInvestors /> : view === 'participant' ? <ParticipantVolume /> : <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
+                            </div>
+                        </main>
+                    </div>
+                </div>
+            );
         };
 
-        return (
-            <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
-                <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-75 shadow-xl lg:shadow-none flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`} style={{ width: isCollapsed ? 70 : sidebarWidth }}>
-                    <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
-                        {!isCollapsed && <span className="font-bold text-lg tracking-tight text-[#334155]">Dashboard</span>}
-                        <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 text-slate-400 hover:text-[#7C4DFF] hover:bg-slate-50 rounded mx-auto lg:mx-0"><Icon name={isCollapsed ? "ChevronRight" : "ChevronLeft"} size={20} /></button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
-                        {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
-                        <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
-                        <NavItem id="option" label="Option 分析" icon="BarChart3" />
-                        <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
-                        <NavItem id="participant" label="手口上位" icon="Briefcase" />
-                        {!isCollapsed && (
-                            <>
-                                <div className="flex-1 min-h-[20px]"></div>
-                                <div className="pb-16">
-                                    {customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}
-                                </div>
-                                <div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">
-                                    {!isAddingLink ? (
-                                        <button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200" title="リンクを追加"><Icon name="Plus" size={20} /></button>
-                                    ) : (
-                                        <div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <p className="text-xs font-bold text-slate-500 uppercase">Add Item</p>
-                                                <button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14}/></button>
-                                            </div>
-                                            <div className="flex bg-slate-100 p-1 rounded-lg mb-3">
-                                                <button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button>
-                                                <button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                <input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />
-                                                {linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}
-                                                <button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                    {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
-                </aside>
-                {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
-                <div className="flex-1 flex flex-col min-w-0">
-                    <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
-                        <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
-                        <span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}</span>
-                    </header>
-                    <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
-                        <div className="max-w-7xl mx-auto h-full">
-                            {view === 'calendar' ? <ProfitManager /> : view === 'jpx' ? <ForeignInvestors /> : view === 'participant' ? <ParticipantVolume /> : <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
-                        </div>
-                    </main>
-                </div>
-            </div>
-        );
-    };
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-</script>
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
