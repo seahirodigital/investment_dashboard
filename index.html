@@ -933,11 +933,15 @@
                         datasets: [{
                             label: '差引（億円）',
                             data: data.map((d, index) => ({ x: index, y: d.balance })),
-                            backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(83, 109, 254, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(83, 109, 254, 0.7)' : 'rgba(255, 64, 129, 0.7)',
-                            borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#536DFE' : ctx.parsed.y >= 0 ? '#536DFE' : '#FF4081',
+                            backgroundColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? 'rgba(103, 58, 183, 0.7)' : ctx.parsed.y >= 0 ? 'rgba(103, 58, 183, 0.7)' : 'rgba(216, 27, 96, 0.7)',
+                            borderColor: (ctx) => (!ctx.parsed || ctx.parsed.y === undefined) ? '#673AB7' : ctx.parsed.y >= 0 ? '#673AB7' : '#D81B60',
                             borderWidth: 1,
                             barPercentage: 0.9,
                             categoryPercentage: 0.9
+                        }]
+                    },
+        options: {
+            // ... 以下は変更なし
                         }]
                     },
                     options: {
