@@ -8,6 +8,9 @@
     <!-- デザイン・スタイル (Tailwind CSS) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- EasyMDE (Markdown Editor) CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    
     <!-- 依存ライブラリ -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -20,6 +23,8 @@
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- EasyMDE JS -->
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
@@ -111,6 +116,18 @@
             opacity: 1;
             transform: translateX(-50%) translateY(-10px);
         }
+
+        /* Quotes Carousel Styles */
+        .quote-scroll-container { display: flex; overflow-x: auto; gap: 16px; padding: 16px; scroll-behavior: smooth; }
+        .quote-scroll-container::-webkit-scrollbar { height: 6px; }
+        .quote-card { flex: 0 0 300px; min-height: 120px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; transition: transform 0.2s, box-shadow 0.2s; }
+        .quote-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        /* EasyMDE Overrides */
+        .EasyMDEContainer { background: white; border-radius: 0.5rem; }
+        .CodeMirror { border: 1px solid #e2e8f0; border-radius: 0.5rem; font-family: monospace; font-size: 14px; }
+        .editor-toolbar { border: 1px solid #e2e8f0; border-radius: 0.5rem 0.5rem 0 0; background-color: #f8fafc; opacity: 1; }
+        .editor-statusbar { display: none; }
     </style>
 </head>
 <body>
@@ -153,7 +170,13 @@
                 Save: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
                 Settings: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
                 Database: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
-                RefreshCw: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                RefreshCw: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>,
+                /* 追加アイコン */
+                Pin: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>,
+                PinOff: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><line x1="12" y1="17" x2="12" y2="22"/><path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14"/><path d="M15 9.34V6h1a2 2 0 0 0 0-4H7.89"/></svg>,
+                Lightbulb: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5 0-2.2-1.8-4-4-4a4 4 0 0 0-4 4c0 1.5.5 2.5 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>,
+                ArrowLeft: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,
+                ArrowRight: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             };
             return icons[name] || null;
         };
@@ -214,10 +237,68 @@
             );
         };
 
+        // --- EasyMDE Wrapper for Quotes ---
+        const EasyMDEEditor = ({ value, onChange }) => {
+            const textareaRef = useRef(null);
+            const mdeRef = useRef(null);
+            useEffect(() => {
+                if (!textareaRef.current) return;
+                mdeRef.current = new EasyMDE({
+                    element: textareaRef.current, initialValue: value, spellChecker: false, status: false,
+                    toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "side-by-side", "fullscreen"],
+                    placeholder: "格言を入力...", forceSync: true,
+                });
+                mdeRef.current.codemirror.on("change", () => onChange(mdeRef.current.value()));
+                return () => { mdeRef.current.toTextArea(); mdeRef.current = null; };
+            }, []); 
+            return <textarea ref={textareaRef} />;
+        };
+
+        // --- Quotes Manager ---
+        const QuotesManager = ({ quotes, setQuotes }) => {
+            const [input, setInput] = useState("");
+            const [editId, setEditId] = useState(null);
+            const scrollRef = useRef(null);
+            const [autoScroll, setAutoScroll] = useState(true);
+            const scrollInterval = useRef(null);
+
+            useEffect(() => {
+                if (autoScroll) {
+                    scrollInterval.current = setInterval(() => {
+                        if (scrollRef.current) {
+                            if (scrollRef.current.scrollLeft + scrollRef.current.clientWidth >= scrollRef.current.scrollWidth - 10) scrollRef.current.scrollLeft = 0;
+                            else scrollRef.current.scrollLeft += 1;
+                        }
+                    }, 30);
+                } else clearInterval(scrollInterval.current);
+                return () => clearInterval(scrollInterval.current);
+            }, [autoScroll]);
+
+            const handleScrollLeft = () => { if (scrollRef.current) scrollRef.current.scrollLeft -= 200; };
+            const handleScrollRight = () => { if (scrollRef.current) scrollRef.current.scrollLeft += 200; };
+            const addQuote = () => { if (!input.trim()) return; if (editId) { setQuotes(quotes.map(q => q.id === editId ? { ...q, text: input } : q)); setEditId(null); } else { setQuotes([...quotes, { id: Date.now().toString(), text: input, pinned: false, order: quotes.length }]); } setInput(""); };
+            const deleteQuote = (id) => { if (confirm("削除しますか？")) setQuotes(quotes.filter(q => q.id !== id)); };
+            const togglePin = (id) => setQuotes(quotes.map(q => q.id === id ? { ...q, pinned: !q.pinned } : q));
+            const startEdit = (quote) => { setInput(quote.text); setEditId(quote.id); };
+            const [draggedItem, setDraggedItem] = useState(null);
+            const handleDragStart = (e, index) => setDraggedItem(index);
+            const handleDragOver = (e, index) => { e.preventDefault(); if (draggedItem === null || draggedItem === index) return; const pinnedQuotes = quotes.filter(q => q.pinned); const unpinnedQuotes = quotes.filter(q => !q.pinned); const newPinned = [...pinnedQuotes]; const [removed] = newPinned.splice(draggedItem, 1); newPinned.splice(index, 0, removed); setQuotes([...newPinned, ...unpinnedQuotes]); setDraggedItem(index); };
+            const pinnedQuotes = quotes.filter(q => q.pinned); const unpinnedQuotes = quotes.filter(q => !q.pinned);
+
+            return (
+                <div className="space-y-8 pb-10">
+                    <div className="gradient-bg text-white shadow-lg rounded-xl p-6 md:p-8 animate-fade-in-up"><h1 className="text-3xl font-bold mb-2 flex items-center gap-3"><Icon name="Lightbulb" size={32} /> 投資の格言集</h1><p className="text-blue-100 text-sm">心に留めておくべきルールと戒め</p></div>
+                    {pinnedQuotes.length > 0 && (<div className="animate-fade-in-up"><h2 className="text-sm font-bold text-slate-500 mb-2 flex items-center gap-2"><Icon name="Pin" size={16}/> PINNED QUOTES (BOARD)</h2><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{pinnedQuotes.map((q, i) => (<div key={q.id} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} className="bg-white rounded-xl shadow-sm border-l-4 border-[#7C4DFF] p-4 relative group hover:shadow-md transition-all cursor-move"><div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white"><button onClick={() => togglePin(q.id)} className="p-1 text-slate-400 hover:text-[#7C4DFF]"><Icon name="PinOff" size={14} /></button><button onClick={() => startEdit(q)} className="p-1 text-slate-400 hover:text-[#536DFE]"><Icon name="Pencil" size={14} /></button><button onClick={() => deleteQuote(q.id)} className="p-1 text-slate-400 hover:text-red-500"><Icon name="X" size={14} /></button></div><div className="markdown-preview text-sm" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(q.text) : q.text }} /></div>))}</div></div>)}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative animate-fade-in-up group" onMouseEnter={() => setAutoScroll(false)} onMouseLeave={() => setAutoScroll(true)}><h2 className="text-sm font-bold text-slate-500 mb-4">STREAM</h2><button onClick={handleScrollLeft} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-2 rounded-full shadow hover:bg-white text-[#7C4DFF] opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="ArrowLeft" /></button><button onClick={handleScrollRight} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 p-2 rounded-full shadow hover:bg-white text-[#7C4DFF] opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="ArrowRight" /></button><div ref={scrollRef} className="quote-scroll-container">{unpinnedQuotes.length === 0 && <p className="text-slate-400 text-sm text-center w-full">格言がありません。下から追加してください。</p>}{unpinnedQuotes.map(q => (<div key={q.id} className="quote-card shrink-0"><div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90"><button onClick={() => togglePin(q.id)} className="p-1 text-slate-400 hover:text-[#7C4DFF]"><Icon name="Pin" size={14} /></button><button onClick={() => startEdit(q)} className="p-1 text-slate-400 hover:text-[#536DFE]"><Icon name="Pencil" size={14} /></button><button onClick={() => deleteQuote(q.id)} className="p-1 text-slate-400 hover:text-red-500"><Icon name="X" size={14} /></button></div><div className="markdown-preview text-sm" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(q.text) : q.text }} /></div>))}</div></div>
+                    <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><h3 className="text-xs font-bold text-slate-500 mb-2 uppercase">{editId ? 'Edit Quote' : 'New Quote'}</h3><div className="flex gap-2"><div className="flex-1"><EasyMDEEditor value={input} onChange={setInput} /></div><button onClick={addQuote} className="bg-[#7C4DFF] text-white px-6 rounded-lg font-bold hover:bg-[#651FFF] transition-colors self-start py-4">GO</button></div></div>
+                </div>
+            );
+        };
+
         // ==========================================
         //  投資カレンダー
         // ==========================================
-        const ProfitManager = ({ customLinks, setCustomLinks }) => {
+        const ProfitManager = ({ customLinks, setCustomLinks, quotes, setQuotes }) => {
             const [currentDate, setCurrentDate] = useState(new Date());
             const [historyData, setHistoryData] = useState({});
             const [selectedDate, setSelectedDate] = useState(null);
@@ -249,21 +330,22 @@
                 }
             }, []);
 
-            const saveToStorage = (newData, newLinks = customLinks) => {
+            const saveToStorage = (newData, newLinks = customLinks, newQuotes = quotes) => {
                 setHistoryData(newData);
                 localStorage.setItem('history_data', JSON.stringify(newData));
                 if (gistToken && gistId) {
-                    syncToGist(newData, newLinks);
+                    syncToGist(newData, newLinks, newQuotes);
                 }
             };
 
-            const syncToGist = async (data = historyData, links = customLinks) => {
+            const syncToGist = async (data = historyData, links = customLinks, q = quotes) => {
                 const cleanToken = gistToken.trim();
                 const cleanId = gistId.trim();
                 if (!cleanToken || !cleanId) return;
                 setIsSyncing(true);
                 try {
-                    const content = JSON.stringify({ history: data, links: links });
+                    // 保存対象に Quotes も含める
+                    const content = JSON.stringify({ history: data, links: links, quotes: q });
                     await fetch(`https://api.github.com/gists/${cleanId}`, {
                         method: 'PATCH',
                         headers: {
@@ -301,6 +383,10 @@
                             if (content.links) {
                                 setCustomLinks(content.links);
                                 localStorage.setItem('market-dash-links', JSON.stringify(content.links));
+                            }
+                            if (content.quotes) {
+                                setQuotes(content.quotes);
+                                localStorage.setItem('market-dash-quotes', JSON.stringify(content.quotes));
                             }
                         }
                     }
@@ -396,6 +482,10 @@
                             if (json.links) {
                                 setCustomLinks(json.links);
                                 localStorage.setItem('market-dash-links', JSON.stringify(json.links));
+                            }
+                            if (json.quotes) {
+                                setQuotes(json.quotes);
+                                localStorage.setItem('market-dash-quotes', JSON.stringify(json.quotes));
                             }
                             setIsImportModalOpen(false);
                             alert('データの復元が完了しました。');
@@ -567,7 +657,8 @@
             const handleExportCSV = () => {
                 const backupData = {
                     history: historyData,
-                    links: customLinks
+                    links: customLinks,
+                    quotes: quotes // バックアップにもQuotesを含める
                 };
                 const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -1588,7 +1679,7 @@
         };
 
         // ==========================================
-        //  Main Layout (unchanged core logic, just styles)
+        //  Main Layout
         // ==========================================
         const App = () => {
             const [view, setView] = useState('calendar');
@@ -1610,6 +1701,12 @@
             const [newLinkLabel, setNewLinkLabel] = useState('');
             const [newLinkUrl, setNewLinkUrl] = useState('');
             const [linkType, setLinkType] = useState('link');
+            
+            // Quotes State
+            const [quotes, setQuotes] = useState(() => {
+                const saved = localStorage.getItem('market-dash-quotes');
+                return saved ? JSON.parse(saved) : [];
+            });
             
             // Quick Links Logic: Category Toggle State
             const [collapsedCategories, setCollapsedCategories] = useState({});
@@ -1671,6 +1768,11 @@
                 return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); };
             }, [isResizing]);
 
+            // Save Quotes to LocalStorage whenever they change
+            useEffect(() => {
+                localStorage.setItem('market-dash-quotes', JSON.stringify(quotes));
+            }, [quotes]);
+
             const NavItem = ({ id, label, icon }) => (
                 <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? label : ''}>
                     <Icon name={icon} size={20} />
@@ -1726,6 +1828,7 @@
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
                             {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
                             <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
+                            <NavItem id="quotes" label="投資の格言集" icon="Lightbulb" />
                             <NavItem id="option" label="Option 分析" icon="BarChart3" />
                             <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
                             <NavItem id="participant" label="手口上位" icon="Briefcase" />
@@ -1765,11 +1868,15 @@
                     <div className="flex-1 flex flex-col min-w-0">
                         <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
                             <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
-                            <span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : '取引参加者別取引高'}</span>
+                            <span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : view === 'quotes' ? '投資の格言集' : '取引参加者別取引高'}</span>
                         </header>
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
                             <div className="max-w-7xl mx-auto h-full">
-                                {view === 'calendar' ? <ProfitManager customLinks={customLinks} setCustomLinks={setCustomLinks} /> : view === 'jpx' ? <ForeignInvestors /> : view === 'participant' ? <ParticipantVolume /> : <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
+                                {view === 'calendar' ? <ProfitManager customLinks={customLinks} setCustomLinks={setCustomLinks} quotes={quotes} setQuotes={setQuotes} /> : 
+                                 view === 'quotes' ? <QuotesManager quotes={quotes} setQuotes={setQuotes} /> :
+                                 view === 'jpx' ? <ForeignInvestors /> : 
+                                 view === 'participant' ? <ParticipantVolume /> : 
+                                 <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
                             </div>
                         </main>
                     </div>
