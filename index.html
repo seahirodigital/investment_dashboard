@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- キャッシュ対策: 最新のデプロイを強制的に読み込ませるための設定 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <title>Market Dashboard</title>
     
     <!-- デザイン・スタイル (Tailwind CSS) -->
@@ -79,10 +85,12 @@
             justify-content: center; align-items: flex-end; padding-right: 8px; gap: 4px;
         }
 
-        /* Markdownプレビュー */
-        .markdown-preview { color: #334155; font-size: 14px; line-height: 1.6; }
-        .markdown-preview h1 { font-size: 1.6em; font-weight: 800; margin: 0.5em 0 0.3em 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.2em; color: #1e293b; }
-        .markdown-preview h2 { font-size: 1.4em; font-weight: 700; margin: 1em 0 0.3em 0; color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; }
+        /* Markdownプレビュー (UX改善: フォントサイズ縮小) */
+        .markdown-preview { color: #334155; font-size: 13px; line-height: 1.5; }
+        /* 変更点: h1サイズ縮小 (1.6em -> 1.1em) */
+        .markdown-preview h1 { font-size: 1.1em; font-weight: 700; margin: 0.3em 0 0.2em 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.1em; color: #1e293b; }
+        /* 変更点: h2サイズ縮小 (1.4em -> 1.05em) */
+        .markdown-preview h2 { font-size: 1.05em; font-weight: 600; margin: 0.5em 0 0.2em 0; color: #334155; border-left: 3px solid #7C4DFF; padding-left: 0.4em; }
         .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.6em; }
         
         /* ツールチップ */
@@ -201,9 +209,11 @@
         };
 
         // --- Quotes Manager (EasyMDE) ---
+        // 修正: 外部からのvalue変更を検知してエディタに反映
         const EasyMDEEditor = ({ value, onChange }) => {
             const textareaRef = useRef(null);
             const mdeRef = useRef(null);
+            
             useEffect(() => {
                 if (!textareaRef.current) return;
                 mdeRef.current = new EasyMDE({
@@ -213,7 +223,15 @@
                 });
                 mdeRef.current.codemirror.on("change", () => onChange(mdeRef.current.value()));
                 return () => { mdeRef.current.toTextArea(); mdeRef.current = null; };
-            }, []); 
+            }, []);
+
+            // 修正: 編集モード切り替え時の値反映
+            useEffect(() => {
+                if (mdeRef.current && value !== mdeRef.current.value()) {
+                    mdeRef.current.value(value);
+                }
+            }, [value]);
+
             return <textarea ref={textareaRef} />;
         };
 
@@ -246,7 +264,6 @@
                     setQuotes(quotes.map(q => q.id === editId ? { ...q, text: input } : q)); 
                     setEditId(null); 
                 } else { 
-                    // 分割ロジック (ーーー or ---)
                     const parts = input.split(/ーーー|---/);
                     const newQuotes = parts.map((part, index) => {
                         if(!part.trim()) return null;
@@ -257,8 +274,10 @@
                 setInput(""); 
             };
             
-            const deleteQuote = (id) => { if (confirm("削除しますか？")) setQuotes(quotes.filter(q => q.id !== id)); };
+            // 修正: 削除時のconfirmを排除
+            const deleteQuote = (id) => { setQuotes(quotes.filter(q => q.id !== id)); };
             const togglePin = (id) => setQuotes(quotes.map(q => q.id === id ? { ...q, pinned: !q.pinned } : q));
+            // 修正: 編集開始
             const startEdit = (quote) => { setInput(quote.text); setEditId(quote.id); };
             const [draggedItem, setDraggedItem] = useState(null);
             const handleDragStart = (e, index) => setDraggedItem(index);
@@ -648,16 +667,58 @@ m−{d}-18:00`;}catch(e){return lastDateStr;}};const zoomChart=(direction)=>{if(
 sign{formatNumber(val)}億円 (sign{sign}
 sign{(raw*1000).toLocaleString('ja-JP')}円)`;}return'';},afterLabel:(context)=>context.parsed.y>=0?'買い越し':'売り越し'}},zoom:{pan:{enabled:true,mode:'x',threshold:0},zoom:{wheel:{enabled:true,speed:0.1},pinch:{enabled:true},mode:'x',onZoomComplete:updateStatsFromChart}}},scales:{y:{ticks:{callback:(value,index,ticks)=>index===ticks.length-1?formatNumber(value)+'億円':formatNumber(value)},grid:{color:'#e2e8f0'}},x:{type:'linear',min:0,max:data.length-1,ticks:{callback:(value)=>data[Math.round(value)]?.displayDate||'',maxRotation:45,minRotation:45,autoSkip:true,maxTicksLimit:20},grid:{color:'#e2e8f0'}}}}};chartInstance.current=new Chart(ctx,config);};useEffect(()=>{const loadData=async()=>{try{const res=await fetch('history.csv');const text=res.ok?await res.text():null;if(!text)throw new Error("CSV load failed");Papa.parse(text,{header:true,dynamicTyping:true,skipEmptyLines:true,complete:(results)=>{const raw=results.data.filter(r=>r.date&&r.balance!=null).map(r=>({date:r.date,balance:r.balance/100000,rawBalance:r.balance})).sort((a,b)=>new Date(a.date)-new Date(b.date));const processed=calculateWeekLabels(raw);setAllData(processed);if(processed.length>0)setLastUpdate(`最終更新: ${getFormattedReleaseDate(processed[processed.length-1].date)}`);}}); }catch(e){console.error(e);setLastUpdate("データの読み込みに失敗しました");}};loadData();},[]);useEffect(()=>{if(allData.length===0)return;const filtered=getFilteredData(allData,currentTimeRange);setDataCount(filtered.length);drawChart(filtered);setStats(calculateStats(filtered));},[allData,currentTimeRange]);return(<div className="space-y-6"><div className="unified-header-card"><div className="unified-header-title"><Icon name="LineChart" size={28} /> JPX 海外投資家動向</div><p className="unified-header-sub">{lastUpdate}</p></div><div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up"><h2 className="text-xl font-bold text-slate-900 mb-4">差引推移 <span className="text-sm font-normal text-slate-500 ml-2">({dataCount}件のデータ)</span></h2><div style={{position:'relative',height:'500px'}}><canvas ref={chartRef}></canvas><div style={{position:'absolute',bottom:'90px',left:'80px',display:'flex',gap:'8px',zIndex:10}}><button onClick={()=>zoomChart('in')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">＋</button><button onClick={()=>zoomChart('out')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">ー</button></div><div style={{position:'absolute',bottom:'90px',right:'20px',display:'flex',gap:'8px',zIndex:10}}><button onClick={()=>panChart('left')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">← 左へ</button><button onClick={()=>panChart('right')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">右へ →</button></div></div></div>{stats&&( <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up">{[{label:'最新週（先週）の売買状況',value:stats.latest.balance,color:stats.latest.balance>=0?'text-[#7C4DFF]':'text-[#FF4081]',sub:stats.latest.balance>=0?'買い越し':'売り越し'},{label:'買い越し 平均',value:stats.positiveAvg,color:'text-[#7C4DFF]',sub:'表示範囲内'},{label:'買い越し 中央値',value:stats.positiveMedian,color:'text-[#7C4DFF]',sub:'表示範囲内'},{label:'売り越し 平均',value:stats.negativeAvg,color:'text-[#FF4081]',sub:'表示範囲内'},{label:'売り越し 中央値',value:stats.negativeMedian,color:'text-[#FF4081]',sub:'表示範囲内'},].map((s,i)=>(<div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"><p className="text-slate-600 text-sm font-medium mb-2">{s.label}</p><p className={`text-3xl font-bold ${s.color}`}>{formatLargeNumber(s.value)}</p><p className="text-slate-400 text-xs mt-1">{s.sub}</p></div>))}</div>)}<div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up"><div className="flex flex-wrap gap-4 items-center"><div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{v:'all',l:'全期間'},{v:'1y',l:'1年'},{v:'6m',l:'6ヶ月'},{v:'3m',l:'3ヶ月'}].map(opt=>(<button key={opt.v} onClick={()=>setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange===opt.v?'bg-[#7C4DFF] text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div><button onClick={resetZoom} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">🔄 ズームリセット</button></div></div></div>);};
 
-// DataInput Component (CRITICAL - DO NOT REMOVE)
-    const DataInput = ({ onDataParsed }) => {
-        const [dragActive, setDragActive] = useState(false);
-        const handleDrag = (e) => { e.preventDefault(); e.stopPropagation(); if (e.type === "dragenter" || e.type === "dragover") setDragActive(true); else if (e.type === "dragleave") setDragActive(false); };
-        const handleDrop = (e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
-        const handleFile = (file) => { if (!file) return; const reader = new FileReader(); reader.onload = (event) => Papa.parse(event.target.result, { header: false, skipEmptyLines: true, complete: (res) => onDataParsed(res.data) }); reader.readAsText(file); };
-        return (<div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}><Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} /><p className="text-slate-600 font-bold mb-1">CSVファイルをドラッグ＆ドロップ</p><p className="text-xs text-slate-400 mb-4">または</p><input type="file" accept=".csv" className="hidden" id="csv-upload" onChange={(e) => e.target.files && handleFile(e.target.files[0])} /><label htmlFor="csv-upload" className="bg-[#7C4DFF] text-white px-4 py-2 rounded-lg hover:bg-[#651FFF] cursor-pointer inline-block text-sm font-bold">ファイルを選択</label></div>);
-    };
+        // DataInput Component (Updated: Textarea restoration)
+        // 修正: 確実に表示されるようにコンテナのスタイルを見直し、構造を単純化
+        const DataInput = ({ onDataParsed }) => {
+            const [text, setText] = useState('');
+            const [dragActive, setDragActive] = useState(false);
+            
+            const handleTextParse = () => {
+                if (!text) return;
+                Papa.parse(text, {
+                    complete: (results) => onDataParsed(results.data),
+                    skipEmptyLines: true,
+                    header: false 
+                });
+            };
 
-    const OptionOI=({charts,setCharts})=>{const[ticker,setTicker]=useState('');const[error,setError]=useState(null);const handleData=(rows)=>{const step=50;const res=processOptionData(rows,step);if(res.error){setError(res.error);}else{setError(null);const newChart={id:Date.now().toString(),data:res.data,step:step,rawRows:rows};setCharts([...charts,newChart]);}};const handleStepChange=(id,newStep,newData)=>{setCharts(charts.map(c=>c.id===id?{...c,step:newStep,data:newData}:c));};const handleTickerNav=()=>{if(!ticker)return;const symbol=ticker.trim().toUpperCase();window.open(`https://optioncharts.io/options/${symbol}/option-chain`,'_blank');};return(<div className="h-full flex flex-col pb-20"><div className="unified-header-card"><div className="unified-header-title"><Icon name="BarChart3" size={28} /> Option 分析</div><p className="unified-header-sub">建玉の壁を可視化</p></div>{charts.length>0&&<button onClick={()=>setCharts([])} className="text-sm text-red-500 hover:underline mb-4">データをクリア</button>}{charts.map(chart=>(<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange}/>))}{error&&<div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle"/>{error}</div>}<div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl"><p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p><div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">{[{label:'QQQ',url:'https://optioncharts.io/options/QQQ/option-chain'},{label:'SPY',url:'https://optioncharts.io/options/SPY/option-chain'},{label:'DJI',url:'https://optioncharts.io/options/$DJX/option-chain'},{label:'IWM',url:'https://optioncharts.io/options/IWM/option-chain'},{label:'VIX',url:'https://optioncharts.io/options/$VIX/option-chain'},{label:'NVIDIA',url:'https://optioncharts.io/options/NVDA/option-chain'},{label:'APPL',url:'https://optioncharts.io/options/AAPL/option-chain'},{label:'AMZN',url:'https://optioncharts.io/options/AMZN/option-chain'},{label:'GLD',url:'https://optioncharts.io/options/GLD/option-chain'},{label:'SLV',url:'https://optioncharts.io/options/SLV/option-chain'}].map(l=>(<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10}/></a>))}</div><div className="mb-10 flex items-center gap-2"><span className="text-sm text-slate-500 font-bold">Ticker:</span><input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key==='Enter'&&handleTickerNav()}/><button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button></div><DataInput onDataParsed={handleData}/></div></div>);};
+            const handleFile = (file) => {
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => Papa.parse(event.target.result, { header: false, skipEmptyLines: true, complete: (res) => onDataParsed(res.data) });
+                reader.readAsText(file);
+            };
+
+            const handleDrag = (e) => { e.preventDefault(); e.stopPropagation(); if (e.type === "dragenter" || e.type === "dragover") setDragActive(true); else if (e.type === "dragleave") setDragActive(false); };
+            const handleDrop = (e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
+
+            return (
+                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 flex flex-col gap-6 w-full">
+                    {/* File Upload Area */}
+                    <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors relative ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
+                        <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
+                        <p className="text-slate-600 font-bold mb-1">CSVファイルをドラッグ＆ドロップ</p>
+                        <p className="text-xs text-slate-400 mb-4">または</p>
+                        <input type="file" accept=".csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files && handleFile(e.target.files[0])} />
+                        <span className="bg-[#7C4DFF] text-white px-4 py-2 rounded-lg hover:bg-[#651FFF] pointer-events-none inline-block text-sm font-bold">ファイルを選択</span>
+                    </div>
+                    
+                    {/* Text Input Area (Restored) */}
+                    <div className="flex gap-2 w-full">
+                        <textarea 
+                            className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none min-h-[100px]"
+                            rows={4}
+                            placeholder="ここにデータを貼り付け..."
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                        />
+                        <button onClick={handleTextParse} disabled={!text} className="bg-slate-800 text-white px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-bold shrink-0">解析</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const OptionOI=({charts,setCharts})=>{const[ticker,setTicker]=useState('');const[error,setError]=useState(null);const handleData=(rows)=>{const step=50;const res=processOptionData(rows,step);if(res.error){setError(res.error);}else{setError(null);const newChart={id:Date.now().toString(),data:res.data,step:step,rawRows:rows};setCharts([...charts,newChart]);}};const handleStepChange=(id,newStep,newData)=>{setCharts(charts.map(c=>c.id===id?{...c,step:newStep,data:newData}:c));};const handleTickerNav=()=>{if(!ticker)return;const symbol=ticker.trim().toUpperCase();window.open(`https://optioncharts.io/options/${symbol}/option-chain`,'_blank');};return(<div className="h-full flex flex-col pb-20"><div className="unified-header-card"><div className="unified-header-title"><Icon name="BarChart3" size={28} /> Option 分析</div><p className="unified-header-sub">建玉の壁を可視化</p></div>{charts.length>0&&<button onClick={()=>setCharts([])} className="text-sm text-red-500 hover:underline mb-4">データをクリア</button>}{charts.map(chart=>(<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange}/>))}{error&&<div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle"/>{error}</div>}<div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl"><p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p><div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">{[{label:'QQQ',url:'https://optioncharts.io/options/QQQ/option-chain'},{label:'SPY',url:'https://optioncharts.io/options/SPY/option-chain'},{label:'DJI',url:'https://optioncharts.io/options/$DJX/option-chain'},{label:'IWM',url:'https://optioncharts.io/options/IWM/option-chain'},{label:'VIX',url:'https://optioncharts.io/options/$VIX/option-chain'},{label:'NVIDIA',url:'https://optioncharts.io/options/NVDA/option-chain'},{label:'APPL',url:'https://optioncharts.io/options/AAPL/option-chain'},{label:'AMZN',url:'https://optioncharts.io/options/AMZN/option-chain'},{label:'GLD',url:'https://optioncharts.io/options/GLD/option-chain'},{label:'SLV',url:'https://optioncharts.io/options/SLV/option-chain'}].map(l=>(<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10}/></a>))}</div><div className="mb-10 flex items-center gap-2"><span className="text-sm text-slate-500 font-bold">Ticker:</span><input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key==='Enter'&&handleTickerNav()}/><button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button></div><DataInput onDataParsed={handleData}/></div></div>);};
 
     const processOptionData=(rawRows,step=50)=>{if(!rawRows||rawRows.length<2)return{data:[],error:'データが不足しています。'};const strikeRegex=/(strike|行使価格|koushi)/i;const oiRegex=/(open\s*int|oi|建玉|tategyoku)/i;const parseNum=(val)=>{if(typeof val==='number')return val;if(!val)return 0;let str=String(val).toUpperCase();let multiplier=1;if(str.endsWith('K'))multiplier=1000;else if(str.endsWith('M'))multiplier=1000000;str=str.replace(/[^0-9.-]/g,'').trim();const num=parseFloat(str);return isNaN(num)?0:num*multiplier;};let reshapeHeaderIndex=-1;let reshapeWidth=0;const getHeaderInfo=(row)=>{const sRow=row.map(c=>String(c).trim());let sCol=-1,oiCols=[];sRow.forEach((cell,i)=>{if(strikeRegex.test(cell))sCol=i;else if(oiRegex.test(cell))oiCols.push(i);});return{sCol,oiCols,colCount:row.length};};for(let r=0;r<Math.min(rawRows.length,50);r++){const info=getHeaderInfo(rawRows[r]);if(info.sCol!==-1&&info.oiCols.length>=2&&info.colCount>1){let singleColCount=0;for(let k=1;k<=10&&(r+k)<rawRows.length;k++){if(rawRows[r+k].length===1||rawRows[r+k].length<info.colCount/2)singleColCount++;}if(singleColCount>=5){reshapeHeaderIndex=r;reshapeWidth=info.colCount;break;}}}if(reshapeWidth>0&&reshapeHeaderIndex!==-1){const headerRow=rawRows[reshapeHeaderIndex];const flatData=[];for(let i=reshapeHeaderIndex+1;i<rawRows.length;i++){const row=rawRows[i];for(const cell of row){if(cell!==null&&cell!==undefined&&String(cell).trim()!=='')flatData.push(cell);}}const newRows=[headerRow];let currentChunk=[];for(const cell of flatData){currentChunk.push(cell);if(currentChunk.length===reshapeWidth){newRows.push(currentChunk);currentChunk=[];}}rawRows=newRows;}let bestCandidate={headerIndex:-1,strikeCol:-1,callCol:-1,putCol:-1,score:0};for(let r=0;r<Math.min(rawRows.length,50);r++){const row=rawRows[r].map(c=>String(c).trim());let sCol=-1,oiCols=[];row.forEach((cell,i)=>{if(strikeRegex.test(cell))sCol=i;else if(oiRegex.test(cell))oiCols.push(i);});if(sCol!==-1&&oiCols.length>=2){let cCol=-1,pCol=-1;const oi1=row[oiCols[0]].toLowerCase();const oi2=row[oiCols[1]].toLowerCase();if(oi1.includes('call')||oi1.includes('コール')){cCol=oiCols[0];}if(oi1.includes('put')||oi1.includes('プット')){pCol=oiCols[0];}if(oi2.includes('call')||oi2.includes('コール')){cCol=oiCols[1];}if(oi2.includes('put')||oi2.includes('プット')){pCol=oiCols[1];}if(cCol===-1||pCol===-1){cCol=oiCols[0];pCol=oiCols[1];}bestCandidate={headerIndex:r,strikeCol:sCol,callCol:cCol,putCol:pCol,score:10};break;}}if(bestCandidate.headerIndex===-1)return{data:[],error:'ヘッダーが見つかりませんでした。'};const{headerIndex,strikeCol,callCol,putCol}=bestCandidate;const dataMap=new Map();const safeStep=step>0?step:1;for(let i=headerIndex+1;i<rawRows.length;i++){const row=rawRows[i];if(!row||row.length<=Math.max(strikeCol,callCol,putCol))continue;const strike=parseNum(row[strikeCol]);const oi1=parseNum(row[callCol]);const oi2=parseNum(row[putCol]);if(strike>0){const roundedStrike=Math.round(strike/safeStep)*safeStep;if(!dataMap.has(roundedStrike))dataMap.set(roundedStrike,{call:0,put:0});const d=dataMap.get(roundedStrike);d.call+=oi1;d.put+=oi2;}}const sortedData=Array.from(dataMap.entries()).sort((a,b)=>b[0]-a[0]).map(([strike,val])=>({strike,diff:val.call-val.put,call:val.call,put:val.put}));return{data:sortedData,error:sortedData.length===0?"有効なデータが見つかりませんでした":null};};
     
@@ -754,6 +815,9 @@ sign{(raw*1000).toLocaleString('ja-JP')}円)`;}return'';},afterLabel:(context)=>
                         <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
                         <NavItem id="participant" label="手口上位" icon="Briefcase" />
                         {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
+                        
+                        {/* 変更点: バージョン表示を追加 (反映確認用) */}
+                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.01.31-fix</div>}
                     </div>
                     {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
                 </aside>
