@@ -217,6 +217,49 @@
             return <textarea ref={textareaRef} />;
         };
 
+        // --- Data Input for Option OI ---
+        const DataInput = ({ onDataParsed }) => {
+            const [text, setText] = useState('');
+            const [dragActive, setDragActive] = useState(false);
+            const handleParse = (input) => {
+                Papa.parse(input, {
+                    complete: (results) => onDataParsed(results.data),
+                    skipEmptyLines: true,
+                    header: false 
+                });
+            };
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setDragActive(false);
+                if (e.dataTransfer.files?.[0]) handleParse(e.dataTransfer.files[0]);
+            };
+            return (
+                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 space-y-6">
+                    <div 
+                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`}
+                        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                        onDragLeave={() => setDragActive(false)}
+                        onDrop={handleDrop}
+                    >
+                        <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
+                        <p className="text-slate-600 font-medium">CSVファイルをドラッグ＆ドロップ</p>
+                        <p className="text-slate-400 text-sm">または</p>
+                        <input type="file" className="mt-2 text-sm text-slate-500" onChange={(e) => e.target.files?.[0] && handleParse(e.target.files[0])} />
+                    </div>
+                    <div className="flex gap-2">
+                        <textarea 
+                            className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none"
+                            rows={4}
+                            placeholder="ここにデータを貼り付け..."
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                        />
+                        <button onClick={() => handleParse(text)} disabled={!text} className="bg-[#7C4DFF] text-white px-4 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-medium">解析</button>
+                    </div>
+                </div>
+            );
+        };
+
         // --- Quotes Manager ---
         const QuotesManager = ({ quotes, setQuotes }) => {
             const [input, setInput] = useState("");
@@ -278,6 +321,9 @@
             );
         };
 
+        // --- Option OI Logic Helper ---
+        const processOptionData=(rawRows,step=50)=>{if(!rawRows||rawRows.length<2)return{data:[],error:'データが不足しています。'};const strikeRegex=/(strike|行使価格|koushi)/i;const oiRegex=/(open\s*int|oi|建玉|tategyoku)/i;const parseNum=(val)=>{if(typeof val==='number')return val;if(!val)return 0;let str=String(val).toUpperCase();let multiplier=1;if(str.endsWith('K'))multiplier=1000;else if(str.endsWith('M'))multiplier=1000000;str=str.replace(/[^0-9.-]/g,'').trim();const num=parseFloat(str);return isNaN(num)?0:num*multiplier;};let reshapeHeaderIndex=-1;let reshapeWidth=0;const getHeaderInfo=(row)=>{const sRow=row.map(c=>String(c).trim());let sCol=-1,oiCols=[];sRow.forEach((cell,i)=>{if(strikeRegex.test(cell))sCol=i;else if(oiRegex.test(cell))oiCols.push(i);});return{sCol,oiCols,colCount:row.length};};for(let r=0;r<Math.min(rawRows.length,50);r++){const info=getHeaderInfo(rawRows[r]);if(info.sCol!==-1&&info.oiCols.length>=2&&info.colCount>1){let singleColCount=0;for(let k=1;k<=10&&(r+k)<rawRows.length;k++){if(rawRows[r+k].length===1||rawRows[r+k].length<info.colCount/2)singleColCount++;}if(singleColCount>=5){reshapeHeaderIndex=r;reshapeWidth=info.colCount;break;}}}if(reshapeWidth>0&&reshapeHeaderIndex!==-1){const headerRow=rawRows[reshapeHeaderIndex];const flatData=[];for(let i=reshapeHeaderIndex+1;i<rawRows.length;i++){const row=rawRows[i];for(const cell of row){if(cell!==null&&cell!==undefined&&String(cell).trim()!=='')flatData.push(cell);}}const newRows=[headerRow];let currentChunk=[];for(const cell of flatData){currentChunk.push(cell);if(currentChunk.length===reshapeWidth){newRows.push(currentChunk);currentChunk=[];}}rawRows=newRows;}let bestCandidate={headerIndex:-1,strikeCol:-1,callCol:-1,putCol:-1,score:0};for(let r=0;r<Math.min(rawRows.length,50);r++){const row=rawRows[r].map(c=>String(c).trim());let sCol=-1,oiCols=[];row.forEach((cell,i)=>{if(strikeRegex.test(cell))sCol=i;else if(oiRegex.test(cell))oiCols.push(i);});if(sCol!==-1&&oiCols.length>=2){let cCol=-1,pCol=-1;const oi1=row[oiCols[0]].toLowerCase();const oi2=row[oiCols[1]].toLowerCase();if(oi1.includes('call')||oi1.includes('コール')){cCol=oiCols[0];}if(oi1.includes('put')||oi1.includes('プット')){pCol=oiCols[0];}if(oi2.includes('call')||oi2.includes('コール')){cCol=oiCols[1];}if(oi2.includes('put')||oi2.includes('プット')){pCol=oiCols[1];}if(cCol===-1||pCol===-1){cCol=oiCols[0];pCol=oiCols[1];}bestCandidate={headerIndex:r,strikeCol:sCol,callCol:cCol,putCol:pCol,score:10};break;}}if(bestCandidate.headerIndex===-1)return{data:[],error:'ヘッダーが見つかりませんでした。'};const{headerIndex,strikeCol,callCol,putCol}=bestCandidate;const dataMap=new Map();const safeStep=step>0?step:1;for(let i=headerIndex+1;i<rawRows.length;i++){const row=rawRows[i];if(!row||row.length<=Math.max(strikeCol,callCol,putCol))continue;const strike=parseNum(row[strikeCol]);const oi1=parseNum(row[callCol]);const oi2=parseNum(row[putCol]);if(strike>0){const roundedStrike=Math.round(strike/safeStep)*safeStep;if(!dataMap.has(roundedStrike))dataMap.set(roundedStrike,{call:0,put:0});const d=dataMap.get(roundedStrike);d.call+=oi1;d.put+=oi2;}}const sortedData=Array.from(dataMap.entries()).sort((a,b)=>b[0]-a[0]).map(([strike,val])=>({strike,diff:val.call-val.put,call:val.call,put:val.put}));return{data:sortedData,error:sortedData.length===0?"有効なデータが見つかりませんでした":null};};
+
         // ==========================================
         //  投資カレンダー
         // ==========================================
@@ -316,7 +362,6 @@
             const stats = useMemo(() => {
                 const currentYearKey = currentDate.getFullYear().toString();
                 const currentMonthKey = getMonthKey(currentDate);
-                // 先月
                 const prevMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
                 const prevMonthKey = getMonthKey(prevMonthDate);
 
@@ -363,7 +408,6 @@
                 return weeks;
             }, [currentDate]);
 
-            // --- Custom X-Axis Tick for Chart ---
             const CustomAxisTick = (props) => {
                 const { x, y, payload } = props;
                 const d = new Date(currentDate.getFullYear(), currentDate.getMonth(), payload.value);
@@ -410,8 +454,6 @@
                     let newDetails = [];
                     if (detailData[key]) newDetails = Object.entries(detailData[key]).map(([name, amount]) => ({ name, amount }));
                     if (!newHistory[key]) newHistory[key] = { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', details: [] };
-                    // 既存の詳細があれば維持しつつ、新しい詳細で上書き（またはマージ）
-                    // ここではシンプルに新しいCSVデータの詳細で上書きするが、必要に応じてマージロジックを追加可能
                     newHistory[key] = { ...newHistory[key], [importCategory]: val, details: newDetails.length > 0 ? newDetails : existingDetails };
                     count++;
                 });
@@ -505,11 +547,11 @@
                 let tooltipContent = null;
                 if (data && data.details && data.details.length > 0) {
                     tooltipContent = (
-                        <div className="stock-tooltip"><div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600 bg-slate-50 -m-2 mb-1 p-2 rounded-t-lg">損益内訳 (CSV集計)</div><div className="max-h-[250px] overflow-y-auto">{data.details.map((d, i) => (<div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0"><span className="truncate w-36 text-slate-600 font-medium" title={d.name}>{d.name}</span><span className={`text-[10px] font-mono ${d.amount >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span></div>))}</div></div>
+                        <div className="stock-tooltip"><div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600 bg-slate-50 -m-2 mb-1 p-2 rounded-t-lg">損益内訳</div><div className="max-h-[250px] overflow-y-auto">{data.details.map((d, i) => (<div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0"><span className="truncate w-36 text-slate-600 font-medium" title={d.name}>{d.name}</span><span className={`text-[10px] font-mono ${d.amount >= 0 ? 'text-[#536DFE]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span></div>))}</div></div>
                     );
                 }
 
-                // 復元した StatCard コンポーネント (ラベルなしバージョン)
+                // 復元した StatCard コンポーネント (ラベルなしバージョン、背景色あり)
                 const StatCard = ({ type, val }) => (
                     <div className={`flex justify-end items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
                         <span className={`w-full text-right ${val < 0 ? 'text-[#FF4081]' : ''}`}>{formatMoney(val)}</span>
@@ -586,7 +628,7 @@
                     {/* Monthly Chart */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-[#334155] flex items-center gap-2">
+                            <h3 className="text-lg font-bold text-[#7C4DFF] flex items-center gap-2">
                                 <Icon name="BarChart3" size={20} /> 月間日次推移 ({currentDate.getFullYear()}年{currentDate.getMonth()+1}月)
                                 <div className="flex items-center gap-1 ml-4 text-sm text-slate-500 font-normal">
                                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="hover:bg-slate-100 p-1 rounded"><Icon name="ChevronLeft" size={16} /></button>
