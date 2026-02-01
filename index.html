@@ -88,72 +88,78 @@
         }
 
         /* ==========================================================================
-           Markdown Style Fix (Headers Resizing) - 修正版 v2
+           Markdown Style Fix (Headers Resizing)
            ========================================================================== */
         
-        /* 共通設定 */
         .markdown-preview, .editor-preview { color: #334155; font-size: 13px; line-height: 1.6; }
 
-        /* 
-           1. エディタ入力中のスタイル (.CodeMirror .cm-header-*)
-           EasyMDEのエディタ内で「#」を入力した際の文字サイズ設定
-           前回小さすぎたため、視認できるサイズへ修正
-        */
         .CodeMirror .cm-header-1 {
-            font-size: 1.6rem !important; /* 約20px (大きすぎず、本文よりは明確に大きい) */
-            line-height: 1.4;
-            font-weight: 700;
-            color: #1e293b;
+            font-size: 1.25rem !important; /* 約20px */
+            line-height: 1.4; font-weight: 700; color: #1e293b;
         }
         .CodeMirror .cm-header-2 {
-            font-size: 1.4rem !important; /* 約18px */
-            line-height: 1.4;
-            font-weight: 600;
-            color: #334155;
+            font-size: 1.125rem !important; /* 約18px */
+            line-height: 1.4; font-weight: 600; color: #334155;
         }
         .CodeMirror .cm-header-3 {
-            font-size: 1.15rem !important; /* 約16px */
-            line-height: 1.4;
-            font-weight: 600;
-            color: #475569;
-        }
-
-        /* 
-           2. プレビュー表示のスタイル 
-           (.editor-preview h*) : EasyMDEのプレビューモード
-           (.markdown-preview h*) : 格言集などの表示エリア
-        */
-        .editor-preview h1, .editor-preview-side h1, .markdown-preview h1 { 
-            font-size: 1.25rem !important; /* 約20px */
-            font-weight: 700; 
-            margin: 0.6em 0 0.4em 0; 
-            border-bottom: 1px solid #e2e8f0; 
-            padding-bottom: 0.2em; 
-            color: #1e293b; 
-        }
-        
-        .editor-preview h2, .editor-preview-side h2, .markdown-preview h2 { 
-            font-size: 1.125rem !important; /* 約18px */
-            font-weight: 600; 
-            margin: 0.5em 0 0.3em 0; 
-            color: #334155; 
-            border-left: 4px solid #7C4DFF; 
-            padding-left: 0.5em; 
-        }
-        
-        .editor-preview h3, .editor-preview-side h3, .markdown-preview h3 { 
             font-size: 1rem !important; /* 約16px */
-            font-weight: 600; 
-            margin: 0.4em 0 0.2em 0; 
-            color: #475569; 
+            line-height: 1.4; font-weight: 600; color: #475569;
         }
 
+        .editor-preview h1, .editor-preview-side h1, .markdown-preview h1 { 
+            font-size: 1.25rem !important; font-weight: 700; margin: 0.6em 0 0.4em 0; 
+            border-bottom: 1px solid #e2e8f0; padding-bottom: 0.2em; color: #1e293b; 
+        }
+        .editor-preview h2, .editor-preview-side h2, .markdown-preview h2 { 
+            font-size: 1.125rem !important; font-weight: 600; margin: 0.5em 0 0.3em 0; 
+            color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; 
+        }
+        .editor-preview h3, .editor-preview-side h3, .markdown-preview h3 { 
+            font-size: 1rem !important; font-weight: 600; margin: 0.4em 0 0.2em 0; color: #475569; 
+        }
         .editor-preview ul, .editor-preview-side ul, .markdown-preview ul {
-            list-style-type: disc; 
-            padding-left: 1.5em; 
-            margin-bottom: 0.6em; 
+            list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.6em; 
         }
         
+        /* ==========================================================================
+           EasyMDE & CodeMirror Scroll Fix (Mobile Optimized)
+           ========================================================================== */
+        
+        /* コンテナをFlexboxにして高さを親に合わせる */
+        .EasyMDEContainer { 
+            background: white; 
+            border-radius: 0.5rem; 
+            height: 100%; /* 親要素(div.flex-1)いっぱいに広げる */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ツールバーのスタイル */
+        .editor-toolbar { 
+            border: 1px solid #e2e8f0; 
+            border-radius: 0.5rem 0.5rem 0 0; 
+            background-color: #f8fafc; 
+            opacity: 1; 
+            flex-shrink: 0; /* 縮小させない */
+        }
+
+        /* エディタ本体のスタイル調整 */
+        .CodeMirror { 
+            border: 1px solid #e2e8f0; 
+            border-radius: 0 0 0.5rem 0.5rem; 
+            font-family: monospace; 
+            font-size: 14px; 
+            
+            /* Flexbox内で残りの高さを埋める */
+            flex: 1; 
+            height: auto !important; /* EasyMDEのデフォルト高さを無効化 */
+            
+            /* スクロール連鎖（背景スクロール）防止: 重要 */
+            overscroll-behavior-y: contain; 
+        }
+
+        .editor-statusbar { display: none; }
+
         /* ========================================================================== */
 
         /* ツールチップ */
@@ -178,12 +184,6 @@
             position: relative; transition: transform 0.2s, box-shadow 0.2s;
         }
         .quote-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-
-        /* EasyMDE */
-        .EasyMDEContainer { background: white; border-radius: 0.5rem; }
-        .CodeMirror { border: 1px solid #e2e8f0; border-radius: 0.5rem; font-family: monospace; font-size: 14px; }
-        .editor-toolbar { border: 1px solid #e2e8f0; border-radius: 0.5rem 0.5rem 0 0; background-color: #f8fafc; opacity: 1; }
-        .editor-statusbar { display: none; }
 
         /* 統一ヘッダーカード */
         .unified-header-card {
@@ -707,8 +707,8 @@
                                             {editData.details && editData.details.length > 0 && (<div className="mt-6 pt-4 border-t border-slate-200"><h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV集計)</h4><div className="bg-white border border-slate-200 rounded p-2 space-y-1 text-xs max-h-40 overflow-y-auto">{editData.details.map((d, i) => (<div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0" title={d.name}><span className="text-slate-600 truncate flex-1">{d.name}</span><span className={`font-mono ${d.amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span></div>))}</div></div>)}
                                         </div>
                                     </div>
-                                    {/* Markdown Column: モバイルでは 'diary' タブの時のみ表示 */}
-                                    <div className={`flex-1 bg-white overflow-hidden p-6 flex-col ${mobileModalTab === 'diary' ? 'flex' : 'hidden'} lg:flex`}>
+                                    {/* Markdown Column: モバイルでは 'diary' タブの時のみ表示。パディングをモバイル向けに縮小 (p-2) */}
+                                    <div className={`flex-1 bg-white overflow-hidden p-2 lg:p-6 flex-col ${mobileModalTab === 'diary' ? 'flex' : 'hidden'} lg:flex`}>
                                         <div className="flex justify-between items-center mb-2"><div className="flex items-center gap-2"><Icon name="Pencil" size={14} className="text-slate-500" /><span className="text-xs font-bold text-slate-500 uppercase">Investment Diary (Markdown)</span></div></div>
                                         <div className="flex-1 overflow-hidden relative"><EasyMDEEditor value={editData.note} onChange={(val) => setEditData({ ...editData, note: val })} /></div>
                                     </div>
@@ -891,8 +891,8 @@
                         <NavItem id="participant" label="手口上位" icon="Briefcase" />
                         {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                         
-                        {/* 変更点: Markdown Style Fix 版 v2026.02.01-fix2 */}
-                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix2</div>}
+                        {/* 変更点: Mobile Scroll Fix 版 v2026.02.01-fix3 */}
+                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix3</div>}
                     </div>
                     {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
                 </aside>
