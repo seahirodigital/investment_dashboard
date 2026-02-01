@@ -88,30 +88,34 @@
         }
 
         /* ==========================================================================
-           Markdown Style Fix (Headers Resizing)
+           Markdown Style Fix (Headers Resizing) - 修正版 v2
            ========================================================================== */
         
         /* 共通設定 */
-        .markdown-preview, .editor-preview { color: #334155; font-size: 13px; line-height: 1.5; }
+        .markdown-preview, .editor-preview { color: #334155; font-size: 13px; line-height: 1.6; }
 
         /* 
            1. エディタ入力中のスタイル (.CodeMirror .cm-header-*)
-           EasyMDEのエディタ内で「#」を入力した際の文字サイズを強制的に小さくする
+           EasyMDEのエディタ内で「#」を入力した際の文字サイズ設定
+           前回小さすぎたため、視認できるサイズへ修正
         */
         .CodeMirror .cm-header-1 {
-            font-size: 1rem !important; /* H4相当 (16px) */
-            line-height: 1.5;
+            font-size: 1.25rem !important; /* 約20px (大きすぎず、本文よりは明確に大きい) */
+            line-height: 1.4;
             font-weight: 700;
+            color: #1e293b;
         }
         .CodeMirror .cm-header-2 {
-            font-size: 0.875rem !important; /* H5相当 (14px) */
-            line-height: 1.5;
+            font-size: 1.125rem !important; /* 約18px */
+            line-height: 1.4;
             font-weight: 600;
+            color: #334155;
         }
         .CodeMirror .cm-header-3 {
-            font-size: 0.75rem !important; /* H6相当 (12px) */
-            line-height: 1.5;
+            font-size: 1rem !important; /* 約16px */
+            line-height: 1.4;
             font-weight: 600;
+            color: #475569;
         }
 
         /* 
@@ -120,25 +124,25 @@
            (.markdown-preview h*) : 格言集などの表示エリア
         */
         .editor-preview h1, .editor-preview-side h1, .markdown-preview h1 { 
-            font-size: 1rem !important; /* H4相当 */
+            font-size: 1.25rem !important; /* 約20px */
             font-weight: 700; 
-            margin: 0.5em 0 0.3em 0; 
+            margin: 0.6em 0 0.4em 0; 
             border-bottom: 1px solid #e2e8f0; 
-            padding-bottom: 0.1em; 
+            padding-bottom: 0.2em; 
             color: #1e293b; 
         }
         
         .editor-preview h2, .editor-preview-side h2, .markdown-preview h2 { 
-            font-size: 0.875rem !important; /* H5相当 */
+            font-size: 1.125rem !important; /* 約18px */
             font-weight: 600; 
-            margin: 0.5em 0 0.2em 0; 
+            margin: 0.5em 0 0.3em 0; 
             color: #334155; 
-            border-left: 3px solid #7C4DFF; 
-            padding-left: 0.4em; 
+            border-left: 4px solid #7C4DFF; 
+            padding-left: 0.5em; 
         }
         
         .editor-preview h3, .editor-preview-side h3, .markdown-preview h3 { 
-            font-size: 0.75rem !important; /* H6相当 */
+            font-size: 1rem !important; /* 約16px */
             font-weight: 600; 
             margin: 0.4em 0 0.2em 0; 
             color: #475569; 
@@ -792,125 +796,125 @@
         const OptionOI=({charts,setCharts})=>{const[ticker,setTicker]=useState('');const[error,setError]=useState(null);const handleData=(rows)=>{const step=50;const res=processOptionData(rows,step);if(res.error){setError(res.error);}else{setError(null);const newChart={id:Date.now().toString(),data:res.data,step:step,rawRows:rows};setCharts([...charts,newChart]);}};const handleStepChange=(id,newStep,newData)=>{setCharts(charts.map(c=>c.id===id?{...c,step:newStep,data:newData}:c));};const handleTickerNav=()=>{if(!ticker)return;const symbol=ticker.trim().toUpperCase();window.open(`https://optioncharts.io/options/${symbol}/option-chain`,'_blank');};return(<div className="h-full flex flex-col pb-20"><div className="unified-header-card"><div className="unified-header-title"><Icon name="BarChart3" size={28} /> Option 分析</div><p className="unified-header-sub">建玉の壁を可視化</p></div>{charts.length>0&&<button onClick={()=>setCharts([])} className="text-sm text-red-500 hover:underline mb-4">データをクリア</button>}{charts.map(chart=>(<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange}/>))}{error&&<div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle"/>{error}</div>}<div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl"><p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p><div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">{[{label:'QQQ',url:'https://optioncharts.io/options/QQQ/option-chain'},{label:'SPY',url:'https://optioncharts.io/options/SPY/option-chain'},{label:'DJI',url:'https://optioncharts.io/options/$DJX/option-chain'},{label:'IWM',url:'https://optioncharts.io/options/IWM/option-chain'},{label:'VIX',url:'https://optioncharts.io/options/$VIX/option-chain'},{label:'NVIDIA',url:'https://optioncharts.io/options/NVDA/option-chain'},{label:'APPL',url:'https://optioncharts.io/options/AAPL/option-chain'},{label:'AMZN',url:'https://optioncharts.io/options/AMZN/option-chain'},{label:'GLD',url:'https://optioncharts.io/options/GLD/option-chain'},{label:'SLV',url:'https://optioncharts.io/options/SLV/option-chain'}].map(l=>(<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10}/></a>))}</div><div className="mb-10 flex items-center gap-2"><span className="text-sm text-slate-500 font-bold">Ticker:</span><input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key==='Enter'&&handleTickerNav()}/><button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button></div><DataInput onDataParsed={handleData}/></div></div>);};
 
     const processOptionData=(rawRows,step=50)=>{if(!rawRows||rawRows.length<2)return{data:[],error:'データが不足しています。'};const strikeRegex=/(strike|行使価格|koushi)/i;const oiRegex=/(open\s*int|oi|建玉|tategyoku)/i;const parseNum=(val)=>{if(typeof val==='number')return val;if(!val)return 0;let str=String(val).toUpperCase();let multiplier=1;if(str.endsWith('K'))multiplier=1000;else if(str.endsWith('M'))multiplier=1000000;str=str.replace(/[^0-9.-]/g,'').trim();const num=parseFloat(str);return isNaN(num)?0:num*multiplier;};let reshapeHeaderIndex=-1;let reshapeWidth=0;const getHeaderInfo=(row)=>{const sRow=row.map(c=>String(c).trim());let sCol=-1,oiCols=[];sRow.forEach((cell,i)=>{if(strikeRegex.test(cell))sCol=i;else if(oiRegex.test(cell))oiCols.push(i);});return{sCol,oiCols,colCount:row.length};};for(let r=0;r<Math.min(rawRows.length,50);r++){const info=getHeaderInfo(rawRows[r]);if(info.sCol!==-1&&info.oiCols.length>=2&&info.colCount>1){let singleColCount=0;for(let k=1;k<=10&&(r+k)<rawRows.length;k++){if(rawRows[r+k].length===1||rawRows[r+k].length<info.colCount/2)singleColCount++;}if(singleColCount>=5){reshapeHeaderIndex=r;reshapeWidth=info.colCount;break;}}}if(reshapeWidth>0&&reshapeHeaderIndex!==-1){const headerRow=rawRows[reshapeHeaderIndex];const flatData=[];for(let i=reshapeHeaderIndex+1;i<rawRows.length;i++){const row=rawRows[i];for(const cell of row){if(cell!==null&&cell!==undefined&&String(cell).trim()!=='')flatData.push(cell);}}const newRows=[headerRow];let currentChunk=[];for(const cell of flatData){currentChunk.push(cell);if(currentChunk.length===reshapeWidth){newRows.push(currentChunk);currentChunk=[];}}rawRows=newRows;}let bestCandidate={headerIndex:-1,strikeCol:-1,callCol:-1,putCol:-1,score:0};for(let r=0;r<Math.min(rawRows.length,50);r++){const row=rawRows[r].map(c=>String(c).trim());let sCol=-1,oiCols=[];row.forEach((cell,i)=>{if(strikeRegex.test(cell))sCol=i;else if(oiRegex.test(cell))oiCols.push(i);});if(sCol!==-1&&oiCols.length>=2){let cCol=-1,pCol=-1;const oi1=row[oiCols[0]].toLowerCase();const oi2=row[oiCols[1]].toLowerCase();if(oi1.includes('call')||oi1.includes('コール')){cCol=oiCols[0];}if(oi1.includes('put')||oi1.includes('プット')){pCol=oiCols[0];}if(oi2.includes('call')||oi2.includes('コール')){cCol=oiCols[1];}if(oi2.includes('put')||oi2.includes('プット')){pCol=oiCols[1];}if(cCol===-1||pCol===-1){cCol=oiCols[0];pCol=oiCols[1];}bestCandidate={headerIndex:r,strikeCol:sCol,callCol:cCol,putCol:pCol,score:10};break;}}if(bestCandidate.headerIndex===-1)return{data:[],error:'ヘッダーが見つかりませんでした。'};const{headerIndex,strikeCol,callCol,putCol}=bestCandidate;const dataMap=new Map();const safeStep=step>0?step:1;for(let i=headerIndex+1;i<rawRows.length;i++){const row=rawRows[i];if(!row||row.length<=Math.max(strikeCol,callCol,putCol))continue;const strike=parseNum(row[strikeCol]);const oi1=parseNum(row[callCol]);const oi2=parseNum(row[putCol]);if(strike>0){const roundedStrike=Math.round(strike/safeStep)*safeStep;if(!dataMap.has(roundedStrike))dataMap.set(roundedStrike,{call:0,put:0});const d=dataMap.get(roundedStrike);d.call+=oi1;d.put+=oi2;}}const sortedData=Array.from(dataMap.entries()).sort((a,b)=>b[0]-a[0]).map(([strike,val])=>({strike,diff:val.call-val.put,call:val.call,put:val.put}));return{data:sortedData,error:sortedData.length===0?"有効なデータが見つかりませんでした":null};};
+    
+    const OIChart=({id,initialData,initialStep,rawRows,onStepChange})=>{const[data,setData]=useState(initialData);const[step,setStep]=useState(initialStep);const[zoomY,setZoomY]=useState(1);const[zoomX,setZoomX]=useState(1);const mainRef=useRef(null);const leftRef=useRef(null);const bottomRef=useRef(null);useEffect(()=>{if(rawRows&&step!==initialStep){const res=processOptionData(rawRows,step);if(!res.error){setData(res.data);onStepChange(id,step,res.data);}}},[step]);const handleScroll=()=>{if(mainRef.current&&leftRef.current&&bottomRef.current){leftRef.current.scrollTop=mainRef.current.scrollTop;bottomRef.current.scrollLeft=mainRef.current.scrollLeft;}};const barHeight=30;const totalHeight=Math.max(450,data.length*barHeight*zoomY);const chartWidth=`${zoomX*100}%`;const maxVal=Math.max(...data.map(d=>Math.abs(d.diff)),100);const handleWheel=(e,axis)=>{if(e.ctrlKey||axis==='main')return;e.preventDefault();const delta=e.deltaY>0?-0.1:0.1;if(axis==='y')setZoomY(z=>Math.max(0.1,Math.min(5,z+delta)));if(axis==='x')setZoomX(z=>Math.max(0.5,Math.min(3,z+delta)));};const CustomTooltip=({active,payload,label})=>{if(!active||!payload?.length)return null;const d=payload[0].payload;return(<div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50"><p className="font-bold">Strike: {label}</p><p className={d.diff>=0?'text-[#7C4DFF]':'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p><div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div></div>);};return(<div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden mb-6 animate-fade-in-up"><div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap"><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500">HEIGHT</span><button onClick={()=>setZoomY(z=>Math.max(0.1,z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button><input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20"/><button onClick={()=>setZoomY(z=>Math.min(5,z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button></div><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500">WIDTH</span><button onClick={()=>setZoomX(z=>Math.max(0.5,z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button><button onClick={()=>setZoomX(z=>Math.min(3,z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button></div><div className="flex items-center gap-2 border-l pl-4 border-slate-200"><span className="text-xs font-bold text-slate-500">STEP</span><input type="number" className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]" value={step} onChange={(e)=>setStep(parseFloat(e.target.value)||0)} min="0.1"/></div><button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button></div><div className="flex-1 flex overflow-hidden relative"><div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e,'y')}><div style={{height:totalHeight,width:'100%'}}><ResponsiveContainer><BarChart layout="vertical" data={data} margin={{top:10,bottom:0}}><YAxis type="category" dataKey="strike" width={90} tick={{fontSize:12,fontWeight:600}} interval={0}/><Bar dataKey="diff" fill="transparent"/></BarChart></ResponsiveContainer></div></div><div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}><div style={{width:chartWidth,height:totalHeight,minWidth:'100%'}}><ResponsiveContainer><BarChart layout="vertical" data={data} margin={{top:10,right:30,left:0,bottom:0}}><CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true}/><XAxis type="number" domain={[-maxVal,maxVal]} hide/><YAxis type="category" width={0} tick={false}/><Tooltip content={<CustomTooltip/>} cursor={{fill:'rgba(0,0,0,0.05)'}}/><ReferenceLine x={0} stroke="#334155"/><Bar dataKey="diff" barSize={barHeight*0.8}>{data.map((entry,index)=>(<Cell key={index} fill={entry.diff>=0?'#536DFE':'#FF4081'}/>))}<LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11,fill:'#64748b'}}/></Bar></BarChart></ResponsiveContainer></div></div></div><div className="h-8 border-t border-slate-200 flex shrink-0"><div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14}/></div><div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e)=>handleWheel(e,'x')}><div style={{width:chartWidth,minWidth:'100%',height:'100%'}}><ResponsiveContainer><BarChart layout="vertical" data={[{}]} margin={{right:30,left:0}}><XAxis type="number" domain={[-maxVal,maxVal]} tick={{fontSize:10}}/><YAxis type="category" width={0}/></BarChart></ResponsiveContainer></div></div></div></div>);};
 
-    const OIChart = ({ id, initialData, initialStep, rawRows, onStepChange }) => { const [data, setData] = useState(initialData); const [step, setStep] = useState(initialStep); const [zoomY, setZoomY] = useState(1); const [zoomX, setZoomX] = useState(1); const mainRef = useRef(null); const leftRef = useRef(null); const bottomRef = useRef(null); useEffect(() => { if (rawRows && step !== initialStep) { const res = processOptionData(rawRows, step); if (!res.error) { setData(res.data); onStepChange(id, step, res.data); } } }, [step]); const handleScroll = () => { if (mainRef.current && leftRef.current && bottomRef.current) { leftRef.current.scrollTop = mainRef.current.scrollTop; bottomRef.current.scrollLeft = mainRef.current.scrollLeft; } }; const barHeight = 30; const totalHeight = Math.max(450, data.length * barHeight * zoomY); const chartWidth = `${zoomX * 100}%`; const maxVal = Math.max(...data.map(d => Math.abs(d.diff)), 100); const handleWheel = (e, axis) => { if (e.ctrlKey || axis === 'main') return; e.preventDefault(); const delta = e.deltaY > 0 ? -0.1 : 0.1; if (axis === 'y') setZoomY(z => Math.max(0.1, Math.min(5, z + delta))); if (axis === 'x') setZoomX(z => Math.max(0.5, Math.min(3, z + delta))); }; const CustomTooltip = ({ active, payload, label }) => { if (!active || !payload?.length) return null; const d = payload[0].payload; return (<div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50"><p className="font-bold">Strike: {label}</p><p className={d.diff >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p><div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div></div>); }; return (<div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden mb-6 animate-fade-in-up"><div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap"><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500">HEIGHT</span><button onClick={() => setZoomY(z => Math.max(0.1, z - 0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16} /></button><input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e) => setZoomY(parseFloat(e.target.value))} className="w-20" /><button onClick={() => setZoomY(z => Math.min(5, z + 0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16} /></button></div><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500">WIDTH</span><button onClick={() => setZoomX(z => Math.max(0.5, z - 0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16} /></button><button onClick={() => setZoomX(z => Math.min(3, z + 0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16} /></button></div><div className="flex items-center gap-2 border-l pl-4 border-slate-200"><span className="text-xs font-bold text-slate-500">STEP</span><input type="number" className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]" value={step} onChange={(e) => setStep(parseFloat(e.target.value) || 0)} min="0.1" /></div><button onClick={() => { setZoomY(1); setZoomX(1); }} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14} /> Reset</button></div><div className="flex-1 flex overflow-hidden relative"><div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e) => handleWheel(e, 'y')}><div style={{ height: totalHeight, width: '100%' }}><ResponsiveContainer><BarChart layout="vertical" data={data} margin={{ top: 10, bottom: 0 }}><YAxis type="category" dataKey="strike" width={90} tick={{ fontSize: 12, fontWeight: 600 }} interval={0} /><Bar dataKey="diff" fill="transparent" /></BarChart></ResponsiveContainer></div></div><div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}><div style={{ width: chartWidth, height: totalHeight, minWidth: '100%' }}><ResponsiveContainer><BarChart layout="vertical" data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} /><XAxis type="number" domain={[-maxVal, maxVal]} hide /><YAxis type="category" width={0} tick={false} /><Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.05)' }} /><ReferenceLine x={0} stroke="#334155" /><Bar dataKey="diff" barSize={barHeight * 0.8}>{data.map((entry, index) => (<Cell key={index} fill={entry.diff >= 0 ? '#536DFE' : '#FF4081'} />))}<LabelList dataKey="diff" position="insideRight" formatter={(v) => v.toLocaleString()} style={{ fontSize: 11, fill: '#64748b' }} /></Bar></BarChart></ResponsiveContainer></div></div></div><div className="h-8 border-t border-slate-200 flex shrink-0"><div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14} /></div><div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e) => handleWheel(e, 'x')}><div style={{ width: chartWidth, minWidth: '100%', height: '100%' }}><ResponsiveContainer><BarChart layout="vertical" data={[{}]} margin={{ right: 30, left: 0 }}><XAxis type="number" domain={[-maxVal, maxVal]} tick={{ fontSize: 10 }} /><YAxis type="category" width={0} /></BarChart></ResponsiveContainer></div></div></div></div>); };
+    // ==========================================
+    //  Main Layout
+    // ==========================================
+    const App = () => {
+        const [view, setView] = useState('calendar');
+        const [sidebarOpen, setSidebarOpen] = useState(false);
+        const [sidebarWidth, setSidebarWidth] = useState(260);
+        const [isCollapsed, setIsCollapsed] = useState(false);
+        const [isResizing, setIsResizing] = useState(false);
+        const [optionCharts, setOptionCharts] = useState([]);
 
-        // ==========================================
-        //  Main Layout
-        // ==========================================
-        const App = () => {
-            const [view, setView] = useState('calendar');
-            const [sidebarOpen, setSidebarOpen] = useState(false);
-            const [sidebarWidth, setSidebarWidth] = useState(260);
-            const [isCollapsed, setIsCollapsed] = useState(false);
-            const [isResizing, setIsResizing] = useState(false);
-            const [optionCharts, setOptionCharts] = useState([]);
+        const [historyData, setHistoryData] = useState({});
+        const [customLinks, setCustomLinks] = useState([]);
+        const [quotes, setQuotes] = useState([]);
+        const [gistToken] = useState(localStorage.getItem('gist_token') || '');
+        const [gistId] = useState(localStorage.getItem('gist_id') || '');
 
-            const [historyData, setHistoryData] = useState({});
-            const [customLinks, setCustomLinks] = useState([]);
-            const [quotes, setQuotes] = useState([]);
-            const [gistToken] = useState(localStorage.getItem('gist_token') || '');
-            const [gistId] = useState(localStorage.getItem('gist_id') || '');
-
-            useEffect(() => {
-                const loadLocal = () => {
-                    try {
-                        const h = localStorage.getItem('history_data'); if (h) setHistoryData(JSON.parse(h));
-                        const l = localStorage.getItem('market-dash-links'); if (l) setCustomLinks(JSON.parse(l));
-                        const q = localStorage.getItem('market-dash-quotes'); if (q) setQuotes(JSON.parse(q));
-                    } catch (e) { console.error("Local Load Failed", e); }
-                };
-                loadLocal();
-                if (gistToken && gistId) {
-                    fetch(`https://api.github.com/gists/${gistId.trim()}`, { headers: { 'Authorization': `token ${gistToken.trim()}` } })
-                        .then(res => res.json())
-                        .then(json => {
-                            if (json.files && json.files['market_data.json']) {
-                                const content = JSON.parse(json.files['market_data.json'].content);
-                                if (content.history) setHistoryData(content.history);
-                                if (content.links) setCustomLinks(content.links);
-                                if (content.quotes) setQuotes(content.quotes);
-                            }
-                        })
-                        .catch(e => console.error("Gist Init Load Failed", e));
-                }
-            }, []);
-
-            const saveAllData = (newHistory, newLinks, newQuotes) => {
-                const h = newHistory !== undefined ? newHistory : historyData;
-                const l = newLinks !== undefined ? newLinks : customLinks;
-                const q = newQuotes !== undefined ? newQuotes : quotes;
-                if (newHistory !== undefined) { setHistoryData(h); localStorage.setItem('history_data', JSON.stringify(h)); }
-                if (newLinks !== undefined) { setCustomLinks(l); localStorage.setItem('market-dash-links', JSON.stringify(l)); }
-                if (newQuotes !== undefined) { setQuotes(q); localStorage.setItem('market-dash-quotes', JSON.stringify(q)); }
-                if (gistToken && gistId) {
-                    const content = JSON.stringify({ history: h, links: l, quotes: q });
-                    fetch(`https://api.github.com/gists/${gistId.trim()}`, {
-                        method: 'PATCH',
-                        headers: { 'Authorization': `token ${gistToken.trim()}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ files: { 'market_data.json': { content: content } } })
-                    }).catch(e => console.error("Gist Save Failed", e));
-                }
+        useEffect(() => {
+            const loadLocal = () => {
+                try {
+                    const h = localStorage.getItem('history_data'); if (h) setHistoryData(JSON.parse(h));
+                    const l = localStorage.getItem('market-dash-links'); if (l) setCustomLinks(JSON.parse(l));
+                    const q = localStorage.getItem('market-dash-quotes'); if (q) setQuotes(JSON.parse(q));
+                } catch (e) { console.error("Local Load Failed", e); }
             };
+            loadLocal();
+            if (gistToken && gistId) {
+                fetch(`https://api.github.com/gists/${gistId.trim()}`, { headers: { 'Authorization': `token ${gistToken.trim()}` } })
+                    .then(res => res.json())
+                    .then(json => {
+                        if (json.files && json.files['market_data.json']) {
+                            const content = JSON.parse(json.files['market_data.json'].content);
+                            if (content.history) setHistoryData(content.history);
+                            if (content.links) setCustomLinks(content.links);
+                            if (content.quotes) setQuotes(content.quotes);
+                        }
+                    })
+                    .catch(e => console.error("Gist Init Load Failed", e));
+            }
+        }, []);
 
-            const [isAddingLink, setIsAddingLink] = useState(false);
-            const [newLinkLabel, setNewLinkLabel] = useState('');
-            const [newLinkUrl, setNewLinkUrl] = useState('');
-            const [linkType, setLinkType] = useState('link');
-            const [collapsedCategories, setCollapsedCategories] = useState({});
-            const [draggedIndex, setDraggedIndex] = useState(null);
-
-            const toggleCategory = (i) => setCollapsedCategories(p => ({ ...p, [i]: !p[i] }));
-            const openAllInGroup = (start) => { for (let i = start + 1; i < customLinks.length; i++) { if (customLinks[i].type === 'divider') break; if (customLinks[i].url) window.open(customLinks[i].url, '_blank'); } };
-            const addCustomLink = () => { if ((linkType === 'link' && newLinkLabel && newLinkUrl) || (linkType === 'divider' && newLinkLabel)) { let url = newLinkUrl; if (linkType === 'link' && !/^https?:\/\//i.test(url)) url = 'https://' + url; const newItem = { label: newLinkLabel, url: linkType === 'link' ? url : '', type: linkType }; const updated = [...customLinks, newItem]; setNewLinkLabel(''); setNewLinkUrl(''); setIsAddingLink(false); saveAllData(undefined, updated, undefined); } };
-            const removeCustomLink = (i) => { const updated = customLinks.filter((_, idx) => idx !== i); saveAllData(undefined, updated, undefined); };
-            const handleDragStart = (e, i) => { setDraggedIndex(i); e.dataTransfer.effectAllowed = 'move'; };
-            const handleDragOver = (e, i) => { e.preventDefault(); if (draggedIndex === null || draggedIndex === i) return; const newLinks = [...customLinks]; const [removed] = newLinks.splice(draggedIndex, 1); newLinks.splice(i, 0, removed); saveAllData(undefined, newLinks, undefined); setDraggedIndex(i); };
-
-            const startResizing = useCallback((e) => { e.preventDefault(); setIsResizing(true); }, []);
-            useEffect(() => { const handleMouseMove = (e) => { if (isResizing) { let w = e.clientX; if (w < 150) w = 150; if (w > 400) w = 400; setSidebarWidth(w); } }; const handleMouseUp = () => { if (isResizing) setIsResizing(false); }; if (isResizing) { document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', handleMouseUp); } return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); }; }, [isResizing]);
-
-            const NavItem = ({ id, label, icon }) => ( <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? label : ''}><Icon name={icon} size={20} />{!isCollapsed && <span className="font-medium text-sm">{label}</span>}</button> );
-
-            const renderCustomLinks = () => { const elements = []; let currentCategoryHidden = false; customLinks.forEach((link, i) => { if (link.type === 'divider') { currentCategoryHidden = collapsedCategories[i] || false; elements.push(<div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mt-3 mb-1 cursor-move transition-colors hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}><div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={14} /></div><div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => toggleCategory(i)}><Icon name={currentCategoryHidden ? "ChevronRight" : "ChevronLeft"} size={14} className="text-slate-400 transition-transform" style={{ transform: currentCategoryHidden ? 'rotate(0deg)' : 'rotate(-90deg)' }} /><Icon name="FolderOpen" size={14} className="text-[#7C4DFF]" /><span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate select-none">{link.label}</span></div><button onClick={() => openAllInGroup(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[#7C4DFF] transition-opacity"><Icon name="ExternalLink" size={12} /></button><button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button></div>); } else { if (!currentCategoryHidden) { elements.push(<div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} className={`group flex items-center gap-2 px-3 py-1 ml-4 rounded-lg transition-colors cursor-move hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}><div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={12} /></div><a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto"><Icon name="Link" size={12} className="shrink-0 text-slate-400" /><span className="truncate">{link.label}</span></a><button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button></div>); } } }); return elements; };
-
-            return (
-                <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
-                    <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-75 shadow-xl lg:shadow-none flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`} style={{ width: isCollapsed ? 70 : sidebarWidth }}>
-                        <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">{!isCollapsed && <span className="font-bold text-lg tracking-tight text-[#334155]">Dashboard</span>}<button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 text-slate-400 hover:text-[#7C4DFF] hover:bg-slate-50 rounded mx-auto lg:mx-0"><Icon name={isCollapsed ? "ChevronRight" : "ChevronLeft"} size={20} /></button></div>
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
-                            {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
-                            <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
-                            <NavItem id="quotes" label="投資の格言集" icon="Lightbulb" />
-                            <NavItem id="option" label="Option 分析" icon="BarChart3" />
-                            <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
-                            <NavItem id="participant" label="手口上位" icon="Briefcase" />
-                            {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
-                            
-                            {/* 変更点: Markdown Style Fix 版 v2026.02.01-fix2 */}
-                            {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix2</div>}
-                        </div>
-                        {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
-                    </aside>
-                    {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
-                    <div className="flex-1 flex flex-col min-w-0">
-                        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0"><button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button><span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : view === 'quotes' ? '投資の格言集' : '取引参加者別取引高'}</span></header>
-                        <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
-                            <div className="max-w-7xl mx-auto h-full">
-                                {view === 'calendar' ? <ProfitManager historyData={historyData} updateHistoryData={(nd) => saveAllData(nd, undefined, undefined)} customLinks={customLinks} setCustomLinks={(nl) => saveAllData(undefined, nl, undefined)} quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} saveAllData={saveAllData} /> :
-                                    view === 'quotes' ? <QuotesManager quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} /> :
-                                        view === 'jpx' ? <ForeignInvestors /> :
-                                            view === 'participant' ? <ParticipantVolume /> :
-                                                <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
-                            </div>
-                        </main>
-                    </div>
-                </div>
-            );
+        const saveAllData = (newHistory, newLinks, newQuotes) => {
+            const h = newHistory !== undefined ? newHistory : historyData;
+            const l = newLinks !== undefined ? newLinks : customLinks;
+            const q = newQuotes !== undefined ? newQuotes : quotes;
+            if (newHistory !== undefined) { setHistoryData(h); localStorage.setItem('history_data', JSON.stringify(h)); }
+            if (newLinks !== undefined) { setCustomLinks(l); localStorage.setItem('market-dash-links', JSON.stringify(l)); }
+            if (newQuotes !== undefined) { setQuotes(q); localStorage.setItem('market-dash-quotes', JSON.stringify(q)); }
+            if (gistToken && gistId) {
+                const content = JSON.stringify({ history: h, links: l, quotes: q });
+                fetch(`https://api.github.com/gists/${gistId.trim()}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `token ${gistToken.trim()}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: { 'market_data.json': { content: content } } })
+                }).catch(e => console.error("Gist Save Failed", e));
+            }
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        const [isAddingLink, setIsAddingLink] = useState(false);
+        const [newLinkLabel, setNewLinkLabel] = useState('');
+        const [newLinkUrl, setNewLinkUrl] = useState('');
+        const [linkType, setLinkType] = useState('link');
+        const [collapsedCategories, setCollapsedCategories] = useState({});
+        const [draggedIndex, setDraggedIndex] = useState(null);
+
+        const toggleCategory = (i) => setCollapsedCategories(p => ({ ...p, [i]: !p[i] }));
+        const openAllInGroup = (start) => { for (let i = start + 1; i < customLinks.length; i++) { if (customLinks[i].type === 'divider') break; if (customLinks[i].url) window.open(customLinks[i].url, '_blank'); } };
+        const addCustomLink = () => { if ((linkType === 'link' && newLinkLabel && newLinkUrl) || (linkType === 'divider' && newLinkLabel)) { let url = newLinkUrl; if (linkType === 'link' && !/^https?:\/\//i.test(url)) url = 'https://' + url; const newItem = { label: newLinkLabel, url: linkType === 'link' ? url : '', type: linkType }; const updated = [...customLinks, newItem]; setNewLinkLabel(''); setNewLinkUrl(''); setIsAddingLink(false); saveAllData(undefined, updated, undefined); } };
+        const removeCustomLink = (i) => { const updated = customLinks.filter((_, idx) => idx !== i); saveAllData(undefined, updated, undefined); };
+        const handleDragStart = (e, i) => { setDraggedIndex(i); e.dataTransfer.effectAllowed = 'move'; };
+        const handleDragOver = (e, i) => { e.preventDefault(); if (draggedIndex === null || draggedIndex === i) return; const newLinks = [...customLinks]; const [removed] = newLinks.splice(draggedIndex, 1); newLinks.splice(i, 0, removed); saveAllData(undefined, newLinks, undefined); setDraggedIndex(i); };
+
+        const startResizing = useCallback((e) => { e.preventDefault(); setIsResizing(true); }, []);
+        useEffect(() => { const handleMouseMove = (e) => { if (isResizing) { let w = e.clientX; if (w < 150) w = 150; if (w > 400) w = 400; setSidebarWidth(w); } }; const handleMouseUp = () => { if (isResizing) setIsResizing(false); }; if (isResizing) { document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', handleMouseUp); } return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); }; }, [isResizing]);
+
+        const NavItem = ({ id, label, icon }) => ( <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? label : ''}><Icon name={icon} size={20} />{!isCollapsed && <span className="font-medium text-sm">{label}</span>}</button> );
+
+        const renderCustomLinks = () => { const elements = []; let currentCategoryHidden = false; customLinks.forEach((link, i) => { if (link.type === 'divider') { currentCategoryHidden = collapsedCategories[i] || false; elements.push(<div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mt-3 mb-1 cursor-move transition-colors hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}><div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={14} /></div><div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => toggleCategory(i)}><Icon name={currentCategoryHidden ? "ChevronRight" : "ChevronLeft"} size={14} className="text-slate-400 transition-transform" style={{ transform: currentCategoryHidden ? 'rotate(0deg)' : 'rotate(-90deg)' }} /><Icon name="FolderOpen" size={14} className="text-[#7C4DFF]" /><span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate select-none">{link.label}</span></div><button onClick={() => openAllInGroup(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[#7C4DFF] transition-opacity"><Icon name="ExternalLink" size={12} /></button><button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button></div>); } else { if (!currentCategoryHidden) { elements.push(<div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} className={`group flex items-center gap-2 px-3 py-1 ml-4 rounded-lg transition-colors cursor-move hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}><div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={12} /></div><a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto"><Icon name="Link" size={12} className="shrink-0 text-slate-400" /><span className="truncate">{link.label}</span></a><button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button></div>); } } }); return elements; };
+
+        return (
+            <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+                <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-75 shadow-xl lg:shadow-none flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`} style={{ width: isCollapsed ? 70 : sidebarWidth }}>
+                    <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">{!isCollapsed && <span className="font-bold text-lg tracking-tight text-[#334155]">Dashboard</span>}<button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 text-slate-400 hover:text-[#7C4DFF] hover:bg-slate-50 rounded mx-auto lg:mx-0"><Icon name={isCollapsed ? "ChevronRight" : "ChevronLeft"} size={20} /></button></div>
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
+                        {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
+                        <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
+                        <NavItem id="quotes" label="投資の格言集" icon="Lightbulb" />
+                        <NavItem id="option" label="Option 分析" icon="BarChart3" />
+                        <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
+                        <NavItem id="participant" label="手口上位" icon="Briefcase" />
+                        {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
+                        
+                        {/* 変更点: Markdown Style Fix 版 v2026.02.01-fix2 */}
+                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix2</div>}
+                    </div>
+                    {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
+                </aside>
+                {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+                <div className="flex-1 flex flex-col min-w-0">
+                    <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0"><button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button><span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : view === 'quotes' ? '投資の格言集' : '取引参加者別取引高'}</span></header>
+                    <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
+                        <div className="max-w-7xl mx-auto h-full">
+                            {view === 'calendar' ? <ProfitManager historyData={historyData} updateHistoryData={(nd) => saveAllData(nd, undefined, undefined)} customLinks={customLinks} setCustomLinks={(nl) => saveAllData(undefined, nl, undefined)} quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} saveAllData={saveAllData} /> :
+                                view === 'quotes' ? <QuotesManager quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} /> :
+                                    view === 'jpx' ? <ForeignInvestors /> :
+                                        view === 'participant' ? <ParticipantVolume /> :
+                                            <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
+                        </div>
+                    </main>
+                </div>
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
     </script>
 </body>
 </html>
