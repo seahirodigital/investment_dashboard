@@ -702,11 +702,11 @@
                     );
                 }
 
-                const StatCard = ({ type, val }) => (
-                    <div className={`flex justify-end items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
-                        <span className={`w-full text-right ${val < 0 ? 'text-[#FF4081]' : ''}`}>{formatMoney(val)}</span>
-                    </div>
-                );
+                    const StatCard = ({ type, val }) => (
+                        <div className={`flex justify-end items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}>
+                            <span className={`w-full text-right ${type === 'cfd' ? (val >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]') : (val < 0 ? 'text-[#FF4081]' : '')}`}>{formatMoney(val)}</span>
+                        </div>
+                    );
 
                 return (
                     <div onClick={() => openModal(date)} className={`cal-cell cursor-pointer hover:bg-[#F3E5F5] transition-colors border-r border-b border-slate-100 group ${isToday ? 'bg-[#F3E5F5]/30 ring-2 ring-inset ring-[#7C4DFF]/20' : ''}`}>
