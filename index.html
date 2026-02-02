@@ -172,6 +172,9 @@
             pointer-events: none; transition: opacity 0.15s, transform 0.15s;
         }
         .cal-cell:hover .stock-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(-10px); }
+        
+        /* ツールチップ内のインタラクションを有効化 (削除ボタン用) */
+        .cal-cell:hover .stock-tooltip { pointer-events: auto; }
 
         /* Quotes Carousel */
         .quote-scroll-container {
@@ -257,7 +260,7 @@
         const CATEGORY_STYLES = {
             stocks: { bg: 'bg-[#F3E5F5]', text: 'text-[#7E57C2]', label: '現物' },
             margin: { bg: 'bg-[#E8EAF6]', text: 'text-[#5C6BC0]', label: '信用' },
-            foreign: { bg: 'bg-[#EDE7F6]', text: 'text-[#673AB7]', label: '米国' }, // 変更: 海外 -> 米国
+            foreign: { bg: 'bg-[#EDE7F6]', text: 'text-[#673AB7]', label: '米国' },
             cfd: { bg: 'bg-[#FCE4EC]', text: 'text-[#D81B60]', label: 'CFD' },
             event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
         };
@@ -479,8 +482,7 @@
                 }
                 if (headerRowIndex === -1) { alert("有効なデータが見つかりませんでした。"); return; }
                 
-                const aggregatedData = {}; 
-                const detailData = {};
+                const detailDataMap = {}; // 日付毎の明細リスト候補
                 
                 for (let i = headerRowIndex + 1; i < rows.length; i++) {
                     const row = rows[i];
@@ -495,40 +497,56 @@
                     const val = parseInt(String(row[plColIndex]).replace(/,/g, '').trim(), 10);
                     
                     if (!isNaN(val)) {
-                        aggregatedData[dateKey] = (aggregatedData[dateKey] || 0) + val;
+                        // 明細データの作成 (カテゴリ情報を付与)
+                        if (!detailDataMap[dateKey]) detailDataMap[dateKey] = [];
+                        let name = "不明な銘柄";
                         if (nameColIndex !== -1) {
-                            const name = String(row[nameColIndex]).trim();
-                            if (!detailData[dateKey]) detailData[dateKey] = {};
-                            detailData[dateKey][name] = (detailData[dateKey][name] || 0) + val;
+                            name = String(row[nameColIndex]).trim();
                         }
+                        detailDataMap[dateKey].push({ name, amount: val, category: importCategory });
                     }
                 }
                 
                 const newHistory = { ...historyData };
                 let count = 0;
                 
-                Object.entries(aggregatedData).forEach(([key, val]) => {
-                    const existingDetails = newHistory[key]?.details || [];
-                    let newDetails = [];
-                    if (detailData[key]) {
-                        newDetails = Object.entries(detailData[key]).map(([name, amount]) => ({ name, amount }));
-                    }
-                    
+                Object.entries(detailDataMap).forEach(([key, newDetailsList]) => {
+                    // 既存データ取得
                     if (!newHistory[key]) newHistory[key] = { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', details: [] };
+                    const existingDetails = newHistory[key].details || [];
                     
-                    // 修正: 既存データを展開した上で、インポート対象カテゴリのみを上書きし、詳細は追記（マージ）する
-                    // これにより、StocksとCFDのインポートが独立して動作する
-                    newHistory[key] = { 
-                        ...newHistory[key], 
-                        [importCategory]: val, 
-                        details: [...existingDetails, ...newDetails] // 追記モードに変更
+                    // 重複チェックと合計金額計算
+                    let addedAmount = 0;
+                    const finalNewDetails = [];
+
+                    newDetailsList.forEach(newItem => {
+                        // 同一内容(name, amount, category)が既に存在するかチェック
+                        const isDuplicate = existingDetails.some(existing => 
+                            existing.name === newItem.name && 
+                            existing.amount === newItem.amount && 
+                            existing.category === newItem.category
+                        );
+                        
+                        if (!isDuplicate) {
+                            finalNewDetails.push(newItem);
+                            addedAmount += newItem.amount;
+                        }
+                    });
+
+                    // カテゴリ合計値の更新 (重複していない分だけ加算)
+                    newHistory[key] = {
+                        ...newHistory[key],
+                        [importCategory]: (newHistory[key][importCategory] || 0) + addedAmount,
+                        details: [...existingDetails, ...finalNewDetails]
                     };
-                    count++;
+
+                    if (finalNewDetails.length > 0) count++;
                 });
                 
                 updateHistoryData(newHistory);
                 setIsImportModalOpen(false);
-                alert(`${count}件の日付データをインポートしました。`);
+                if(count > 0) alert(`${count}日分のデータを更新しました。`);
+                else alert("新しいデータは見つかりませんでした（重複スキップ）。");
             };
 
             const handleFileImport = (file) => {
@@ -549,6 +567,34 @@
                 const reader = new FileReader();
                 reader.onload = (event) => Papa.parse(event.target.result, { header: false, skipEmptyLines: true, complete: (res) => processCSVData(res.data) });
                 reader.readAsText(file, 'Shift_JIS');
+            };
+
+            // 明細削除機能
+            const handleDeleteDetail = (dateKey, detailIndex, e) => {
+                if(e) e.stopPropagation();
+                if (!window.confirm("この明細を削除しますか？\n(カテゴリ情報がある場合、合計金額からも減算されます)")) return;
+
+                const newData = { ...historyData };
+                const dayData = { ...newData[dateKey] };
+                const details = [...dayData.details];
+                const targetDetail = details[detailIndex];
+
+                // 数値同期処理 (カテゴリ情報がある場合のみ)
+                if (targetDetail.category && dayData[targetDetail.category] !== undefined) {
+                    dayData[targetDetail.category] -= targetDetail.amount;
+                }
+
+                // リストから削除
+                details.splice(detailIndex, 1);
+                dayData.details = details;
+                newData[dateKey] = dayData;
+                
+                updateHistoryData(newData);
+                
+                // モーダルが開いている場合は表示データを更新
+                if (isModalOpen && selectedDate && getDateKey(selectedDate) === dateKey) {
+                    setEditData(dayData);
+                }
             };
 
             const handleDrag = (e) => {
@@ -635,7 +681,24 @@
                 let tooltipContent = null;
                 if (data && data.details && data.details.length > 0) {
                     tooltipContent = (
-                        <div className="stock-tooltip"><div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600 bg-slate-50 -m-2 mb-1 p-2 rounded-t-lg">損益内訳 (CSV集計)</div><div className="max-h-[250px] overflow-y-auto">{data.details.map((d, i) => (<div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0"><span className="truncate w-36 text-slate-600 font-medium" title={d.name}>{d.name}</span><span className={`text-[10px] font-mono ${d.amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span></div>))}</div></div>
+                        <div className="stock-tooltip">
+                            <div className="font-bold border-b border-slate-200 pb-1 mb-1 text-slate-600 bg-slate-50 -m-2 mb-1 p-2 rounded-t-lg">損益内訳 (CSV集計)</div>
+                            <div className="max-h-[250px] overflow-y-auto">
+                                {data.details.map((d, i) => (
+                                    <div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0 hover:bg-slate-50 group/item">
+                                        <div className="flex-1 min-w-0">
+                                            <span className="truncate block text-slate-600 font-medium" title={d.name}>{d.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 pl-2">
+                                            <span className={`text-[10px] font-mono ${d.amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span>
+                                            <button onClick={(e) => handleDeleteDetail(key, i, e)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5">
+                                                <Icon name="X" size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     );
                 }
 
@@ -757,7 +820,24 @@
                                         <h4 className="text-sm font-bold text-[#64748B] uppercase mb-4">収支入力 (円)</h4>
                                         <div className="space-y-4">{[{ k: 'stocks', l: '現物収支' }, { k: 'margin', l: '信用収支' }, { k: 'foreign', l: '米国株収支' }, { k: 'cfd', l: 'CFD/先物' }].map(f => (<div key={f.k}><label className="block text-xs font-bold text-slate-500 mb-1">{f.l}</label><input type="number" value={editData[f.k] || ''} onChange={(e) => setEditData({ ...editData, [f.k]: parseInt(e.target.value) || 0 })} className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div>))}
                                             <div className="pt-4 border-t border-slate-200 mt-4"><div className="flex justify-between items-center"><span className="font-bold text-slate-700">合計</span><span className={`text-xl font-bold font-mono ${(editData.stocks + editData.margin + editData.foreign + editData.cfd) >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span></div></div>
-                                            {editData.details && editData.details.length > 0 && (<div className="mt-6 pt-4 border-t border-slate-200"><h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV集計)</h4><div className="bg-white border border-slate-200 rounded p-2 space-y-1 text-xs max-h-40 overflow-y-auto">{editData.details.map((d, i) => (<div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0" title={d.name}><span className="text-slate-600 truncate flex-1">{d.name}</span><span className={`font-mono ${d.amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span></div>))}</div></div>)}
+                                            {editData.details && editData.details.length > 0 && (
+                                                <div className="mt-6 pt-4 border-t border-slate-200">
+                                                    <h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV集計)</h4>
+                                                    <div className="bg-white border border-slate-200 rounded p-2 space-y-1 text-xs max-h-40 overflow-y-auto">
+                                                        {editData.details.map((d, i) => (
+                                                            <div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0 hover:bg-slate-50 group/item" title={d.name}>
+                                                                <span className="text-slate-600 truncate flex-1">{d.name}</span>
+                                                                <div className="flex items-center gap-2 pl-2">
+                                                                    <span className={`font-mono ${d.amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span>
+                                                                    <button onClick={(e) => handleDeleteDetail(getDateKey(selectedDate), i, e)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5">
+                                                                        <Icon name="X" size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     {/* Markdown Column: モバイルでは 'diary' タブの時のみ表示。パディングをモバイル向けに縮小 (p-2) */}
@@ -945,7 +1025,7 @@
                         {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                         
                         {/* 変更点: Mobile Scroll Fix 版 v2026.02.01-fix3 */}
-                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix5 (US)</div>}
+                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix6 (Remove)</div>}
                     </div>
                     {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
                 </aside>
