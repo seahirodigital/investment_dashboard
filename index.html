@@ -309,13 +309,12 @@
                 // Shuffle array
                 const shuffled = [...unpinned].sort(() => Math.random() - 0.5);
                 setDisplayQuotes(shuffled);
-            }, [quotes]); // quotesが変わったら再計算だが、本当はMount時だけがいい？いや、追加削除反映のためこれでよい
+            }, [quotes]);
 
             // prefillBody がある場合は input にセット
             useEffect(() => {
                 if (prefillBody) {
                     setInput(prefillBody);
-                    // 投稿フォームへスクロールなどのUXも考慮可能だが今回はセットのみ
                 }
             }, [prefillBody]);
 
@@ -323,7 +322,7 @@
                 if (autoScroll) {
                     scrollInterval.current = setInterval(() => {
                         if (scrollRef.current) {
-                            // 修正: 最後のカードに到達したら最初に戻る
+                            // 修正: 最後のカードに到達したら最初に戻る (判定に余裕を持たせる)
                             if (scrollRef.current.scrollLeft + scrollRef.current.clientWidth >= scrollRef.current.scrollWidth - 10) {
                                 scrollRef.current.scrollLeft = 0;
                             } else {
@@ -351,11 +350,11 @@
                     }).filter(q => q !== null);
                     
                     setQuotes([...quotes, ...newQuotes]);
+                    
                     // 新規投稿時はランダムリストの先頭に追加してスクロールリセット
-                    if (!forcePin) {
-                        setDisplayQuotes(prev => [...newQuotes, ...prev]);
-                        if (scrollRef.current) scrollRef.current.scrollLeft = 0;
-                    }
+                    // PINされた場合もSTREAMの先頭に追加する
+                    setDisplayQuotes(prev => [...newQuotes, ...prev]);
+                    if (scrollRef.current) scrollRef.current.scrollLeft = 0;
                 }
                 setInput("");
             };
@@ -371,14 +370,11 @@
             const handleDragOver = (e, index) => { e.preventDefault(); if (draggedItem === null || draggedItem === index) return; const pinnedQuotes = quotes.filter(q => q.pinned); const unpinnedQuotes = quotes.filter(q => !q.pinned); const newPinned = [...pinnedQuotes]; const [removed] = newPinned.splice(draggedItem, 1); newPinned.splice(index, 0, removed); setQuotes([...newPinned, ...unpinnedQuotes]); setDraggedItem(index); };
             
             const pinnedQuotes = quotes.filter(q => q.pinned);
-            // ストリーム用は displayQuotes (シャッフル済) を使うが、データ整合性のためIDベースで同期
-            // フィルタリング
+            // ストリーム用: フィルタリング機能は削除し、削除済みアイテムのみ除外する
             const streamQuotes = displayQuotes.filter(dq => {
                 // 削除されたものは除外
                 const exists = quotes.find(q => q.id === dq.id);
-                if (!exists || exists.pinned) return false;
-                if (filterBookmarked && !exists.bookmarked) return false;
-                return true;
+                return !!exists;
             }).map(dq => quotes.find(q => q.id === dq.id)); // 最新の状態(bookmark等)を取得
 
             return (
@@ -412,11 +408,12 @@
                         <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-4">
                                 <h2 className="text-sm font-bold text-slate-500">STREAM</h2>
+                                {/* Bookmarked Onlyボタン: フィルタリング機能は削除し、ボタンの状態のみ変更 */}
                                 <button 
                                     onClick={() => setFilterBookmarked(!filterBookmarked)} 
-                                    className={`flex items-center gap-1 text-xs px-2 py-1 rounded border ${filterBookmarked ? 'bg-[#7C4DFF] text-white border-[#7C4DFF]' : 'bg-white text-slate-500 border-slate-200'}`}
+                                    className={`flex items-center gap-1 text-xs px-2 py-1 rounded border ${filterBookmarked ? 'bg-[#7C4DFF] text-white border-[#7C4DFF]' : 'bg-white text-[#7C4DFF] border-[#7C4DFF]'}`}
                                 >
-                                    <Icon name="Bookmark" size={12} fill={filterBookmarked ? "currentColor" : "none"} /> Bookmarked Only
+                                    <Icon name="Bookmark" size={12} fill={filterBookmarked ? "currentColor" : "none"} /> ブックマーク
                                 </button>
                             </div>
                         </div>
@@ -583,7 +580,7 @@
                     if (day === 6 || day === 0) fill = '#FF4081';
                     return (<text x={x} y={y} dy={16} textAnchor="middle" fill={fill} fontSize={10}>{payload.value}</text>);
                 } else {
-                    return (<text x={x} y={y} dy={16} textAnchor="middle" fill="#64748B" fontSize={10}>{payload.value}月</text>);
+                    return (<text x={x} y={y} dy={16} textAnchor="middle" fill="#64748B" fontSize={10}>{payload.value}</text>);
                 }
             };
 
@@ -996,15 +993,15 @@
                                                 className={`p-1.5 rounded-lg border transition-colors ${editData.important ? 'bg-purple-100 border-[#7C4DFF] text-[#7C4DFF]' : 'bg-white border-slate-200 text-slate-300 hover:text-slate-500'}`}
                                                 title="Mark as Important"
                                             >
-                                                <Icon name="Bookmark" size={16} fill={editData.important ? "currentColor" : "none"} />
+                                                <Icon name="Bookmark" size={16} fill={editData.important ? "#7C4DFF" : "none"} />
                                             </button>
                                         </div>
                                         <div className="flex-1 overflow-hidden relative"><EasyMDEEditor value={editData.note} onChange={(val) => setEditData({ ...editData, note: val })} /></div>
                                     </div>
                                 </div>
                                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
-                                    {/* 格言行きボタン */}
-                                    <button onClick={handleSaveAndQuote} className="px-4 py-2 bg-slate-100 text-[#7C4DFF] border border-[#7C4DFF] hover:bg-purple-50 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors mr-auto">
+                                    {/* 格言行きボタン: 配置変更 キャンセルボタンの左隣 */}
+                                    <button onClick={handleSaveAndQuote} className="px-4 py-2 bg-slate-100 text-[#7C4DFF] border border-[#7C4DFF] hover:bg-purple-50 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
                                         <Icon name="Send" size={16} /> 格言行き
                                     </button>
                                     <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-bold transition-colors">キャンセル</button>
@@ -1196,7 +1193,7 @@
                         <NavItem id="participant" label="手口上位" icon="Briefcase" />
                         {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                         
-                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix7 (New Features)</div>}
+                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix8 (Button Fix)</div>}
                     </div>
                     {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
                 </aside>
