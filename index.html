@@ -214,7 +214,8 @@
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList } = Recharts;
 
         // --- Icons ---
-        const Icon = ({ name, size = 20, className = "", style = {} }) => {
+        // Modified: Icon component now accepts 'fill' prop for customizing internal SVG fill
+        const Icon = ({ name, size = 20, className = "", style = {}, fill = "none" }) => {
             const icons = {
                 Menu: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="18" x2="20" y2="18" /></svg>,
                 LayoutDashboard: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>,
@@ -253,7 +254,7 @@
                 Lightbulb: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5 0-2.2-1.8-4-4-4a4 4 0 0 0-4 4c0 1.5.5 2.5 1.5 3.5.8.8 1.3 1.5 1.5 2.5" /><path d="M9 18h6" /><path d="M10 22h4" /></svg>,
                 ArrowLeft: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>,
                 ArrowRight: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>,
-                Bookmark: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>,
+                Bookmark: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>,
                 Send: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             };
             return icons[name] || null;
@@ -302,13 +303,18 @@
             const scrollInterval = useRef(null);
             // ランダム表示用のstate
             const [displayQuotes, setDisplayQuotes] = useState([]);
+            const isInitialized = useRef(false);
 
             // 初期化・ランダム化 (Pin以外)
             useEffect(() => {
-                const unpinned = quotes.filter(q => !q.pinned);
-                // Shuffle array
-                const shuffled = [...unpinned].sort(() => Math.random() - 0.5);
-                setDisplayQuotes(shuffled);
+                // Initialize displayQuotes only once (on mount if data exists, or when data is first loaded)
+                if (displayQuotes.length === 0 && quotes.length > 0 && !isInitialized.current) {
+                    const unpinned = quotes.filter(q => !q.pinned);
+                    // Shuffle array
+                    const shuffled = [...unpinned].sort(() => Math.random() - 0.5);
+                    setDisplayQuotes(shuffled);
+                    isInitialized.current = true;
+                }
             }, [quotes]);
 
             // prefillBody がある場合は input にセット
@@ -322,8 +328,11 @@
                 if (autoScroll) {
                     scrollInterval.current = setInterval(() => {
                         if (scrollRef.current) {
-                            // 修正: 最後のカードに到達したら最初に戻る (判定に余裕を持たせる)
-                            if (scrollRef.current.scrollLeft + scrollRef.current.clientWidth >= scrollRef.current.scrollWidth - 10) {
+                            // 修正: 最後のカードに到達したら最初に戻る (判定を厳密に)
+                            // コンテンツの幅がクライアント幅以下の場合はスクロールしない
+                            if (scrollRef.current.scrollWidth <= scrollRef.current.clientWidth) return;
+
+                            if (scrollRef.current.scrollLeft + scrollRef.current.clientWidth >= scrollRef.current.scrollWidth - 5) {
                                 scrollRef.current.scrollLeft = 0;
                             } else {
                                 scrollRef.current.scrollLeft += 1;
@@ -349,9 +358,10 @@
                         return { id: Date.now().toString() + index, text: part.trim(), pinned: forcePin, bookmarked: false, order: quotes.length + index };
                     }).filter(q => q !== null);
                     
-                    setQuotes([...quotes, ...newQuotes]);
+                    // 新規アイテムは常に先頭に追加（データ上）
+                    setQuotes([...newQuotes, ...quotes]);
                     
-                    // 新規投稿時はランダムリストの先頭に追加してスクロールリセット
+                    // 新規投稿時はストリームの先頭に強制追加（ランダムに埋もれないようにする）
                     // PINされた場合もSTREAMの先頭に追加する
                     setDisplayQuotes(prev => [...newQuotes, ...prev]);
                     if (scrollRef.current) scrollRef.current.scrollLeft = 0;
@@ -370,12 +380,19 @@
             const handleDragOver = (e, index) => { e.preventDefault(); if (draggedItem === null || draggedItem === index) return; const pinnedQuotes = quotes.filter(q => q.pinned); const unpinnedQuotes = quotes.filter(q => !q.pinned); const newPinned = [...pinnedQuotes]; const [removed] = newPinned.splice(draggedItem, 1); newPinned.splice(index, 0, removed); setQuotes([...newPinned, ...unpinnedQuotes]); setDraggedItem(index); };
             
             const pinnedQuotes = quotes.filter(q => q.pinned);
-            // ストリーム用: フィルタリング機能は削除し、削除済みアイテムのみ除外する
-            const streamQuotes = displayQuotes.filter(dq => {
-                // 削除されたものは除外
-                const exists = quotes.find(q => q.id === dq.id);
-                return !!exists;
-            }).map(dq => quotes.find(q => q.id === dq.id)); // 最新の状態(bookmark等)を取得
+            
+            const streamQuotes = useMemo(() => {
+                // ブックマークフィルタがONの場合は、quotes全体からブックマークのみを返す
+                if (filterBookmarked) {
+                    return quotes.filter(q => q.bookmarked);
+                }
+
+                // 通常時はランダム化されたリストを表示（削除済みを除外）
+                return displayQuotes.filter(dq => {
+                    const exists = quotes.find(q => q.id === dq.id);
+                    return !!exists;
+                }).map(dq => quotes.find(q => q.id === dq.id)); // 最新の状態(bookmark等)を取得
+            }, [displayQuotes, quotes, filterBookmarked]);
 
             return (
                 <div className="space-y-6 pb-10">
@@ -413,7 +430,7 @@
                                     onClick={() => setFilterBookmarked(!filterBookmarked)} 
                                     className={`flex items-center gap-1 text-xs px-2 py-1 rounded border ${filterBookmarked ? 'bg-[#7C4DFF] text-white border-[#7C4DFF]' : 'bg-white text-[#7C4DFF] border-[#7C4DFF]'}`}
                                 >
-                                    <Icon name="Bookmark" size={12} fill={filterBookmarked ? "currentColor" : "none"} /> ブックマーク
+                                    <Icon name="Bookmark" size={12} fill={filterBookmarked ? "currentColor" : "none"} /> ブックマークのみ
                                 </button>
                             </div>
                         </div>
@@ -853,8 +870,9 @@
                 );
             };
 
+            // Fixed: Set specific width for mobile (65%)
             const StatBox = ({ title, amount, mobileOrder }) => (
-                <div className={`bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col justify-center h-20 min-w-[65%] md:min-w-[240px] snap-center shrink-0 ${mobileOrder}`}>
+                <div className={`bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col justify-center h-20 w-[65%] min-w-[65%] md:w-auto md:min-w-[240px] snap-center shrink-0 ${mobileOrder}`}>
                     <p className="text-[#64748B] text-xs font-medium mb-1">{title}</p>
                     <h3 className={`text-2xl font-bold ${amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>
                         {amount >= 0 ? '+' : ''}{amount.toLocaleString()}
@@ -1193,7 +1211,7 @@
                         <NavItem id="participant" label="手口上位" icon="Briefcase" />
                         {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                         
-                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix8 (Button Fix)</div>}
+                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix9 (Quote/UI Fix)</div>}
                     </div>
                     {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
                 </aside>
