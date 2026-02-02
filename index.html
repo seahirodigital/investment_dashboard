@@ -257,7 +257,7 @@
         const CATEGORY_STYLES = {
             stocks: { bg: 'bg-[#F3E5F5]', text: 'text-[#7E57C2]', label: '現物' },
             margin: { bg: 'bg-[#E8EAF6]', text: 'text-[#5C6BC0]', label: '信用' },
-            foreign: { bg: 'bg-[#EDE7F6]', text: 'text-[#673AB7]', label: '海外' },
+            foreign: { bg: 'bg-[#EDE7F6]', text: 'text-[#673AB7]', label: '米国' }, // 変更: 海外 -> 米国
             cfd: { bg: 'bg-[#FCE4EC]', text: 'text-[#D81B60]', label: 'CFD' },
             event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
         };
@@ -393,16 +393,25 @@
                 let currentYearTotal = 0;
                 let currentMonthTotal = 0;
                 let prevMonthTotal = 0;
+                
+                // 追加: 当月内訳計算用
+                let currentMonthBreakdown = { s: 0, m: 0, f: 0, c: 0 };
 
                 Object.entries(historyData).forEach(([key, val]) => {
                     if (key.match(/^\d{4}-\d{2}-\d{2}$/)) {
                         const dayTotal = (val.stocks || 0) + (val.margin || 0) + (val.foreign || 0) + (val.cfd || 0);
                         if (key.startsWith(currentYearKey)) currentYearTotal += dayTotal;
-                        if (key.startsWith(currentMonthKey)) currentMonthTotal += dayTotal;
+                        if (key.startsWith(currentMonthKey)) {
+                            currentMonthTotal += dayTotal;
+                            currentMonthBreakdown.s += (val.stocks || 0);
+                            currentMonthBreakdown.m += (val.margin || 0);
+                            currentMonthBreakdown.f += (val.foreign || 0);
+                            currentMonthBreakdown.c += (val.cfd || 0);
+                        }
                         if (key.startsWith(prevMonthKey)) prevMonthTotal += dayTotal;
                     }
                 });
-                return { currentYearTotal, prevMonthTotal, currentMonthTotal, prevMonthDate };
+                return { currentYearTotal, prevMonthTotal, currentMonthTotal, prevMonthDate, currentMonthBreakdown };
             }, [historyData, currentDate]);
 
             const dailyChartData = useMemo(() => {
@@ -589,7 +598,7 @@
                     const d = historyData[key];
                     const total = (d.stocks || 0) + (d.margin || 0) + (d.foreign || 0) + (d.cfd || 0);
                     if (total === 0 && !d.note && !d.event) return;
-                    md += `## ${key} ${d.event ? `(${d.event})` : ''}\n### 収支データ\n- 現物: ${d.stocks || 0} / 信用: ${d.margin || 0} / 海外: ${d.foreign || 0} / CFD: ${d.cfd || 0}\n### 振り返り\n${d.note || '（記載なし）'}\n\n`;
+                    md += `## ${key} ${d.event ? `(${d.event})` : ''}\n### 収支データ\n- 現物: ${d.stocks || 0} / 信用: ${d.margin || 0} / 米国: ${d.foreign || 0} / CFD: ${d.cfd || 0}\n### 振り返り\n${d.note || '（記載なし）'}\n\n`;
                 });
                 const blob = new Blob([md], { type: 'text/markdown' });
                 const url = URL.createObjectURL(blob);
@@ -706,19 +715,28 @@
                     </div>
 
                     {/* Monthly Chart */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
-                        <div className="flex justify-between items-center mb-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-2 md:p-6 animate-fade-in-up">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                             <h3 className="text-lg font-bold text-[#334155] flex items-center gap-2">
-                                <Icon name="BarChart3" size={20} className="text-[#7C4DFF]" /> 月間日次推移 ({currentDate.getFullYear()}年{currentDate.getMonth() + 1}月)
+                                <Icon name="BarChart3" size={20} className="text-[#7C4DFF]" />
+                                {/* スマホでは短縮表示 */}
+                                <span className="hidden md:inline">月間日次推移 ({currentDate.getFullYear()}年{currentDate.getMonth() + 1}月)</span>
+                                <span className="md:hidden">{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</span>
                                 <div className="flex items-center gap-1 ml-4 text-sm text-slate-500 font-normal">
                                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="hover:bg-slate-100 p-1 rounded"><Icon name="ChevronLeft" size={16} /></button>
                                     <button onClick={() => setCurrentDate(new Date())} className="hover:bg-slate-100 px-2 py-0.5 rounded text-xs font-bold">Today</button>
                                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="hover:bg-slate-100 p-1 rounded"><Icon name="ChevronRight" size={16} /></button>
                                 </div>
                             </h3>
-                            <span className={`text-xl font-bold ${stats.currentMonthTotal >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{stats.currentMonthTotal > 0 ? '+' : ''}{stats.currentMonthTotal.toLocaleString()}</span>
+                            <div className="flex flex-wrap items-baseline gap-3 justify-end text-sm w-full md:w-auto">
+                                <span className={`text-xs font-bold ${stats.currentMonthBreakdown.s >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>現物:{stats.currentMonthBreakdown.s.toLocaleString()}</span>
+                                <span className={`text-xs font-bold ${stats.currentMonthBreakdown.m >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>信用:{stats.currentMonthBreakdown.m.toLocaleString()}</span>
+                                <span className={`text-xs font-bold ${stats.currentMonthBreakdown.f >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>米国:{stats.currentMonthBreakdown.f.toLocaleString()}</span>
+                                <span className={`text-xs font-bold ${stats.currentMonthBreakdown.c >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>CFD:{stats.currentMonthBreakdown.c.toLocaleString()}</span>
+                                <span className={`text-xl font-bold ml-2 ${stats.currentMonthTotal >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{stats.currentMonthTotal > 0 ? '+' : ''}{stats.currentMonthTotal.toLocaleString()}</span>
+                            </div>
                         </div>
-                        <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={dailyChartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} barCategoryGap="40%"><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="day" tickLine={false} axisLine={false} tick={<CustomAxisTick />} /><YAxis tickFormatter={(val) => `${(val / 10000).toFixed(0)}万`} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} /><Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(val) => [`¥${val.toLocaleString()}`, "損益"]} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><ReferenceLine y={0} stroke="#94a3b8" /><Bar dataKey="total" radius={[4, 4, 0, 0]}>{dailyChartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.total >= 0 ? '#7C4DFF' : '#FF4081'} />))}</Bar></BarChart></ResponsiveContainer></div>
+                        <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={dailyChartData} margin={{ top: 5, right: 30, left: -10, bottom: 5 }} barCategoryGap="40%"><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="day" tickLine={false} axisLine={false} tick={<CustomAxisTick />} /><YAxis tickFormatter={(val) => `${(val / 10000).toFixed(0)}万`} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} width={40} /><Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(val) => [`¥${val.toLocaleString()}`, "損益"]} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><ReferenceLine y={0} stroke="#94a3b8" /><Bar dataKey="total" radius={[4, 4, 0, 0]}>{dailyChartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.total >= 0 ? '#7C4DFF' : '#FF4081'} />))}</Bar></BarChart></ResponsiveContainer></div>
                     </div>
 
                     {isModalOpen && (
@@ -737,7 +755,7 @@
                                     <div className={`w-full lg:w-1/4 p-6 border-r border-slate-200 bg-slate-50/50 overflow-y-auto shrink-0 ${mobileModalTab === 'inputs' ? 'block' : 'hidden'} lg:block`}>
                                         <div className="mb-6"><label className="block text-xs font-bold text-[#7C4DFF] mb-1 uppercase">Event (Top Layer)</label><input type="text" placeholder="決算, FRB会合, etc." value={editData.event || ''} onChange={(e) => setEditData({ ...editData, event: e.target.value })} className="w-full border border-purple-200 rounded p-2 text-sm focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div>
                                         <h4 className="text-sm font-bold text-[#64748B] uppercase mb-4">収支入力 (円)</h4>
-                                        <div className="space-y-4">{[{ k: 'stocks', l: '現物収支' }, { k: 'margin', l: '信用収支' }, { k: 'foreign', l: '海外株収支' }, { k: 'cfd', l: 'CFD/先物' }].map(f => (<div key={f.k}><label className="block text-xs font-bold text-slate-500 mb-1">{f.l}</label><input type="number" value={editData[f.k] || ''} onChange={(e) => setEditData({ ...editData, [f.k]: parseInt(e.target.value) || 0 })} className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div>))}
+                                        <div className="space-y-4">{[{ k: 'stocks', l: '現物収支' }, { k: 'margin', l: '信用収支' }, { k: 'foreign', l: '米国株収支' }, { k: 'cfd', l: 'CFD/先物' }].map(f => (<div key={f.k}><label className="block text-xs font-bold text-slate-500 mb-1">{f.l}</label><input type="number" value={editData[f.k] || ''} onChange={(e) => setEditData({ ...editData, [f.k]: parseInt(e.target.value) || 0 })} className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div>))}
                                             <div className="pt-4 border-t border-slate-200 mt-4"><div className="flex justify-between items-center"><span className="font-bold text-slate-700">合計</span><span className={`text-xl font-bold font-mono ${(editData.stocks + editData.margin + editData.foreign + editData.cfd) >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span></div></div>
                                             {editData.details && editData.details.length > 0 && (<div className="mt-6 pt-4 border-t border-slate-200"><h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV集計)</h4><div className="bg-white border border-slate-200 rounded p-2 space-y-1 text-xs max-h-40 overflow-y-auto">{editData.details.map((d, i) => (<div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0" title={d.name}><span className="text-slate-600 truncate flex-1">{d.name}</span><span className={`font-mono ${d.amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span></div>))}</div></div>)}
                                         </div>
@@ -927,7 +945,7 @@
                         {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                         
                         {/* 変更点: Mobile Scroll Fix 版 v2026.02.01-fix3 */}
-                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix4 (CFD)</div>}
+                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix5 (US)</div>}
                     </div>
                     {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
                 </aside>
