@@ -366,9 +366,6 @@
             const [gistToken, setGistToken] = useState(localStorage.getItem('gist_token') || '');
             const [gistId, setGistId] = useState(localStorage.getItem('gist_id') || '');
             
-            // Delete Data State
-            const [deleteTargetMonth, setDeleteTargetMonth] = useState(getMonthKey(new Date()));
-            
             const [mobileModalTab, setMobileModalTab] = useState('diary'); // 'diary' or 'inputs'
 
             const formatMoney = (val) => val ? val.toLocaleString() : '0';
@@ -376,50 +373,6 @@
             const getDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
             const handleSaveSettings = () => { localStorage.setItem('gist_token', gistToken.trim()); localStorage.setItem('gist_id', gistId.trim()); setIsSettingsOpen(false); alert("設定を保存しました。"); };
-
-            // データ削除・初期化機能
-            const handleClearData = (scope) => {
-                let confirmationMessage = "本当に削除しますか？\nこの操作は取り消せません。\n日記(Markdown)とイベント名は保持されますが、収支数値と明細は削除されます。";
-                let targetPrefix = null;
-
-                if (scope === 'current') {
-                    targetPrefix = getMonthKey(currentDate);
-                    confirmationMessage = `【今月: ${targetPrefix}】のデータを${confirmationMessage}`;
-                } else if (scope === 'specific') {
-                    if (!deleteTargetMonth) { alert("削除する月を選択してください。"); return; }
-                    targetPrefix = deleteTargetMonth;
-                    confirmationMessage = `【指定月: ${targetPrefix}】のデータを${confirmationMessage}`;
-                } else if (scope === 'all') {
-                    confirmationMessage = `【全ての期間】のデータを${confirmationMessage}`;
-                }
-
-                if (!window.confirm(confirmationMessage)) return;
-
-                const newData = { ...historyData };
-                let count = 0;
-
-                Object.keys(newData).forEach(key => {
-                    // 日付キー形式 (YYYY-MM-DD) かつ 範囲一致チェック
-                    if (key.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                        if (scope === 'all' || (targetPrefix && key.startsWith(targetPrefix))) {
-                            // 既存のオブジェクトから note と event を保持しつつ、数値と明細をリセット
-                            newData[key] = {
-                                ...newData[key],
-                                stocks: 0,
-                                margin: 0,
-                                foreign: 0,
-                                cfd: 0,
-                                details: []
-                            };
-                            count++;
-                        }
-                    }
-                });
-
-                updateHistoryData(newData);
-                alert(`${count}日分のデータを初期化しました。`);
-                if(scope === 'all') setIsSettingsOpen(false);
-            };
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
@@ -897,54 +850,7 @@
                             </div>
                         </div>
                     )}
-                    {isSettingsOpen && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up" onClick={(e) => { if (e.target === e.currentTarget) setIsSettingsOpen(false); }}>
-                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
-                                <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 shrink-0">
-                                    <h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="Settings" size={20} /> 設定</h3>
-                                    <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button>
-                                </div>
-                                <div className="overflow-y-auto p-6 space-y-6">
-                                    {/* GitHub Gist Setting */}
-                                    <div>
-                                        <h4 className="text-sm font-bold text-[#334155] mb-2 flex items-center gap-2"><Icon name="RefreshCw" size={16} /> クラウド同期 (Gist)</h4>
-                                        <p className="text-xs text-slate-500 mb-4">GitHub Gistを利用してデータを同期します。</p>
-                                        <div className="space-y-4">
-                                            <div><label className="block text-xs font-bold text-slate-700 mb-1">Token (gist scope)</label><input type="password" value={gistToken} onChange={(e) => setGistToken(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="ghp_..." /></div>
-                                            <div><label className="block text-xs font-bold text-slate-700 mb-1">Gist ID</label><input type="text" value={gistId} onChange={(e) => setGistId(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="32桁のID" /></div>
-                                            <div className="flex justify-end"><button onClick={handleSaveSettings} className="bg-[#7C4DFF] text-white px-4 py-2 rounded text-sm font-bold hover:bg-[#651FFF]">設定保存</button></div>
-                                        </div>
-                                    </div>
-
-                                    <hr className="border-slate-200" />
-
-                                    {/* Data Clear Setting */}
-                                    <div>
-                                        <h4 className="text-sm font-bold text-red-500 mb-2 flex items-center gap-2"><Icon name="Trash2" size={16} /> データ初期化・削除</h4>
-                                        <p className="text-xs text-slate-500 mb-4">入力済みの収支数値と明細を削除します。<br/><span className="font-bold text-red-400">※日記(Note)とイベント名は保持されます。</span></p>
-                                        
-                                        <div className="space-y-3">
-                                            <button onClick={() => handleClearData('current')} className="w-full py-2 px-3 rounded text-sm font-bold border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center justify-between">
-                                                <span>今月のデータを削除 ({getMonthKey(currentDate)})</span>
-                                                <Icon name="Trash2" size={14} />
-                                            </button>
-
-                                            <div className="flex gap-2">
-                                                <input type="month" value={deleteTargetMonth} onChange={(e) => setDeleteTargetMonth(e.target.value)} className="border border-slate-300 rounded px-2 text-sm flex-1 outline-none focus:border-red-400" />
-                                                <button onClick={() => handleClearData('specific')} className="whitespace-nowrap px-3 py-2 rounded text-sm font-bold border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors">
-                                                    指定月を削除
-                                                </button>
-                                            </div>
-
-                                            <button onClick={() => handleClearData('all')} className="w-full py-3 px-3 rounded text-sm font-bold border border-red-500 bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center gap-2 mt-4">
-                                                <Icon name="AlertTriangle" size={16} /> 全期間のデータを削除
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {isSettingsOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up" onClick={(e) => { if (e.target === e.currentTarget) setIsSettingsOpen(false); }}><div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"><div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="Settings" size={20} /> クラウド同期設定 (GitHub Gist)</h3><button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button></div><div className="p-6 space-y-4"><p className="text-xs text-slate-500">GitHub Gistを利用してデータを同期します。</p><div><label className="block text-xs font-bold text-slate-700 mb-1">Token (gist scope)</label><input type="password" value={gistToken} onChange={(e) => setGistToken(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="ghp_..." /></div><div><label className="block text-xs font-bold text-slate-700 mb-1">Gist ID</label><input type="text" value={gistId} onChange={(e) => setGistId(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="32桁のID" /></div><div className="pt-2 flex justify-end"><button onClick={handleSaveSettings} className="bg-[#7C4DFF] text-white px-4 py-2 rounded text-sm font-bold hover:bg-[#651FFF]">保存</button></div></div></div></div>)}
                     {isImportModalOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up" onClick={(e) => { if (e.target === e.currentTarget) setIsImportModalOpen(false); }}><div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden"><div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="FileUp" size={20} /> データインポート</h3><button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button></div><div className="p-6 flex flex-col md:flex-row gap-6"><div className="flex-1 border-r border-slate-200 pr-6"><h4 className="text-sm font-bold text-[#334155] mb-2 flex items-center gap-2"><Icon name="Database" size={16} /> システムデータ復元</h4><p className="text-xs text-slate-500 mb-4">JSONバックアップを読み込みます。</p><button onClick={() => setImportCategory('backup')} className={`w-full py-3 px-3 rounded text-sm font-bold border transition-all flex items-center justify-between mb-4 ${importCategory === 'backup' ? `bg-[#7C4DFF] text-white border-[#7C4DFF]` : `bg-white text-slate-500 border-slate-200 hover:bg-slate-50`}`}><span>完全バックアップ (JSON)</span>{importCategory === 'backup' && <Icon name="Check" size={14} />}</button></div><div className="flex-1"><h4 className="text-sm font-bold text-[#334155] mb-2 flex items-center gap-2"><Icon name="FileCsv" size={16} /> 証券データ取込</h4><p className="text-xs text-slate-500 mb-4">証券CSVを読み込みます。</p><div className="grid grid-cols-1 gap-2 mb-4">{Object.entries(CATEGORY_STYLES).filter(([k]) => k !== 'event').map(([key, style]) => (<button key={key} onClick={() => setImportCategory(key)} className={`py-2 px-3 rounded text-sm font-bold border transition-all flex items-center justify-between ${importCategory === key ? `bg-[#7C4DFF] text-white border-[#7C4DFF]` : `bg-white text-slate-500 border-slate-200 hover:bg-slate-50`}`}><span>{style.label}</span>{importCategory === key && <Icon name="Check" size={14} />}</button>))}</div></div></div><div className="px-6 pb-6"><div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors relative ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}><Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} /><p className="text-slate-600 font-bold mb-1">ファイルをここにドラッグ</p><input type="file" accept=".csv,.json" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files && handleFileImport(e.target.files[0])} /></div></div></div></div>)}
                 </div>
             );
@@ -1119,7 +1025,7 @@
                         {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                         
                         {/* 変更点: Mobile Scroll Fix 版 v2026.02.01-fix3 */}
-                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix7 (Clear)</div>}
+                        {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix6 (Remove)</div>}
                     </div>
                     {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
                 </aside>
