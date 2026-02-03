@@ -206,6 +206,14 @@
             /* スマホビュー統計カードの横幅を65%に変更 */
             .stat-box-mobile { min-width: 65% !important; }
         }
+        
+        /* 検索結果ドロップダウン */
+        .search-results-dropdown {
+            position: absolute; top: 100%; right: 0; margin-top: 4px;
+            width: 300px; max-height: 400px; overflow-y: auto;
+            background: white; border: 1px solid #e2e8f0; border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); z-index: 60;
+        }
     </style>
 </head>
 
@@ -257,7 +265,9 @@
                 ArrowLeft: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>,
                 ArrowRight: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>,
                 Bookmark: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>,
-                Send: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Send: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
+                Archive: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>,
+                Search: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
             };
             return icons[name] || null;
         };
@@ -300,15 +310,17 @@
             const [input, setInput] = useState("");
             const [editId, setEditId] = useState(null);
             const [filterBookmarked, setFilterBookmarked] = useState(false);
+            const [filterArchived, setFilterArchived] = useState(false); // アーカイブフィルター追加
             const scrollRef = useRef(null);
             const [autoScroll, setAutoScroll] = useState(true);
             const scrollInterval = useRef(null);
             const [displayQuotes, setDisplayQuotes] = useState([]);
 
-            // 初期化・ランダム化 (Pin以外)
+            // 初期化・ランダム化
             useEffect(() => {
-                const unpinned = quotes.filter(q => !q.pinned);
-                const shuffled = [...unpinned].sort(() => Math.random() - 0.5);
+                // Pinも含めてStreamに表示するように変更 (アーカイブ済みは除く)
+                const streamSource = quotes.filter(q => !q.archived); 
+                const shuffled = [...streamSource].sort(() => Math.random() - 0.5);
                 setDisplayQuotes(shuffled);
             }, [quotes]);
 
@@ -349,7 +361,7 @@
                     const parts = input.split(/ーーー|---/);
                     const newQuotes = parts.map((part, index) => {
                         if (!part.trim()) return null;
-                        return { id: Date.now().toString() + index, text: part.trim(), pinned: forcePin, bookmarked: false, order: quotes.length + index };
+                        return { id: Date.now().toString() + index, text: part.trim(), pinned: forcePin, bookmarked: false, archived: false, order: quotes.length + index };
                     }).filter(q => q !== null);
                     
                     setQuotes([...quotes, ...newQuotes]);
@@ -361,7 +373,11 @@
                 setInput("");
             };
             
+            // 削除・アーカイブ・復元
             const deleteQuote = (id) => { setQuotes(quotes.filter(q => q.id !== id)); };
+            const archiveQuote = (id) => { setQuotes(quotes.map(q => q.id === id ? { ...q, archived: true } : q)); }; // アーカイブ処理
+            const restoreQuote = (id) => { setQuotes(quotes.map(q => q.id === id ? { ...q, archived: false } : q)); }; // アーカイブ復元
+
             const togglePin = (id) => setQuotes(quotes.map(q => q.id === id ? { ...q, pinned: !q.pinned } : q));
             const toggleBookmark = (id) => setQuotes(quotes.map(q => q.id === id ? { ...q, bookmarked: !q.bookmarked } : q));
             const startEdit = (quote) => { setInput(quote.text); setEditId(quote.id); };
@@ -371,9 +387,10 @@
             const handleDragStart = (e, index) => setDraggedItem(index);
             const handleDragOver = (e, index) => { e.preventDefault(); if (draggedItem === null || draggedItem === index) return; const pinnedQuotes = quotes.filter(q => q.pinned); const unpinnedQuotes = quotes.filter(q => !q.pinned); const newPinned = [...pinnedQuotes]; const [removed] = newPinned.splice(draggedItem, 1); newPinned.splice(index, 0, removed); setQuotes([...newPinned, ...unpinnedQuotes]); setDraggedItem(index); };
             
-            const pinnedQuotes = quotes.filter(q => q.pinned);
+            // PINNED QUOTES (BOARD)の表示ロジック: アーカイブフィルター対応
+            const visiblePinnedQuotes = quotes.filter(q => q.pinned && (filterArchived ? q.archived : !q.archived));
             
-            // STREAMクオート取得ロジック修正
+            // STREAMクオート取得ロジック
             const streamQuotes = displayQuotes.filter(dq => {
                 const exists = quotes.find(q => q.id === dq.id);
                 if (!exists) return false;
@@ -382,6 +399,9 @@
                 if (filterBookmarked) {
                     return exists.bookmarked;
                 }
+                // アーカイブされたものはStreamに出さない
+                if (exists.archived) return false;
+
                 return true;
             }).map(dq => quotes.find(q => q.id === dq.id));
 
@@ -393,26 +413,44 @@
                     </div>
                     
                     {/* Pinned Board */}
-                    {pinnedQuotes.length > 0 && (
-                        <div className="animate-fade-in-up">
-                            <h2 className="text-sm font-bold text-slate-500 mb-2 flex items-center gap-2"><Icon name="Pin" size={16} /> PINNED QUOTES (BOARD)</h2>
+                    <div className="animate-fade-in-up">
+                        <div className="flex justify-between items-center mb-2">
+                            <h2 className="text-sm font-bold text-slate-500 flex items-center gap-2"><Icon name="Pin" size={16} /> PINNED QUOTES (BOARD)</h2>
+                            <button 
+                                onClick={() => setFilterArchived(!filterArchived)} 
+                                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border ${filterArchived ? 'bg-slate-600 text-white border-slate-600' : 'bg-white text-slate-500 border-slate-300'}`}
+                            >
+                                <Icon name="Archive" size={12} /> アーカイブ
+                            </button>
+                        </div>
+                        {visiblePinnedQuotes.length === 0 && <p className="text-sm text-slate-400 mb-4">{filterArchived ? 'アーカイブされたカードはありません。' : 'ピン留めされたカードはありません。'}</p>}
+                        {visiblePinnedQuotes.length > 0 && (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {pinnedQuotes.map((q, i) => (
-                                    <div key={q.id} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} className="bg-white rounded-xl shadow-sm border-l-4 border-[#7C4DFF] p-4 relative group hover:shadow-md transition-all cursor-move">
+                                {visiblePinnedQuotes.map((q, i) => (
+                                    <div key={q.id} draggable={!filterArchived} onDragStart={(e) => !filterArchived && handleDragStart(e, i)} onDragOver={(e) => !filterArchived && handleDragOver(e, i)} className={`bg-white rounded-xl shadow-sm border-l-4 ${q.archived ? 'border-slate-400 opacity-70' : 'border-[#7C4DFF]'} p-4 relative group hover:shadow-md transition-all ${!filterArchived ? 'cursor-move' : ''}`}>
                                         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white">
-                                            <button onClick={() => togglePin(q.id)} className="p-1 text-slate-400 hover:text-[#7C4DFF]"><Icon name="PinOff" size={14} /></button>
-                                            <button onClick={() => startEdit(q)} className="p-1 text-slate-400 hover:text-[#536DFE]"><Icon name="Pencil" size={14} /></button>
-                                            <button onClick={() => deleteQuote(q.id)} className="p-1 text-slate-400 hover:text-red-500"><Icon name="X" size={14} /></button>
+                                            {q.archived ? (
+                                                <>
+                                                    <button onClick={() => restoreQuote(q.id)} className="p-1 text-slate-400 hover:text-green-500" title="復元"><Icon name="RotateCcw" size={14} /></button>
+                                                    <button onClick={() => deleteQuote(q.id)} className="p-1 text-slate-400 hover:text-red-500" title="完全に削除"><Icon name="Trash2" size={14} /></button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button onClick={() => togglePin(q.id)} className="p-1 text-slate-400 hover:text-[#7C4DFF]"><Icon name="PinOff" size={14} /></button>
+                                                    <button onClick={() => startEdit(q)} className="p-1 text-slate-400 hover:text-[#536DFE]"><Icon name="Pencil" size={14} /></button>
+                                                    <button onClick={() => archiveQuote(q.id)} className="p-1 text-slate-400 hover:text-red-500" title="アーカイブ"><Icon name="X" size={14} /></button>
+                                                </>
+                                            )}
                                         </div>
                                         <div className="markdown-preview text-sm" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(q.text) : q.text }} />
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     {/* Stream */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative animate-fade-in-up group" onMouseEnter={() => setAutoScroll(false)} onMouseLeave={() => setAutoScroll(true)}>
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative animate-fade-in-up group mt-6" onMouseEnter={() => setAutoScroll(false)} onMouseLeave={() => setAutoScroll(true)}>
                         <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-4">
                                 <h2 className="text-sm font-bold text-slate-500">STREAM</h2>
@@ -434,19 +472,20 @@
                                 <div key={q.id} className="quote-card shrink-0">
                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 z-20">
                                         <button onClick={() => toggleBookmark(q.id)} className={`p-1 ${q.bookmarked ? 'text-[#7C4DFF]' : 'text-slate-400'} hover:text-[#7C4DFF]`}><Icon name="Bookmark" size={14} fill={q.bookmarked ? "#7C4DFF" : "none"} /></button>
-                                        <button onClick={() => togglePin(q.id)} className="p-1 text-slate-400 hover:text-[#7C4DFF]"><Icon name="Pin" size={14} /></button>
+                                        <button onClick={() => togglePin(q.id)} className={`p-1 ${q.pinned ? 'text-[#7C4DFF]' : 'text-slate-400'} hover:text-[#7C4DFF]`}><Icon name="Pin" size={14} fill={q.pinned ? "#7C4DFF" : "none"} /></button>
                                         <button onClick={() => startEdit(q)} className="p-1 text-slate-400 hover:text-[#536DFE]"><Icon name="Pencil" size={14} /></button>
                                         <button onClick={() => deleteQuote(q.id)} className="p-1 text-slate-400 hover:text-red-500"><Icon name="X" size={14} /></button>
                                     </div>
                                     <div className="markdown-preview text-sm" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(q.text) : q.text }} />
                                     {q.bookmarked && <div className="absolute top-2 left-2 text-[#7C4DFF]"><Icon name="Bookmark" size={16} fill="#7C4DFF" /></div>}
+                                    {q.pinned && <div className="absolute top-2 left-8 text-[#7C4DFF]"><Icon name="Pin" size={16} fill="#7C4DFF" /></div>}
                                 </div>
                             ))}
                         </div>
                     </div>
 
                     {/* Input Area */}
-                    <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up">
+                    <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up mt-6">
                         <h3 className="text-xs font-bold text-slate-500 mb-2 uppercase">{editId ? 'Edit Quote' : 'New Quote'}</h3>
                         <div className="flex flex-col md:flex-row gap-2">
                             <div className="flex-1">
@@ -482,6 +521,10 @@
             
             const [mobileModalTab, setMobileModalTab] = useState('diary');
             const [chartMode, setChartMode] = useState('daily');
+            
+            // 検索機能用 State
+            const [searchQuery, setSearchQuery] = useState('');
+            const [isSearchFocused, setIsSearchFocused] = useState(false);
 
             const formatMoney = (val) => val ? val.toLocaleString() : '0';
             const getMonthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -496,11 +539,40 @@
                         if (isImportModalOpen) setIsImportModalOpen(false);
                         if (isSettingsOpen) setIsSettingsOpen(false);
                         if (isExportMenuOpen) setIsExportMenuOpen(false);
+                        setIsSearchFocused(false);
                     }
                 };
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, [isModalOpen, isImportModalOpen, isSettingsOpen, isExportMenuOpen]);
+
+            // 検索ロジック
+            const searchResults = useMemo(() => {
+                if (!searchQuery.trim()) return [];
+                const query = searchQuery.toLowerCase();
+                return Object.entries(historyData)
+                    .filter(([key, val]) => {
+                        const noteMatch = val.note && val.note.toLowerCase().includes(query);
+                        const eventMatch = val.event && val.event.toLowerCase().includes(query);
+                        return noteMatch || eventMatch;
+                    })
+                    .sort((a, b) => new Date(b[0]) - new Date(a[0])) // 日付降順
+                    .map(([key, val]) => ({ date: key, ...val }));
+            }, [searchQuery, historyData]);
+            
+            // Youtube ID抽出
+            const extractYoutubeIds = (text) => {
+                if (!text) return [];
+                const regExp = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
+                const matches = [];
+                let match;
+                while ((match = regExp.exec(text)) !== null) {
+                    if (!matches.includes(match[1])) matches.push(match[1]);
+                }
+                return matches.slice(0, 3); // 最大3つ
+            };
+            
+            const youtubeThumbnails = useMemo(() => extractYoutubeIds(editData.note), [editData.note]);
 
             const stats = useMemo(() => {
                 const currentYearKey = currentDate.getFullYear().toString();
@@ -722,8 +794,15 @@
                 if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFileImport(e.dataTransfer.files[0]);
             };
 
-            const openModal = (date) => {
-                if (!date) return;
+            const openModal = (dateOrStr) => {
+                if (!dateOrStr) return;
+                let date;
+                if (typeof dateOrStr === 'string') {
+                    date = new Date(dateOrStr);
+                } else {
+                    date = dateOrStr;
+                }
+                
                 const key = getDateKey(date);
                 const data = historyData[key] || { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', important: false, details: [] };
                 if (!data.note) data.note = `# ${key.replace(/-/g, '/')}`;
@@ -731,6 +810,7 @@
                 setEditData({ ...data }); 
                 setMobileModalTab('diary');
                 setIsModalOpen(true);
+                setSearchQuery(''); // 検索クリア
             };
             const handleSave = () => { const key = getDateKey(selectedDate); updateHistoryData({ ...historyData, [key]: editData }); setIsModalOpen(false); };
             
@@ -870,11 +950,46 @@
                         <StatBox title={`今月の収益 (${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月)`} amount={stats.currentMonthTotal} mobileOrder="order-1 md:order-3" />
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-visible animate-fade-in-up">
                         <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                             <div className="flex items-center gap-4"><h2 className="text-sm md:text-xl font-bold text-[#334155] flex items-center gap-2"><Icon name="Calendar" size={20} />{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h2><div className="flex gap-1"><button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronLeft" size={20} /></button><button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white hover:shadow rounded">Today</button><button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronRight" size={20} /></button></div></div>
-                            <div className="flex gap-2">
-                                <button onClick={() => setIsSettingsOpen(true)} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="Settings" size={14} /> <span className="hidden md:inline">設定(Gist)</span></button>
+                            <div className="flex gap-2 relative">
+                                {/* 検索フォーム */}
+                                <div className="relative">
+                                    <div className={`flex items-center gap-1 border rounded px-2 py-1.5 bg-white transition-all shadow-sm ${isSearchFocused ? 'border-[#7C4DFF] w-64' : 'border-slate-300 w-32 md:w-48'}`}>
+                                        <Icon name="Search" size={14} className="text-slate-400" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="日記を検索..." 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onFocus={() => setIsSearchFocused(true)}
+                                            className="w-full text-xs outline-none bg-transparent"
+                                        />
+                                        {searchQuery && <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={12} /></button>}
+                                    </div>
+                                    {searchQuery && (
+                                        <div className="search-results-dropdown">
+                                            {searchResults.length === 0 ? (
+                                                <div className="p-3 text-xs text-slate-500 text-center">一致するデータはありません</div>
+                                            ) : (
+                                                <ul>
+                                                    {searchResults.map((res) => (
+                                                        <li key={res.date} onClick={() => openModal(res.date)} className="p-2 border-b border-slate-100 hover:bg-purple-50 cursor-pointer flex flex-col gap-1">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-xs font-bold text-[#7C4DFF]">{res.date}</span>
+                                                                {res.event && <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-600 truncate max-w-[100px]">{res.event}</span>}
+                                                            </div>
+                                                            {res.note && <div className="text-xs text-slate-500 truncate">{res.note.replace(/[#\-*]/g, '').trim()}</div>}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button onClick={() => setIsSettingsOpen(true)} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="Settings" size={14} /> <span className="hidden md:inline">設定</span></button>
                                 <button onClick={() => setIsImportModalOpen(true)} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="FileUp" size={14} /> <span className="hidden md:inline">インポート</span></button>
                                 <div className="relative">
                                     <button onClick={() => setIsExportMenuOpen(!isExportMenuOpen)} className="text-xs flex items-center gap-1 text-slate-600 hover:text-[#7C4DFF] border border-slate-300 rounded px-3 py-1.5 bg-white hover:bg-slate-50 transition-colors shadow-sm font-medium"><Icon name="Download" size={14} /> <span className="hidden md:inline">エクスポート</span> <Icon name="ChevronDown" size={12} /></button>
@@ -994,6 +1109,24 @@
                                         </button>
                                     </div>
                                     <div className="flex-1 overflow-hidden relative"><EasyMDEEditor value={editData.note} onChange={(val) => setEditData({ ...editData, note: val })} /></div>
+                                    
+                                    {/* YouTubeサムネイル表示エリア */}
+                                    {youtubeThumbnails.length > 0 && (
+                                        <div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0">
+                                            {youtubeThumbnails.map((id, idx) => (
+                                                <div 
+                                                    key={idx} 
+                                                    className="relative cursor-pointer group shrink-0 aspect-video h-full rounded-md overflow-hidden bg-black"
+                                                    onClick={() => window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')}
+                                                >
+                                                    <img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt="Thumbnail" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                        <div className="bg-black/50 p-1 rounded-full"><div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[8px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
@@ -1102,8 +1235,8 @@ const App = () => {
     const [historyData, setHistoryData] = useState({});
     const [customLinks, setCustomLinks] = useState([]);
     const [quotes, setQuotes] = useState([]);
-    const [gistToken] = useState(localStorage.getItem('gist_token') || '');
-    const [gistId] = useState(localStorage.getItem('gist_id') || '');
+    const [gistToken, setGistToken] = useState(localStorage.getItem('gist_token') || '');
+    const [gistId, setGistId] = useState(localStorage.getItem('gist_id') || '');
     
     const [quotePrefill, setQuotePrefill] = useState('');
 
@@ -1187,7 +1320,7 @@ const App = () => {
                     <NavItem id="participant" label="手口上位" icon="Briefcase" />
                     {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                     
-                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.01-fix9</div>}
+                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-archive-search</div>}
                 </div>
                 {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
             </aside>
