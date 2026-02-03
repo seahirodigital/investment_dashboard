@@ -88,7 +88,7 @@
         }
 
         /* ==========================================================================
-           Markdown Style Fix (Headers Resizing)
+           Markdown Style Fix (Headers Resizing & Syntax Hiding)
            ========================================================================== */
         
         .markdown-preview, .editor-preview { color: #334155; font-size: 13px; line-height: 1.6; }
@@ -105,6 +105,19 @@
             font-size: 1.15rem !important; /* 約16px */
             line-height: 1.4; font-weight: 600; color: #475569;
         }
+
+        /* --- 修正箇所: MD記法(#や**等)を非表示にする設定 --- */
+        .CodeMirror .cm-formatting,
+        .CodeMirror .cm-formatting-header,
+        .CodeMirror .cm-formatting-strong,
+        .CodeMirror .cm-formatting-em,
+        .CodeMirror .cm-formatting-quote,
+        .CodeMirror .cm-formatting-list,
+        .CodeMirror .cm-formatting-list-ul,
+        .CodeMirror .cm-formatting-list-ol {
+            display: none !important;
+        }
+        /* ---------------------------------------------------- */
 
         .editor-preview h1, .editor-preview-side h1, .markdown-preview h1 { 
             font-size: 1.5rem !important; font-weight: 700; margin: 0.6em 0 0.4em 0; 
@@ -1291,9 +1304,17 @@ const App = () => {
                 .then(json => {
                     if (json.files && json.files['market_data.json']) {
                         const content = JSON.parse(json.files['market_data.json'].content);
-                        if (content.history) setHistoryData(content.history);
-                        if (content.links) setCustomLinks(content.links);
-                        if (content.quotes) setQuotes(content.quotes);
+                        
+                        // --- 修正箇所: LocalStorageにデータがある場合はGistからの上書きをスキップする ---
+                        const localHistory = localStorage.getItem('history_data');
+                        if (!localHistory && content.history) setHistoryData(content.history);
+
+                        const localLinks = localStorage.getItem('market-dash-links');
+                        if (!localLinks && content.links) setCustomLinks(content.links);
+
+                        const localQuotes = localStorage.getItem('market-dash-quotes');
+                        if (!localQuotes && content.quotes) setQuotes(content.quotes);
+                        // ------------------------------------------------------------------
                     }
                 })
                 .catch(e => console.error("Gist Init Load Failed", e));
@@ -1356,7 +1377,7 @@ const App = () => {
                     <NavItem id="participant" label="手口上位" icon="Briefcase" />
                     {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                     
-                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-mobile-layout</div>}
+                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-revert-md</div>}
                 </div>
                 {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
             </aside>
