@@ -188,6 +188,14 @@
         }
         .quote-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
 
+        /* カード内スクロール用 */
+        .card-scroll-content {
+            max-height: 180px; /* カード高さの約60%想定 */
+            overflow-y: auto;
+        }
+        .card-scroll-content::-webkit-scrollbar { width: 4px; }
+        .card-scroll-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
         /* 統一ヘッダーカード */
         .unified-header-card {
             background: linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%); color: white;
@@ -267,7 +275,8 @@
                 Bookmark: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>,
                 Send: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
                 Archive: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>,
-                Search: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                Search: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>,
+                List: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
             };
             return icons[name] || null;
         };
@@ -315,13 +324,20 @@
             const [autoScroll, setAutoScroll] = useState(true);
             const scrollInterval = useRef(null);
             const [displayQuotes, setDisplayQuotes] = useState([]);
+            const isInitialized = useRef(false);
 
-            // 初期化・ランダム化
+            // 初期化・ランダム化 (初期ロード時のみ)
             useEffect(() => {
-                // Pinも含めてStreamに表示するように変更 (アーカイブ済みは除く)
-                const streamSource = quotes.filter(q => !q.archived); 
-                const shuffled = [...streamSource].sort(() => Math.random() - 0.5);
-                setDisplayQuotes(shuffled);
+                if (isInitialized.current) return;
+                if (quotes.length > 0) {
+                    const streamSource = quotes.filter(q => !q.archived); 
+                    const shuffled = [...streamSource].sort(() => Math.random() - 0.5);
+                    setDisplayQuotes(shuffled);
+                    isInitialized.current = true;
+                } else if (quotes.length === 0) {
+                    setDisplayQuotes([]);
+                    isInitialized.current = true;
+                }
             }, [quotes]);
 
             useEffect(() => {
@@ -361,13 +377,24 @@
                     const parts = input.split(/ーーー|---/);
                     const newQuotes = parts.map((part, index) => {
                         if (!part.trim()) return null;
-                        return { id: Date.now().toString() + index, text: part.trim(), pinned: forcePin, bookmarked: false, archived: false, order: quotes.length + index };
+                        return { 
+                            id: Date.now().toString() + index, 
+                            text: part.trim(), 
+                            pinned: forcePin, 
+                            bookmarked: false, 
+                            archived: false, 
+                            order: quotes.length + index,
+                            createdAt: Date.now() 
+                        };
                     }).filter(q => q !== null);
                     
-                    setQuotes([...quotes, ...newQuotes]);
+                    // State更新: 新しいものが先頭に来るように
+                    const updatedQuotes = [...newQuotes, ...quotes];
+                    setQuotes(updatedQuotes);
                     
-                    // STREAMの先頭に追加
+                    // STREAM表示用も更新 (先頭に追加)
                     setDisplayQuotes(prev => [...newQuotes, ...prev]);
+                    
                     if (scrollRef.current) scrollRef.current.scrollLeft = 0;
                 }
                 setInput("");
@@ -376,7 +403,8 @@
             // 削除・アーカイブ・復元
             const deleteQuote = (id) => { setQuotes(quotes.filter(q => q.id !== id)); };
             const archiveQuote = (id) => { setQuotes(quotes.map(q => q.id === id ? { ...q, archived: true } : q)); }; // アーカイブ処理
-            const restoreQuote = (id) => { setQuotes(quotes.map(q => q.id === id ? { ...q, archived: false } : q)); }; // アーカイブ復元
+            const restoreQuote = (id) => { setQuotes(quotes.map(q => q.id === id ? { ...q, archived: false } : q)); }; // アーカイブ復元 (元の状態へ = PinならPinへ)
+            const restoreToStream = (id) => { setQuotes(quotes.map(q => q.id === id ? { ...q, archived: false, pinned: false } : q)); }; // ストリームに戻す (Pin解除)
 
             const togglePin = (id) => setQuotes(quotes.map(q => q.id === id ? { ...q, pinned: !q.pinned } : q));
             const toggleBookmark = (id) => setQuotes(quotes.map(q => q.id === id ? { ...q, bookmarked: !q.bookmarked } : q));
@@ -391,6 +419,7 @@
             const visiblePinnedQuotes = quotes.filter(q => q.pinned && (filterArchived ? q.archived : !q.archived));
             
             // STREAMクオート取得ロジック
+            // displayQuotes (IDリスト) を元に最新のデータでマッピングする
             const streamQuotes = displayQuotes.filter(dq => {
                 const exists = quotes.find(q => q.id === dq.id);
                 if (!exists) return false;
@@ -413,8 +442,8 @@
                     </div>
                     
                     {/* Pinned Board */}
-                    <div className="animate-fade-in-up">
-                        <div className="flex justify-between items-center mb-2">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in-up">
+                        <div className="flex justify-between items-center mb-4">
                             <h2 className="text-sm font-bold text-slate-500 flex items-center gap-2"><Icon name="Pin" size={16} /> PINNED QUOTES (BOARD)</h2>
                             <button 
                                 onClick={() => setFilterArchived(!filterArchived)} 
@@ -428,10 +457,11 @@
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {visiblePinnedQuotes.map((q, i) => (
                                     <div key={q.id} draggable={!filterArchived} onDragStart={(e) => !filterArchived && handleDragStart(e, i)} onDragOver={(e) => !filterArchived && handleDragOver(e, i)} className={`bg-white rounded-xl shadow-sm border-l-4 ${q.archived ? 'border-slate-400 opacity-70' : 'border-[#7C4DFF]'} p-4 relative group hover:shadow-md transition-all ${!filterArchived ? 'cursor-move' : ''}`}>
-                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white">
+                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white z-10">
                                             {q.archived ? (
                                                 <>
-                                                    <button onClick={() => restoreQuote(q.id)} className="p-1 text-slate-400 hover:text-green-500" title="復元"><Icon name="RotateCcw" size={14} /></button>
+                                                    <button onClick={() => restoreToStream(q.id)} className="p-1 text-slate-400 hover:text-[#7C4DFF]" title="ストリームに戻す"><Icon name="List" size={14} /></button>
+                                                    <button onClick={() => restoreQuote(q.id)} className="p-1 text-slate-400 hover:text-green-500" title="復元 (Pinnedへ)"><Icon name="RotateCcw" size={14} /></button>
                                                     <button onClick={() => deleteQuote(q.id)} className="p-1 text-slate-400 hover:text-red-500" title="完全に削除"><Icon name="Trash2" size={14} /></button>
                                                 </>
                                             ) : (
@@ -442,7 +472,9 @@
                                                 </>
                                             )}
                                         </div>
-                                        <div className="markdown-preview text-sm" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(q.text) : q.text }} />
+                                        <div className="card-scroll-content">
+                                            <div className="markdown-preview text-sm" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(q.text) : q.text }} />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -476,7 +508,9 @@
                                         <button onClick={() => startEdit(q)} className="p-1 text-slate-400 hover:text-[#536DFE]"><Icon name="Pencil" size={14} /></button>
                                         <button onClick={() => deleteQuote(q.id)} className="p-1 text-slate-400 hover:text-red-500"><Icon name="X" size={14} /></button>
                                     </div>
-                                    <div className="markdown-preview text-sm" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(q.text) : q.text }} />
+                                    <div className="card-scroll-content">
+                                        <div className="markdown-preview text-sm" dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(q.text) : q.text }} />
+                                    </div>
                                     {q.bookmarked && <div className="absolute top-2 left-2 text-[#7C4DFF]"><Icon name="Bookmark" size={16} fill="#7C4DFF" /></div>}
                                     {q.pinned && <div className="absolute top-2 left-8 text-[#7C4DFF]"><Icon name="Pin" size={16} fill="#7C4DFF" /></div>}
                                 </div>
@@ -569,7 +603,7 @@
                 while ((match = regExp.exec(text)) !== null) {
                     if (!matches.includes(match[1])) matches.push(match[1]);
                 }
-                return matches.slice(0, 3); // 最大3つ
+                return matches; // 制限なし
             };
             
             const youtubeThumbnails = useMemo(() => extractYoutubeIds(editData.note), [editData.note]);
@@ -1112,7 +1146,7 @@
                                     
                                     {/* YouTubeサムネイル表示エリア */}
                                     {youtubeThumbnails.length > 0 && (
-                                        <div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0">
+                                        <div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0 custom-scrollbar">
                                             {youtubeThumbnails.map((id, idx) => (
                                                 <div 
                                                     key={idx} 
@@ -1320,7 +1354,7 @@ const App = () => {
                     <NavItem id="participant" label="手口上位" icon="Briefcase" />
                     {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                     
-                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-archive-search</div>}
+                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-pinned-scroll</div>}
                 </div>
                 {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
             </aside>
