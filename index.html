@@ -1087,15 +1087,15 @@
                     {isModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}>
                             <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden">
-<div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+<div className="p-2 md:p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
 <h3 className="font-bold text-lg text-[#334155] flex items-center gap-2">
 <Icon name="FileText" size={20} />{selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
 </h3>
 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button>
 </div>
                             <div className="flex border-b border-slate-200 lg:hidden">
-                                <button onClick={() => setMobileModalTab('diary')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${mobileModalTab === 'diary' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>日記 (Diary)</button>
-                                <button onClick={() => setMobileModalTab('inputs')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${mobileModalTab === 'inputs' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>収支入力</button>
+                                <button onClick={() => setMobileModalTab('diary')} className={`flex-1 py-1.5 md:py-3 text-sm font-bold border-b-2 ${mobileModalTab === 'diary' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>日記 (Diary)</button>
+                                <button onClick={() => setMobileModalTab('inputs')} className={`flex-1 py-1.5 md:py-3 text-sm font-bold border-b-2 ${mobileModalTab === 'inputs' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>収支入力</button>
                             </div>
 
                             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
@@ -1126,7 +1126,7 @@
                                 </div>
                                 
                                 <div className={`flex-1 bg-white overflow-hidden p-2 lg:p-6 flex-col ${mobileModalTab === 'diary' ? 'flex' : 'hidden'} lg:flex`}>
-                                    <div className="flex justify-between items-center mb-2">
+                                    <div className="hidden md:flex justify-between items-center mb-2">
                                         <div className="flex items-center gap-2">
                                             <Icon name="Pencil" size={14} className="text-slate-500" />
                                             <span className="text-xs font-bold text-slate-500 uppercase">Investment Diary (Markdown)</span>
@@ -1143,7 +1143,7 @@
                                     
                                     {/* YouTubeサムネイル表示エリア */}
                                     {youtubeThumbnails.length > 0 && (
-                                        <div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0 custom-scrollbar">
+                                        <div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[45px] md:h-[90px] shrink-0 custom-scrollbar">
                                             {youtubeThumbnails.map((id, idx) => (
                                                 <div 
                                                     key={idx} 
@@ -1160,17 +1160,27 @@
                                     )}
                                 </div>
                             </div>
-                            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
-                                <button onClick={handleSaveAndQuote} className="px-4 py-2 bg-slate-100 text-[#7C4DFF] border border-[#7C4DFF] hover:bg-purple-50 rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors">
-                                    <Icon name="Send" size={16} className="hidden md:inline" /> 
-                                    <span className="md:hidden">格言</span>
-                                    <span className="hidden md:inline">格言行き</span>
-                                </button>
-                                <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-xs md:text-sm font-bold transition-colors">キャンセル</button>
-                                <button onClick={handleSave} className="px-6 py-2 bg-[#7C4DFF] text-white hover:bg-[#651FFF] rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors">
-                                    <Icon name="Check" size={16} className="hidden md:inline" /> 
-                                    保存
-                                </button>
+                            <div className="p-2 md:p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center shrink-0">
+                                <div className="md:hidden">
+                                    <button 
+                                        onClick={() => setEditData({ ...editData, important: !editData.important })}
+                                        className={`p-2 rounded-lg border transition-colors ${editData.important ? 'bg-purple-100 border-[#7C4DFF] text-[#7C4DFF]' : 'bg-white border-slate-200 text-slate-400'}`}
+                                    >
+                                        <Icon name="Bookmark" size={20} fill={editData.important ? "#7C4DFF" : "none"} />
+                                    </button>
+                                </div>
+                                <div className="flex gap-2 ml-auto">
+                                    <button onClick={handleSaveAndQuote} className="px-4 py-2 bg-slate-100 text-[#7C4DFF] border border-[#7C4DFF] hover:bg-purple-50 rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors">
+                                        <Icon name="Send" size={16} className="hidden md:inline" /> 
+                                        <span className="md:hidden">格言</span>
+                                        <span className="hidden md:inline">格言行き</span>
+                                    </button>
+                                    <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-xs md:text-sm font-bold transition-colors">キャンセル</button>
+                                    <button onClick={handleSave} className="px-6 py-2 bg-[#7C4DFF] text-white hover:bg-[#651FFF] rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors">
+                                        <Icon name="Check" size={16} className="hidden md:inline" /> 
+                                        保存
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1269,34 +1279,40 @@ const App = () => {
     const [optionCharts, setOptionCharts] = useState([]);
 
     const [historyData, setHistoryData] = useState({});
-    const [customLinks, setCustomLinks] = useState([]);
+    
+    // Quick Links: Lazy Initialization to load immediately from LocalStorage
+    const [customLinks, setCustomLinks] = useState(() => {
+        try {
+            const l = localStorage.getItem('market-dash-links');
+            if (l) {
+                const parsed = JSON.parse(l);
+                // IDマイグレーション: 既存データにIDがない場合は付与して保存
+                const migrated = parsed.map((item, idx) => (!item.id ? { ...item, id: `link-${Date.now()}-${idx}` } : item));
+                return migrated;
+            }
+            return [];
+        } catch (e) {
+            console.error("Local Links Load Failed", e);
+            return [];
+        }
+    });
+
     const [quotes, setQuotes] = useState([]);
     const [gistToken, setGistToken] = useState(localStorage.getItem('gist_token') || '');
     const [gistId, setGistId] = useState(localStorage.getItem('gist_id') || '');
     
     const [quotePrefill, setQuotePrefill] = useState('');
 
+    // Quick Links Persistence Effect
+    useEffect(() => {
+        localStorage.setItem('market-dash-links', JSON.stringify(customLinks));
+    }, [customLinks]);
+
     useEffect(() => {
         const loadLocal = () => {
             try {
                 const h = localStorage.getItem('history_data'); if (h) setHistoryData(JSON.parse(h));
-                const l = localStorage.getItem('market-dash-links'); 
-                if (l) {
-                    const parsed = JSON.parse(l);
-                    // IDマイグレーション: 既存データにIDがない場合は付与して保存
-                    let modified = false;
-                    const migrated = parsed.map((item, idx) => {
-                        if (!item.id) {
-                            modified = true;
-                            return { ...item, id: `link-${Date.now()}-${idx}` };
-                        }
-                        return item;
-                    });
-                    setCustomLinks(migrated);
-                    if (modified) {
-                        localStorage.setItem('market-dash-links', JSON.stringify(migrated));
-                    }
-                }
+                // customLinks loading removed from here to avoid overwriting state
                 const q = localStorage.getItem('market-dash-quotes'); if (q) setQuotes(JSON.parse(q));
             } catch (e) { console.error("Local Load Failed", e); }
         };
@@ -1325,7 +1341,7 @@ const App = () => {
         const l = newLinks !== undefined ? newLinks : customLinks;
         const q = newQuotes !== undefined ? newQuotes : quotes;
         if (newHistory !== undefined) { setHistoryData(h); localStorage.setItem('history_data', JSON.stringify(h)); }
-        if (newLinks !== undefined) { setCustomLinks(l); localStorage.setItem('market-dash-links', JSON.stringify(l)); }
+        // LocalStorage for links is handled by effect, but Gist save still needed
         if (newQuotes !== undefined) { setQuotes(q); localStorage.setItem('market-dash-quotes', JSON.stringify(q)); }
         if (gistToken && gistId) {
             const content = JSON.stringify({ history: h, links: l, quotes: q });
@@ -1375,13 +1391,13 @@ const App = () => {
         const newLinks = [...customLinks]; 
         const [removed] = newLinks.splice(draggedIndex, 1); 
         newLinks.splice(i, 0, removed); 
-        setCustomLinks(newLinks); // State更新のみ (LocalStorageへの保存はしない)
+        setCustomLinks(newLinks); // State更新のみ (LocalStorageへの保存はeffectで行われる)
         setDraggedIndex(i); 
     };
 
     const handleDragEnd = () => {
         setDraggedIndex(null);
-        saveAllData(undefined, customLinks, undefined); // ドラッグ終了時に保存
+        saveAllData(undefined, customLinks, undefined); // ドラッグ終了時にGist保存
     };
 
     const startResizing = useCallback((e) => { e.preventDefault(); setIsResizing(true); }, []);
@@ -1393,7 +1409,7 @@ const App = () => {
         const elements = []; 
         let currentCategoryHidden = false; 
         customLinks.forEach((link, i) => { 
-            // IDがない場合のフォールバック (基本的にはuseEffectで付与されるが念のため)
+            // IDがない場合のフォールバック
             const key = link.id || i;
 
             if (link.type === 'divider') { 
@@ -1446,7 +1462,7 @@ const App = () => {
                     <NavItem id="participant" label="手口上位" icon="Briefcase" />
                     {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                     
-                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-quicklinks</div>}
+                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-links-mobile</div>}
                 </div>
                 {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
             </aside>
