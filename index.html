@@ -114,6 +114,16 @@
             display: none !important;
         }
 
+        /* --- 修正箇所: Markdown制御文字の非表示設定 --- */
+        /* 見出し(#)、太字(**)、斜体(*)、引用(>) などの記号を非表示にする */
+        .CodeMirror .cm-formatting-header,
+        .CodeMirror .cm-formatting-strong,
+        .CodeMirror .cm-formatting-em,
+        .CodeMirror .cm-formatting-quote {
+            display: none !important;
+        }
+        /* ---------------------------------------------------- */
+
         .editor-preview h1, .editor-preview-side h1, .markdown-preview h1 { 
             font-size: 1.5rem !important; font-weight: 700; margin: 0.6em 0 0.4em 0; 
             border-bottom: 1px solid #e2e8f0; padding-bottom: 0.2em; color: #1e293b; 
