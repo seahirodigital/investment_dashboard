@@ -88,33 +88,31 @@
         }
 
         /* ==========================================================================
-           Markdown Style Fix (Headers Resizing & Control Characters Hiding)
+           Markdown Style Fix
            ========================================================================== */
         
-        .markdown-preview, .editor-preview { color: #334155; font-size: 13px; line-height: 1.6; }
+        .markdown-preview, .editor-preview, .editor-preview-side { color: #334155; font-size: 13px; line-height: 1.6; }
 
-        .CodeMirror .cm-header-1 {
-            font-size: 1.5rem !important; /* 約20px */
-            line-height: 1.4; font-weight: 700; color: #1e293b;
-        }
-        .CodeMirror .cm-header-2 {
-            font-size: 1.25rem !important; /* 約18px */
-            line-height: 1.4; font-weight: 600; color: #334155;
-        }
-        .CodeMirror .cm-header-3 {
-            font-size: 1.15rem !important; /* 約16px */
-            line-height: 1.4; font-weight: 600; color: #475569;
+        /* エディタプレビュー内の画像スタイル調整 */
+        .editor-preview img, .editor-preview-side img, .markdown-preview img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin: 8px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        /* --- 修正箇所: Markdown制御文字の非表示設定 --- */
-        /* 見出し(#)、太字(**)、斜体(*)、引用(>) などの記号を非表示にする */
+        .CodeMirror .cm-header-1 { font-size: 1.5rem !important; line-height: 1.4; font-weight: 700; color: #1e293b; }
+        .CodeMirror .cm-header-2 { font-size: 1.25rem !important; line-height: 1.4; font-weight: 600; color: #334155; }
+        .CodeMirror .cm-header-3 { font-size: 1.15rem !important; line-height: 1.4; font-weight: 600; color: #475569; }
+
+        /* Markdown制御文字の非表示設定 */
         .CodeMirror .cm-formatting-header,
         .CodeMirror .cm-formatting-strong,
         .CodeMirror .cm-formatting-em,
         .CodeMirror .cm-formatting-quote {
             display: none !important;
         }
-        /* ---------------------------------------------------- */
 
         .editor-preview h1, .editor-preview-side h1, .markdown-preview h1 { 
             font-size: 1.5rem !important; font-weight: 700; margin: 0.6em 0 0.4em 0; 
@@ -135,36 +133,29 @@
            EasyMDE & CodeMirror Scroll Fix (Mobile Optimized)
            ========================================================================== */
         
-        /* コンテナをFlexboxにして高さを親に合わせる */
         .EasyMDEContainer { 
             background: white; 
             border-radius: 0.5rem; 
-            height: 100%; /* 親要素(div.flex-1)いっぱいに広げる */
+            height: 100%; 
             display: flex;
             flex-direction: column;
         }
 
-        /* ツールバーのスタイル */
         .editor-toolbar { 
             border: 1px solid #e2e8f0; 
             border-radius: 0.5rem 0.5rem 0 0; 
             background-color: #f8fafc; 
             opacity: 1; 
-            flex-shrink: 0; /* 縮小させない */
+            flex-shrink: 0; 
         }
 
-        /* エディタ本体のスタイル調整 */
         .CodeMirror { 
             border: 1px solid #e2e8f0; 
             border-radius: 0 0 0.5rem 0.5rem; 
             font-family: monospace; 
             font-size: 14px; 
-            
-            /* Flexbox内で残りの高さを埋める */
             flex: 1; 
-            height: auto !important; /* EasyMDEのデフォルト高さを無効化 */
-            
-            /* スクロール連鎖（背景スクロール）防止: 重要 */
+            height: auto !important; 
             overscroll-behavior-y: contain; 
         }
 
@@ -172,7 +163,6 @@
 
         /* ========================================================================== */
 
-        /* ツールチップ */
         .stock-tooltip {
             visibility: hidden; opacity: 0; position: absolute; bottom: 100%; left: 50%;
             transform: translateX(-50%) translateY(-5px); z-index: 100;
@@ -182,8 +172,6 @@
             pointer-events: none; transition: opacity 0.15s, transform 0.15s;
         }
         .cal-cell:hover .stock-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(-10px); }
-        
-        /* ツールチップ内のインタラクションを有効化 (削除ボタン用) */
         .cal-cell:hover .stock-tooltip { pointer-events: auto; }
 
         /* Quotes Carousel */
@@ -198,15 +186,13 @@
         }
         .quote-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
 
-        /* カード内スクロール用 */
         .card-scroll-content {
-            max-height: 180px; /* カード高さの約60%想定 */
+            max-height: 180px; 
             overflow-y: auto;
         }
         .card-scroll-content::-webkit-scrollbar { width: 4px; }
         .card-scroll-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 
-        /* 統一ヘッダーカード */
         .unified-header-card {
             background: linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%); color: white;
             border-radius: 0.75rem; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex;
@@ -216,16 +202,12 @@
         .unified-header-title { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem; }
         .unified-header-sub { font-size: 0.75rem; opacity: 0.9; }
 
-        /* スマホ用スタイル調整 */
         @media (max-width: 768px) {
             .unified-header-card { height: auto; flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 1rem; }
             .unified-header-title { font-size: 1.25rem; }
-            
-            /* スマホビュー統計カードの横幅を65%に変更 */
             .stat-box-mobile { min-width: 65% !important; }
         }
         
-        /* 検索結果ドロップダウン */
         .search-results-dropdown {
             position: absolute; top: 100%; right: 0; margin-top: 4px;
             width: 300px; max-height: 400px; overflow-y: auto;
@@ -311,6 +293,10 @@
                     element: textareaRef.current, initialValue: value, spellChecker: false, status: false,
                     toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "side-by-side", "fullscreen"],
                     placeholder: "内容を入力...", forceSync: true,
+                    // Markdownプレビューのレンダリング設定（画像を表示するため）
+                    previewRender: function(plainText) {
+                        return window.marked ? window.marked.parse(plainText) : plainText;
+                    },
                 });
                 mdeRef.current.codemirror.on("change", () => onChange(mdeRef.current.value()));
 
