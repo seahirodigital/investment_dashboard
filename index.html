@@ -1280,7 +1280,23 @@ const App = () => {
         const loadLocal = () => {
             try {
                 const h = localStorage.getItem('history_data'); if (h) setHistoryData(JSON.parse(h));
-                const l = localStorage.getItem('market-dash-links'); if (l) setCustomLinks(JSON.parse(l));
+                const l = localStorage.getItem('market-dash-links'); 
+                if (l) {
+                    const parsed = JSON.parse(l);
+                    // IDマイグレーション: 既存データにIDがない場合は付与して保存
+                    let modified = false;
+                    const migrated = parsed.map((item, idx) => {
+                        if (!item.id) {
+                            modified = true;
+                            return { ...item, id: `link-${Date.now()}-${idx}` };
+                        }
+                        return item;
+                    });
+                    setCustomLinks(migrated);
+                    if (modified) {
+                        localStorage.setItem('market-dash-links', JSON.stringify(migrated));
+                    }
+                }
                 const q = localStorage.getItem('market-dash-quotes'); if (q) setQuotes(JSON.parse(q));
             } catch (e) { console.error("Local Load Failed", e); }
         };
@@ -1292,7 +1308,11 @@ const App = () => {
                     if (json.files && json.files['market_data.json']) {
                         const content = JSON.parse(json.files['market_data.json'].content);
                         if (content.history) setHistoryData(content.history);
-                        if (content.links) setCustomLinks(content.links);
+                        if (content.links) {
+                            // GistデータのIDチェック
+                            const migrated = content.links.map((item, idx) => (!item.id ? { ...item, id: `link-${Date.now()}-${idx}` } : item));
+                            setCustomLinks(migrated);
+                        }
                         if (content.quotes) setQuotes(content.quotes);
                     }
                 })
@@ -1326,17 +1346,87 @@ const App = () => {
 
     const toggleCategory = (i) => setCollapsedCategories(p => ({ ...p, [i]: !p[i] }));
     const openAllInGroup = (start) => { for (let i = start + 1; i < customLinks.length; i++) { if (customLinks[i].type === 'divider') break; if (customLinks[i].url) window.open(customLinks[i].url, '_blank'); } };
-    const addCustomLink = () => { if ((linkType === 'link' && newLinkLabel && newLinkUrl) || (linkType === 'divider' && newLinkLabel)) { let url = newLinkUrl; if (linkType === 'link' && !/^https?:\/\//i.test(url)) url = 'https://' + url; const newItem = { label: newLinkLabel, url: linkType === 'link' ? url : '', type: linkType }; const updated = [...customLinks, newItem]; setNewLinkLabel(''); setNewLinkUrl(''); setIsAddingLink(false); saveAllData(undefined, updated, undefined); } };
+    
+    const addCustomLink = () => { 
+        if ((linkType === 'link' && newLinkLabel && newLinkUrl) || (linkType === 'divider' && newLinkLabel)) { 
+            let url = newLinkUrl; 
+            if (linkType === 'link' && !/^https?:\/\//i.test(url)) url = 'https://' + url; 
+            const newItem = { 
+                id: Date.now().toString(), // IDを追加
+                label: newLinkLabel, 
+                url: linkType === 'link' ? url : '', 
+                type: linkType 
+            }; 
+            const updated = [...customLinks, newItem]; 
+            setNewLinkLabel(''); 
+            setNewLinkUrl(''); 
+            setIsAddingLink(false); 
+            saveAllData(undefined, updated, undefined); 
+        } 
+    };
+    
     const removeCustomLink = (i) => { const updated = customLinks.filter((_, idx) => idx !== i); saveAllData(undefined, updated, undefined); };
+    
     const handleDragStart = (e, i) => { setDraggedIndex(i); e.dataTransfer.effectAllowed = 'move'; };
-    const handleDragOver = (e, i) => { e.preventDefault(); if (draggedIndex === null || draggedIndex === i) return; const newLinks = [...customLinks]; const [removed] = newLinks.splice(draggedIndex, 1); newLinks.splice(i, 0, removed); saveAllData(undefined, newLinks, undefined); setDraggedIndex(i); };
+    
+    const handleDragOver = (e, i) => { 
+        e.preventDefault(); 
+        if (draggedIndex === null || draggedIndex === i) return; 
+        const newLinks = [...customLinks]; 
+        const [removed] = newLinks.splice(draggedIndex, 1); 
+        newLinks.splice(i, 0, removed); 
+        setCustomLinks(newLinks); // State更新のみ (LocalStorageへの保存はしない)
+        setDraggedIndex(i); 
+    };
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null);
+        saveAllData(undefined, customLinks, undefined); // ドラッグ終了時に保存
+    };
 
     const startResizing = useCallback((e) => { e.preventDefault(); setIsResizing(true); }, []);
     useEffect(() => { const handleMouseMove = (e) => { if (isResizing) { let w = e.clientX; if (w < 150) w = 150; if (w > 400) w = 400; setSidebarWidth(w); } }; const handleMouseUp = () => { if (isResizing) setIsResizing(false); }; if (isResizing) { document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', handleMouseUp); } return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); }; }, [isResizing]);
 
     const NavItem = ({ id, label, icon }) => ( <button onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${view === id ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? label : ''}><Icon name={icon} size={20} />{!isCollapsed && <span className="font-medium text-sm">{label}</span>}</button> );
 
-    const renderCustomLinks = () => { const elements = []; let currentCategoryHidden = false; customLinks.forEach((link, i) => { if (link.type === 'divider') { currentCategoryHidden = collapsedCategories[i] || false; elements.push(<div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mt-3 mb-1 cursor-move transition-colors hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}><div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={14} /></div><div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => toggleCategory(i)}><Icon name={currentCategoryHidden ? "ChevronRight" : "ChevronLeft"} size={14} className="text-slate-400 transition-transform" style={{ transform: currentCategoryHidden ? 'rotate(0deg)' : 'rotate(-90deg)' }} /><Icon name="FolderOpen" size={14} className="text-[#7C4DFF]" /><span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate select-none">{link.label}</span></div><button onClick={() => openAllInGroup(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[#7C4DFF] transition-opacity"><Icon name="ExternalLink" size={12} /></button><button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button></div>); } else { if (!currentCategoryHidden) { elements.push(<div key={i} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} className={`group flex items-center gap-2 px-3 py-1 ml-4 rounded-lg transition-colors cursor-move hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}><div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={12} /></div><a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto"><Icon name="Link" size={12} className="shrink-0 text-slate-400" /><span className="truncate">{link.label}</span></a><button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button></div>); } } }); return elements; };
+    const renderCustomLinks = () => { 
+        const elements = []; 
+        let currentCategoryHidden = false; 
+        customLinks.forEach((link, i) => { 
+            // IDがない場合のフォールバック (基本的にはuseEffectで付与されるが念のため)
+            const key = link.id || i;
+
+            if (link.type === 'divider') { 
+                currentCategoryHidden = collapsedCategories[i] || false; 
+                elements.push(
+                    <div key={key} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mt-3 mb-1 cursor-move transition-colors hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
+                        <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={14} /></div>
+                        <div className="flex-1 flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => toggleCategory(i)}>
+                            <Icon name={currentCategoryHidden ? "ChevronRight" : "ChevronLeft"} size={14} className="text-slate-400 transition-transform" style={{ transform: currentCategoryHidden ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+                            <Icon name="FolderOpen" size={14} className="text-[#7C4DFF]" />
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate select-none">{link.label}</span>
+                        </div>
+                        <button onClick={() => openAllInGroup(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-[#7C4DFF] transition-opacity"><Icon name="ExternalLink" size={12} /></button>
+                        <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button>
+                    </div>
+                ); 
+            } else { 
+                if (!currentCategoryHidden) { 
+                    elements.push(
+                        <div key={key} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} className={`group flex items-center gap-2 px-3 py-1 ml-4 rounded-lg transition-colors cursor-move hover:bg-slate-100 ${draggedIndex === i ? 'dragging' : ''}`}>
+                            <div className="text-slate-300 group-hover:text-slate-400 cursor-grab active:cursor-grabbing"><Icon name="GripVertical" size={12} /></div>
+                            <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center gap-2 text-slate-600 text-sm font-medium overflow-hidden pointer-events-none group-hover:pointer-events-auto">
+                                <Icon name="Link" size={12} className="shrink-0 text-slate-400" />
+                                <span className="truncate">{link.label}</span>
+                            </a>
+                            <button onClick={() => removeCustomLink(i)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"><Icon name="Trash2" size={12} /></button>
+                        </div>
+                    ); 
+                } 
+            } 
+        }); 
+        return elements; 
+    };
     
     const handleMoveToQuotes = (text) => {
         setQuotePrefill(text);
@@ -1356,7 +1446,7 @@ const App = () => {
                     <NavItem id="participant" label="手口上位" icon="Briefcase" />
                     {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                     
-                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-mobile-layout</div>}
+                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.03-fix-quicklinks</div>}
                 </div>
                 {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
             </aside>
