@@ -1460,15 +1460,11 @@
 
     // Modified parser to support vertical copy-paste from SBI
     const parseSBIRiskFormat = (text) => {
-        // Normalize lines
         const lines = text.split('\n').map(l => l.trim()).filter(l => l);
         const data = [];
         let detectedAtm = null;
 
-        // リスク指標行のインデックスを収集
         const riskIndices = [];
-        // 正規表現: 行末に "リスク指標" を含む行。ATMマークがある場合も考慮。
-        // SBIのフォーマット: "02/05 13:00 35,000リスク指標" や "A T M 35,000リスク指標" など
         const anchorRegex = /((?:A\s?T\s?M\s?)|(?:ATM\s?))?([\d,]+)\s*リスク指標/;
         
         lines.forEach((line, idx) => {
@@ -1482,59 +1478,38 @@
             const strike = parseInt(match[2].replace(/,/g, ''), 10);
             if (isAtm) detectedAtm = strike;
 
-            // CALL OI探索: idx行より上を探索
+            // **修正1: CALL OI探索ロジックの改善**
             let callOI = 0;
-            // 上に遡り、最初に見つかった「数値で始まる行」を探す。ただし日付行(02/05...)は除く。
-            // Callデータ行は典型的に [清算値] [建玉] [取引高] ... の順序。
-            // 例: "2 276 5 50.31%" -> 左から2番目がOI
-            for (let i = 1; i <= 10; i++) {
-                if (idx - i < 0) break;
-                const targetLine = lines[idx - i];
-                if (targetLine.includes('リスク指標')) break; // 前のブロックに入ったら終了
-
-                // 行頭が数値（日付除く）かチェック
-                // 日付は "02/05" のようにスラッシュを含む、または "+" "-" で始まる（前日比）
-                // Callデータ行は "2" や "135" などの数値で始まることが多い
-                if (/^[\d,]+(\s|$)/.test(targetLine) && !targetLine.includes('/')) {
-                    // 数値を抽出
-                    const nums = targetLine.match(/[\d,]+/g);
-                    if (nums && nums.length >= 2) {
-                        // 左から2番目を採用 (清算値, 建玉, 出来高...)
-                        const val = parseInt(nums[1].replace(/,/g, ''), 10);
-                        callOI = val;
-                        break;
-                    }
+            // 「リスク指標」行の**2行上**がCallの建玉データ（SBIフォーマット）
+            if (idx >= 2) {
+                const callLine = lines[idx - 2]; 
+                // 数値のみを抽出（日付やパーセンテージを除外）
+                const nums = callLine.match(/(?<!\d\/)\b(\d{1,3}(?:,\d{3})*|\d+)\b(?!%)/g);
+                if (nums && nums.length >= 2) {
+                    // **2番目の数値が建玉**（1番目は清算値）
+                    callOI = parseInt(nums[1].replace(/,/g, ''), 10);
                 }
             }
 
-            // PUT OI探索: idx行より下を探索
+            // **修正2: PUT OI探索ロジックの改善**
             let putOI = 0;
-            // 下に進み、最初に見つかった「数値またはハイフンで終わる行」を探す。
-            // Putデータ行は典型的に ... [取引高] [建玉] [清算値] の順序。
-            // 例: "... 13,345" -> 右端が清算値、その左が建玉
-            for (let i = 1; i <= 10; i++) {
-                if (idx + i >= lines.length) break;
-                const targetLine = lines[idx + i];
-                if (targetLine.includes('リスク指標')) break; // 次のブロックに入ったら終了
-
-                // 行末が数値またはハイフンかチェック
-                if (/([\d,]+|-)$/.test(targetLine) && !targetLine.includes('/')) {
-                    const tokens = targetLine.split(/\s+/);
-                    if (tokens.length >= 2) {
-                        // 右から2番目を取得 (..., 建玉, 清算値)
-                        const oiToken = tokens[tokens.length - 2];
-                        const parse = (s) => (s === '-' ? 0 : parseInt(s.replace(/,/g, ''), 10));
-                        
-                        // oiTokenが数値またはハイフンなら採用
-                        if (/^[\d,]+$/.test(oiToken) || oiToken === '-') {
-                            putOI = parse(oiToken);
-                            break;
-                        }
+            // 「リスク指標」行の**1行下**がPutの建玉データ
+            if (idx + 1 < lines.length) {
+                const putLine = lines[idx + 1];
+                // 行末から数値を抽出（右から2番目が建玉）
+                const tokens = putLine.split(/\s+/).filter(t => t);
+                if (tokens.length >= 2) {
+                    // **右から2番目を取得**（右端は清算値）
+                    const oiToken = tokens[tokens.length - 2];
+                    const parse = (s) => (s === '-' ? 0 : parseInt(s.replace(/,/g, ''), 10));
+                    
+                    // 数値またはハイフンの場合のみ採用
+                    if (/^[\d,]+$/.test(oiToken) || oiToken === '-') {
+                        putOI = parse(oiToken);
                     }
                 }
             }
 
-            // データ追加
             data.push({ strike, call: callOI, put: putOI, diff: callOI - putOI });
         });
 
