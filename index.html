@@ -283,9 +283,13 @@
 
         // --- Quotes Manager (EasyMDE) ---
         // 修正: uploadConfigを受け取り、pasteイベントで画像アップロードを処理する
-        const EasyMDEEditor = ({ value, onChange, uploadConfig }) => {
+        // 追加: onSave propを受け取り、Ctrl+Sでの保存をサポート
+        const EasyMDEEditor = ({ value, onChange, uploadConfig, onSave }) => {
             const textareaRef = useRef(null);
             const mdeRef = useRef(null);
+            const onSaveRef = useRef(onSave); // 最新のonSave関数を保持するためのRef
+
+            useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
             
             useEffect(() => {
                 if (!textareaRef.current) return;
@@ -297,6 +301,11 @@
                     previewRender: function(plainText) {
                         return window.marked ? window.marked.parse(plainText) : plainText;
                     },
+                    // --- Ctrl+S ショートカット追加 ---
+                    extraKeys: {
+                        "Ctrl-S": function(cm) { if (onSaveRef.current) onSaveRef.current(); },
+                        "Cmd-S": function(cm) { if (onSaveRef.current) onSaveRef.current(); }
+                    }
                 });
                 mdeRef.current.codemirror.on("change", () => onChange(mdeRef.current.value()));
 
@@ -583,7 +592,7 @@
                     <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up mt-6">
                         <div className="flex flex-col md:flex-row gap-2">
                             <div className="flex-1">
-                                <EasyMDEEditor value={input} onChange={setInput} uploadConfig={uploadConfig} />
+                                <EasyMDEEditor value={input} onChange={setInput} uploadConfig={uploadConfig} onSave={() => addQuote(false)} />
                             </div>
                             <div className="flex md:flex-col gap-2 self-end md:self-start w-full md:w-auto">
                                 <button onClick={() => addQuote(false)} className="flex-1 bg-[#7C4DFF] text-white px-6 rounded-lg font-bold hover:bg-[#651FFF] transition-colors py-2 md:py-3 whitespace-nowrap">STREAM</button>
@@ -1220,8 +1229,8 @@
                                             <Icon name="Bookmark" size={16} fill={editData.important ? "#7C4DFF" : "none"} />
                                         </button>
                                     </div>
-                                    {/* uploadConfigを追加 */}
-                                    <div className="flex-1 overflow-hidden relative"><EasyMDEEditor value={editData.note} onChange={(val) => setEditData({ ...editData, note: val })} uploadConfig={uploadConfig} /></div>
+                                    {/* uploadConfigを追加, onSaveを追加 */}
+                                    <div className="flex-1 overflow-hidden relative"><EasyMDEEditor value={editData.note} onChange={(val) => setEditData({ ...editData, note: val })} uploadConfig={uploadConfig} onSave={handleSave} /></div>
                                     
                                     {/* YouTubeサムネイル表示エリア */}
                                     {youtubeThumbnails.length > 0 && (
@@ -1391,53 +1400,101 @@ const App = () => {
     
     const [quotePrefill, setQuotePrefill] = useState('');
 
+    // 修正: Cloud First Data Loading Strategy
     useEffect(() => {
-        const loadLocal = () => {
-            try {
-                const h = localStorage.getItem('history_data'); if (h) setHistoryData(JSON.parse(h));
-                const l = localStorage.getItem('market-dash-links'); if (l) setCustomLinks(JSON.parse(l));
-                const q = localStorage.getItem('market-dash-quotes'); if (q) setQuotes(JSON.parse(q));
-            } catch (e) { console.error("Local Load Failed", e); }
-        };
-        loadLocal();
-        if (gistToken && gistId) {
-            fetch(`https://api.github.com/gists/${gistId.trim()}`, { headers: { 'Authorization': `token ${gistToken.trim()}` } })
-                .then(res => res.json())
-                .then(json => {
-                    if (json.files && json.files['market_data.json']) {
-                        const content = JSON.parse(json.files['market_data.json'].content);
-                        
-                        // --- 修正箇所: LocalStorageにデータがある場合はGistからの上書きをスキップする ---
-                        // F5更新時など、ローカルの最新データがGistの古いデータで上書きされるのを防ぐ
-                        const localHistory = localStorage.getItem('history_data');
-                        if (!localHistory && content.history) setHistoryData(content.history);
-
-                        const localLinks = localStorage.getItem('market-dash-links');
-                        if (!localLinks && content.links) setCustomLinks(content.links);
-
-                        const localQuotes = localStorage.getItem('market-dash-quotes');
-                        if (!localQuotes && content.quotes) setQuotes(content.quotes);
-                        // ------------------------------------------------------------------
+        const loadData = async () => {
+            let cloudLoaded = false;
+            
+            // 1. Gistからデータを取得（最優先）
+            if (gistToken && gistId) {
+                try {
+                    const response = await fetch(`https://api.github.com/gists/${gistId.trim()}`, {
+                        headers: { 'Authorization': `token ${gistToken.trim()}` }
+                    });
+                    
+                    if (response.ok) {
+                        const json = await response.json();
+                        if (json.files && json.files['market_data.json']) {
+                            const content = JSON.parse(json.files['market_data.json'].content);
+                            
+                            // GistデータをstateとlocalStorageの両方に保存 (古いローカルデータがあっても上書きする)
+                            if (content.history) {
+                                setHistoryData(content.history);
+                                localStorage.setItem('history_data', JSON.stringify(content.history));
+                            }
+                            if (content.links) {
+                                setCustomLinks(content.links);
+                                localStorage.setItem('market-dash-links', JSON.stringify(content.links));
+                            }
+                            if (content.quotes) {
+                                setQuotes(content.quotes);
+                                localStorage.setItem('market-dash-quotes', JSON.stringify(content.quotes));
+                            }
+                            
+                            cloudLoaded = true;
+                            console.log("✅ Sync: Gist data loaded successfully (Cloud First)");
+                        }
                     }
-                })
-                .catch(e => console.error("Gist Init Load Failed", e));
-        }
-    }, []);
+                } catch (e) {
+                    console.error("❌ Sync: Gist load failed", e);
+                }
+            }
 
+            // 2. Gistが使えない、または失敗した場合のみローカルからロード
+            if (!cloudLoaded) {
+                try {
+                    const h = localStorage.getItem('history_data'); if (h) setHistoryData(JSON.parse(h));
+                    const l = localStorage.getItem('market-dash-links'); if (l) setCustomLinks(JSON.parse(l));
+                    const q = localStorage.getItem('market-dash-quotes'); if (q) setQuotes(JSON.parse(q));
+                    console.log("⚠️ Sync: Loaded from LocalStorage (Fallback)");
+                } catch (e) { 
+                    console.error("Local Load Failed", e); 
+                }
+            }
+        };
+
+        loadData();
+    }, []); // 依存配列は空でOK (Token等は初期化時に読み込み済み)
+
+    // 修正: Save Strategy (Sync Local + Async Cloud)
     const saveAllData = (newHistory, newLinks, newQuotes) => {
         const h = newHistory !== undefined ? newHistory : historyData;
         const l = newLinks !== undefined ? newLinks : customLinks;
         const q = newQuotes !== undefined ? newQuotes : quotes;
-        if (newHistory !== undefined) { setHistoryData(h); localStorage.setItem('history_data', JSON.stringify(h)); }
-        if (newLinks !== undefined) { setCustomLinks(l); localStorage.setItem('market-dash-links', JSON.stringify(l)); }
-        if (newQuotes !== undefined) { setQuotes(q); localStorage.setItem('market-dash-quotes', JSON.stringify(q)); }
+        
+        // State Update
+        if (newHistory !== undefined) setHistoryData(h);
+        if (newLinks !== undefined) setCustomLinks(l);
+        if (newQuotes !== undefined) setQuotes(q);
+
+        // 1. LocalStorage (Synchronous - Immediate)
+        try {
+            if (newHistory !== undefined) localStorage.setItem('history_data', JSON.stringify(h));
+            if (newLinks !== undefined) localStorage.setItem('market-dash-links', JSON.stringify(l));
+            if (newQuotes !== undefined) localStorage.setItem('market-dash-quotes', JSON.stringify(q));
+        } catch (e) {
+            console.error("Local Save Failed", e);
+        }
+
+        // 2. Gist (Asynchronous - Background)
         if (gistToken && gistId) {
-            const content = JSON.stringify({ history: h, links: l, quotes: q });
+            const content = JSON.stringify({ 
+                history: h, 
+                links: l, 
+                quotes: q,
+                lastUpdated: new Date().toISOString() // 競合解決用にタイムスタンプ付与
+            });
+            
             fetch(`https://api.github.com/gists/${gistId.trim()}`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `token ${gistToken.trim()}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ files: { 'market_data.json': { content: content } } })
-            }).catch(e => console.error("Gist Save Failed", e));
+            })
+            .then(res => {
+                if(res.ok) console.log("✅ Sync: Saved to Gist");
+                else console.warn("⚠️ Sync: Gist Save Failed", res.status);
+            })
+            .catch(e => console.error("❌ Sync: Gist Network Error", e));
         }
     };
 
@@ -1480,7 +1537,7 @@ const App = () => {
                     <NavItem id="participant" label="手口上位" icon="Briefcase" />
                     {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                     
-                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.04-md-fix</div>}
+                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.05-cloud-sync-fix</div>}
                 </div>
                 {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
             </aside>
