@@ -268,12 +268,7 @@
                 Send: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
                 Archive: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>,
                 Search: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>,
-                List: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>,
-                // 追加アイコン
-                Clipboard: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /></svg>,
-                AlertCircle: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>,
-                ArrowUpDown: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 16-4 4-4-4" /><path d="M17 20V4" /><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /></svg>,
-                AlignJustify: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+                List: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
             };
             return icons[name] || null;
         };
@@ -1360,515 +1355,218 @@
                                     const index = Math.round(context.parsed.x); if (index >= 0 && index < data.length) {
                                         const val = data[index].balance; const raw = data[index].rawBalance; const sign = val >= 0 ? '+' : ''; return `${sign}${formatNumber(val)}億円 (${sign}${(raw*1000).toLocaleString('ja-JP')}円)`;}return'';},afterLabel:(context)=>context.parsed.y>=0?'買い越し':'売り越し'}},zoom:{pan:{enabled:true,mode:'x',threshold:0},zoom:{wheel:{enabled:true,speed:0.1},pinch:{enabled:true},mode:'x',onZoomComplete:updateStatsFromChart}}},scales:{y:{ticks:{callback:(value,index,ticks)=>index===ticks.length-1?formatNumber(value)+'億円':formatNumber(value)},grid:{color:'#e2e8f0'}},x:{type:'linear',min:0,max:data.length-1,ticks:{callback:(value)=>data[Math.round(value)]?.displayDate||'',maxRotation:45,minRotation:45,autoSkip:true,maxTicksLimit:20},grid:{color:'#e2e8f0'}}}}};chartInstance.current=new Chart(ctx,config);};useEffect(()=>{const loadData=async()=>{try{const res=await fetch('history.csv');const text=res.ok?await res.text():null;if(!text)throw new Error("CSV load failed");Papa.parse(text,{header:true,dynamicTyping:true,skipEmptyLines:true,complete:(results)=>{const raw=results.data.filter(r=>r.date&&r.balance!=null).map(r=>({date:r.date,balance:r.balance/100000,rawBalance:r.balance})).sort((a,b)=>new Date(a.date)-new Date(b.date));const processed=calculateWeekLabels(raw);setAllData(processed);if(processed.length>0)setLastUpdate(`最終更新: ${getFormattedReleaseDate(processed[processed.length-1].date)}`);}}); }catch(e){console.error(e);setLastUpdate("データの読み込みに失敗しました");}};loadData();},[]);useEffect(()=>{if(allData.length===0)return;const filtered=getFilteredData(allData,currentTimeRange);setDataCount(filtered.length);drawChart(filtered);setStats(calculateStats(filtered));},[allData,currentTimeRange]);return(<div className="space-y-6"><div className="unified-header-card"><div className="unified-header-title"><Icon name="LineChart" size={28} /> JPX 海外投資家動向</div><p className="unified-header-sub">{lastUpdate}</p></div><div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up"><h2 className="text-xl font-bold text-slate-900 mb-4">差引推移 <span className="text-sm font-normal text-slate-500 ml-2">({dataCount}件のデータ)</span></h2><div style={{position:'relative',height:'500px'}}><canvas ref={chartRef}></canvas><div style={{position:'absolute',bottom:'90px',left:'80px',display:'flex',gap:'8px',zIndex:10}}><button onClick={()=>zoomChart('in')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">＋</button><button onClick={()=>zoomChart('out')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">ー</button></div><div style={{position:'absolute',bottom:'90px',right:'20px',display:'flex',gap:'8px',zIndex:10}}><button onClick={()=>panChart('left')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">← 左へ</button><button onClick={()=>panChart('right')} className="px-3 py-2 bg-white/90 backdrop-blur text-slate-700 rounded-lg shadow-md hover:bg-white transition-colors text-sm font-medium border border-slate-300">右へ →</button></div></div></div>{stats&&( <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6 animate-fade-in-up">{[{label:'最新週（先週）の売買状況',value:stats.latest.balance,color:stats.latest.balance>=0?'text-[#7C4DFF]':'text-[#FF4081]',sub:stats.latest.balance>=0?'買い越し':'売り越し'},{label:'買い越し 平均',value:stats.positiveAvg,color:'text-[#7C4DFF]',sub:'表示範囲内'},{label:'買い越し 中央値',value:stats.positiveMedian,color:'text-[#7C4DFF]',sub:'表示範囲内'},{label:'売り越し 平均',value:stats.negativeAvg,color:'text-[#FF4081]',sub:'表示範囲内'},{label:'売り越し 中央値',value:stats.negativeMedian,color:'text-[#FF4081]',sub:'表示範囲内'},].map((s,i)=>(<div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"><p className="text-slate-600 text-sm font-medium mb-2">{s.label}</p><p className={`text-3xl font-bold ${s.color}`}>{formatLargeNumber(s.value)}</p><p className="text-slate-400 text-xs mt-1">{s.sub}</p></div>))}</div>)}<div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 animate-fade-in-up"><div className="flex flex-wrap gap-4 items-center"><div className="flex items-center gap-2"><span className="text-slate-600 text-sm font-medium">期間:</span><div className="flex gap-1">{[{v:'all',l:'全期間'},{v:'1y',l:'1年'},{v:'6m',l:'6ヶ月'},{v:'3m',l:'3ヶ月'}].map(opt=>(<button key={opt.v} onClick={()=>setCurrentTimeRange(opt.v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTimeRange===opt.v?'bg-[#7C4DFF] text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>))}</div></div><button onClick={resetZoom} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium">🔄 ズームリセット</button></div></div></div>);};
 
-    // Helper: Re-aggregate / Binning Logic
-    const reaggregateData = (rawData, step) => {
-        if (step <= 0) return rawData.sort((a, b) => b.strike - a.strike).map(d => ({ ...d, diff: d.call - d.put }));
-
-        const binnedMap = new Map();
-        rawData.forEach(item => {
-            // Round to nearest step
-            const binnedStrike = Math.round(item.strike / step) * step;
-            if (!binnedMap.has(binnedStrike)) binnedMap.set(binnedStrike, { call: 0, put: 0 });
-            const d = binnedMap.get(binnedStrike);
-            d.call += item.call;
-            d.put += item.put;
-        });
-
-        return Array.from(binnedMap.entries())
-            .sort((a, b) => b[0] - a[0])
-            .map(([strike, val]) => ({
-                strike,
-                diff: val.call - val.put,
-                call: val.call,
-                put: val.put
-            }));
-    };
-
-    // ------------------------------------------------------------------
-    //  New Components: DataInput & OIChart
-    // ------------------------------------------------------------------
-
+    // DataInput Component
     const DataInput = ({ onDataParsed }) => {
-        const [pasteText, setPasteText] = useState('');
+        const [text, setText] = useState('');
         const [dragActive, setDragActive] = useState(false);
-        const [error, setError] = useState(null);
-
-        const processParsedData = (results) => {
-            if (results.errors.length > 0 && results.data.length === 0) {
-                setError('データの解析に失敗しました。フォーマットを確認してください。');
-                return;
-            }
-            onDataParsed(results.data);
-            setError(null);
-        };
-
-        const handleFileUpload = (file) => {
-            Papa.parse(file, {
-                complete: processParsedData,
-                header: false,
+        
+        const handleTextParse = () => {
+            if (!text) return;
+            Papa.parse(text, {
+                complete: (results) => onDataParsed(results.data),
                 skipEmptyLines: true,
+                header: false 
             });
         };
 
-        const handlePasteProcess = () => {
-            if (!pasteText.trim()) return;
-            Papa.parse(pasteText, {
-                complete: processParsedData,
-                header: false,
-                skipEmptyLines: true,
-            });
+        const handleFile = (file) => {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => Papa.parse(event.target.result, { header: false, skipEmptyLines: true, complete: (res) => onDataParsed(res.data) });
+            reader.readAsText(file);
         };
 
-        const handleDrag = useCallback((e) => {
-            e.preventDefault(); e.stopPropagation();
-            if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
-            else if (e.type === 'dragleave') setDragActive(false);
-        }, []);
-
-        const handleDrop = useCallback((e) => {
-            e.preventDefault(); e.stopPropagation(); setDragActive(false);
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
-        }, []);
-
-        const handleFileChange = (e) => {
-            if (e.target.files && e.target.files[0]) handleFileUpload(e.target.files[0]);
-        };
+        const handleDrag = (e) => { e.preventDefault(); e.stopPropagation(); if (e.type === "dragenter" || e.type === "dragover") setDragActive(true); else if (e.type === "dragleave") setDragActive(false); };
+        const handleDrop = (e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
 
         return (
-            <div className="w-full max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8 animate-fade-in-up">
-                <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <Icon name="FileText" className="w-5 h-5" /> データ入力ソース
-                    </h2>
-                    <p className="text-slate-500 text-sm mt-1">以下のいずれかの方法でオプションデータを読み込んでください。</p>
+            <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 flex flex-col gap-6 w-full">
+                <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors relative ${dragActive ? 'border-[#7C4DFF] bg-purple-50' : 'border-slate-300 hover:bg-slate-50'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
+                    <Icon name="Upload" className="mx-auto text-slate-400 mb-2" size={32} />
+                    <p className="text-slate-600 font-bold mb-1">CSVファイルをドラッグ＆ドロップ</p>
+                    <p className="text-xs text-slate-400 mb-4">または</p>
+                    <input type="file" accept=".csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => e.target.files && handleFile(e.target.files[0])} />
+                    <span className="bg-[#7C4DFF] text-white px-4 py-2 rounded-lg hover:bg-[#651FFF] pointer-events-none inline-block text-sm font-bold">ファイルを選択</span>
                 </div>
-                <div className="p-6 space-y-8">
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div 
-                            className={`relative flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg transition-all h-64 ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'}`}
-                            onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
-                        >
-                            <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileChange} accept=".csv,.tsv,.txt" />
-                            <Icon name="Upload" className={`w-10 h-10 mb-3 ${dragActive ? 'text-blue-500' : 'text-slate-400'}`} />
-                            <p className="text-sm text-slate-600 font-medium">ファイルをドロップ</p>
-                            <p className="text-xs text-slate-400 mt-1">.csv, .tsv, .txt</p>
-                        </div>
-                        <div className="flex flex-col h-64">
-                            <textarea
-                                className="flex-1 w-full p-3 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-slate-50"
-                                placeholder="ここにスプレッドシートやサイトからコピーしたデータを貼り付け..."
-                                value={pasteText} onChange={(e) => setPasteText(e.target.value)}
-                            />
-                            <button onClick={handlePasteProcess} disabled={!pasteText.trim()} className="mt-3 flex items-center justify-center gap-2 bg-slate-800 text-white py-2 px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium">
-                                <Icon name="Clipboard" className="w-4 h-4" /> テキスト解析
-                            </button>
-                        </div>
-                    </div>
-                    {error && (
-                        <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2 border border-red-100">
-                            <Icon name="AlertCircle" className="w-4 h-4 flex-shrink-0" /> {error}
-                        </div>
-                    )}
+                <div className="flex gap-2 w-full">
+                    <textarea 
+                        className="flex-1 border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none min-h-[100px]"
+                        rows={4}
+                        placeholder="ここにデータを貼り付け..."
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                    />
+                    <button onClick={handleTextParse} disabled={!text} className="bg-slate-800 text-white px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 font-bold shrink-0">解析</button>
                 </div>
             </div>
         );
     };
 
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload;
-            return (
-                <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-md text-sm z-50">
-                    <p className="font-bold text-slate-700 mb-1">Strike: {label}</p>
-                    <p className={`font-semibold ${data.diff >= 0 ? 'text-blue-600' : 'text-red-500'}`}>Diff: {data.diff.toLocaleString()}</p>
-                    <div className="mt-2 text-xs text-slate-500 border-t pt-2">
-                        <p>Call OI: {data.call.toLocaleString()}</p>
-                        <p>Put OI: {data.put.toLocaleString()}</p>
-                    </div>
-                </div>
-            );
-        }
-        return null;
+    const OptionOI=({charts,setCharts})=>{const[ticker,setTicker]=useState('');const[error,setError]=useState(null);const handleData=(rows)=>{const step=50;const res=processOptionData(rows,step);if(res.error){setError(res.error);}else{setError(null);const newChart={id:Date.now().toString(),data:res.data,step:step,rawRows:rows};setCharts([...charts,newChart]);}};const handleStepChange=(id,newStep,newData)=>{setCharts(charts.map(c=>c.id===id?{...c,step:newStep,data:newData}:c));};const handleTickerNav=()=>{if(!ticker)return;const symbol=ticker.trim().toUpperCase();window.open(`https://optioncharts.io/options/${symbol}/option-chain`,'_blank');};return(<div className="h-full flex flex-col pb-20"><div className="unified-header-card"><div className="unified-header-title"><Icon name="BarChart3" size={28} /> Option 分析</div><p className="unified-header-sub">建玉の壁を可視化</p></div>{charts.length>0&&<button onClick={()=>setCharts([])} className="text-sm text-red-500 hover:underline mb-4">データをクリア</button>}{charts.map(chart=>(<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange}/>))}{error&&<div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle"/>{error}</div>}<div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl"><p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p><div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">{[{label:'QQQ',url:'https://optioncharts.io/options/QQQ/option-chain'},{label:'SPY',url:'https://optioncharts.io/options/SPY/option-chain'},{label:'DJI',url:'https://optioncharts.io/options/$DJX/option-chain'},{label:'IWM',url:'https://optioncharts.io/options/IWM/option-chain'},{label:'VIX',url:'https://optioncharts.io/options/$VIX/option-chain'},{label:'NVIDIA',url:'https://optioncharts.io/options/NVDA/option-chain'},{label:'APPL',url:'https://optioncharts.io/options/AAPL/option-chain'},{label:'AMZN',url:'https://optioncharts.io/options/AMZN/option-chain'},{label:'GLD',url:'https://optioncharts.io/options/GLD/option-chain'},{label:'SLV',url:'https://optioncharts.io/options/SLV/option-chain'}].map(l=>(<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10}/></a>))}</div><div className="mb-10 flex items-center gap-2"><span className="text-sm text-slate-500 font-bold">Ticker:</span><input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key==='Enter'&&handleTickerNav()}/><button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button></div><DataInput onDataParsed={handleData}/></div></div>);};
+
+const processOptionData = (rawRows, step = 50) => {
+    if (!rawRows || rawRows.length < 2) return { data: [], error: 'データが不足しています。' };
+
+    const parseNum = (val) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        let str = String(val).toUpperCase();
+        let multiplier = 1;
+        if (str.endsWith('K')) multiplier = 1000;
+        else if (str.endsWith('M')) multiplier = 1000000;
+        str = str.replace(/[^0-9.-]/g, '').trim();
+        const num = parseFloat(str);
+        return isNaN(num) ? 0 : num * multiplier;
     };
 
-    const OIChart = ({ data }) => {
-        const [zoomLevelX, setZoomLevelX] = useState(1);
-        const [zoomLevelY, setZoomLevelY] = useState(1);
-        const [strikeInterval, setStrikeInterval] = useState('');
-        
-        const mainScrollRef = useRef(null);
-        const leftAxisScrollRef = useRef(null);
-        const bottomAxisScrollRef = useRef(null);
+    // --- SBI形式パース & 集計ロジック (リスク指標) ---
+    // 「リスク指標」を含む行があるかチェック
+    const isSBI = rawRows.slice(0, 50).some(row => 
+        row.some(cell => String(cell).includes('リスク指標'))
+    );
 
-        const displayData = useMemo(() => {
-            const interval = typeof strikeInterval === 'number' ? strikeInterval : 0;
-            return interval > 0 ? reaggregateData(data, interval) : data;
-        }, [data, strikeInterval]);
-
-        const handleReset = () => { setZoomLevelX(1); setZoomLevelY(1); setStrikeInterval(''); };
-        const handleFitY = () => { const targetBars = 100; const ratio = targetBars / Math.max(displayData.length, 1); setZoomLevelY(Math.max(0.1, Math.min(1, ratio))); };
-
-        const handleMainChartWheel = (e) => {
-            if (e.ctrlKey) {
-                e.preventDefault();
-                const delta = -e.deltaY;
-                const zoomFactor = delta > 0 ? 0.1 : -0.1;
-                if (e.shiftKey) setZoomLevelX(prev => Math.min(Math.max(0.2, prev + zoomFactor), 5));
-                else setZoomLevelY(prev => Math.min(Math.max(0.05, prev + zoomFactor), 10));
-            }
-        };
-
-        const handleLeftAxisWheel = (e) => { e.preventDefault(); e.stopPropagation(); const delta = -e.deltaY; const zoomFactor = delta > 0 ? 0.2 : -0.2; setZoomLevelY(prev => Math.min(Math.max(0.05, prev + zoomFactor), 10)); };
-        const handleBottomAxisWheel = (e) => { e.preventDefault(); e.stopPropagation(); const delta = -e.deltaY; const zoomFactor = delta > 0 ? 0.2 : -0.2; setZoomLevelX(prev => Math.min(Math.max(0.2, prev + zoomFactor), 5)); };
-
-        const handleMainScroll = () => {
-            if (!mainScrollRef.current) return;
-            const { scrollTop, scrollLeft } = mainScrollRef.current;
-            if (leftAxisScrollRef.current) leftAxisScrollRef.current.scrollTop = scrollTop;
-            if (bottomAxisScrollRef.current) bottomAxisScrollRef.current.scrollLeft = scrollLeft;
-        };
-
-        const baseBarHeight = 30; 
-        const computedHeight = Math.max(800, displayData.length * baseBarHeight * zoomLevelY);
-        const chartWidthPercent = 100 * zoomLevelX; 
-        const maxAbsVal = Math.max(...displayData.map(d => Math.abs(d.diff)), 100);
-        const axisLimit = maxAbsVal > 0 ? Math.ceil(maxAbsVal * 1.15 / 1000) * 1000 : 1000;
-        const dynamicFontSize = Math.min(24, Math.max(10, 11 + (zoomLevelY - 1) * 4));
-        const dynamicYAxisWidth = Math.max(60, dynamicFontSize * 0.7 * 8) + 20;
-        const tickInterval = zoomLevelY < 0.3 ? 'preserveStartEnd' : 0;
-        
-        const dummyData = [{ strike: 0, diff: 0 }];
-
-        const renderCustomLabel = (props) => {
-            const { x, y, width, height, value } = props;
-            const abs = Math.abs(value);
-            if (abs === 0) return null;
-            const text = (zoomLevelY > 2 || abs < 1000) ? value.toLocaleString() : (value/1000).toFixed(1) + 'k';
-            const fontSize = Math.min(14, dynamicFontSize - 2);
-            const isPositive = value >= 0;
-            const offset = 5;
-            const labelX = isPositive ? x + width + offset : x - offset;
-            const labelY = y + height / 2;
-            const textAnchor = isPositive ? 'start' : 'end';
-            return (<text x={labelX} y={labelY} fill="#64748b" textAnchor={textAnchor} dominantBaseline="middle" fontSize={fontSize} fontWeight={500}>{text}</text>);
-        };
-
-        return (
-            <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex h-[85vh] relative animate-fade-in-up">
-                <div className="flex-1 flex flex-col min-w-0 relative">
-                    <div className="p-4 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-4 z-30 shadow-sm shrink-0">
-                        <div className="flex items-center gap-2"><h3 className="font-bold text-slate-700">建玉分析グラフ</h3><span className="text-xs text-slate-500 bg-white px-2 py-1 rounded border">{displayData.length} Strikes</span></div>
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-slate-500 uppercase">Height (Y)</span>
-                                <button onClick={() => setZoomLevelY(z => Math.max(0.05, z - 0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
-                                <input type="range" min="0.05" max="5" step="0.1" value={zoomLevelY} onChange={(e) => setZoomLevelY(parseFloat(e.target.value))} className="w-24 h-1 bg-slate-300 rounded-lg appearance-none cursor-pointer" />
-                                <button onClick={() => setZoomLevelY(z => Math.min(10, z + 0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
-                                <button onClick={handleFitY} className="ml-1 p-1.5 text-xs bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600 flex items-center gap-1" title="Fit to Screen"><Icon name="ArrowUpDown" size={12}/> Fit</button>
-                            </div>
-                            <div className="h-4 w-px bg-slate-300 mx-1 hidden md:block"></div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-slate-500 uppercase">Width (X)</span>
-                                <button onClick={() => setZoomLevelX(z => Math.max(0.2, z - 0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button>
-                                <input type="range" min="0.5" max="3" step="0.1" value={zoomLevelX} onChange={(e) => setZoomLevelX(parseFloat(e.target.value))} className="w-24 h-1 bg-slate-300 rounded-lg appearance-none cursor-pointer" />
-                                <button onClick={() => setZoomLevelX(z => Math.min(5, z + 0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button>
-                            </div>
-                            <button onClick={handleReset} className="flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-blue-600 bg-white border border-slate-200 px-3 py-1.5 rounded shadow-sm hover:shadow transition-all ml-2"><Icon name="RotateCcw" size={14} /> Reset</button>
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-hidden flex flex-col relative">
-                        <div className="flex-1 flex overflow-hidden">
-                            <div className="h-full border-r border-slate-200 bg-slate-50/80 z-20 flex-shrink-0 cursor-ns-resize hover:bg-blue-50/30 transition-colors" style={{ width: dynamicYAxisWidth }} onWheel={handleLeftAxisWheel}>
-                                <div ref={leftAxisScrollRef} className="h-full w-full overflow-hidden">
-                                    <div style={{ width: '100%', height: computedHeight }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart layout="vertical" data={displayData} margin={{ top: 20, right: 0, left: 10, bottom: 0 }} barCategoryGap={zoomLevelY > 1 ? 4 : 1}>
-                                                <YAxis dataKey="strike" type="category" width={dynamicYAxisWidth - 10} stroke="#64748b" tick={{ fontSize: dynamicFontSize, fontWeight: 600, fill: '#475569' }} interval={tickInterval} tickMargin={8} axisLine={{ stroke: 'transparent' }} tickLine={{ stroke: '#cbd5e1' }} />
-                                                <Bar dataKey="diff" barSize={zoomLevelY * 24} fill="transparent" />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex-1 relative h-full min-w-0">
-                                <div ref={mainScrollRef} className="absolute inset-0 overflow-auto bg-slate-50/30 cursor-crosshair" onScroll={handleMainScroll} onWheel={handleMainChartWheel} style={{ touchAction: 'pan-x pan-y' }}>
-                                    <div style={{ width: `${chartWidthPercent}%`, height: computedHeight, minWidth: '100%' }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart layout="vertical" data={displayData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }} barCategoryGap={zoomLevelY > 1 ? 4 : 1}>
-                                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} stroke="#e2e8f0" />
-                                                <XAxis type="number" domain={[-axisLimit, axisLimit]} hide />
-                                                <YAxis type="category" width={0} tick={false} axisLine={false} />
-                                                <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(0,0,0,0.05)'}} />
-                                                <ReferenceLine x={0} stroke="#334155" strokeWidth={1.5} />
-                                                <Bar dataKey="diff" name="Call - Put" barSize={zoomLevelY * 24}>
-                                                    {displayData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.diff >= 0 ? '#4A86E8' : '#E67C73'} radius={[0, 2, 2, 0]} />))}
-                                                    {zoomLevelY > 0.6 && <LabelList dataKey="diff" content={renderCustomLabel} />}
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex h-[50px] border-t border-slate-200 bg-slate-50 z-20 shrink-0">
-                            <div className="border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-300" style={{ width: dynamicYAxisWidth }}><Icon name="MousePointer2" size={16} /></div>
-                            <div className="flex-1 relative cursor-ew-resize hover:bg-slate-100 transition-colors" onWheel={handleBottomAxisWheel}>
-                                <div ref={bottomAxisScrollRef} className="w-full h-full overflow-hidden">
-                                    <div style={{ width: `${chartWidthPercent}%`, height: '100%', minWidth: '100%' }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart layout="vertical" data={dummyData} margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                                                <CartesianGrid horizontal={false} vertical={true} stroke="#e2e8f0" />
-                                                <XAxis type="number" domain={[-axisLimit, axisLimit]} stroke="#64748b" tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 11 }} allowDataOverflow={true} orientation="bottom" />
-                                                <YAxis type="category" width={0} tick={false} axisLine={false} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white border-t border-slate-200 p-2 px-4 text-xs text-slate-500 flex justify-between shrink-0">
-                        <span className="flex items-center gap-2"><span className="font-bold text-blue-600">NEW:</span><span>Hover & Scroll on <b>Left Axis</b> to zoom Height. Scroll on <b>Bottom Axis</b> to zoom Width.</span></span>
-                        <span>Max Diff: {maxAbsVal.toLocaleString()}</span>
-                    </div>
-                </div>
-                <div className="w-64 bg-slate-50 border-l border-slate-200 flex-shrink-0 flex flex-col z-40 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]">
-                    <div className="p-4 border-b border-slate-200 bg-white"><h4 className="font-bold text-slate-700 flex items-center gap-2 text-sm"><Icon name="Settings" size={16} />表示設定</h4></div>
-                    <div className="p-4 flex flex-col gap-6 overflow-y-auto">
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm"><Icon name="AlignJustify" size={16} /><label>行使価格の刻み幅</label></div>
-                            <p className="text-xs text-slate-500">縦軸（Strike）を指定した価格幅でまとめて集計します。</p>
-                            <div className="relative"><input type="number" min="0" step="any" placeholder="自動 (Default)" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" value={strikeInterval} onChange={(e) => { const val = parseFloat(e.target.value); setStrikeInterval(isNaN(val) ? '' : val); }} /></div>
-                            <div className="grid grid-cols-2 gap-2">
-                                {[100, 125, 250, 500, 1000].map(val => (<button key={val} onClick={() => setStrikeInterval(val)} className={`text-xs py-1.5 rounded border transition-colors ${strikeInterval === val ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`}>{val}</button>))}
-                                <button onClick={() => setStrikeInterval('')} className={`text-xs py-1.5 rounded border transition-colors col-span-1 ${strikeInterval === '' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`}>自動</button>
-                            </div>
-                        </div>
-                        <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-xs text-blue-800 leading-relaxed"><strong>ヒント:</strong><br/>遠くの権利行使価格（Far OTM）を含めて全体を俯瞰したい場合は、刻み幅を大きくすると見やすくなります。</div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // Modified parser to support vertical copy-paste from SBI
-    const parseSBIRiskFormat = (text) => {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-        const data = [];
-        let detectedAtm = null;
-
-        const riskIndices = [];
-        const anchorRegex = /((?:A\s?T\s?M\s?)|(?:ATM\s?))?([\d,]+)\s*リスク指標/;
-        
-        lines.forEach((line, idx) => {
-            if (anchorRegex.test(line)) riskIndices.push(idx);
-        });
-
-        riskIndices.forEach((idx) => {
-            const line = lines[idx];
-            const match = line.match(anchorRegex);
-            const isAtm = !!match[1];
-            const strike = parseInt(match[2].replace(/,/g, ''), 10);
-            if (isAtm) detectedAtm = strike;
-
-            // **修正1: CALL OI探索ロジックの改善**
-            let callOI = 0;
-            // 「リスク指標」行の**2行上**がCallの建玉データ（SBIフォーマット）
-            if (idx >= 2) {
-                const callLine = lines[idx - 2]; 
-                // 数値のみを抽出（日付やパーセンテージを除外）
-                const nums = callLine.match(/(?<!\d\/)\b(\d{1,3}(?:,\d{3})*|\d+)\b(?!%)/g);
-                if (nums && nums.length >= 2) {
-                    // **2番目の数値が建玉**（1番目は清算値）
-                    callOI = parseInt(nums[1].replace(/,/g, ''), 10);
-                }
-            }
-
-            // **修正2: PUT OI探索ロジックの改善**
-            let putOI = 0;
-            // 「リスク指標」行の**1行下**がPutの建玉データ
-            if (idx + 1 < lines.length) {
-                const putLine = lines[idx + 1];
-                // 行末から数値を抽出（右から2番目が建玉）
-                const tokens = putLine.split(/\s+/).filter(t => t);
-                if (tokens.length >= 2) {
-                    // **右から2番目を取得**（右端は清算値）
-                    const oiToken = tokens[tokens.length - 2];
-                    const parse = (s) => (s === '-' ? 0 : parseInt(s.replace(/,/g, ''), 10));
-                    
-                    // 数値またはハイフンの場合のみ採用
-                    if (/^[\d,]+$/.test(oiToken) || oiToken === '-') {
-                        putOI = parse(oiToken);
-                    }
-                }
-            }
-
-            data.push({ strike, call: callOI, put: putOI, diff: callOI - putOI });
-        });
-
-        return { data: data.sort((a, b) => b.strike - a.strike), atmStrike: detectedAtm };
-    };
-
-    const processOptionData = (rawRows, step = 50) => {
-        if (!rawRows || rawRows.length < 1) return { data: [], error: 'データが不足しています。' };
-
-        // 1. Try SBI Risk Indicator Parser (Unstructured Text)
-        let fullText = "";
-        if (Array.isArray(rawRows[0])) {
-            fullText = rawRows.map(row => row.join(' ')).join('\n');
-        } else {
-            fullText = rawRows.map(r => r.join(' ')).join('\n');
-        }
-
-        if (fullText.includes('リスク指標')) {
-            const sbiResult = parseSBIRiskFormat(fullText);
-            if (sbiResult && sbiResult.data.length > 0) {
-                return { 
-                    data: reaggregateData(sbiResult.data, step),
-                    atmStrike: sbiResult.atmStrike,
-                    error: null 
-                };
-            }
-        }
-
-        // 2. Standard CSV Parser (Existing Logic)
-        const strikeRegex = /(strike|行使価格|koushi)/i;
-        const oiRegex = /(open\s*int|oi|建玉|tategyoku)/i;
-        const parseNum = (val) => {
-            if (typeof val === 'number') return val;
-            if (!val) return 0;
-            let str = String(val).toUpperCase();
-            let multiplier = 1;
-            if (str.endsWith('K')) multiplier = 1000;
-            else if (str.endsWith('M')) multiplier = 1000000;
-            str = str.replace(/[^0-9.-]/g, '').trim();
-            const num = parseFloat(str);
-            return isNaN(num) ? 0 : num * multiplier;
-        };
-
-        let headerIndex = -1;
-        let strikeCol = -1, callCol = -1, putCol = -1;
-
-        for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
-            const row = rawRows[r].map(c => String(c).trim());
-            let sCol = -1, oiCols = [];
-            row.forEach((cell, i) => {
-                if (strikeRegex.test(cell)) sCol = i;
-                else if (oiRegex.test(cell)) oiCols.push(i);
-            });
-
-            if (sCol !== -1 && oiCols.length >= 2) {
-                let cCol = -1, pCol = -1;
-                const oi1 = row[oiCols[0]].toLowerCase();
-                const oi2 = row[oiCols[1]].toLowerCase();
-                
-                if (oi1.includes('call') || oi1.includes('コール')) cCol = oiCols[0];
-                if (oi1.includes('put') || oi1.includes('プット')) pCol = oiCols[0];
-                if (oi2.includes('call') || oi2.includes('コール')) cCol = oiCols[1];
-                if (oi2.includes('put') || oi2.includes('プット')) pCol = oiCols[1];
-
-                if (cCol === -1 || pCol === -1) {
-                    cCol = oiCols[0];
-                    pCol = oiCols[1];
-                }
-                headerIndex = r; strikeCol = sCol; callCol = cCol; putCol = pCol;
-                break;
-            }
-        }
-
-        if (headerIndex === -1) return { data: [], error: 'ヘッダーが見つかりませんでした。' };
-
+    if (isSBI) {
         const dataMap = new Map();
-        
-        for (let i = headerIndex + 1; i < rawRows.length; i++) {
-            const row = rawRows[i];
-            if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
-            const strike = parseNum(row[strikeCol]);
-            const oi1 = parseNum(row[callCol]);
-            const oi2 = parseNum(row[putCol]);
+        const safeStep = step > 0 ? step : 1;
+        let currentStrike = null;
 
-            if (strike > 0) {
-                if (!dataMap.has(strike)) dataMap.set(strike, { call: 0, put: 0 });
-                const d = dataMap.get(strike);
-                d.call += oi1;
-                d.put += oi2;
+        rawRows.forEach(row => {
+            // 行全体の文字列からStrikeを探す (例: "02/05 14:02 59,000リスク指標")
+            const rowStr = row.join(' ');
+            const strikeMatch = rowStr.match(/([0-9,]+)リスク指標/);
+            if (strikeMatch) {
+                currentStrike = parseNum(strikeMatch[1]);
             }
-        }
 
-        const rawData = Array.from(dataMap.entries()).map(([strike, val]) => ({
-            strike, call: val.call, put: val.put
-        }));
-
-        return { 
-            data: reaggregateData(rawData, step),
-            atmStrike: null,
-            error: rawData.length === 0 ? "有効なデータが見つかりませんでした" : null 
-        };
-    };
-
-    // ------------------------------------------------------------------
-    //  Modified OptionOI Container
-    // ------------------------------------------------------------------
-    const OptionOI = () => {
-        const [chartData, setChartData] = useState(null);
-        const [error, setError] = useState(null);
-
-        const handleDataParsed = (rawRows) => {
-            // Use existing parser logic to adapt DataInput result to OIChart format
-            const result = processOptionData(rawRows, 0); // 0 = raw, re-aggregation handled by OIChart settings
-            if (result.error) {
-                setError(result.error);
-                setChartData(null);
-            } else {
-                setError(null);
-                setChartData(result.data);
-            }
-        };
-
-        const handleReset = () => {
-            setChartData(null);
-            setError(null);
-        };
-
-        return (
-            <div className="h-full flex flex-col pb-20">
-                <div className="unified-header-card">
-                    <div className="unified-header-title"><Icon name="BarChart3" size={28} /> Option 分析</div>
-                    <p className="unified-header-sub">建玉の壁を可視化</p>
-                </div>
+            if (currentStrike !== null) {
+                // セルのクリーニング
+                const cells = row.map(c => String(c).trim());
                 
-                {chartData ? (
-                    <div className="animate-fade-in-up">
-                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-slate-800">解析結果</h2>
-                            <button onClick={handleReset} className="text-sm bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded flex items-center gap-1 transition-colors">
-                                <Icon name="RotateCcw" size={14} /> データをクリア / 再入力
-                            </button>
-                        </div>
-                        <OIChart data={chartData} />
-                    </div>
-                ) : (
-                    <>
-                        <DataInput onDataParsed={handleDataParsed} />
-                        {error && (
-                            <div className="max-w-4xl mx-auto p-4 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 border border-red-100 animate-fade-in-up">
-                                <Icon name="AlertTriangle" size={20} />
-                                <span className="font-bold">Error:</span> {error}
-                            </div>
-                        )}
-                        <div className="max-w-4xl mx-auto mt-8 p-6 bg-slate-50/50 rounded-xl border border-slate-200 text-center">
-                            <h3 className="text-sm font-bold text-slate-500 uppercase mb-4">Sample Links</h3>
-                            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-                                {[{ label: 'QQQ', url: 'https://optioncharts.io/options/QQQ/option-chain' }, { label: 'SPY', url: 'https://optioncharts.io/options/SPY/option-chain' }, { label: 'DJI', url: 'https://optioncharts.io/options/$DJX/option-chain' }, { label: 'IWM', url: 'https://optioncharts.io/options/IWM/option-chain' }, { label: 'VIX', url: 'https://optioncharts.io/options/$VIX/option-chain' }, { label: 'NVIDIA', url: 'https://optioncharts.io/options/NVDA/option-chain' }, { label: 'APPL', url: 'https://optioncharts.io/options/AAPL/option-chain' }].map(l => (
-                                    <a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10} /></a>
-                                ))}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        );
+                cells.forEach((cell, idx) => {
+                    // %を含むセルを基準にOIを探す
+                    // Call建玉: %を含むセルの左側にある純粋な数値 (カッコつき気配値は除外)
+                    // Put建玉: %を含むセルの右側にある純粋な数値
+                    if (cell.endsWith('%')) {
+                        
+                        // Call Check (Left)
+                        if (idx > 0) {
+                            const left = cells[idx - 1];
+                            // 数値かつ、カッコを含まない
+                            if (/^[0-9,]+$/.test(left)) {
+                                const val = parseNum(left);
+                                const roundedStrike = Math.round(currentStrike / safeStep) * safeStep;
+                                if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
+                                dataMap.get(roundedStrike).call += val;
+                            }
+                        }
+
+                        // Put Check (Right)
+                        if (idx < cells.length - 1) {
+                            const right = cells[idx + 1];
+                            if (/^[0-9,]+$/.test(right)) {
+                                const val = parseNum(right);
+                                const roundedStrike = Math.round(currentStrike / safeStep) * safeStep;
+                                if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
+                                dataMap.get(roundedStrike).put += val;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        
+        const sortedData = Array.from(dataMap.entries())
+            .sort((a, b) => b[0] - a[0])
+            .map(([strike, val]) => ({ strike, diff: val.call - val.put, call: val.call, put: val.put }))
+            .filter(d => d.call > 0 || d.put > 0); // ゼロデータ除外
+
+        return { data: sortedData, error: sortedData.length === 0 ? "SBIデータ読み込みエラー: 有効なデータが見つかりませんでした" : null };
+    }
+    
+    // --- 既存の標準CSVパースロジック ---
+    const strikeRegex = /(strike|行使価格|koushi)/i;
+    const oiRegex = /(open\s*int|oi|建玉|tategyoku)/i;
+
+    let reshapeHeaderIndex = -1;
+    let reshapeWidth = 0;
+    const getHeaderInfo = (row) => {
+        const sRow = row.map(c => String(c).trim());
+        let sCol = -1, oiCols = [];
+        sRow.forEach((cell, i) => {
+            if (strikeRegex.test(cell)) sCol = i;
+            else if (oiRegex.test(cell)) oiCols.push(i);
+        });
+        return { sCol, oiCols, colCount: row.length };
     };
+    for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
+        const info = getHeaderInfo(rawRows[r]);
+        if (info.sCol !== -1 && info.oiCols.length >= 2 && info.colCount > 1) {
+            let singleColCount = 0;
+            for (let k = 1; k <= 10 && (r + k) < rawRows.length; k++) {
+                if (rawRows[r + k].length === 1 || rawRows[r + k].length < info.colCount / 2) singleColCount++;
+            }
+            if (singleColCount >= 5) { reshapeHeaderIndex = r; reshapeWidth = info.colCount; break; }
+        }
+    }
+    if (reshapeWidth > 0 && reshapeHeaderIndex !== -1) {
+        const headerRow = rawRows[reshapeHeaderIndex];
+        const flatData = [];
+        for (let i = reshapeHeaderIndex + 1; i < rawRows.length; i++) {
+            const row = rawRows[i];
+            for (const cell of row) { if (cell !== null && cell !== undefined && String(cell).trim() !== '') flatData.push(cell); }
+        }
+        const newRows = [headerRow];
+        let currentChunk = [];
+        for (const cell of flatData) {
+            currentChunk.push(cell);
+            if (currentChunk.length === reshapeWidth) { newRows.push(currentChunk); currentChunk = []; }
+        }
+        rawRows = newRows;
+    }
+    let bestCandidate = { headerIndex: -1, strikeCol: -1, callCol: -1, putCol: -1, score: 0 };
+    for (let r = 0; r < Math.min(rawRows.length, 50); r++) {
+        const row = rawRows[r].map(c => String(c).trim());
+        let sCol = -1, oiCols = [];
+        row.forEach((cell, i) => {
+            if (strikeRegex.test(cell)) sCol = i;
+            else if (oiRegex.test(cell)) oiCols.push(i);
+        });
+        if (sCol !== -1 && oiCols.length >= 2) {
+            let cCol = -1, pCol = -1;
+            const oi1 = row[oiCols[0]].toLowerCase();
+            const oi2 = row[oiCols[1]].toLowerCase();
+            if (oi1.includes('call') || oi1.includes('コール')) { cCol = oiCols[0]; }
+            if (oi1.includes('put') || oi1.includes('プット')) { pCol = oiCols[0]; }
+            if (oi2.includes('call') || oi2.includes('コール')) { cCol = oiCols[1]; }
+            if (oi2.includes('put') || oi2.includes('プット')) { pCol = oiCols[1]; }
+            if (cCol === -1 || pCol === -1) { cCol = oiCols[0]; pCol = oiCols[1]; }
+            bestCandidate = { headerIndex: r, strikeCol: sCol, callCol: cCol, putCol: pCol, score: 10 };
+            break;
+        }
+    }
+    if (bestCandidate.headerIndex === -1) return { data: [], error: 'ヘッダーが見つかりませんでした。' };
+    const { headerIndex, strikeCol, callCol, putCol } = bestCandidate;
+    const dataMap = new Map();
+    const safeStep = step > 0 ? step : 1;
+    for (let i = headerIndex + 1; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        if (!row || row.length <= Math.max(strikeCol, callCol, putCol)) continue;
+        const strike = parseNum(row[strikeCol]);
+        const oi1 = parseNum(row[callCol]);
+        const oi2 = parseNum(row[putCol]);
+        if (strike > 0) {
+            const roundedStrike = Math.round(strike / safeStep) * safeStep;
+            if (!dataMap.has(roundedStrike)) dataMap.set(roundedStrike, { call: 0, put: 0 });
+            const d = dataMap.get(roundedStrike);
+            d.call += oi1;
+            d.put += oi2;
+        }
+    }
+    const sortedData = Array.from(dataMap.entries()).sort((a, b) => b[0] - a[0]).map(([strike, val]) => ({ strike, diff: val.call - val.put, call: val.call, put: val.put }));
+    return { data: sortedData, error: sortedData.length === 0 ? "有効なデータが見つかりませんでした" : null };
+};
+
+const OIChart=({id,initialData,initialStep,rawRows,onStepChange})=>{const[data,setData]=useState(initialData);const[step,setStep]=useState(initialStep);const[zoomY,setZoomY]=useState(1);const[zoomX,setZoomX]=useState(1);const mainRef=useRef(null);const leftRef=useRef(null);const bottomRef=useRef(null);useEffect(()=>{if(rawRows&&step!==initialStep){const res=processOptionData(rawRows,step);if(!res.error){setData(res.data);onStepChange(id,step,res.data);}}},[step]);const handleScroll=()=>{if(mainRef.current&&leftRef.current&&bottomRef.current){leftRef.current.scrollTop=mainRef.current.scrollTop;bottomRef.current.scrollLeft=mainRef.current.scrollLeft;}};const barHeight=30;const totalHeight=Math.max(450,data.length*barHeight*zoomY);const chartWidth=`${zoomX*100}%`;const maxVal=Math.max(...data.map(d=>Math.abs(d.diff)),100);const handleWheel=(e,axis)=>{if(e.ctrlKey||axis==='main')return;e.preventDefault();const delta=e.deltaY>0?-0.1:0.1;if(axis==='y')setZoomY(z=>Math.max(0.1,Math.min(5,z+delta)));if(axis==='x')setZoomX(z=>Math.max(0.5,Math.min(3,z+delta)));};const CustomTooltip=({active,payload,label})=>{if(!active||!payload?.length)return null;const d=payload[0].payload;return(<div className="bg-white p-3 border border-slate-200 shadow-lg rounded text-sm z-50"><p className="font-bold">Strike: {label}</p><p className={d.diff>=0?'text-[#7C4DFF]':'text-[#FF4081]'}>Diff: {d.diff.toLocaleString()}</p><div className="text-xs text-slate-500 mt-1 pt-1 border-t">C: {d.call.toLocaleString()} / P: {d.put.toLocaleString()}</div></div>);};return(<div className="bg-white rounded-xl shadow border border-slate-200 h-[80vh] flex flex-col overflow-hidden mb-6 animate-fade-in-up"><div className="p-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50 shrink-0 flex-wrap"><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500">HEIGHT</span><button onClick={()=>setZoomY(z=>Math.max(0.1,z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button><input type="range" min="0.1" max="5" step="0.1" value={zoomY} onChange={(e)=>setZoomY(parseFloat(e.target.value))} className="w-20"/><button onClick={()=>setZoomY(z=>Math.min(5,z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button></div><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500">WIDTH</span><button onClick={()=>setZoomX(z=>Math.max(0.5,z-0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomOut" size={16}/></button><button onClick={()=>setZoomX(z=>Math.min(3,z+0.2))} className="p-1 hover:bg-slate-200 rounded"><Icon name="ZoomIn" size={16}/></button></div><div className="flex items-center gap-2 border-l pl-4 border-slate-200"><span className="text-xs font-bold text-slate-500">STEP</span><input type="number" className="border border-slate-300 rounded px-1 py-0.5 text-xs w-16 text-center focus:outline-none focus:border-[#7C4DFF]" value={step} onChange={(e)=>setStep(parseFloat(e.target.value)||0)} min="0.1"/></div><button onClick={()=>{setZoomY(1);setZoomX(1);}} className="ml-auto text-xs flex items-center gap-1 hover:text-[#7C4DFF] border px-2 py-1 rounded bg-white"><Icon name="RotateCcw" size={14}/> Reset</button></div><div className="flex-1 flex overflow-hidden relative"><div className="w-24 border-r border-slate-200 bg-slate-50 shrink-0 overflow-hidden" ref={leftRef} onWheel={(e)=>handleWheel(e,'y')}><div style={{height:totalHeight,width:'100%'}}><ResponsiveContainer><BarChart layout="vertical" data={data} margin={{top:10,bottom:0}}><YAxis type="category" dataKey="strike" width={90} tick={{fontSize:12,fontWeight:600}} interval={0}/><Bar dataKey="diff" fill="transparent"/></BarChart></ResponsiveContainer></div></div><div className="flex-1 overflow-auto bg-slate-50/30" ref={mainRef} onScroll={handleScroll}><div style={{width:chartWidth,height:totalHeight,minWidth:'100%'}}><ResponsiveContainer><BarChart layout="vertical" data={data} margin={{top:10,right:30,left:0,bottom:0}}><CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true}/><XAxis type="number" domain={[-maxVal,maxVal]} hide/><YAxis type="category" width={0} tick={false}/><Tooltip content={<CustomTooltip/>} cursor={{fill:'rgba(0,0,0,0.05)'}}/><ReferenceLine x={0} stroke="#334155"/><Bar dataKey="diff" barSize={barHeight*0.8}>{data.map((entry,index)=>(<Cell key={index} fill={entry.diff>=0?'#536DFE':'#FF4081'}/>))}<LabelList dataKey="diff" position="insideRight" formatter={(v)=>v.toLocaleString()} style={{fontSize:11,fill:'#64748b'}}/></Bar></BarChart></ResponsiveContainer></div></div></div><div className="h-8 border-t border-slate-200 flex shrink-0"><div className="w-24 border-r border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400"><Icon name="MousePointer2" size={14}/></div><div className="flex-1 overflow-hidden bg-slate-50" ref={bottomRef} onWheel={(e)=>handleWheel(e,'x')}><div style={{width:chartWidth,minWidth:'100%',height:'100%'}}><ResponsiveContainer><BarChart layout="vertical" data={[{}]} margin={{right:30,left:0}}><XAxis type="number" domain={[-maxVal,maxVal]} tick={{fontSize:10}}/><YAxis type="category" width={0}/></BarChart></ResponsiveContainer></div></div></div></div>);};
 
 // ==========================================
 //  Main Layout
@@ -2026,7 +1724,7 @@ const App = () => {
                     <NavItem id="participant" label="手口上位" icon="Briefcase" />
                     {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
                     
-                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.05-sbi-parse-fix</div>}
+                    {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.05-sbi-oi-support</div>}
                 </div>
                 {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
             </aside>
@@ -2039,7 +1737,7 @@ const App = () => {
                             view === 'quotes' ? <QuotesManager quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} prefillBody={quotePrefill} uploadConfig={{token: gistToken, owner: localStorage.getItem('repo_owner') || 'seahirodigital', repo: localStorage.getItem('repo_name') || 'investment_dashboard'}} /> :
                                 view === 'jpx' ? <ForeignInvestors /> :
                                     view === 'participant' ? <ParticipantVolume /> :
-                                        <OptionOI />}
+                                        <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
                     </div>
                 </main>
             </div>
