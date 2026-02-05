@@ -58,7 +58,7 @@ jobs:
           
           git add history.csv trend.png
           git commit -m "Update JPX data: $(date)"
-          git push origin main
+          git push origin HEAD
       
       - name: Prepare deployment files
         run: |
