@@ -1,162 +1,311 @@
-import requests
-import pandas as pd
-import json
-import os
-from datetime import datetime
-import traceback
-import io
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投資主体別 売買状況 | 投資ダッシュボード</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-# 環境変数からデバッグモードを取得
-DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
-DATA_FILE = 'data/shutai_data.json'
-TARGET_URL = 'https://nikkei225jp.com/data/shutai.php'
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-def log(msg):
-    print(f"[Scraper] {msg}", flush=True)
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
 
-def parse_value(val):
-    """Pandasの値を数値に変換"""
-    if pd.isna(val) or val == '-':
-        return 0
-    
-    s_val = str(val).strip()
-    
-    # 文字列のクリーニング
-    s_val = s_val.replace(',', '').replace('%', '')
-    
-    # 記号処理（▼はマイナス、▲/+はプラス）
-    if '▼' in s_val:
-        s_val = '-' + s_val.replace('▼', '')
-    elif '▲' in s_val:
-        s_val = s_val.replace('▲', '')
-    elif '+' in s_val:
-        s_val = s_val.replace('+', '')
-        
-    try:
-        if '.' in s_val:
-            return float(s_val)
-        return int(s_val)
-    except ValueError:
-        return 0
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
 
-def scrape_shutai_data():
-    log(f"Starting scraping process using Pandas. Target: {TARGET_URL}")
-    log(f"Debug Mode: {DEBUG_MODE}")
+        h1 {
+            color: #2d3748;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
-    }
+        .subtitle {
+            color: #718096;
+            font-size: 1.1em;
+        }
 
-    try:
-        # 1. HTMLの取得
-        response = requests.get(TARGET_URL, headers=headers, timeout=20)
-        response.encoding = response.apparent_encoding
-        
-        if response.status_code != 200:
-            log(f"Error: HTTP {response.status_code}")
-            return
+        nav {
+            margin-top: 20px;
+        }
 
-        html_content = response.text
-        log(f"HTML Content Length: {len(html_content)}")
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
 
-        # 2. Pandasでテーブル抽出 (lxml使用)
-        # datatbl というIDを持つテーブルを探す
-        try:
-            dfs = pd.read_html(io.StringIO(html_content), attrs={'id': 'datatbl'}, flavor='lxml')
-        except Exception as e:
-            log(f"Pandas read_html failed: {e}")
-            log("Trying bs4 flavor...")
-            dfs = pd.read_html(io.StringIO(html_content), attrs={'id': 'datatbl'}, flavor='bs4')
+        nav a:hover {
+            color: #764ba2;
+        }
 
-        if not dfs:
-            log("CRITICAL: No tables found matching id='datatbl'")
-            return
-            
-        df = dfs[0]
-        log(f"Table extracted. Shape: {df.shape}")
-        
-        # 3. データ処理
-        new_data = []
-        
-        # 行ごとの処理
-        # dfの構造: 
-        # 0:日付, 1:日経平均, 2:変化, 3:海外, 4:証券自己
-        # 5:個人計, 6:現金, 7:信用, 8:投資信託, 9:事業法人, 10:その他, 11:信託, 12:生保, 13:都銀
-        
-        for idx, row in df.iterrows():
-            # ヘッダー行や月計行の除外チェック
-            # 日付カラムの値を確認
-            date_val = str(row.iloc[0])
-            
-            # 日付フォーマットチェック (YYYY/MM/DD)
-            try:
-                # 2026/01/30 のような形式か、timeタグ内のテキスト
-                # 余計な文字を除去
-                date_clean = date_val.split(' ')[0] # "2026/01/30" だけ取る
-                date_obj = datetime.strptime(date_clean, '%Y/%m/%d')
-                formatted_date = date_obj.strftime('%Y-%m-%d')
-            except ValueError:
-                # 日付変換できない行（ヘッダーや「月計」など）はスキップ
-                continue
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
 
-            try:
-                # データのマッピング (ilocで位置指定)
-                record = {
-                    "date": formatted_date,
-                    "nikkei_avg": parse_value(row.iloc[1]),
-                    "foreign": parse_value(row.iloc[3]),
-                    "securities_self": parse_value(row.iloc[4]),
-                    "individual_total": parse_value(row.iloc[5]),
-                    "individual_cash": parse_value(row.iloc[6]),
-                    "individual_credit": parse_value(row.iloc[7]),
-                    "investment_trust": parse_value(row.iloc[8]),
-                    "business_corp": parse_value(row.iloc[9]),
-                    "trust_banks": parse_value(row.iloc[11])
+        .chart-title {
+            font-size: 1.8em;
+            color: #2d3748;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-top: 20px;
+        }
+
+        .info-text {
+            color: #718096;
+            font-size: 0.9em;
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 投資主体別 売買状況</h1>
+            <p class="subtitle">Investment Entity Trading Activity</p>
+            <nav>
+                <a href="index.html">🏠 ホーム</a>
+                <a href="advanced.html">📈 海外投資家動向</a>
+                <a href="shutai.html">📊 投資主体別売買</a>
+            </nav>
+        </header>
+
+        <div class="chart-card">
+            <h2 class="chart-title">週次 投資主体別売買状況</h2>
+            <div class="chart-container">
+                <canvas id="shutaiChart"></canvas>
+            </div>
+            <p class="info-text">
+                ※ 海外投資家、証券自己、個人(現金・信用)、投資信託、事業法人、信託銀行など、主要投資主体の週次売買動向を表示しています。<br>
+                ※ プラス値は買い越し、マイナス値は売り越しを示します。<br>
+                ※ データは毎週木曜日19時に自動更新されます。
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // データ読み込みと描画
+        async function loadAndDisplayChart() {
+            try {
+                const response = await fetch('data/shutai_data.json');
+                if (!response.ok) {
+                    throw new Error('データの読み込みに失敗しました');
                 }
-                new_data.append(record)
-            except Exception as e:
-                log(f"Error parsing row {idx}: {e}")
-                continue
+                
+                const data = await response.json();
+                
+                if (!data || data.length === 0) {
+                    throw new Error('データが空です');
+                }
 
-        log(f"Extracted {len(new_data)} valid records.")
+                // 最新30週分のデータを取得
+                const recentData = data.slice(-30);
+                
+                // データの整形
+                const labels = recentData.map(d => {
+                    const date = new Date(d.date);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                });
 
-        if len(new_data) == 0:
-            log("WARNING: Valid data count is 0. Aborting save.")
-            return
+                // チャート設定（JPXと同様のカラーパレット）
+                const chartData = {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '海外',
+                            data: recentData.map(d => d.foreign / 100000), // 10万株単位
+                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '証券自己',
+                            data: recentData.map(d => d.securities_self / 100000),
+                            backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                            borderColor: 'rgba(118, 75, 162, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '個人(現金)',
+                            data: recentData.map(d => d.individual_cash / 100000),
+                            backgroundColor: 'rgba(72, 187, 120, 0.8)',
+                            borderColor: 'rgba(72, 187, 120, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '個人(信用)',
+                            data: recentData.map(d => d.individual_credit / 100000),
+                            backgroundColor: 'rgba(144, 205, 244, 0.8)',
+                            borderColor: 'rgba(144, 205, 244, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '投資信託',
+                            data: recentData.map(d => d.investment_trust / 100000),
+                            backgroundColor: 'rgba(237, 137, 54, 0.8)',
+                            borderColor: 'rgba(237, 137, 54, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '事業法人',
+                            data: recentData.map(d => d.business_corp / 100000),
+                            backgroundColor: 'rgba(246, 173, 85, 0.8)',
+                            borderColor: 'rgba(246, 173, 85, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '信託銀行',
+                            data: recentData.map(d => d.trust_banks / 100000),
+                            backgroundColor: 'rgba(229, 62, 62, 0.7)',
+                            borderColor: 'rgba(229, 62, 62, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '生保損保',
+                            data: recentData.map(d => d.insurance / 100000),
+                            backgroundColor: 'rgba(159, 122, 234, 0.7)',
+                            borderColor: 'rgba(159, 122, 234, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '都銀地銀',
+                            data: recentData.map(d => d.city_banks / 100000),
+                            backgroundColor: 'rgba(128, 90, 213, 0.7)',
+                            borderColor: 'rgba(128, 90, 213, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                };
 
-        # 4. 保存ロジック
-        final_list = []
-        
-        if DEBUG_MODE:
-            log("DEBUG MODE: Overwriting ALL data.")
-            final_list = sorted(new_data, key=lambda x: x['date'])
-        else:
-            log("NORMAL MODE: Merging data.")
-            existing_data = []
-            if os.path.exists(DATA_FILE):
-                try:
-                    with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                        existing_data = json.load(f)
-                except:
-                    pass
-            
-            data_map = {item['date']: item for item in existing_data}
-            for item in new_data:
-                data_map[item['date']] = item
-            
-            final_list = sorted(data_map.values(), key=lambda x: x['date'])
+                const config = {
+                    type: 'bar',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                stacked: true,
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                title: {
+                                    display: true,
+                                    text: '売買金額 (10万株)',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 15,
+                                    padding: 15,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        const value = context.parsed.y;
+                                        label += value >= 0 ? '+' : '';
+                                        label += value.toFixed(1) + '万株';
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
 
-        # ディレクトリ作成と保存
-        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(final_list, f, indent=4, ensure_ascii=False)
-        
-        log(f"Successfully saved to {DATA_FILE}")
+                const ctx = document.getElementById('shutaiChart').getContext('2d');
+                new Chart(ctx, config);
 
-    except Exception as e:
-        log(f"FATAL ERROR: {e}")
-        traceback.print_exc()
+            } catch (error) {
+                console.error('エラー:', error);
+                document.querySelector('.chart-container').innerHTML = `
+                    <div class="error">
+                        ⚠️ データの読み込みに失敗しました: ${error.message}<br>
+                        ページを再読み込みしてください。
+                    </div>
+                `;
+            }
+        }
 
-if __name__ == "__main__":
-    scrape_shutai_data()
+        // ページ読み込み時に実行
+        window.addEventListener('DOMContentLoaded', loadAndDisplayChart);
+    </script>
+</body>
+</html>
