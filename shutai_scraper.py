@@ -41,7 +41,8 @@ def parse_value(text):
 def is_valid_date_row(row):
     """週次データの行かどうかを判定（月計・年計を除外）"""
     # class="yy"は集計行
-    if row.get('class') and 'yy' in row.get('class'):
+    row_class = row.get('class')
+    if row_class and 'yy' in row_class:
         return False
     
     # 最初のセルをチェック
@@ -100,20 +101,35 @@ def scrape_shutai_data():
         
         if not table:
             log("CRITICAL: No table found with id='datatbl'")
-            # デバッグ: テーブルの存在確認
             all_tables = soup.find_all('table')
             log(f"Found {len(all_tables)} tables in total")
             return
         
         log(f"Table found successfully")
         
-        # 3. データ行を抽出（週次データのみ）
-        rows = table.find_all('tr')
-        log(f"Total rows in table: {len(rows)}")
+        # 3. データ行を抽出
+        # tbody内とtable直下の両方から取得
+        rows = []
+        tbody = table.find('tbody')
+        if tbody:
+            rows = tbody.find_all('tr')
+            log(f"Found {len(rows)} rows in tbody")
+        else:
+            rows = table.find_all('tr')
+            log(f"Found {len(rows)} rows in table (no tbody)")
+        
+        # デバッグ: 最初の数行の構造を確認
+        if DEBUG_MODE and len(rows) > 0:
+            log("--- First 3 rows structure ---")
+            for i, row in enumerate(rows[:3]):
+                cells = row.find_all(['td', 'th'])
+                log(f"Row {i}: {len(cells)} cells, class={row.get('class')}")
+                if cells and len(cells) > 0:
+                    log(f"  First cell text: {cells[0].get_text()[:50]}")
         
         new_data = []
         
-        for row in rows:
+        for idx, row in enumerate(rows):
             # ヘッダー行はスキップ
             if row.find('th'):
                 continue
@@ -126,7 +142,8 @@ def scrape_shutai_data():
             cells = row.find_all('td')
             
             if len(cells) < 14:
-                log(f"Skipping row with insufficient cells: {len(cells)}")
+                if DEBUG_MODE:
+                    log(f"Row {idx}: Skipping row with {len(cells)} cells")
                 continue
             
             try:
@@ -161,17 +178,29 @@ def scrape_shutai_data():
                 
                 new_data.append(record)
                 
+                if DEBUG_MODE and len(new_data) <= 3:
+                    log(f"Parsed record: {formatted_date}, 海外={record['foreign']}, 個人計={record['individual_total']}")
+                
             except Exception as e:
-                log(f"Error parsing row: {e}")
+                if DEBUG_MODE:
+                    log(f"Error parsing row {idx}: {e}")
                 continue
         
         log(f"Extracted {len(new_data)} valid weekly records (excluding monthly/yearly summaries).")
         
         if len(new_data) == 0:
             log("WARNING: Valid data count is 0. Aborting save.")
+            # さらなるデバッグ情報
+            if DEBUG_MODE:
+                log("--- Debug: Checking all rows for date patterns ---")
+                for idx, row in enumerate(rows[:10]):
+                    first_cell = row.find('td')
+                    if first_cell:
+                        text = first_cell.get_text().strip()[:50]
+                        log(f"Row {idx}: '{text}'")
             return
         
-        # 最新5件を表示（デバッグ用）
+        # 最新5件を表示
         log("Sample data (latest 5 records):")
         for record in new_data[-5:]:
             log(f"  {record['date']}: 海外={record['foreign']}, 個人計={record['individual_total']}")
@@ -193,14 +222,14 @@ def scrape_shutai_data():
                 except:
                     log("No existing data file found.")
             
-            # 日付をキーにしてマージ（重複は最新で上書き）
+            # 日付をキーにしてマージ
             data_map = {item['date']: item for item in existing_data}
             for item in new_data:
                 data_map[item['date']] = item
             
             final_list = sorted(data_map.values(), key=lambda x: x['date'])
         
-        # ディレクトリ作成と保存
+        # 保存
         os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(final_list, f, indent=4, ensure_ascii=False)
