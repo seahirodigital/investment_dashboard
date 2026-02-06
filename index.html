@@ -230,7 +230,7 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
-        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList } = Recharts;
+        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine, ResponsiveContainer, LabelList, Legend } = Recharts;
 
         // --- Icons ---
         const Icon = ({ name, size = 20, className = "", style = {} }) => {
@@ -277,7 +277,8 @@
                 Archive: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>,
                 Search: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>,
                 List: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>,
-                Camera: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                Camera: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>,
+                TrendingUp: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
             };
             return icons[name] || null;
         };
@@ -1411,7 +1412,153 @@
         );
     };
 
-    const OptionOI=({charts,setCharts})=>{const[ticker,setTicker]=useState('');const[error,setError]=useState(null);const handleData=(rows)=>{const step=50;const res=processOptionData(rows,step);if(res.error){setError(res.error);}else{setError(null);const newChart={id:Date.now().toString(),data:res.data,step:step,rawRows:rows};setCharts([...charts,newChart]);}};const handleStepChange=(id,newStep,newData)=>{setCharts(charts.map(c=>c.id===id?{...c,step:newStep,data:newData}:c));};const handleTickerNav=()=>{if(!ticker)return;const symbol=ticker.trim().toUpperCase();window.open(`https://optioncharts.io/options/${symbol}/option-chain`,'_blank');};return(<div className="h-full flex flex-col pb-20"><div className="unified-header-card"><div className="unified-header-title"><Icon name="BarChart3" size={28} /> Option 分析</div><p className="unified-header-sub">建玉の壁を可視化</p></div>{charts.length>0&&<button onClick={()=>setCharts([])} className="text-sm text-red-500 hover:underline mb-4">データをクリア</button>}{charts.map(chart=>(<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange}/>))}{error&&<div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle"/>{error}</div>}<div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl"><p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p><div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">{[{label:'QQQ',url:'https://optioncharts.io/options/QQQ/option-chain'},{label:'SPY',url:'https://optioncharts.io/options/SPY/option-chain'},{label:'DJI',url:'https://optioncharts.io/options/$DJX/option-chain'},{label:'IWM',url:'https://optioncharts.io/options/IWM/option-chain'},{label:'VIX',url:'https://optioncharts.io/options/$VIX/option-chain'},{label:'NVIDIA',url:'https://optioncharts.io/options/NVDA/option-chain'},{label:'APPL',url:'https://optioncharts.io/options/AAPL/option-chain'},{label:'AMZN',url:'https://optioncharts.io/options/AMZN/option-chain'},{label:'GLD',url:'https://optioncharts.io/options/GLD/option-chain'},{label:'SLV',url:'https://optioncharts.io/options/SLV/option-chain'}].map(l=>(<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10}/></a>))}</div><div className="mb-10 flex items-center gap-2"><span className="text-sm text-slate-500 font-bold">Ticker:</span><input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key==='Enter'&&handleTickerNav()}/><button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button></div><DataInput onDataParsed={handleData}/></div></div>);};
+    // --- Investor Trends Component (NEW) ---
+    const InvestorTrends = () => {
+        const defaultData = `日付	日経平均	日経平均
+変化(週)	海外	証券自己	個人	法人	法人(金融)
+個人 計	個人
+(現金)	個人
+(信用)	投資信託	事業法人	その他
+法人	信託銀行	生保
+損保	都銀
+地銀
+2026/01/30	53,322.85	▼0.97%	+159,891	-819,655	+834,854	+471,539	+363,315	-91,760	+319,019	-39,728	-289,884	-15,927	-113,158
+2026/01/23	53,846.87	▼0.17%	+192,161	-405,459	+479,204	+137,774	+341,430	+130,746	+175,747	-22,535	-424,920	-114,576	-49,223
+2026/01/16	53,936.17	▲3.84%	+780,423	+374,992	-662,790	-674,710	+11,919	-45,570	+81,695	-49,475	-245,952	-125,679	-50,789
+2026/01/09	51,939.89	▲3.18%	+1,224,694	-702,878	-542,835	-564,482	+21,647	-29,677	+168,637	-6,670	-7,793	-32,526	-30,669
+2025/12/30	50,339.48	▼0.81%	-14,988	-196,135	+184,684	+2,914	+181,770	-17,774	+13,880	+13,646	+17,543	-290	-522
+2025/12/26	50,750.39	▲2.51%	-21,033	+282,544	-385,293	-404,260	+18,967	+50,651	+16,598	+90,015	+30,765	-43,752	-7,391
+2025/12/19	49,507.21	▼2.61%	-439,099	+249,210	+256,534	-26,355	+282,889	-77,501	+217,722	+46,025	-176,619	-60,412	-30,795
+2025/12/12	50,836.55	▲0.68%	+189,792	-496,602	-250,281	-393,617	+143,335	+144,696	+231,203	+109,982	+129,372	-43,389	+7,610
+2025/12/05	50,491.87	▲0.47%	+3,459	-344,974	+207,691	+2,377	+205,314	+169,903	+203,802	+45,550	-208,494	-82,891	-64,142
+2025/11/28	50,253.91	▲3.35%	-116,267	+370,271	-452,833	-435,915	-16,918	+35,694	+167,386	+33,749	+23,635	-24,443	-21,753
+2025/11/21	48,625.88	▼3.48%	-383,633	+322,466	+115,895	-36,803	+152,699	-124,650	+259,495	+30,670	-83,461	-59,955	-36,224
+2025/11/14	50,376.53	▲0.20%	+514,770	+306,576	-236,619	-435,882	+199,263	-44,636	+192,361	+67,241	-539,765	-106,396	-88,394
+2025/11/07	50,276.37	▼4.07%	-355,937	-750,638	+555,751	+97,061	+458,691	+261,322	+205,482	+13,931	+75,578	-30,306	-19,849
+2025/10/31	52,411.34	▲6.31%	+345,942	-90,025	-187,683	-385,929	+198,246	-336,537	+167,367	+12,068	+138,835	-38,046	-20,375
+2025/10/24	49,299.65	▲3.61%	+643,645	+58,420	-512,482	-536,907	+24,424	-116,556	+63,976	+25,989	-78,641	-49,689	-8,544
+2025/10/17	47,582.15	▼1.05%	+153,284	-360,052	+343,116	+102,672	+240,444	-152,487	+131,397	+3,004	-10,911	-42,020	-72,622
+2025/10/10	48,088.80	▲5.07%	+1,058,677	-77,644	-429,020	-640,366	+211,347	-36,365	+150,450	+25,646	-488,226	-78,875	-60,886
+2025/10/03	45,769.50	▲0.91%	+1,239,848	-1,645,704	+422,263	+77,863	+344,400	+65,086	+122,709	+20,061	-213,666	-23,232	-36,396
+2025/09/26	45,354.99	▲0.69%	-559,181	+1,115,848	+129,369	+128,620	+748	-276,016	-21,324	+38,840	-358,418	-90,502	-417
+2025/09/19	45,045.81	▲0.62%	-294,384	+754,004	-32,665	-169,799	+137,135	-45,386	+182,480	+8,814	-531,015	-27,248	-16,519
+2025/09/12	44,768.12	▲4.07%	-692,367	+1,259,599	-468,896	-425,246	-43,649	-104,917	+207,733	-17,323	-130,105	-44,590	-19,205
+2025/09/05	43,018.75	▲0.70%	+131,446	-30,659	+165,783	-65,992	+231,775	-93,921	+325,300	-12,583	-422,062	-58,036	-12,481
+2025/08/29	42,718.47	▲0.20%	-303,154	+269,149	+413,479	+145,323	+268,156	-213,870	+415,279	-94,240	-446,135	-58,902	-16,090
+2025/08/22	42,633.29	▼1.72%	-198,867	+201,617	+150,198	-220,130	+370,328	-291,043	+237,443	+1,618	+1,295	-59,616	-41,724
+2025/08/15	43,378.31	▲3.73%	+573,776	+736,083	-1,125,354	-1,018,633	-106,721	+9,971	+181,121	-23,030	-216,505	-39,562	-41,225
+2025/08/08	41,820.48	▲2.50%	-5,334	+646,130	-578,058	-645,225	+67,167	-38,022	+246,021	-15,861	-116,562	-42,588	-53,093
+2025/08/01	40,799.60	▼1.58%	-189,206	+223,919	+25,543	-189,123	+214,666	+58,939	+286,603	+1,977	-100,216	-282,071	-36,940
+2025/07/25	41,456.23	▲4.11%	+602,395	+556,728	-1,219,052	-1,021,498	-197,554	-22,253	+94,604	+32,177	+38,585	-32,255	-22,974
+2025/07/18	39,819.11	▲0.63%	+187,508	-390,766	-87,985	-215,409	+127,424	+58,475	+216,272	+12,853	+10,791	-42,083	-49,544
+2025/07/11	39,569.68	▼0.61%	+403,085	-148,323	-66,547	-199,569	+133,022	-442,783	+228,086	+48,797	-35,304	-2,137	-27,560`;
+        
+        const [inputText, setInputText] = useState(defaultData);
+        const [chartData, setChartData] = useState([]);
+
+        useEffect(() => {
+            parseData(inputText);
+        }, []);
+
+        const parseData = (text) => {
+            if (!text.trim()) return;
+            // 簡易的なパース処理: タブまたはスペース区切り
+            // 日付(YYYY/MM/DD)で始まる行のみをデータとして扱う
+            const lines = text.split('\n');
+            const data = [];
+            
+            lines.forEach(line => {
+                const parts = line.trim().split(/[\t\s]+/);
+                if (parts.length > 5 && /^\d{4}\/\d{2}\/\d{2}$/.test(parts[0])) {
+                    // 数値のクリーニング関数
+                    const cleanNum = (str) => {
+                        if (!str) return 0;
+                        return parseInt(str.replace(/,/g, '').replace(/\+/g, ''), 10) || 0;
+                    };
+
+                    // 列定義に基づいてマッピング (提供データの構造に合わせる)
+                    // 0: 日付, 1: 日経平均, 2: 変化, 3: 海外, 4: 証券自己, 5: 個人, ... 
+                    // 11: 投資信託, 12: 事業法人 (ヘッダー行からの推測位置)
+                    // 注: 「個人」の次に「法人」「法人(金融)」「個人 計」などが来るため、インデックスはずれる可能性あり
+                    // ここでは提供データの列順を固定と仮定してマッピング
+                    // Data: 2026/01/30 ... +159,891(Foreign) -819,655(Prop) +834,854(Indiv)
+                    
+                    data.push({
+                        date: parts[0],
+                        foreign: cleanNum(parts[3]), // 海外
+                        proprietary: cleanNum(parts[4]), // 証券自己
+                        individual: cleanNum(parts[5]), // 個人 (恐らくグロスまたは代表値)
+                        trust: cleanNum(parts[11]), // 投資信託 (列位置調整が必要ならここを変える)
+                        business: cleanNum(parts[12]) // 事業法人
+                    });
+                }
+            });
+            // 日付昇順にソート
+            data.sort((a, b) => new Date(a.date) - new Date(b.date));
+            setChartData(data);
+        };
+
+        const handleParse = () => {
+            parseData(inputText);
+        };
+
+        return (
+            <div className="h-full flex flex-col pb-20">
+                <div className="unified-header-card">
+                    <div className="unified-header-title">
+                        <Icon name="TrendingUp" size={28} /> 主体別投資動向
+                    </div>
+                    <p className="unified-header-sub">主要投資主体の売買状況推移</p>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow border border-slate-200 p-6 mb-6 animate-fade-in-up">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-bold text-slate-700">売買動向チャート (積み上げ)</h2>
+                        <a href="https://nikkei225jp.com/data/shutai.php" target="_blank" rel="noopener noreferrer" className="text-[#7C4DFF] hover:underline text-sm font-bold flex items-center gap-1">
+                            日経225投手主体別 <Icon name="ExternalLink" size={12} />
+                        </a>
+                    </div>
+                    
+                    <div className="h-[500px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} stackOffset="sign">
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                <XAxis dataKey="date" tick={{fontSize: 10}} />
+                                <YAxis tickFormatter={(val) => `${(val / 10000).toFixed(0)}万`} width={40} tick={{fontSize: 10}} />
+                                <Tooltip formatter={(val) => val.toLocaleString()} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                <Legend />
+                                <ReferenceLine y={0} stroke="#000" />
+                                <Bar dataKey="foreign" name="海外" fill="#7C4DFF" stackId="a" />
+                                <Bar dataKey="individual" name="個人" fill="#00BCD4" stackId="a" />
+                                <Bar dataKey="proprietary" name="証券自己" fill="#607D8B" stackId="a" />
+                                <Bar dataKey="trust" name="投資信託" fill="#FF4081" stackId="a" />
+                                <Bar dataKey="business" name="事業法人" fill="#FFC107" stackId="a" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 w-full">
+                    <div className="mb-4">
+                        <h3 className="font-bold text-slate-700 mb-2 text-sm">データ入力 (Excel/Text貼り付け)</h3>
+                        <p className="text-xs text-slate-500 mb-2">ヘッダー行の有無に関わらず、日付(YYYY/MM/DD)で始まる行を自動検出してグラフ化します。</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <textarea 
+                            className="w-full border border-slate-300 rounded-lg p-3 text-xs font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none min-h-[150px]"
+                            rows={6}
+                            placeholder="日付..."
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                        />
+                        <button onClick={handleParse} className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 font-bold self-end">更新</button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const OptionOI=({charts,setCharts})=>{const[ticker,setTicker]=useState('');const[error,setError]=useState(null);const handleData=(rows)=>{const step=50;const res=processOptionData(rows,step);if(res.error){setError(res.error);}else{setError(null);const newChart={id:Date.now().toString(),data:res.data,step:step,rawRows:rows};setCharts([...charts,newChart]);}};const handleStepChange=(id,newStep,newData)=>{setCharts(charts.map(c=>c.id===id?{...c,step:newStep,data:newData}:c));};const handleTickerNav=()=>{if(!ticker)return;const symbol=ticker.trim().toUpperCase();window.open(`https://optioncharts.io/options/${symbol}/option-chain`,'_blank');};return(<div className="h-full flex flex-col pb-20"><div className="unified-header-card"><div className="unified-header-title"><Icon name="BarChart3" size={28} /> Option 分析</div><p className="unified-header-sub">建玉の壁を可視化</p></div>{charts.length>0&&<button onClick={()=>setCharts([])} className="text-sm text-red-500 hover:underline mb-4">データをクリア</button>}{charts.map(chart=>(<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange}/>))}{error&&<div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle"/>{error}</div>}<div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl"><div className="mb-10 flex items-center gap-2"><span className="text-sm text-slate-500 font-bold">Ticker:</span><input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key==='Enter'&&handleTickerNav()}/><button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button></div><DataInput onDataParsed={handleData}/></div></div>);};
 
 const processOptionData = (rawRows, step = 50) => {
     if (!rawRows || rawRows.length < 2) return { data: [], error: 'データが不足しています。' };
@@ -1771,6 +1918,7 @@ const App = () => {
                     {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
                     <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
                     <NavItem id="quotes" label="投資の格言集" icon="Lightbulb" />
+                    <NavItem id="trends" label="主体別投資動向" icon="TrendingUp" />
                     <NavItem id="option" label="Option 分析" icon="BarChart3" />
                     <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
                     <NavItem id="participant" label="手口上位" icon="Briefcase" />
@@ -1782,13 +1930,14 @@ const App = () => {
             </aside>
             {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
             <div className="flex-1 flex flex-col min-w-0">
-                <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0"><button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button><span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外投資家動向' : view === 'quotes' ? '投資の格言集' : '取引参加者別取引高'}</span></header>
+                <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0"><button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button><span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'jpx' ? 'JPX 海外動向' : view === 'quotes' ? '投資の格言集' : view === 'trends' ? '主体別投資動向' : '取引参加者別取引高'}</span></header>
                 <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
                     <div className="max-w-7xl mx-auto h-full">
                         {view === 'calendar' ? <ProfitManager historyData={historyData} updateHistoryData={(nd) => saveAllData(nd, undefined, undefined)} customLinks={customLinks} setCustomLinks={(nl) => saveAllData(undefined, nl, undefined)} quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} saveAllData={saveAllData} onMoveToQuotes={handleMoveToQuotes} /> :
                             view === 'quotes' ? <QuotesManager quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} prefillBody={quotePrefill} uploadConfig={{token: gistToken, owner: localStorage.getItem('repo_owner') || 'seahirodigital', repo: localStorage.getItem('repo_name') || 'investment_dashboard'}} /> :
                                 view === 'jpx' ? <ForeignInvestors /> :
                                     view === 'participant' ? <ParticipantVolume /> :
+                                        view === 'trends' ? <InvestorTrends /> :
                                         <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
                     </div>
                 </main>
