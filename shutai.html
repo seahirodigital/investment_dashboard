@@ -1,240 +1,162 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>投資主体別売買動向 - Dashboard</title>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --bg-color: #1a1a1a;
-            --card-bg: #2d2d2d;
-            --text-color: #e0e0e0;
-            --accent-color: #4CAF50;
-            --border-color: #404040;
-        }
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        header {
-            margin-bottom: 30px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-        h1 {
-            font-size: 24px;
-            margin: 0;
-            display: inline-block;
-        }
-        nav {
-            margin-top: 15px;
-            margin-bottom: 10px;
-        }
-        nav a {
-            color: var(--text-color);
-            text-decoration: none;
-            margin-right: 20px;
-            font-size: 16px;
-            padding-bottom: 5px;
-            opacity: 0.7;
-            transition: opacity 0.3s;
-        }
-        nav a:hover, nav a.active {
-            opacity: 1;
-            color: var(--accent-color);
-            border-bottom: 2px solid var(--accent-color);
-        }
-        .chart-container {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            height: 600px;
-            position: relative;
-        }
-        .loading {
-            text-align: center;
-            padding: 100px;
-            font-style: italic;
-            opacity: 0.6;
-        }
-        .footer-note {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #888;
-            text-align: right;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>Investment Dashboard</h1>
-            <nav>
-                <a href="index.html">JPX Data</a>
-                <a href="advanced.html">投資の格言</a>
-                <a href="shutai.html" class="active">主体別売買動向</a>
-            </nav>
-        </header>
+import requests
+import pandas as pd
+import json
+import os
+from datetime import datetime
+import traceback
+import io
 
-        <div class="chart-container">
-            <div id="loading" class="loading">データを読み込み中...</div>
-            <canvas id="shutaiChart"></canvas>
-        </div>
-        <div class="footer-note">
-            Data Source: Nikkei225jp (Weekly)
-        </div>
-    </div>
+# 環境変数からデバッグモードを取得
+DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
+DATA_FILE = 'data/shutai_data.json'
+TARGET_URL = 'https://nikkei225jp.com/data/shutai.php'
 
-    <script>
-        async function loadData() {
-            try {
-                // キャッシュ回避のタイムスタンプ付与
-                const response = await fetch('./data/shutai_data.json?t=' + new Date().getTime());
-                if (!response.ok) throw new Error("Data file not found (404)");
-                const data = await response.json();
-                renderChart(data);
-            } catch (error) {
-                document.getElementById('loading').innerText = "エラー: データの読み込みに失敗しました。\n" + error.message;
-                console.error(error);
-            }
-        }
+def log(msg):
+    print(f"[Scraper] {msg}", flush=True)
 
-        function renderChart(rawData) {
-            document.getElementById('loading').style.display = 'none';
+def parse_value(val):
+    """Pandasの値を数値に変換"""
+    if pd.isna(val) or val == '-':
+        return 0
+    
+    s_val = str(val).strip()
+    
+    # 文字列のクリーニング
+    s_val = s_val.replace(',', '').replace('%', '')
+    
+    # 記号処理（▼はマイナス、▲/+はプラス）
+    if '▼' in s_val:
+        s_val = '-' + s_val.replace('▼', '')
+    elif '▲' in s_val:
+        s_val = s_val.replace('▲', '')
+    elif '+' in s_val:
+        s_val = s_val.replace('+', '')
+        
+    try:
+        if '.' in s_val:
+            return float(s_val)
+        return int(s_val)
+    except ValueError:
+        return 0
+
+def scrape_shutai_data():
+    log(f"Starting scraping process using Pandas. Target: {TARGET_URL}")
+    log(f"Debug Mode: {DEBUG_MODE}")
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
+    }
+
+    try:
+        # 1. HTMLの取得
+        response = requests.get(TARGET_URL, headers=headers, timeout=20)
+        response.encoding = response.apparent_encoding
+        
+        if response.status_code != 200:
+            log(f"Error: HTTP {response.status_code}")
+            return
+
+        html_content = response.text
+        log(f"HTML Content Length: {len(html_content)}")
+
+        # 2. Pandasでテーブル抽出 (lxml使用)
+        # datatbl というIDを持つテーブルを探す
+        try:
+            dfs = pd.read_html(io.StringIO(html_content), attrs={'id': 'datatbl'}, flavor='lxml')
+        except Exception as e:
+            log(f"Pandas read_html failed: {e}")
+            log("Trying bs4 flavor...")
+            dfs = pd.read_html(io.StringIO(html_content), attrs={'id': 'datatbl'}, flavor='bs4')
+
+        if not dfs:
+            log("CRITICAL: No tables found matching id='datatbl'")
+            return
             
-            // データが古い順(昇順)であることを前提
-            const labels = rawData.map(d => {
-                const parts = d.date.split('-');
-                return `${parts[1]}/${parts[2]}`; // MM/DD
-            });
+        df = dfs[0]
+        log(f"Table extracted. Shape: {df.shape}")
+        
+        # 3. データ処理
+        new_data = []
+        
+        # 行ごとの処理
+        # dfの構造: 
+        # 0:日付, 1:日経平均, 2:変化, 3:海外, 4:証券自己
+        # 5:個人計, 6:現金, 7:信用, 8:投資信託, 9:事業法人, 10:その他, 11:信託, 12:生保, 13:都銀
+        
+        for idx, row in df.iterrows():
+            # ヘッダー行や月計行の除外チェック
+            # 日付カラムの値を確認
+            date_val = str(row.iloc[0])
             
-            const foreign = rawData.map(d => d.foreign);      // 海外
-            const trust = rawData.map(d => d.trust_banks);    // 信託銀行
-            const individual = rawData.map(d => d.individual_total); // 個人計
-            const securities = rawData.map(d => d.securities_self); // 証券自己
-            const business = rawData.map(d => d.business_corp); // 事業法人
-            const nikkei = rawData.map(d => d.nikkei_avg);    // 日経平均
+            # 日付フォーマットチェック (YYYY/MM/DD)
+            try:
+                # 2026/01/30 のような形式か、timeタグ内のテキスト
+                # 余計な文字を除去
+                date_clean = date_val.split(' ')[0] # "2026/01/30" だけ取る
+                date_obj = datetime.strptime(date_clean, '%Y/%m/%d')
+                formatted_date = date_obj.strftime('%Y-%m-%d')
+            except ValueError:
+                # 日付変換できない行（ヘッダーや「月計」など）はスキップ
+                continue
 
-            const ctx = document.getElementById('shutaiChart').getContext('2d');
-            
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            type: 'line',
-                            label: '日経平均',
-                            data: nikkei,
-                            borderColor: 'rgba(186, 104, 200, 1)', 
-                            borderWidth: 3,
-                            pointRadius: 2,
-                            yAxisID: 'y1',
-                            order: 0,
-                            tension: 0.1
-                        },
-                        {
-                            label: '海外投資家',
-                            data: foreign,
-                            backgroundColor: 'rgba(33, 150, 243, 0.8)', // 青
-                            stack: 'Stack 0',
-                            yAxisID: 'y',
-                            order: 1
-                        },
-                        {
-                            label: '信託銀行',
-                            data: trust,
-                            backgroundColor: 'rgba(255, 193, 7, 0.8)', // 黄
-                            stack: 'Stack 0',
-                            yAxisID: 'y',
-                            order: 1
-                        },
-                        {
-                            label: '個人',
-                            data: individual,
-                            backgroundColor: 'rgba(244, 67, 54, 0.8)', // 赤
-                            stack: 'Stack 0',
-                            yAxisID: 'y',
-                            order: 1
-                        },
-                        {
-                            label: '証券自己',
-                            data: securities,
-                            backgroundColor: 'rgba(0, 150, 136, 0.8)', // 緑系
-                            stack: 'Stack 0',
-                            yAxisID: 'y',
-                            order: 1
-                        },
-                        {
-                            label: '事業法人',
-                            data: business,
-                            backgroundColor: 'rgba(156, 39, 176, 0.6)', // 紫
-                            stack: 'Stack 0',
-                            yAxisID: 'y',
-                            order: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
-                    },
-                    plugins: {
-                        legend: { labels: { color: '#e0e0e0' } },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    if (context.parsed.y !== null) {
-                                        label += new Intl.NumberFormat('ja-JP').format(context.parsed.y);
-                                    }
-                                    return label;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#b0b0b0' },
-                            grid: { color: '#444' }
-                        },
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            title: { display: true, text: '売買金額 (千円)', color: '#b0b0b0' },
-                            ticks: { color: '#b0b0b0' },
-                            grid: { color: '#444' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            title: { display: true, text: '日経平均株価', color: '#ba68c8' },
-                            grid: { drawOnChartArea: false },
-                            ticks: { color: '#ba68c8' }
-                        }
-                    }
+            try:
+                # データのマッピング (ilocで位置指定)
+                record = {
+                    "date": formatted_date,
+                    "nikkei_avg": parse_value(row.iloc[1]),
+                    "foreign": parse_value(row.iloc[3]),
+                    "securities_self": parse_value(row.iloc[4]),
+                    "individual_total": parse_value(row.iloc[5]),
+                    "individual_cash": parse_value(row.iloc[6]),
+                    "individual_credit": parse_value(row.iloc[7]),
+                    "investment_trust": parse_value(row.iloc[8]),
+                    "business_corp": parse_value(row.iloc[9]),
+                    "trust_banks": parse_value(row.iloc[11])
                 }
-            });
-        }
-        window.onload = loadData;
-    </script>
-</body>
-</html>
+                new_data.append(record)
+            except Exception as e:
+                log(f"Error parsing row {idx}: {e}")
+                continue
+
+        log(f"Extracted {len(new_data)} valid records.")
+
+        if len(new_data) == 0:
+            log("WARNING: Valid data count is 0. Aborting save.")
+            return
+
+        # 4. 保存ロジック
+        final_list = []
+        
+        if DEBUG_MODE:
+            log("DEBUG MODE: Overwriting ALL data.")
+            final_list = sorted(new_data, key=lambda x: x['date'])
+        else:
+            log("NORMAL MODE: Merging data.")
+            existing_data = []
+            if os.path.exists(DATA_FILE):
+                try:
+                    with open(DATA_FILE, 'r', encoding='utf-8') as f:
+                        existing_data = json.load(f)
+                except:
+                    pass
+            
+            data_map = {item['date']: item for item in existing_data}
+            for item in new_data:
+                data_map[item['date']] = item
+            
+            final_list = sorted(data_map.values(), key=lambda x: x['date'])
+
+        # ディレクトリ作成と保存
+        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(final_list, f, indent=4, ensure_ascii=False)
+        
+        log(f"Successfully saved to {DATA_FILE}")
+
+    except Exception as e:
+        log(f"FATAL ERROR: {e}")
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    scrape_shutai_data()
