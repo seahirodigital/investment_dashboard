@@ -12,7 +12,7 @@ DATA_FILE = 'data/shutai_data.json'
 TARGET_URL = 'https://nikkei225jp.com/data/shutai.php'
 
 def log(msg):
-    print(f"[Scraper] {msg}", flush=True)
+    print(f"[Shutai Scraper] {msg}", flush=True)
 
 def parse_value(val):
     """Pandasの値を数値に変換"""
@@ -22,7 +22,7 @@ def parse_value(val):
     s_val = str(val).strip()
     
     # 不要な文字の削除
-    s_val = s_val.replace(',', '').replace('%', '')
+    s_val = s_val.replace(',', '').replace('%', '').replace(' ', '').replace('\n', '')
     
     # 記号処理（▼はマイナス、▲/+はプラス）
     if '▼' in s_val:
@@ -39,11 +39,15 @@ def parse_value(val):
     except ValueError:
         return 0
 
+def is_summary_row(date_str):
+    """月計・年計行かどうかを判定"""
+    # "2026/01 月計", "2025 年計" などを除外
+    return '月計' in date_str or '年計' in date_str or 'class="yy"' in date_str
+
 def scrape_shutai_data():
-    log(f"Starting scraping process using Pandas (lxml). Target: {TARGET_URL}")
+    log(f"Starting scraping process. Target: {TARGET_URL}")
     log(f"Debug Mode: {DEBUG_MODE}")
 
-    # ヘッダー偽装
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
@@ -59,17 +63,13 @@ def scrape_shutai_data():
             return
 
         html_content = response.text
-        # テーブル抽出に十分な長さがあるか確認
-        if len(html_content) < 1000:
-            log("Warning: HTML content is remarkably short.")
-            log(f"HTML Preview: {html_content[:500]}")
+        log(f"HTML Content Length: {len(html_content)}")
 
         # 2. Pandasでテーブル抽出
-        # lxmlパーサーを使用して強力に解析
         try:
             dfs = pd.read_html(io.StringIO(html_content), attrs={'id': 'datatbl'}, flavor='lxml')
         except Exception as e:
-            log(f"Pandas(lxml) failed: {e}. Trying bs4 flavor...")
+            log(f"Pandas(lxml) failed: {e}. Trying bs4...")
             try:
                 dfs = pd.read_html(io.StringIO(html_content), attrs={'id': 'datatbl'}, flavor='bs4')
             except Exception as e2:
@@ -81,51 +81,56 @@ def scrape_shutai_data():
             return
             
         df = dfs[0]
-        log(f"Table extracted successfully. Rows: {len(df)}")
+        log(f"Table extracted. Rows: {len(df)}")
         
-        # 3. データ処理
+        # 3. データ処理（週次データのみ）
         new_data = []
         
-        # 行ごとに処理
         for idx, row in df.iterrows():
-            # 列数が足りない行はスキップ
+            # 列数チェック
             if len(row) < 12:
                 continue
 
-            # 日付カラム(0番目)の値を確認
+            # 日付カラムの値を確認
             date_val = str(row.iloc[0])
             
-            # 日付フォーマットチェック
+            # 月計・年計行を除外
+            if is_summary_row(date_val):
+                continue
+            
+            # 日付フォーマットチェック (YYYY/MM/DD形式のみ)
             try:
-                # "2026/01/30" や "2026/01/30▼0.97%" のような文字列から日付部分のみ抽出
-                # スペースや改行で分割して先頭を取得
-                date_clean = date_val.split(' ')[0].split('\n')[0]
-                date_obj = datetime.strptime(date_clean.strip(), '%Y/%m/%d')
+                # "2026/01/30" のような形式を抽出
+                date_clean = date_val.split(' ')[0].split('\n')[0].strip()
+                date_obj = datetime.strptime(date_clean, '%Y/%m/%d')
                 formatted_date = date_obj.strftime('%Y-%m-%d')
             except ValueError:
-                # 日付変換できない行（ヘッダー行など）はスキップ
+                # 日付変換できない行はスキップ
                 continue
 
-            # データマッピング (HTMLの列順序に基づく)
             try:
+                # データマッピング（全投資主体を取得）
                 record = {
                     "date": formatted_date,
-                    "nikkei_avg": parse_value(row.iloc[1]),     # 日経平均
-                    "foreign": parse_value(row.iloc[3]),        # 海外
-                    "securities_self": parse_value(row.iloc[4]), # 証券自己
-                    "individual_total": parse_value(row.iloc[5]), # 個人計
-                    "individual_cash": parse_value(row.iloc[6]),  # 個人現金
-                    "individual_credit": parse_value(row.iloc[7]), # 個人信用
-                    "investment_trust": parse_value(row.iloc[8]),  # 投資信託
-                    "business_corp": parse_value(row.iloc[9]),     # 事業法人
-                    "trust_banks": parse_value(row.iloc[11])       # 信託銀行
+                    "nikkei_avg": parse_value(row.iloc[1]),           # 日経平均
+                    "foreign": parse_value(row.iloc[3]),              # 海外
+                    "securities_self": parse_value(row.iloc[4]),      # 証券自己
+                    "individual_total": parse_value(row.iloc[5]),     # 個人計
+                    "individual_cash": parse_value(row.iloc[6]),      # 個人(現金)
+                    "individual_credit": parse_value(row.iloc[7]),    # 個人(信用)
+                    "investment_trust": parse_value(row.iloc[8]),     # 投資信託
+                    "business_corp": parse_value(row.iloc[9]),        # 事業法人
+                    "other_corp": parse_value(row.iloc[10]),          # その他法人
+                    "trust_banks": parse_value(row.iloc[11]),         # 信託銀行
+                    "insurance": parse_value(row.iloc[12]),           # 生保損保
+                    "city_banks": parse_value(row.iloc[13])           # 都銀地銀
                 }
                 new_data.append(record)
             except Exception as e:
-                # 解析エラー時はログを出してスキップ
+                log(f"Error parsing row {idx}: {e}")
                 continue
 
-        log(f"Extracted {len(new_data)} valid records from {len(df)} rows.")
+        log(f"Extracted {len(new_data)} valid weekly records (excluding monthly/yearly summaries).")
 
         if len(new_data) == 0:
             log("WARNING: Valid data count is 0. Aborting save.")
@@ -135,7 +140,7 @@ def scrape_shutai_data():
         final_list = []
         
         if DEBUG_MODE:
-            log("DEBUG MODE: Overwriting ALL data with fetched content.")
+            log("DEBUG MODE: Overwriting ALL data.")
             final_list = sorted(new_data, key=lambda x: x['date'])
         else:
             log("NORMAL MODE: Merging with existing data.")
@@ -144,8 +149,9 @@ def scrape_shutai_data():
                 try:
                     with open(DATA_FILE, 'r', encoding='utf-8') as f:
                         existing_data = json.load(f)
+                    log(f"Loaded {len(existing_data)} existing records.")
                 except:
-                    pass
+                    log("No existing data file found.")
             
             # 日付をキーにしてマージ（重複は最新で上書き）
             data_map = {item['date']: item for item in existing_data}
