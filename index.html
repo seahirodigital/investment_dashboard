@@ -1476,26 +1476,54 @@
                         return parseInt(str.replace(/,/g, '').replace(/\+/g, ''), 10) || 0;
                     };
 
-                    // 列定義に基づいてマッピング (提供データの構造に合わせる)
-                    // 0: 日付, 1: 日経平均, 2: 変化, 3: 海外, 4: 証券自己, 5: 個人, ... 
-                    // 11: 投資信託, 12: 事業法人 (ヘッダー行からの推測位置)
-                    // 注: 「個人」の次に「法人」「法人(金融)」「個人 計」などが来るため、インデックスはずれる可能性あり
-                    // ここでは提供データの列順を固定と仮定してマッピング
-                    // Data: 2026/01/30 ... +159,891(Foreign) -819,655(Prop) +834,854(Indiv)
-                    
+                    // 列定義に基づいてマッピング
+                    // 0: 日付, 1: 日経平均, 2: 変化, 3: 海外, 4: 証券自己, 5: 個人
+                    // 11: 投資信託, 12: 事業法人
                     data.push({
                         date: parts[0],
-                        foreign: cleanNum(parts[3]), // 海外
-                        proprietary: cleanNum(parts[4]), // 証券自己
-                        individual: cleanNum(parts[5]), // 個人 (恐らくグロスまたは代表値)
-                        trust: cleanNum(parts[11]), // 投資信託 (列位置調整が必要ならここを変える)
-                        business: cleanNum(parts[12]) // 事業法人
+                        foreign: cleanNum(parts[3]),
+                        proprietary: cleanNum(parts[4]),
+                        individual: cleanNum(parts[5]),
+                        trust: cleanNum(parts[11]),
+                        business: cleanNum(parts[12])
                     });
                 }
             });
-            // 日付昇順にソート
+
+            // 日付昇順にソート (古い -> 新しい)
             data.sort((a, b) => new Date(a.date) - new Date(b.date));
-            setChartData(data);
+
+            // 累積値を計算して新しい配列を作成
+            let cumForeign = 0;
+            let cumProprietary = 0;
+            let cumIndividual = 0;
+            let cumTrust = 0;
+            let cumBusiness = 0;
+
+            const cumulativeData = data.map(item => {
+                cumForeign += item.foreign;
+                cumProprietary += item.proprietary;
+                cumIndividual += item.individual;
+                cumTrust += item.trust;
+                cumBusiness += item.business;
+
+                return {
+                    ...item,
+                    foreign: cumForeign,
+                    proprietary: cumProprietary,
+                    individual: cumIndividual,
+                    trust: cumTrust,
+                    business: cumBusiness,
+                    // 元の週次データも保持（ツールチップ等で利用可能）
+                    weekly_foreign: item.foreign,
+                    weekly_proprietary: item.proprietary,
+                    weekly_individual: item.individual,
+                    weekly_trust: item.trust,
+                    weekly_business: item.business
+                };
+            });
+
+            setChartData(cumulativeData);
         };
 
         const handleParse = () => {
@@ -1508,12 +1536,12 @@
                     <div className="unified-header-title">
                         <Icon name="TrendingUp" size={28} /> 主体別投資動向
                     </div>
-                    <p className="unified-header-sub">主要投資主体の売買状況推移</p>
+                    <p className="unified-header-sub">主要投資主体の累積売買ポジション推移</p>
                 </div>
                 
                 <div className="bg-white rounded-xl shadow border border-slate-200 p-6 mb-6 animate-fade-in-up">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold text-slate-700">売買動向チャート (積み上げ)</h2>
+                        <h2 className="text-lg font-bold text-slate-700">主体別 累積売買動向チャート</h2>
                         <a href="https://nikkei225jp.com/data/shutai.php" target="_blank" rel="noopener noreferrer" className="text-[#7C4DFF] hover:underline text-sm font-bold flex items-center gap-1">
                             日経225投手主体別 <Icon name="ExternalLink" size={12} />
                         </a>
