@@ -39,45 +39,39 @@ jobs:
           DEBUG_MODE: ${{ github.event.inputs.debug_mode || 'false' }}
         run: python main.py
       
-      - name: Check for changes
-        id: check_changes
-        run: |
-          # 監視対象に data/shutai_data.json を追加
-          if git diff --quiet history.csv trend.png data/shutai_data.json; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected"
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected"
-          fi
-      
       - name: Commit to main branch
-        if: steps.check_changes.outputs.has_changes == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # shutai_data.json を明示的に追加
-          git add history.csv trend.png data/shutai_data.json
-          git commit -m "Update JPX and Shutai data: $(date)"
-          git push origin main
+          # エラー回避: ファイルが存在する場合のみ add する
+          [ -f history.csv ] && git add history.csv
+          [ -f trend.png ] && git add trend.png
+          [ -f data/shutai_data.json ] && git add data/shutai_data.json
+          
+          # 変更がステージングされている場合のみコミット＆プッシュ
+          if ! git diff --cached --quiet; then
+            git commit -m "Update JPX and Shutai data: $(date)"
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
       
       - name: Prepare deployment files
         run: |
           mkdir -p deploy
           
-          # 単一ファイルのコピー
+          # 単一ファイルのコピー (存在チェック付き)
           [ -f index.html ] && cp index.html deploy/
           [ -f advanced.html ] && cp advanced.html deploy/
           [ -f shutai.html ] && cp shutai.html deploy/
           [ -f history.csv ] && cp history.csv deploy/
           [ -f trend.png ] && cp trend.png deploy/
           
-          # ▼▼▼ フォルダごとのコピーを追加 ▼▼▼
+          # フォルダごとのコピー
           [ -d css ] && cp -r css deploy/
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
-          # ▲▲▲ 追加終わり ▲▲▲
           
           echo "Files prepared for deployment"
           ls -laR deploy/
