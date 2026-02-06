@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投資主体別売買動向 - Dashboard</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --accent-color: #4CAF50;
+            --border-color: #404040;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        h1 {
+            font-size: 24px;
+            margin: 0;
+            display: inline-block;
+        }
+        nav {
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        nav a {
+            color: var(--text-color);
+            text-decoration: none;
+            margin-right: 20px;
+            font-size: 16px;
+            padding-bottom: 5px;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        nav a:hover, nav a.active {
+            opacity: 1;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+        }
+        .chart-container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            height: 600px;
+            position: relative;
+        }
+        .loading {
+            text-align: center;
+            padding: 100px;
+            font-style: italic;
+            opacity: 0.6;
+        }
+        .footer-note {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Investment Dashboard</h1>
+            <nav>
+                <a href="index.html">JPX Data</a>
+                <a href="advanced.html">投資の格言</a>
+                <a href="shutai.html" class="active">主体別売買動向</a>
+            </nav>
+        </header>
+
+        <div class="chart-container">
+            <div id="loading" class="loading">データを読み込み中...</div>
+            <canvas id="shutaiChart"></canvas>
+        </div>
+        <div class="footer-note">
+            Data Source: Nikkei225jp (Weekly)
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                // キャッシュ回避のタイムスタンプ付与
+                const response = await fetch('./data/shutai_data.json?t=' + new Date().getTime());
+                if (!response.ok) throw new Error("Data file not found (404)");
+                const data = await response.json();
+                renderChart(data);
+            } catch (error) {
+                document.getElementById('loading').innerText = "エラー: データの読み込みに失敗しました。\n" + error.message;
+                console.error(error);
+            }
+        }
+
+        function renderChart(rawData) {
+            document.getElementById('loading').style.display = 'none';
+            
+            // データが古い順(昇順)であることを前提
+            const labels = rawData.map(d => {
+                const parts = d.date.split('-');
+                return `${parts[1]}/${parts[2]}`; // MM/DD
+            });
+            
+            const foreign = rawData.map(d => d.foreign);      // 海外
+            const trust = rawData.map(d => d.trust_banks);    // 信託銀行
+            const individual = rawData.map(d => d.individual_total); // 個人計
+            const securities = rawData.map(d => d.securities_self); // 証券自己
+            const business = rawData.map(d => d.business_corp); // 事業法人
+            const nikkei = rawData.map(d => d.nikkei_avg);    // 日経平均
+
+            const ctx = document.getElementById('shutaiChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'line',
+                            label: '日経平均',
+                            data: nikkei,
+                            borderColor: 'rgba(186, 104, 200, 1)', 
+                            borderWidth: 3,
+                            pointRadius: 2,
+                            yAxisID: 'y1',
+                            order: 0,
+                            tension: 0.1
+                        },
+                        {
+                            label: '海外投資家',
+                            data: foreign,
+                            backgroundColor: 'rgba(33, 150, 243, 0.8)', // 青
+                            stack: 'Stack 0',
+                            yAxisID: 'y',
+                            order: 1
+                        },
+                        {
+                            label: '信託銀行',
+                            data: trust,
+                            backgroundColor: 'rgba(255, 193, 7, 0.8)', // 黄
+                            stack: 'Stack 0',
+                            yAxisID: 'y',
+                            order: 1
+                        },
+                        {
+                            label: '個人',
+                            data: individual,
+                            backgroundColor: 'rgba(244, 67, 54, 0.8)', // 赤
+                            stack: 'Stack 0',
+                            yAxisID: 'y',
+                            order: 1
+                        },
+                        {
+                            label: '証券自己',
+                            data: securities,
+                            backgroundColor: 'rgba(0, 150, 136, 0.8)', // 緑系
+                            stack: 'Stack 0',
+                            yAxisID: 'y',
+                            order: 1
+                        },
+                        {
+                            label: '事業法人',
+                            data: business,
+                            backgroundColor: 'rgba(156, 39, 176, 0.6)', // 紫
+                            stack: 'Stack 0',
+                            yAxisID: 'y',
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#e0e0e0' } },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('ja-JP').format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#b0b0b0' },
+                            grid: { color: '#444' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: '売買金額 (千円)', color: '#b0b0b0' },
+                            ticks: { color: '#b0b0b0' },
+                            grid: { color: '#444' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: '日経平均株価', color: '#ba68c8' },
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#ba68c8' }
+                        }
+                    }
+                }
+            });
+        }
+        window.onload = loadData;
+    </script>
+</body>
+</html>
