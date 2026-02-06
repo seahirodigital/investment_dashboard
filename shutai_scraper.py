@@ -1,10 +1,9 @@
 import requests
-import pandas as pd
+from bs4 import BeautifulSoup
 import json
 import os
 from datetime import datetime
 import traceback
-import io
 
 # 環境変数からデバッグモードを取得
 DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
@@ -14,23 +13,23 @@ TARGET_URL = 'https://nikkei225jp.com/data/shutai.php'
 def log(msg):
     print(f"[Shutai Scraper] {msg}", flush=True)
 
-def parse_value(val):
-    """Pandasの値を数値に変換"""
-    if pd.isna(val) or str(val).strip() == '-':
+def parse_value(text):
+    """テキストを数値に変換"""
+    if not text or text.strip() == '-':
         return 0
     
-    s_val = str(val).strip()
+    s_val = str(text).strip()
     
     # 不要な文字の削除
-    s_val = s_val.replace(',', '').replace('%', '').replace(' ', '').replace('\n', '')
+    s_val = s_val.replace(',', '').replace('%', '').replace(' ', '').replace('\n', '').replace('\t', '')
     
     # 記号処理（▼はマイナス、▲/+はプラス）
     if '▼' in s_val:
         s_val = '-' + s_val.replace('▼', '')
     elif '▲' in s_val:
         s_val = s_val.replace('▲', '')
-    elif '+' in s_val:
-        s_val = s_val.replace('+', '')
+    elif s_val.startswith('+'):
+        s_val = s_val[1:]
         
     try:
         if '.' in s_val:
@@ -39,10 +38,38 @@ def parse_value(val):
     except ValueError:
         return 0
 
-def is_summary_row(date_str):
-    """月計・年計行かどうかを判定"""
-    # "2026/01 月計", "2025 年計" などを除外
-    return '月計' in date_str or '年計' in date_str or 'class="yy"' in date_str
+def is_valid_date_row(row):
+    """週次データの行かどうかを判定（月計・年計を除外）"""
+    # class="yy"は集計行
+    if row.get('class') and 'yy' in row.get('class'):
+        return False
+    
+    # 最初のセルをチェック
+    first_cell = row.find('td')
+    if not first_cell:
+        return False
+    
+    text = first_cell.get_text().strip()
+    
+    # "月計"や"年計"を含む行は除外
+    if '月計' in text or '年計' in text:
+        return False
+    
+    # YYYY/MM/DD形式の日付かチェック
+    try:
+        # <time>タグの中身を取得
+        time_tag = first_cell.find('time')
+        if time_tag:
+            date_text = time_tag.get_text().strip()
+        else:
+            date_text = text
+        
+        # スペースや改行で分割して最初の部分を取得
+        date_clean = date_text.split()[0].split('\n')[0]
+        datetime.strptime(date_clean, '%Y/%m/%d')
+        return True
+    except:
+        return False
 
 def scrape_shutai_data():
     log(f"Starting scraping process. Target: {TARGET_URL}")
@@ -65,77 +92,90 @@ def scrape_shutai_data():
         html_content = response.text
         log(f"HTML Content Length: {len(html_content)}")
 
-        # 2. Pandasでテーブル抽出
-        try:
-            dfs = pd.read_html(io.StringIO(html_content), attrs={'id': 'datatbl'}, flavor='lxml')
-        except Exception as e:
-            log(f"Pandas(lxml) failed: {e}. Trying bs4...")
-            try:
-                dfs = pd.read_html(io.StringIO(html_content), attrs={'id': 'datatbl'}, flavor='bs4')
-            except Exception as e2:
-                log(f"Pandas(bs4) also failed: {e2}")
-                return
-
-        if not dfs:
-            log("CRITICAL: No tables found matching id='datatbl'")
-            return
-            
-        df = dfs[0]
-        log(f"Table extracted. Rows: {len(df)}")
+        # 2. BeautifulSoupでパース
+        soup = BeautifulSoup(html_content, 'lxml')
         
-        # 3. データ処理（週次データのみ）
+        # テーブルを検索
+        table = soup.find('table', {'id': 'datatbl'})
+        
+        if not table:
+            log("CRITICAL: No table found with id='datatbl'")
+            # デバッグ: テーブルの存在確認
+            all_tables = soup.find_all('table')
+            log(f"Found {len(all_tables)} tables in total")
+            return
+        
+        log(f"Table found successfully")
+        
+        # 3. データ行を抽出（週次データのみ）
+        rows = table.find_all('tr')
+        log(f"Total rows in table: {len(rows)}")
+        
         new_data = []
         
-        for idx, row in df.iterrows():
-            # 列数チェック
-            if len(row) < 12:
-                continue
-
-            # 日付カラムの値を確認
-            date_val = str(row.iloc[0])
-            
-            # 月計・年計行を除外
-            if is_summary_row(date_val):
+        for row in rows:
+            # ヘッダー行はスキップ
+            if row.find('th'):
                 continue
             
-            # 日付フォーマットチェック (YYYY/MM/DD形式のみ)
+            # 週次データの行かチェック
+            if not is_valid_date_row(row):
+                continue
+            
+            # セルを取得
+            cells = row.find_all('td')
+            
+            if len(cells) < 14:
+                log(f"Skipping row with insufficient cells: {len(cells)}")
+                continue
+            
             try:
-                # "2026/01/30" のような形式を抽出
-                date_clean = date_val.split(' ')[0].split('\n')[0].strip()
+                # 日付の取得と整形
+                first_cell = cells[0]
+                time_tag = first_cell.find('time')
+                if time_tag:
+                    date_text = time_tag.get_text().strip()
+                else:
+                    date_text = first_cell.get_text().strip()
+                
+                date_clean = date_text.split()[0].split('\n')[0]
                 date_obj = datetime.strptime(date_clean, '%Y/%m/%d')
                 formatted_date = date_obj.strftime('%Y-%m-%d')
-            except ValueError:
-                # 日付変換できない行はスキップ
-                continue
-
-            try:
-                # データマッピング（全投資主体を取得）
+                
+                # データの抽出（全投資主体）
                 record = {
                     "date": formatted_date,
-                    "nikkei_avg": parse_value(row.iloc[1]),           # 日経平均
-                    "foreign": parse_value(row.iloc[3]),              # 海外
-                    "securities_self": parse_value(row.iloc[4]),      # 証券自己
-                    "individual_total": parse_value(row.iloc[5]),     # 個人計
-                    "individual_cash": parse_value(row.iloc[6]),      # 個人(現金)
-                    "individual_credit": parse_value(row.iloc[7]),    # 個人(信用)
-                    "investment_trust": parse_value(row.iloc[8]),     # 投資信託
-                    "business_corp": parse_value(row.iloc[9]),        # 事業法人
-                    "other_corp": parse_value(row.iloc[10]),          # その他法人
-                    "trust_banks": parse_value(row.iloc[11]),         # 信託銀行
-                    "insurance": parse_value(row.iloc[12]),           # 生保損保
-                    "city_banks": parse_value(row.iloc[13])           # 都銀地銀
+                    "nikkei_avg": parse_value(cells[1].get_text()),       # 日経平均
+                    "foreign": parse_value(cells[3].get_text()),          # 海外
+                    "securities_self": parse_value(cells[4].get_text()),  # 証券自己
+                    "individual_total": parse_value(cells[5].get_text()), # 個人計
+                    "individual_cash": parse_value(cells[6].get_text()),  # 個人(現金)
+                    "individual_credit": parse_value(cells[7].get_text()),# 個人(信用)
+                    "investment_trust": parse_value(cells[8].get_text()), # 投資信託
+                    "business_corp": parse_value(cells[9].get_text()),    # 事業法人
+                    "other_corp": parse_value(cells[10].get_text()),      # その他法人
+                    "trust_banks": parse_value(cells[11].get_text()),     # 信託銀行
+                    "insurance": parse_value(cells[12].get_text()),       # 生保損保
+                    "city_banks": parse_value(cells[13].get_text())       # 都銀地銀
                 }
+                
                 new_data.append(record)
+                
             except Exception as e:
-                log(f"Error parsing row {idx}: {e}")
+                log(f"Error parsing row: {e}")
                 continue
-
+        
         log(f"Extracted {len(new_data)} valid weekly records (excluding monthly/yearly summaries).")
-
+        
         if len(new_data) == 0:
             log("WARNING: Valid data count is 0. Aborting save.")
             return
-
+        
+        # 最新5件を表示（デバッグ用）
+        log("Sample data (latest 5 records):")
+        for record in new_data[-5:]:
+            log(f"  {record['date']}: 海外={record['foreign']}, 個人計={record['individual_total']}")
+        
         # 4. 保存ロジック
         final_list = []
         
@@ -159,7 +199,7 @@ def scrape_shutai_data():
                 data_map[item['date']] = item
             
             final_list = sorted(data_map.values(), key=lambda x: x['date'])
-
+        
         # ディレクトリ作成と保存
         os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
