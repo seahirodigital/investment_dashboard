@@ -1,10 +1,16 @@
-import requests
-from bs4 import BeautifulSoup
 import json
 import os
 from datetime import datetime
 import traceback
-import re
+
+# requests-htmlを使用（JavaScriptレンダリング対応）
+try:
+    from requests_html import HTMLSession
+    USE_REQUESTS_HTML = True
+except ImportError:
+    import requests
+    from bs4 import BeautifulSoup
+    USE_REQUESTS_HTML = False
 
 # 環境変数からデバッグモードを取得
 DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
@@ -24,7 +30,7 @@ def parse_value(text):
     # 不要な文字の削除
     s_val = s_val.replace(',', '').replace('%', '').replace(' ', '').replace('\n', '').replace('\t', '')
     
-    # 記号処理（▼はマイナス、▲/+はプラス）
+    # 記号処理
     if '▼' in s_val:
         s_val = '-' + s_val.replace('▼', '')
     elif '▲' in s_val:
@@ -39,114 +45,137 @@ def parse_value(text):
     except ValueError:
         return 0
 
-def scrape_shutai_data():
-    log(f"Starting scraping process. Target: {TARGET_URL}")
-    log(f"Debug Mode: {DEBUG_MODE}")
-
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
-    }
-
+def scrape_with_requests_html():
+    """requests-htmlを使用してJavaScriptレンダリング"""
+    log("Using requests-html (with JavaScript rendering)")
+    
+    session = HTMLSession()
+    
     try:
-        # 1. HTML取得
+        response = session.get(TARGET_URL, timeout=30)
+        
+        # JavaScriptをレンダリング
+        log("Rendering JavaScript...")
+        response.html.render(timeout=20, sleep=2)
+        
+        # テーブルを検索
+        table = response.html.find('#datatbl', first=True)
+        
+        if not table:
+            log("ERROR: Table not found after rendering")
+            return []
+        
+        log("Table found after JavaScript rendering")
+        
+        # 行を抽出
+        rows = table.find('tr')
+        log(f"Found {len(rows)} rows")
+        
+        new_data = []
+        
+        for row in rows:
+            # ヘッダー行をスキップ
+            if row.find('th', first=True):
+                continue
+            
+            cells = row.find('td')
+            
+            if len(cells) < 14:
+                continue
+            
+            # class="yy"を除外
+            if 'yy' in row.attrs.get('class', []):
+                continue
+            
+            try:
+                # 日付取得
+                date_text = cells[0].text.strip().split()[0]
+                
+                if '月計' in date_text or '年計' in date_text:
+                    continue
+                
+                date_obj = datetime.strptime(date_text, '%Y/%m/%d')
+                formatted_date = date_obj.strftime('%Y-%m-%d')
+                
+                # データ抽出
+                record = {
+                    "date": formatted_date,
+                    "nikkei_avg": parse_value(cells[1].text),
+                    "foreign": parse_value(cells[3].text),
+                    "securities_self": parse_value(cells[4].text),
+                    "individual_total": parse_value(cells[5].text),
+                    "individual_cash": parse_value(cells[6].text),
+                    "individual_credit": parse_value(cells[7].text),
+                    "investment_trust": parse_value(cells[8].text),
+                    "business_corp": parse_value(cells[9].text),
+                    "other_corp": parse_value(cells[10].text),
+                    "trust_banks": parse_value(cells[11].text),
+                    "insurance": parse_value(cells[12].text),
+                    "city_banks": parse_value(cells[13].text)
+                }
+                
+                new_data.append(record)
+                
+            except Exception as e:
+                continue
+        
+        session.close()
+        return new_data
+        
+    except Exception as e:
+        log(f"Error with requests-html: {e}")
+        session.close()
+        return []
+
+def scrape_with_beautifulsoup():
+    """BeautifulSoupでフォールバック（静的HTML用）"""
+    log("Using BeautifulSoup (static HTML only)")
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+    
+    try:
         response = requests.get(TARGET_URL, headers=headers, timeout=20)
         response.encoding = response.apparent_encoding
         
-        if response.status_code != 200:
-            log(f"Error: HTTP {response.status_code}")
-            return
-
-        html_content = response.text
-        log(f"HTML Content Length: {len(html_content)}")
-
-        # 2. BeautifulSoupでパース
-        soup = BeautifulSoup(html_content, 'lxml')
-        
-        # テーブルを検索
+        soup = BeautifulSoup(response.text, 'lxml')
         table = soup.find('table', {'id': 'datatbl'})
         
         if not table:
-            log("CRITICAL: No table found with id='datatbl'")
-            return
+            log("ERROR: Table not found")
+            return []
         
-        log(f"✓ Table found with id='datatbl'")
-        
-        # デバッグ: テーブルのHTML構造を詳細確認
-        log("--- Table Structure Debug ---")
-        log(f"Table name: {table.name}")
-        log(f"Table attrs: {table.attrs}")
-        
-        # 子要素を確認
-        direct_children = [c for c in table.children if hasattr(c, 'name') and c.name]
-        log(f"Direct children: {[c.name for c in direct_children]}")
-        
-        # テーブル内のすべての要素を検索
-        all_trs = table.find_all('tr')
-        all_tds = table.find_all('td')
-        all_ths = table.find_all('th')
-        
-        log(f"Total <tr> found: {len(all_trs)}")
-        log(f"Total <td> found: {len(all_tds)}")
-        log(f"Total <th> found: {len(all_ths)}")
-        
-        # テーブルのHTML（最初の2000文字）を表示
-        table_str = str(table)[:2000]
-        log(f"Table HTML (first 2000 chars):\n{table_str}\n")
-        
-        # 3. データ行を抽出
         rows = table.find_all('tr')
-        log(f"Processing {len(rows)} rows...")
+        log(f"Found {len(rows)} rows")
         
-        if len(rows) == 0:
-            log("ERROR: No <tr> elements found!")
-            
-            # 正規表現で日付パターンを探す
-            date_pattern = r'<time>(\d{4}/\d{2}/\d{2})</time>'
-            dates_found = re.findall(date_pattern, html_content)
-            log(f"Found {len(dates_found)} date patterns in raw HTML")
-            if dates_found:
-                log(f"Sample dates: {dates_found[:5]}")
-            
-            return
-        
-        # データ処理
         new_data = []
         
-        for idx, row in enumerate(rows):
-            # ヘッダー行はスキップ
+        for row in rows:
             if row.find('th'):
                 continue
             
-            # セルを取得
             cells = row.find_all('td')
             
             if len(cells) < 14:
                 continue
             
-            # class="yy"の行（月計・年計）を除外
-            row_class = row.get('class')
-            if row_class and 'yy' in row_class:
+            if row.get('class') and 'yy' in row.get('class'):
                 continue
             
             try:
-                # 日付の取得
                 first_cell = cells[0]
                 time_tag = first_cell.find('time')
-                if time_tag:
-                    date_text = time_tag.get_text().strip()
-                else:
-                    date_text = first_cell.get_text().strip()
+                date_text = time_tag.get_text().strip() if time_tag else first_cell.get_text().strip()
                 
-                # 月計・年計を除外
-                if '月計' in date_text or '年計' in date_text:
+                date_clean = date_text.split()[0]
+                
+                if '月計' in date_clean or '年計' in date_clean:
                     continue
                 
-                date_clean = date_text.split()[0].split('\n')[0]
                 date_obj = datetime.strptime(date_clean, '%Y/%m/%d')
                 formatted_date = date_obj.strftime('%Y-%m-%d')
                 
-                # データの抽出
                 record = {
                     "date": formatted_date,
                     "nikkei_avg": parse_value(cells[1].get_text()),
@@ -165,24 +194,41 @@ def scrape_shutai_data():
                 
                 new_data.append(record)
                 
-                if len(new_data) <= 3:
-                    log(f"✓ Parsed: {formatted_date}, 海外={record['foreign']}, 個人計={record['individual_total']}")
-                
             except Exception as e:
                 continue
+        
+        return new_data
+        
+    except Exception as e:
+        log(f"Error with BeautifulSoup: {e}")
+        return []
+
+def scrape_shutai_data():
+    log(f"Starting scraping process. Target: {TARGET_URL}")
+    log(f"Debug Mode: {DEBUG_MODE}")
+    log(f"requests-html available: {USE_REQUESTS_HTML}")
+    
+    try:
+        # requests-htmlが利用可能ならそちらを使用
+        if USE_REQUESTS_HTML:
+            new_data = scrape_with_requests_html()
+        else:
+            new_data = scrape_with_beautifulsoup()
         
         log(f"Extracted {len(new_data)} valid weekly records")
         
         if len(new_data) == 0:
             log("WARNING: Valid data count is 0. Aborting save.")
+            log("TIP: Install requests-html for JavaScript rendering support:")
+            log("  pip install requests-html --break-system-packages")
             return
         
-        # 最新5件を表示
+        # サンプルデータ表示
         log("Sample data (latest 5 records):")
         for record in new_data[-5:]:
             log(f"  {record['date']}: 海外={record['foreign']:,}, 個人計={record['individual_total']:,}")
         
-        # 4. 保存ロジック
+        # 保存ロジック
         final_list = []
         
         if DEBUG_MODE:
