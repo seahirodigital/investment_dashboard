@@ -107,43 +107,46 @@ def scrape_shutai_data():
         
         log(f"Table found successfully")
         
-        # 3. データ行を抽出
-        # tbody内とtable直下の両方から取得
-        rows = []
-        tbody = table.find('tbody')
-        if tbody:
-            rows = tbody.find_all('tr')
-            log(f"Found {len(rows)} rows in tbody")
-        else:
-            rows = table.find_all('tr')
-            log(f"Found {len(rows)} rows in table (no tbody)")
+        # 3. データ行を抽出 - recursive=Trueで全ての<tr>を取得
+        rows = table.find_all('tr', recursive=True)
+        log(f"Found {len(rows)} rows in table (recursive search)")
         
         # デバッグ: 最初の数行の構造を確認
-        if DEBUG_MODE and len(rows) > 0:
-            log("--- First 3 rows structure ---")
-            for i, row in enumerate(rows[:3]):
-                cells = row.find_all(['td', 'th'])
-                log(f"Row {i}: {len(cells)} cells, class={row.get('class')}")
-                if cells and len(cells) > 0:
-                    log(f"  First cell text: {cells[0].get_text()[:50]}")
+        if len(rows) > 0:
+            log("--- First 5 rows structure ---")
+            for i, row in enumerate(rows[:5]):
+                cells_td = row.find_all('td')
+                cells_th = row.find_all('th')
+                log(f"Row {i}: {len(cells_td)} td cells, {len(cells_th)} th cells, class={row.get('class')}")
+                if cells_td and len(cells_td) > 0:
+                    log(f"  First td text: {cells_td[0].get_text()[:60]}")
         
         new_data = []
+        skipped_summary = 0
+        skipped_header = 0
+        skipped_invalid = 0
         
         for idx, row in enumerate(rows):
             # ヘッダー行はスキップ
             if row.find('th'):
+                skipped_header += 1
                 continue
             
             # 週次データの行かチェック
             if not is_valid_date_row(row):
+                row_class = row.get('class')
+                if row_class and 'yy' in row_class:
+                    skipped_summary += 1
+                else:
+                    skipped_invalid += 1
                 continue
             
             # セルを取得
             cells = row.find_all('td')
             
             if len(cells) < 14:
-                if DEBUG_MODE:
-                    log(f"Row {idx}: Skipping row with {len(cells)} cells")
+                log(f"Row {idx}: Skipping row with only {len(cells)} cells (need 14)")
+                skipped_invalid += 1
                 continue
             
             try:
@@ -178,32 +181,29 @@ def scrape_shutai_data():
                 
                 new_data.append(record)
                 
-                if DEBUG_MODE and len(new_data) <= 3:
-                    log(f"Parsed record: {formatted_date}, 海外={record['foreign']}, 個人計={record['individual_total']}")
+                if len(new_data) <= 3:
+                    log(f"✓ Parsed: {formatted_date}, 海外={record['foreign']}, 個人計={record['individual_total']}")
                 
             except Exception as e:
-                if DEBUG_MODE:
-                    log(f"Error parsing row {idx}: {e}")
+                log(f"Error parsing row {idx}: {e}")
+                skipped_invalid += 1
                 continue
         
-        log(f"Extracted {len(new_data)} valid weekly records (excluding monthly/yearly summaries).")
+        log(f"--- Parsing Summary ---")
+        log(f"Total rows: {len(rows)}")
+        log(f"Skipped headers: {skipped_header}")
+        log(f"Skipped summaries (月計/年計): {skipped_summary}")
+        log(f"Skipped invalid: {skipped_invalid}")
+        log(f"Successfully extracted: {len(new_data)} weekly records")
         
         if len(new_data) == 0:
             log("WARNING: Valid data count is 0. Aborting save.")
-            # さらなるデバッグ情報
-            if DEBUG_MODE:
-                log("--- Debug: Checking all rows for date patterns ---")
-                for idx, row in enumerate(rows[:10]):
-                    first_cell = row.find('td')
-                    if first_cell:
-                        text = first_cell.get_text().strip()[:50]
-                        log(f"Row {idx}: '{text}'")
             return
         
         # 最新5件を表示
         log("Sample data (latest 5 records):")
         for record in new_data[-5:]:
-            log(f"  {record['date']}: 海外={record['foreign']}, 個人計={record['individual_total']}")
+            log(f"  {record['date']}: 海外={record['foreign']:,}, 個人計={record['individual_total']:,}")
         
         # 4. 保存ロジック
         final_list = []
@@ -234,7 +234,7 @@ def scrape_shutai_data():
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(final_list, f, indent=4, ensure_ascii=False)
         
-        log(f"Successfully saved {len(final_list)} records to {DATA_FILE}")
+        log(f"✓ Successfully saved {len(final_list)} records to {DATA_FILE}")
 
     except Exception as e:
         log(f"FATAL ERROR: {e}")
