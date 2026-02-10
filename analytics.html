@@ -121,7 +121,7 @@
                 try {
                     const canvas = await html2canvas(element, { 
                         backgroundColor: '#ffffff',
-                        scale: 2 // 高解像度
+                        scale: 2
                     });
                     
                     canvas.toBlob(blob => {
@@ -234,7 +234,6 @@
 
                 const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
                 
-                // 日付順にソート
                 filtered.sort((a, b) => a.date.localeCompare(b.date));
                 
                 let cumFlow = 0;
@@ -242,12 +241,10 @@
                 const timeSeries = filtered.map(d => {
                     cumFlow += d.flow;
                     
-                    // 【修正】dateフォーマットから年月と週番号を抽出
-                    // 例: "2024-06-01" → 年=2024, 月=6, 週=01
+                    // dateフォーマット: "2024-06-01" → 年=2024, 月=6, 週=01
                     const parts = d.date.split('-');
-                    const year = parseInt(parts[0]);
                     const month = parseInt(parts[1]);
-                    const weekNumber = parseInt(parts[2]); // この部分が週番号
+                    const weekNumber = parseInt(parts[2]);
                     
                     const weekLabel = `${month}月${weekNumber}週目`;
 
@@ -420,10 +417,10 @@
                                                     <XAxis 
                                                         dataKey="weekLabel" 
                                                         fontSize={11} 
-                                                        interval="preserveStartEnd"
-                                                        angle={-20}
+                                                        interval={0}
+                                                        angle={-45}
                                                         textAnchor="end"
-                                                        height={60}
+                                                        height={80}
                                                     />
                                                     <YAxis fontSize={11} tickFormatter={(val) => `${val.toLocaleString()}億`} width={45} />
                                                     <Tooltip 
