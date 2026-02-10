@@ -8,11 +8,14 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React & Recharts Libraries -->
+    <!-- Libraries -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Recharts: Global variable 'Recharts' will be available -->
+    <!-- Rechartsの動作に必要なProp-Typesを追加 -->
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
     <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
+    
+    <!-- Utilities -->
     <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
@@ -20,7 +23,8 @@
         body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        #global-error { display: none; padding: 20px; background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; margin: 20px; border-radius: 8px; }
+        /* Error Box */
+        #global-error { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fee2e2; color: #b91c1c; padding: 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 90%; width: 400px; border: 1px solid #ef4444; }
     </style>
 </head>
 <body>
@@ -28,20 +32,18 @@
     <div id="global-error"></div>
 
     <script>
-        // Global Error Handler for "White Screen" issues
         window.onerror = function(message, source, lineno, colno, error) {
             const el = document.getElementById('global-error');
             el.style.display = 'block';
-            el.innerHTML = `<strong>System Error:</strong><br>${message}<br><small>${source}:${lineno}</small>`;
+            el.innerHTML = `<strong>System Error:</strong><br>${message}<br><small class="text-xs opacity-75">${source}:${lineno}</small>`;
         };
     </script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
-        // Access Recharts from window object safely
+        // Rechartsオブジェクトを安全に取得
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, Area } = window.Recharts || {};
 
-        // --- Icons Component ---
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
                 Filter: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>,
@@ -55,36 +57,27 @@
             const [rawData, setRawData] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
-            
-            // Filter States
             const [startDate, setStartDate] = useState('');
             const [endDate, setEndDate] = useState('');
             
-            // Load Data
             useEffect(() => {
-                // Ensure Recharts is loaded
                 if (!window.Recharts) {
-                    setError("Library 'Recharts' failed to load. Please refresh.");
+                    setError("Graph library failed to load. Please try refreshing the page.");
                     setLoading(false);
                     return;
                 }
 
-                // Append timestamp to prevent caching
+                // キャッシュ回避のためタイムスタンプを付与
                 fetch(`./sector_data.json?t=${new Date().getTime()}`)
                     .then(res => {
-                        if (!res.ok) {
-                            if (res.status === 404) throw new Error("Data file (sector_data.json) not found yet. The analysis script may still be running.");
-                            throw new Error(`Failed to load data: ${res.statusText}`);
-                        }
+                        if (!res.ok) throw new Error("Analysis data not found. GitHub Actions may still be running.");
                         return res.json();
                     })
                     .then(json => {
                         if (!json.data || json.data.length === 0) throw new Error("Data file is empty.");
                         setRawData(json);
-                        
                         const dates = json.data.map(d => d.date).sort();
                         setEndDate(dates[dates.length - 1]);
-                        // Default to ~6 months ago
                         const startIdx = Math.max(0, dates.length - 26);
                         setStartDate(dates[startIdx]);
                         setLoading(false);
@@ -96,17 +89,14 @@
                     });
             }, []);
 
-            // Process Data based on Filter
             const processedData = useMemo(() => {
                 if (!rawData || !startDate || !endDate) return null;
-
                 try {
                     const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
                     if (filtered.length === 0) return null;
-
                     const sectors = rawData.metadata.sectors;
 
-                    // 1. Mean Diff Calculation
+                    // Mean Diff Logic
                     const flowPositive = filtered.filter(d => d.flow > 0);
                     const flowNegative = filtered.filter(d => d.flow <= 0);
 
@@ -114,25 +104,14 @@
                         const ticker = sec.ticker;
                         const meanPos = flowPositive.length ? flowPositive.reduce((acc, d) => acc + (d.returns[ticker] || 0), 0) / flowPositive.length : 0;
                         const meanNeg = flowNegative.length ? flowNegative.reduce((acc, d) => acc + (d.returns[ticker] || 0), 0) / flowNegative.length : 0;
-                        return {
-                            name: sec.name,
-                            ticker: sec.ticker,
-                            category: sec.category,
-                            meanDiff: meanPos - meanNeg,
-                            meanPos,
-                            meanNeg
-                        };
+                        return { name: sec.name, ticker: sec.ticker, category: sec.category, meanDiff: meanPos - meanNeg, meanPos, meanNeg };
                     }).sort((a, b) => b.meanDiff - a.meanDiff);
 
-                    // 2. Cumulative Flow
+                    // Cumulative Flow
                     let cumFlow = 0;
                     const timeSeries = filtered.map(d => {
                         cumFlow += d.flow;
-                        return {
-                            date: d.date,
-                            flow: d.flow,
-                            cumFlow: cumFlow / 100000000,
-                        };
+                        return { date: d.date, flow: d.flow, cumFlow: cumFlow / 100000000 };
                     });
 
                     return { sensitivity, timeSeries, sectors, totalFlow: cumFlow };
@@ -142,86 +121,57 @@
                 }
             }, [rawData, startDate, endDate]);
 
-            if (loading) return (
-                <div className="min-h-screen flex items-center justify-center text-slate-500 gap-2">
-                    <svg className="animate-spin h-5 w-5 text-[#7C4DFF]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    <span>Loading analysis data...</span>
-                </div>
-            );
-
+            if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500 animate-pulse">Loading analysis data...</div>;
             if (error) return (
                 <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
-                    <div className="bg-white text-slate-700 p-8 rounded-xl shadow-lg max-w-lg text-center border-t-4 border-red-500">
-                        <div className="text-red-500 mb-4"><svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
-                        <h3 className="font-bold text-xl mb-2">Data Loading Failed</h3>
-                        <p className="text-sm bg-slate-100 p-3 rounded mb-4 font-mono text-red-600">{error}</p>
-                        <p className="text-xs text-slate-500">
-                            <strong>Potential Cause:</strong> The backend script <code>sector_manager.py</code> failed to run or hasn't finished yet.<br/>
-                            Please check the "Actions" tab in GitHub repository.
-                        </p>
-                        <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-700 transition">Retry</button>
+                    <div className="bg-white p-8 rounded-xl shadow-lg max-w-lg text-center border-t-4 border-red-500">
+                        <h3 className="font-bold text-xl mb-2 text-slate-800">Data Load Error</h3>
+                        <p className="text-sm bg-red-50 text-red-600 p-3 rounded mb-4 font-mono">{error}</p>
+                        <p className="text-xs text-slate-400">Please verify that GitHub Actions has completed successfully.</p>
+                        <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 bg-slate-800 text-white rounded hover:bg-slate-700">Retry</button>
                     </div>
                 </div>
             );
-
-            if (!processedData) return <div className="min-h-screen flex items-center justify-center">No data available for the selected period.</div>;
+            if (!processedData) return <div className="min-h-screen flex items-center justify-center">No data for selected period.</div>;
 
             return (
                 <div className="min-h-screen bg-[#f8fafc] pb-20">
                     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
                         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="bg-[#7C4DFF] text-white p-2 rounded-lg">
-                                    <Icon name="BarChart2" />
-                                </div>
-                                <div>
-                                    <h1 className="font-bold text-slate-800 text-lg leading-tight">Sector Performance Analyzer</h1>
-                                    <p className="text-xs text-slate-500">Foreign Flow Sensitivity & Trends</p>
-                                </div>
+                                <div className="bg-[#7C4DFF] text-white p-2 rounded-lg"><Icon name="BarChart2" /></div>
+                                <div><h1 className="font-bold text-slate-800 text-lg">Sector Performance Analyzer</h1><p className="text-xs text-slate-500">Foreign Flow Sensitivity</p></div>
                             </div>
-                            <div className="text-xs text-slate-400 font-mono hidden md:block">
-                                Generated: {rawData.metadata.generated_at}
-                            </div>
+                            <div className="text-xs text-slate-400 font-mono hidden md:block">Updated: {rawData.metadata.generated_at}</div>
                         </div>
                     </header>
 
                     <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap gap-4 items-center justify-between animate-fade-in">
                             <div className="flex items-center gap-4 flex-wrap">
+                                <div className="flex items-center gap-2 text-slate-600"><Icon name="Filter" size={16} /><span className="text-sm font-bold">Period:</span></div>
                                 <div className="flex items-center gap-2">
-                                    <Icon name="Filter" className="text-slate-400" size={16} />
-                                    <span className="text-sm font-bold text-slate-600">Analysis Period:</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:outline-none focus:border-[#7C4DFF]" />
-                                    <span className="text-slate-400">to</span>
-                                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:outline-none focus:border-[#7C4DFF]" />
+                                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none" />
+                                    <span className="text-slate-400">-</span>
+                                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none" />
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs text-slate-400">Cumulative Flow</p>
-                                <p className={`text-lg font-bold font-mono ${processedData.totalFlow >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>
-                                    {(processedData.totalFlow / 100000000).toLocaleString(undefined, { maximumFractionDigits: 0 })} 億円
-                                </p>
+                                <p className="text-xs text-slate-400">Total Foreign Flow</p>
+                                <p className={`text-lg font-bold font-mono ${processedData.totalFlow >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{(processedData.totalFlow / 100000000).toLocaleString(undefined, { maximumFractionDigits: 0 })} 億円</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in">
-                                <div className="mb-6">
-                                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                        <Icon name="BarChart2" className="text-[#7C4DFF]" />
-                                        Sector Sensitivity
-                                    </h2>
-                                    <p className="text-xs text-slate-500 mt-1">Mean Return Diff (Foreign Buy vs Sell)</p>
-                                </div>
+                                <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Icon name="BarChart2" className="text-[#7C4DFF]" />Sector Sensitivity (Return Tilt)</h2>
                                 <div className="h-[400px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart layout="vertical" data={processedData.sensitivity} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} stroke="#e2e8f0" />
-                                            <XAxis type="number" stroke="#94a3b8" fontSize={12} tickFormatter={(val) => `${val.toFixed(2)}%`} />
-                                            <YAxis type="category" dataKey="name" width={100} stroke="#64748b" fontSize={11} />
-                                            <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(val) => `${val.toFixed(3)}%`} />
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis type="number" fontSize={12} tickFormatter={(val) => `${val.toFixed(2)}%`} />
+                                            <YAxis type="category" dataKey="name" width={110} fontSize={11} />
+                                            <Tooltip formatter={(val) => `${val.toFixed(3)}%`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                                             <ReferenceLine x={0} stroke="#94a3b8" />
                                             <Bar dataKey="meanDiff" fill="#7C4DFF" radius={[0, 4, 4, 0]} name="Mean Diff" />
                                         </BarChart>
@@ -230,26 +180,15 @@
                             </div>
 
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in">
-                                <div className="mb-6">
-                                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                        <Icon name="TrendingUp" className="text-[#7C4DFF]" />
-                                        Cumulative Foreign Flow
-                                    </h2>
-                                    <p className="text-xs text-slate-500 mt-1">Accumulated Net Buying (100 Million JPY)</p>
-                                </div>
+                                <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Icon name="TrendingUp" className="text-[#7C4DFF]" />Cumulative Foreign Flow</h2>
                                 <div className="h-[400px]">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart data={processedData.timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                            <defs>
-                                                <linearGradient id="colorFlow" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#7C4DFF" stopOpacity={0.1}/>
-                                                    <stop offset="95%" stopColor="#7C4DFF" stopOpacity={0}/>
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                                            <XAxis dataKey="date" tickFormatter={(str) => { const d = new Date(str); return `${d.getMonth()+1}/${d.getDate()}`; }} fontSize={11} stroke="#94a3b8" />
-                                            <YAxis fontSize={11} stroke="#94a3b8" tickFormatter={(val) => `${val.toLocaleString()}億`} />
-                                            <Tooltip labelFormatter={(label) => new Date(label).toLocaleDateString()} formatter={(val, name) => [name === 'cumFlow' ? `${Math.round(val).toLocaleString()}億円` : val, name === 'cumFlow' ? 'Cumulative Flow' : name]} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                        <ComposedChart data={processedData.timeSeries}>
+                                            <defs><linearGradient id="colorFlow" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#7C4DFF" stopOpacity={0.1}/><stop offset="95%" stopColor="#7C4DFF" stopOpacity={0}/></linearGradient></defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="date" tickFormatter={(str) => { const d = new Date(str); return `${d.getMonth()+1}/${d.getDate()}`; }} fontSize={11} />
+                                            <YAxis fontSize={11} tickFormatter={(val) => `${val.toLocaleString()}億`} width={45} />
+                                            <Tooltip labelFormatter={(label) => new Date(label).toLocaleDateString()} formatter={(val, name) => [name === 'cumFlow' ? `${Math.round(val).toLocaleString()}億円` : val]} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                                             <ReferenceLine y={0} stroke="#94a3b8" />
                                             <Area type="monotone" dataKey="cumFlow" stroke="#7C4DFF" strokeWidth={2} fillOpacity={1} fill="url(#colorFlow)" />
                                         </ComposedChart>
@@ -262,12 +201,10 @@
                             <div className="p-6 border-b border-slate-200"><h2 className="text-lg font-bold text-slate-800">Detailed Statistics</h2></div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left text-slate-600">
-                                    <thead className="bg-slate-50 text-xs uppercase text-slate-500 font-bold">
-                                        <tr><th className="px-6 py-3">Sector</th><th className="px-6 py-3 text-right text-[#7C4DFF]">Mean Diff</th><th className="px-6 py-3 text-right">Avg (Buy)</th><th className="px-6 py-3 text-right">Avg (Sell)</th></tr>
-                                    </thead>
+                                    <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500"><tr><th className="px-6 py-3">Sector</th><th className="px-6 py-3 text-right text-[#7C4DFF]">Mean Diff</th><th className="px-6 py-3 text-right">Avg (Foreign Buy)</th><th className="px-6 py-3 text-right">Avg (Foreign Sell)</th></tr></thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {processedData.sensitivity.map((row) => (
-                                            <tr key={row.ticker} className="hover:bg-slate-50 transition-colors">
+                                            <tr key={row.ticker} className="hover:bg-slate-50">
                                                 <td className="px-6 py-4 font-medium text-slate-800">{row.name}</td>
                                                 <td className="px-6 py-4 text-right font-bold text-[#7C4DFF]">{row.meanDiff > 0 ? '+' : ''}{row.meanDiff.toFixed(3)}%</td>
                                                 <td className="px-6 py-4 text-right">{row.meanPos.toFixed(3)}%</td>
