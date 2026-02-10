@@ -58,7 +58,6 @@
         const { useState, useEffect, useMemo } = React;
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, Area, Cell } = window.Recharts || {};
 
-        // 日経平均、TOPIX、S&P500、NASDAQ100 全て同じ扱いにする
         const BENCHMARKS = ['^N225', '1306.T', '^GSPC', '^NDX'];
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -181,7 +180,6 @@
                         if (!json.data || json.data.length === 0) throw new Error("データが空です。");
                         setRawData(json);
                         
-                        // 日付設定 (今日を基準に直近2ヶ月)
                         const today = new Date();
                         const formatYMD = (d) => d.toISOString().split('T')[0];
                         
@@ -200,11 +198,9 @@
                     });
             }, []);
 
-            // 統計計算
             const allStats = useMemo(() => {
                 if (!rawData || !startDate || !endDate) return null;
                 const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
-                // データが0件でも、配列として返す(空配列)ことでUIを表示し続ける
                 if (filtered.length === 0) return [];
 
                 const flowPositive = filtered.filter(d => d.flow > 0);
@@ -220,12 +216,10 @@
                         meanPos,
                         meanNeg
                     };
-                }).sort((a, b) => b.meanDiff - a.meanDiff); // 数値の降順 (プラスが大きい順 -> マイナスが大きい順)
+                }).sort((a, b) => b.meanDiff - a.meanDiff);
             }, [rawData, startDate, endDate]);
 
-            // 初期表示リスト
             useEffect(() => {
-                // allStatsが有効な配列であれば実行
                 if (allStats && allStats.length > 0 && activeTickers.size === 0) {
                     const initialSet = new Set();
                     allStats.forEach(item => initialSet.add(item.ticker));
@@ -233,7 +227,6 @@
                 }
             }, [allStats]);
 
-            // 表示データ構築
             const processedData = useMemo(() => {
                 if (!allStats || !rawData || !startDate || !endDate) return null;
 
@@ -249,7 +242,8 @@
                     const firstDayOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
                     const dayOfWeek = firstDayOfMonth.getDay();
                     const weekNum = Math.ceil((dateObj.getDate() + dayOfWeek) / 7);
-                    const weekLabel = `${dateObj.getMonth() + 1}月${weekNum}週`;
+                    // 【修正】週表記を「〜週目」に変更
+                    const weekLabel = `${dateObj.getMonth() + 1}月${weekNum}週目`;
 
                     return { 
                         date: d.date, 
@@ -262,14 +256,10 @@
                 return { chartData, timeSeries, totalFlow: cumFlow, allStats };
             }, [allStats, activeTickers, rawData, startDate, endDate]);
 
-            // 色決定ロジック
             const getBarColor = (ticker, value) => {
-                // ベンチマーク(日米含む) -> 濃い灰色 (#475569)
                 if (ticker && BENCHMARKS.includes(ticker)) return '#475569';
-                
-                // その他: プラスなら紫、マイナスならピンク
-                // valueは meanDiff または flow
-                return value > 0 ? '#7C4DFF' : '#FF4081';
+                // 【修正】色を薄く変更 (ソフトな紫、ソフトなピンク)
+                return value > 0 ? '#A78BFA' : '#F472B6';
             };
 
             const toggleTicker = (ticker) => {
@@ -290,12 +280,11 @@
                 setActiveTickers(new Set());
             };
 
-            // クリックでカレンダーを表示するためのハンドラ
             const handleDateClick = (e) => {
                 try {
                     e.target.showPicker();
                 } catch (err) {
-                    // ブラウザ未対応時は何もしない
+                    // ignore
                 }
             };
 
@@ -310,7 +299,6 @@
                 </div>
             );
 
-            // データがロードされたが期間内にデータがない場合でも画面を描画するため、早期リターンしない
             const hasData = processedData && processedData.chartData.length > 0;
             const totalFlowDisplay = processedData ? processedData.totalFlow : 0;
             const generatedAt = rawData ? rawData.metadata.generated_at : "";
@@ -330,7 +318,6 @@
                     </header>
 
                     <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-                        {/* コントロールパネル */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap gap-4 items-center justify-between animate-fade-in">
                             <div className="flex items-center gap-4 flex-wrap">
                                 <div className="flex items-center gap-2 text-slate-600"><Icon name="Filter" size={16} /><span className="text-sm font-bold">分析期間:</span></div>
@@ -375,7 +362,6 @@
                             </div>
                         ) : (
                             <>
-                            {/* 統合グラフカード */}
                             <div id="chart-container" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in relative">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
@@ -389,7 +375,6 @@
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    {/* 感応度チャート */}
                                     <div id="chart-sensitivity" className="relative p-2 rounded hover:bg-slate-50/50 transition-colors">
                                         <div className="flex justify-between items-center mb-4">
                                             <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
@@ -416,7 +401,6 @@
                                         </div>
                                     </div>
 
-                                    {/* 資金フローチャート */}
                                     <div id="chart-flow" className="relative p-2 rounded hover:bg-slate-50/50 transition-colors">
                                         <div className="flex justify-between items-center mb-4">
                                             <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
@@ -445,7 +429,8 @@
                                                     <ReferenceLine y={0} stroke="#94a3b8" />
                                                     <Bar dataKey="flow" name="純流出入額" radius={[2, 2, 0, 0]} barSize={20}>
                                                         {processedData.timeSeries.map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={getBarColor(null, entry.flow)} />
+                                                            // 【修正】ここも色を薄く変更
+                                                            <Cell key={`cell-${index}`} fill={entry.flow > 0 ? '#A78BFA' : '#F472B6'} />
                                                         ))}
                                                     </Bar>
                                                 </BarChart>
@@ -455,7 +440,6 @@
                                 </div>
                             </div>
 
-                            {/* 全銘柄 詳細統計テーブル */}
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in">
                                 <div className="p-6 border-b border-slate-200 flex items-center gap-2">
                                     <h2 className="text-lg font-bold text-slate-800">詳細統計データ一覧</h2>
