@@ -233,26 +233,31 @@
                 const chartData = allStats.filter(s => activeTickers.has(s.ticker));
 
                 const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
+                
+                // 【修正】日付順にソート
+                filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
                 let cumFlow = 0;
                 
-                // 【修正】週番号を時系列順に連番化
-                let lastMonth = null;
-                let weekCounter = 0;
+                // 【修正】年月ごとの週カウンターを管理
+                const weekCountByYearMonth = {};
                 
                 const timeSeries = filtered.map(d => {
                     cumFlow += d.flow;
                     const dateObj = new Date(d.date);
-                    const currentMonth = dateObj.getMonth() + 1;
+                    const year = dateObj.getFullYear();
+                    const month = dateObj.getMonth() + 1;
+                    const yearMonth = `${year}-${month}`;
                     
-                    // 月が変わったら週番号を1にリセット、同じ月なら+1
-                    if (lastMonth !== currentMonth) {
-                        weekCounter = 1;
-                        lastMonth = currentMonth;
+                    // この年月で初めて登場した場合は1週目、以降は+1
+                    if (!weekCountByYearMonth[yearMonth]) {
+                        weekCountByYearMonth[yearMonth] = 1;
                     } else {
-                        weekCounter++;
+                        weekCountByYearMonth[yearMonth]++;
                     }
                     
-                    const weekLabel = `${currentMonth}月${weekCounter}週目`;
+                    const weekNumber = weekCountByYearMonth[yearMonth];
+                    const weekLabel = `${month}月${weekNumber}週目`;
 
                     return { 
                         date: d.date, 
