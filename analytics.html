@@ -234,29 +234,21 @@
 
                 const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
                 
-                // 【修正】日付順にソート
-                filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+                // 日付順にソート
+                filtered.sort((a, b) => a.date.localeCompare(b.date));
                 
                 let cumFlow = 0;
                 
-                // 【修正】年月ごとの週カウンターを管理
-                const weekCountByYearMonth = {};
-                
                 const timeSeries = filtered.map(d => {
                     cumFlow += d.flow;
-                    const dateObj = new Date(d.date);
-                    const year = dateObj.getFullYear();
-                    const month = dateObj.getMonth() + 1;
-                    const yearMonth = `${year}-${month}`;
                     
-                    // この年月で初めて登場した場合は1週目、以降は+1
-                    if (!weekCountByYearMonth[yearMonth]) {
-                        weekCountByYearMonth[yearMonth] = 1;
-                    } else {
-                        weekCountByYearMonth[yearMonth]++;
-                    }
+                    // 【修正】dateフォーマットから年月と週番号を抽出
+                    // 例: "2024-06-01" → 年=2024, 月=6, 週=01
+                    const parts = d.date.split('-');
+                    const year = parseInt(parts[0]);
+                    const month = parseInt(parts[1]);
+                    const weekNumber = parseInt(parts[2]); // この部分が週番号
                     
-                    const weekNumber = weekCountByYearMonth[yearMonth];
                     const weekLabel = `${month}月${weekNumber}週目`;
 
                     return { 
@@ -438,11 +430,12 @@
                                                         cursor={{fill: 'transparent'}}
                                                         labelFormatter={(label, payload) => {
                                                             if(payload && payload[0]) {
-                                                                const d = new Date(payload[0].payload.date);
-                                                                const year = d.getFullYear();
-                                                                const month = d.getMonth() + 1;
-                                                                const day = d.getDate();
-                                                                return `${year}/${month}/${day} (${label})`; 
+                                                                const dateStr = payload[0].payload.date;
+                                                                const parts = dateStr.split('-');
+                                                                const year = parts[0];
+                                                                const month = parseInt(parts[1]);
+                                                                const week = parseInt(parts[2]);
+                                                                return `${year}年${month}月第${week}週 (${label})`; 
                                                             }
                                                             return label;
                                                         }} 
