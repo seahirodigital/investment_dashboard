@@ -4,19 +4,33 @@ import json
 import os
 from datetime import datetime, timedelta
 
-# --- Config: 分析対象セクター定義 ---
-SECTOR_CONFIG = [
+# ファイルパス定義
+SECTORS_FILE = 'sectors.json'
+HISTORY_CSV = 'history.csv'
+OUTPUT_JSON = 'sector_data.json'
+
+# デフォルト設定（sectors.jsonがない場合用）
+DEFAULT_SECTORS = [
     {"ticker": "1306.T", "name": "TOPIX (1306)", "category": "Benchmark"},
     {"ticker": "^N225", "name": "Nikkei 225", "category": "Benchmark"},
     {"ticker": "2644.T", "name": "Semicon (2644)", "category": "Growth"},
-    {"ticker": "1615.T", "name": "Banks (1615)", "category": "Value"},
-    {"ticker": "1618.T", "name": "Auto & Energy (1618)", "category": "Cyclical"},
-    {"ticker": "1489.T", "name": "High Div Yield (1489)", "category": "Value"},
-    {"ticker": "2516.T", "name": "Mothers/Growth (2516)", "category": "Small Cap"}
+    {"ticker": "1615.T", "name": "Banks (1615)", "category": "Value"}
 ]
 
-HISTORY_CSV = 'history.csv'
-OUTPUT_JSON = 'sector_data.json'
+def load_sectors():
+    """sectors.jsonから設定を読み込む"""
+    if os.path.exists(SECTORS_FILE):
+        try:
+            with open(SECTORS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading {SECTORS_FILE}: {e}")
+    
+    # ファイルがない、またはエラーの場合はデフォルトを作成して使用
+    print(f"Using default sectors and creating {SECTORS_FILE}")
+    with open(SECTORS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(DEFAULT_SECTORS, f, ensure_ascii=False, indent=2)
+    return DEFAULT_SECTORS
 
 def load_jpx_history():
     """既存のhistory.csvを読み込み、週次データとして整形する"""
@@ -38,9 +52,9 @@ def load_jpx_history():
         print(f"Error loading history.csv: {e}")
         return None
 
-def fetch_market_data(start_date, end_date):
+def fetch_market_data(sectors, start_date, end_date):
     """Yahoo Financeから株価データを取得し、週次リターンを計算する"""
-    tickers = [item['ticker'] for item in SECTOR_CONFIG]
+    tickers = [item['ticker'] for item in sectors]
     
     print(f"Fetching data for: {tickers}")
     
@@ -78,6 +92,9 @@ def fetch_market_data(start_date, end_date):
         # データ型をDataFrameに統一
         if isinstance(data, pd.Series):
             data = data.to_frame()
+            # カラム名がティッカーになっていない場合の対応（1銘柄時）
+            if len(tickers) == 1 and data.columns[0] != tickers[0]:
+                data.columns = tickers
             
         # 週次リターン(%)の計算
         returns = data.pct_change() * 100
@@ -92,14 +109,19 @@ def fetch_market_data(start_date, end_date):
 def main():
     print("=== Starting Sector Analysis Data Processing ===")
     
+    # セクター設定読み込み
+    sectors = load_sectors()
+    
     jpx_df = load_jpx_history()
     if jpx_df is None:
         return
 
+    # 期間設定 (JPXデータの範囲 + バッファ)
     start_date = jpx_df.index.min() - timedelta(days=14)
     end_date = datetime.now() + timedelta(days=1)
 
-    market_returns = fetch_market_data(start_date, end_date)
+    # 株価データの取得
+    market_returns = fetch_market_data(sectors, start_date, end_date)
     
     if market_returns.empty:
         print("Skipping analysis due to missing market data.")
@@ -108,7 +130,7 @@ def main():
     output = {
         "metadata": {
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "sectors": SECTOR_CONFIG
+            "sectors": sectors
         },
         "data": []
     }
@@ -121,16 +143,18 @@ def main():
             jpx_date = row['date']
             balance = row['balance']
             
+            # JPX日付に最も近い市場データを探す
             idx_loc = market_returns.index.get_indexer([jpx_date], method='nearest')[0]
             if idx_loc == -1: continue
                 
             market_date = market_returns.index[idx_loc]
+            # 日付乖離チェック（7日以内）
             if abs((market_date - jpx_date).days) > 7: continue
                 
             target_week_data = {}
             has_valid = False
             
-            for sector in SECTOR_CONFIG:
+            for sector in sectors:
                 ticker = sector['ticker']
                 if ticker in market_returns.columns:
                     val = market_returns.iloc[idx_loc][ticker]
@@ -150,7 +174,7 @@ def main():
                 }
                 output["data"].append(entry)
                 processed_count += 1
-        except Exception:
+        except Exception as e:
             continue
 
     if processed_count > 0:
