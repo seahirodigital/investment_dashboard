@@ -235,20 +235,24 @@
                 const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
                 let cumFlow = 0;
                 
+                // 【修正】週番号を時系列順に連番化
+                let lastMonth = null;
+                let weekCounter = 0;
+                
                 const timeSeries = filtered.map(d => {
                     cumFlow += d.flow;
                     const dateObj = new Date(d.date);
+                    const currentMonth = dateObj.getMonth() + 1;
                     
-                    // 【修正】週番号の計算ロジックを改善
-                    // その月の1日の曜日を取得（日曜=0, 月曜=1, ..., 土曜=6）
-                    const firstDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
-                    const firstDayOfWeek = firstDay.getDay();
+                    // 月が変わったら週番号を1にリセット、同じ月なら+1
+                    if (lastMonth !== currentMonth) {
+                        weekCounter = 1;
+                        lastMonth = currentMonth;
+                    } else {
+                        weekCounter++;
+                    }
                     
-                    // その月の1日が属する週を「第1週」とする
-                    // 日付 + (1日の曜日 - 1) を7で割って切り上げ
-                    const weekNum = Math.ceil((dateObj.getDate() + firstDayOfWeek - 1) / 7);
-                    
-                    const weekLabel = `${dateObj.getMonth() + 1}月${weekNum}週目`;
+                    const weekLabel = `${currentMonth}月${weekCounter}週目`;
 
                     return { 
                         date: d.date, 
