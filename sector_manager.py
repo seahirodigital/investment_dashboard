@@ -16,8 +16,7 @@ DEFAULT_SECTORS = [
   { "ticker": "^GSPC", "name": "S&P 500", "category": "Benchmark" },
   { "ticker": "^NDX", "name": "NASDAQ 100", "category": "Benchmark" },
   { "ticker": "213A.T", "name": "半導体(国内) 213A", "category": "Semicon" },
-  { "ticker": "2243.T", "name": "半導体(米国SOX)", "category": "Semicon" },
-  { "ticker": "346A.T", "name": "半導体(米国S&P)", "category": "Semicon" },
+  { "ticker": "2243.T", "name": "グローバル半導体", "category": "Semicon" },
   { "ticker": "1617.T", "name": "食品", "category": "Defensive" },
   { "ticker": "1618.T", "name": "エネルギー資源", "category": "Cyclical" },
   { "ticker": "1619.T", "name": "建設・資材", "category": "Cyclical" },
@@ -36,7 +35,6 @@ DEFAULT_SECTORS = [
   { "ticker": "1632.T", "name": "金融(除く銀行)", "category": "Financial" },
   { "ticker": "1633.T", "name": "不動産", "category": "Financial" }
 ]
-
 def load_sectors():
     """sectors.jsonから設定を読み込む"""
     if os.path.exists(SECTORS_FILE):
@@ -52,7 +50,7 @@ def load_sectors():
     return DEFAULT_SECTORS
 
 def load_jpx_history():
-    """既存のhistory.csvを読み込み、週次データとして整形する"""
+    """既存のhistory.csvを読み込み、週次データ(金曜基準)として整形する"""
     if not os.path.exists(HISTORY_CSV):
         print(f"Error: {HISTORY_CSV} not found. Run main.py first.")
         return None
@@ -66,6 +64,11 @@ def load_jpx_history():
         df['date'] = pd.to_datetime(df['date'])
         df = df.sort_values('date')
         df.set_index('date', inplace=True)
+        
+        # 【修正】日次データが含まれる場合を考慮し、週次（金曜日）にリサンプリングして重複を排除
+        # balanceはその週の最終値を採用
+        df = df.resample('W-FRI').last().dropna()
+        
         return df
     except Exception as e:
         print(f"Error loading history.csv: {e}")
@@ -85,7 +88,6 @@ def fetch_market_data(sectors, start_date, end_date):
             print("Warning: No data fetched from Yahoo Finance.")
             return pd.DataFrame()
 
-        # カラム構造の確認とデータ抽出
         target_col = 'Adj Close'
         
         if isinstance(df.columns, pd.MultiIndex):
@@ -111,9 +113,6 @@ def fetch_market_data(sectors, start_date, end_date):
             if len(tickers) == 1 and data.columns[0] != tickers[0]:
                 data.columns = tickers
             
-        # 週次リターン(%)の計算
-        # pct_change() は (今週の終値 - 前週の終値) / 前週の終値
-        # これは「その週の保有リターン」を意味する
         returns = data.pct_change() * 100
         returns.index = pd.to_datetime(returns.index).tz_localize(None)
         
@@ -154,20 +153,16 @@ def main():
     
     for _, row in jpx_reset.iterrows():
         try:
-            jpx_date = row['date'] # 通常は金曜日
+            jpx_date = row['date']
             balance = row['balance']
             
-            # 【重要修正】
-            # JPXの日付(金曜)に対して、直近の過去(method='pad')のYahoo日付(月曜)を探す。
-            # これにより「同じ週」のデータを確実にマッチングさせる。
-            # 以前の method='nearest' では、金曜→翌月曜(3日差)となり、翌週のデータを見てしまっていた。
+            # 直近の過去のYahoo日付(月曜)を探す (method='pad')
             idx_loc = market_returns.index.get_indexer([jpx_date], method='pad')[0]
             
             if idx_loc == -1: continue
                 
             market_date = market_returns.index[idx_loc]
             
-            # 日付乖離チェック（念のため7日以内、通常は4日以内になるはず）
             if abs((market_date - jpx_date).days) > 7: continue
                 
             target_week_data = {}
