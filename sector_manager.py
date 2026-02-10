@@ -9,12 +9,32 @@ SECTORS_FILE = 'sectors.json'
 HISTORY_CSV = 'history.csv'
 OUTPUT_JSON = 'sector_data.json'
 
-# デフォルト設定（sectors.jsonがない場合用）
+# デフォルト設定
 DEFAULT_SECTORS = [
-    {"ticker": "1306.T", "name": "TOPIX (1306)", "category": "Benchmark"},
-    {"ticker": "^N225", "name": "Nikkei 225", "category": "Benchmark"},
-    {"ticker": "2644.T", "name": "Semicon (2644)", "category": "Growth"},
-    {"ticker": "1615.T", "name": "Banks (1615)", "category": "Value"}
+  { "ticker": "^N225", "name": "日経平均", "category": "Benchmark" },
+  { "ticker": "1306.T", "name": "TOPIX", "category": "Benchmark" },
+  { "ticker": "^GSPC", "name": "S&P 500", "category": "Benchmark" },
+  { "ticker": "^NDX", "name": "NASDAQ 100", "category": "Benchmark" },
+  { "ticker": "213A.T", "name": "半導体(国内) 213A", "category": "Semicon" },
+  { "ticker": "2243.T", "name": "半導体(米国SOX)", "category": "Semicon" },
+  { "ticker": "346A.T", "name": "半導体(米国S&P)", "category": "Semicon" },
+  { "ticker": "1617.T", "name": "食品", "category": "Defensive" },
+  { "ticker": "1618.T", "name": "エネルギー資源", "category": "Cyclical" },
+  { "ticker": "1619.T", "name": "建設・資材", "category": "Cyclical" },
+  { "ticker": "1620.T", "name": "素材・化学", "category": "Cyclical" },
+  { "ticker": "1621.T", "name": "医薬品", "category": "Defensive" },
+  { "ticker": "1622.T", "name": "自動車・輸送機", "category": "Cyclical" },
+  { "ticker": "1623.T", "name": "鉄鋼・非鉄", "category": "Cyclical" },
+  { "ticker": "1624.T", "name": "機械", "category": "Cyclical" },
+  { "ticker": "1625.T", "name": "電機・精密", "category": "Tech" },
+  { "ticker": "1626.T", "name": "情報通信・サービス", "category": "Tech" },
+  { "ticker": "1627.T", "name": "電力・ガス", "category": "Defensive" },
+  { "ticker": "1628.T", "name": "運輸・物流", "category": "Cyclical" },
+  { "ticker": "1629.T", "name": "商社・卸売", "category": "Value" },
+  { "ticker": "1630.T", "name": "小売", "category": "Consumer" },
+  { "ticker": "1631.T", "name": "銀行", "category": "Financial" },
+  { "ticker": "1632.T", "name": "金融(除く銀行)", "category": "Financial" },
+  { "ticker": "1633.T", "name": "不動産", "category": "Financial" }
 ]
 
 def load_sectors():
@@ -26,7 +46,6 @@ def load_sectors():
         except Exception as e:
             print(f"Error loading {SECTORS_FILE}: {e}")
     
-    # ファイルがない、またはエラーの場合はデフォルトを作成して使用
     print(f"Using default sectors and creating {SECTORS_FILE}")
     with open(SECTORS_FILE, 'w', encoding='utf-8') as f:
         json.dump(DEFAULT_SECTORS, f, ensure_ascii=False, indent=2)
@@ -69,7 +88,6 @@ def fetch_market_data(sectors, start_date, end_date):
         # カラム構造の確認とデータ抽出
         target_col = 'Adj Close'
         
-        # MultiIndex対応
         if isinstance(df.columns, pd.MultiIndex):
             if target_col in df.columns.get_level_values(0):
                 data = df[target_col]
@@ -80,23 +98,22 @@ def fetch_market_data(sectors, start_date, end_date):
                 print(f"Error: Neither 'Adj Close' nor 'Close' found. Columns: {df.columns}")
                 return pd.DataFrame()
         else:
-            # 単一階層の場合
             if target_col in df.columns:
                 data = df[target_col]
             elif 'Close' in df.columns:
                 print("Note: 'Adj Close' not found, using 'Close' instead.")
                 data = df['Close']
             else:
-                data = df # フォールバック
+                data = df 
 
-        # データ型をDataFrameに統一
         if isinstance(data, pd.Series):
             data = data.to_frame()
-            # カラム名がティッカーになっていない場合の対応（1銘柄時）
             if len(tickers) == 1 and data.columns[0] != tickers[0]:
                 data.columns = tickers
             
         # 週次リターン(%)の計算
+        # pct_change() は (今週の終値 - 前週の終値) / 前週の終値
+        # これは「その週の保有リターン」を意味する
         returns = data.pct_change() * 100
         returns.index = pd.to_datetime(returns.index).tz_localize(None)
         
@@ -109,18 +126,15 @@ def fetch_market_data(sectors, start_date, end_date):
 def main():
     print("=== Starting Sector Analysis Data Processing ===")
     
-    # セクター設定読み込み
     sectors = load_sectors()
-    
     jpx_df = load_jpx_history()
     if jpx_df is None:
         return
 
-    # 期間設定 (JPXデータの範囲 + バッファ)
+    # 期間設定
     start_date = jpx_df.index.min() - timedelta(days=14)
     end_date = datetime.now() + timedelta(days=1)
 
-    # 株価データの取得
     market_returns = fetch_market_data(sectors, start_date, end_date)
     
     if market_returns.empty:
@@ -140,15 +154,20 @@ def main():
     
     for _, row in jpx_reset.iterrows():
         try:
-            jpx_date = row['date']
+            jpx_date = row['date'] # 通常は金曜日
             balance = row['balance']
             
-            # JPX日付に最も近い市場データを探す
-            idx_loc = market_returns.index.get_indexer([jpx_date], method='nearest')[0]
+            # 【重要修正】
+            # JPXの日付(金曜)に対して、直近の過去(method='pad')のYahoo日付(月曜)を探す。
+            # これにより「同じ週」のデータを確実にマッチングさせる。
+            # 以前の method='nearest' では、金曜→翌月曜(3日差)となり、翌週のデータを見てしまっていた。
+            idx_loc = market_returns.index.get_indexer([jpx_date], method='pad')[0]
+            
             if idx_loc == -1: continue
                 
             market_date = market_returns.index[idx_loc]
-            # 日付乖離チェック（7日以内）
+            
+            # 日付乖離チェック（念のため7日以内、通常は4日以内になるはず）
             if abs((market_date - jpx_date).days) > 7: continue
                 
             target_week_data = {}
