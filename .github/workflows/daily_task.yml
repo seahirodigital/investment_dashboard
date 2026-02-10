@@ -37,12 +37,23 @@ jobs:
       - name: Run Script
         env:
           DEBUG_MODE: ${{ github.event.inputs.debug_mode || 'false' }}
-        run: python main.py
+        run: |
+          # 1. JPXデータの取得 (history.csv生成)
+          python main.py
+          
+          # 2. セクター分析データの生成 (sector_data.json生成)
+          # history.csvの存在を確認してから実行
+          if [ -f history.csv ]; then
+            python sector_manager.py
+          else
+            echo "Warning: history.csv not found, skipping sector analysis."
+          fi
       
       - name: Check for changes
         id: check_changes
         run: |
-          if git diff --quiet history.csv trend.png; then
+          # sector_data.json も監視対象に追加
+          if git diff --quiet history.csv trend.png sector_data.json; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "No changes detected"
           else
@@ -56,8 +67,9 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add history.csv trend.png
-          git commit -m "Update JPX data: $(date)"
+          # sector_data.json もコミット対象に追加
+          git add history.csv trend.png sector_data.json
+          git commit -m "Update JPX & Sector data: $(date)"
           git push origin HEAD
       
       - name: Prepare deployment files
@@ -67,8 +79,10 @@ jobs:
           # 単一ファイルのコピー
           [ -f index.html ] && cp index.html deploy/
           [ -f advanced.html ] && cp advanced.html deploy/
+          [ -f analytics.html ] && cp analytics.html deploy/  # 追加
           [ -f history.csv ] && cp history.csv deploy/
           [ -f trend.png ] && cp trend.png deploy/
+          [ -f sector_data.json ] && cp sector_data.json deploy/  # 追加
           
           # ▼▼▼ フォルダごとのコピーを追加 (ここが重要) ▼▼▼
           [ -d css ] && cp -r css deploy/
