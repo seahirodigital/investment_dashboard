@@ -1,9 +1,7 @@
 [
   { "ticker": "^N225", "name": "日経平均", "category": "Benchmark" },
   { "ticker": "1306.T", "name": "TOPIX", "category": "Benchmark" },
-  { "ticker": "200A.T", "name": "半導体(国内) 200A", "category": "Semicon" },
   { "ticker": "213A.T", "name": "半導体(国内) 213A", "category": "Semicon" },
-  { "ticker": "2644.T", "name": "半導体(国内) 2644", "category": "Semicon" },
   { "ticker": "2243.T", "name": "半導体(米国SOX)", "category": "Semicon" },
   { "ticker": "346A.T", "name": "半導体(米国S&P)", "category": "Semicon" },
   { "ticker": "1617.T", "name": "食品", "category": "Defensive" },
