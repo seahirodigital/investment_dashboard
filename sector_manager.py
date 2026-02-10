@@ -34,6 +34,7 @@ DEFAULT_SECTORS = [
   { "ticker": "1631.T", "name": "銀行", "category": "Financial" },
   { "ticker": "1632.T", "name": "金融(除く銀行)", "category": "Financial" },
   { "ticker": "1633.T", "name": "不動産", "category": "Financial" }
+  { "ticker": "1568.T", "name": "TOPIXダブル(1568)","category": "Benchmark" },
 ]
 def load_sectors():
     """sectors.jsonから設定を読み込む"""
