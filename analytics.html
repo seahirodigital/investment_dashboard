@@ -14,6 +14,9 @@
     <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
     <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
     
+    <!-- Screenshot Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <!-- Utilities -->
     <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -27,6 +30,19 @@
         /* Modal Overlay */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
         .modal-content { background: white; padding: 24px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        
+        /* Hide Date Input Spin Buttons */
+        input[type="date"]::-webkit-inner-spin-button,
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            display: none;
+            -webkit-appearance: none;
+        }
+        input[type="date"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+            position: relative;
+        }
+        /* Custom calendar icon capability if needed, but we rely on simple text input look here */
     </style>
 </head>
 <body>
@@ -45,7 +61,9 @@
         const { useState, useEffect, useMemo } = React;
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, Area, Cell } = window.Recharts || {};
 
-        const BENCHMARKS = ['^N225', '1306.T', '^GSPC', '^NDX'];
+        const BENCHMARKS_JP = ['^N225', '1306.T'];
+        const BENCHMARKS_US = ['^GSPC', '^NDX'];
+        const BENCHMARKS = [...BENCHMARKS_JP, ...BENCHMARKS_US];
 
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
@@ -58,7 +76,8 @@
                 ChevronLeft: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>,
                 ChevronRight: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>,
                 HelpCircle: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
-                X: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                X: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+                Camera: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
             };
             return <span className={className}>{icons[name] || null}</span>;
         };
@@ -98,6 +117,37 @@
             );
         };
 
+        const ScreenshotButton = ({ targetId, title, className = "" }) => {
+            const handleScreenshot = async () => {
+                const element = document.getElementById(targetId);
+                if (!element) return;
+                
+                try {
+                    const canvas = await html2canvas(element, { 
+                        backgroundColor: '#ffffff',
+                        scale: 2 // 高解像度
+                    });
+                    const link = document.createElement('a');
+                    link.download = `${title}_${new Date().toISOString().slice(0,10)}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                } catch (err) {
+                    console.error("Screenshot failed:", err);
+                    alert("スクリーンショットの撮影に失敗しました。");
+                }
+            };
+
+            return (
+                <button 
+                    onClick={handleScreenshot} 
+                    className={`p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors ${className}`}
+                    title="スクリーンショットを保存"
+                >
+                    <Icon name="Camera" size={18} />
+                </button>
+            );
+        };
+
         const App = () => {
             const [rawData, setRawData] = useState(null);
             const [loading, setLoading] = useState(true);
@@ -106,7 +156,6 @@
             const [endDate, setEndDate] = useState('');
             const [showModal, setShowModal] = useState(false);
             
-            // グラフ表示対象のTickerリスト
             const [activeTickers, setActiveTickers] = useState(new Set());
 
             useEffect(() => {
@@ -116,7 +165,6 @@
                     return;
                 }
 
-                // キャッシュ回避
                 fetch(`./sector_data.json?t=${new Date().getTime()}`)
                     .then(res => {
                         if (!res.ok) throw new Error("データファイルが見つかりません。GitHub Actionsの完了をお待ちください。");
@@ -126,16 +174,14 @@
                         if (!json.data || json.data.length === 0) throw new Error("データが空です。");
                         setRawData(json);
                         
-                        // 日付設定 (直近2ヶ月)
-                        const dates = json.data.map(d => d.date).sort();
-                        const lastDateStr = dates[dates.length - 1];
-                        setEndDate(lastDateStr);
-
-                        const lastDate = new Date(lastDateStr);
-                        const twoMonthsAgo = new Date(lastDate);
-                        twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-                        
+                        // 日付設定 (今日を基準に直近2ヶ月)
+                        const today = new Date();
                         const formatYMD = (d) => d.toISOString().split('T')[0];
+                        
+                        setEndDate(formatYMD(today));
+
+                        const twoMonthsAgo = new Date(today);
+                        twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
                         setStartDate(formatYMD(twoMonthsAgo));
                         
                         setLoading(false);
@@ -147,7 +193,7 @@
                     });
             }, []);
 
-            // 期間変更時に統計を再計算
+            // 統計計算
             const allStats = useMemo(() => {
                 if (!rawData || !startDate || !endDate) return null;
                 const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
@@ -156,7 +202,6 @@
                 const flowPositive = filtered.filter(d => d.flow > 0);
                 const flowNegative = filtered.filter(d => d.flow <= 0);
 
-                // 全セクターの統計計算
                 return rawData.metadata.sectors.map(sec => {
                     const ticker = sec.ticker;
                     const meanPos = flowPositive.length ? flowPositive.reduce((acc, d) => acc + (d.returns[ticker] || 0), 0) / flowPositive.length : 0;
@@ -167,10 +212,10 @@
                         meanPos,
                         meanNeg
                     };
-                }).sort((a, b) => a.meanDiff - b.meanDiff); // 昇順（マイナスが大きい順）
+                }).sort((a, b) => Math.abs(b.meanDiff) - Math.abs(a.meanDiff)); // 絶対値の降順 (乖離が大きい順)
             }, [rawData, startDate, endDate]);
 
-            // 初期表示リストのセット（全銘柄をデフォルトにする）
+            // 初期表示リスト (全銘柄ON)
             useEffect(() => {
                 if (allStats && activeTickers.size === 0) {
                     const initialSet = new Set();
@@ -179,15 +224,12 @@
                 }
             }, [allStats]);
 
-            // 表示用データの構築
+            // 表示データ構築
             const processedData = useMemo(() => {
                 if (!allStats || !rawData || !startDate || !endDate) return null;
 
-                // 1. グラフ表示用データ (activeTickers に含まれるものだけ)
-                // allStatsは既に昇順ソート済み
                 const chartData = allStats.filter(s => activeTickers.has(s.ticker));
 
-                // 2. 資金流入 (チャート右側用)
                 const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
                 let cumFlow = 0;
                 
@@ -195,7 +237,6 @@
                     cumFlow += d.flow;
                     const dateObj = new Date(d.date);
                     
-                    // 月の第何週か計算
                     const firstDayOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
                     const dayOfWeek = firstDayOfMonth.getDay();
                     const weekNum = Math.ceil((dateObj.getDate() + dayOfWeek) / 7);
@@ -212,38 +253,22 @@
                 return { chartData, timeSeries, totalFlow: cumFlow, allStats };
             }, [allStats, activeTickers, rawData, startDate, endDate]);
 
-            // グラフの色決定ロジック
-            const getBarColor = (ticker, rankIndex) => {
-                if (BENCHMARKS.includes(ticker)) return '#FF4081'; // ベンチマークはピンク
-
-                // ベンチマーク以外の順位に応じて色を変える
-                if (rankIndex === 0) return '#7C4DFF'; // 1位: 濃い紫
-                if (rankIndex === 1) return '#9E77FF'; // 2位
-                if (rankIndex === 2) return '#BE9EFF'; // 3位 (薄い紫)
-                return '#cbd5e1'; // 4位以降: グレー
-            };
-
-            // ランク計算用ヘルパー
-            const getRankMap = (data) => {
-                let nonBenchCount = 0;
-                const map = {};
-                data.forEach(d => {
-                    if (BENCHMARKS.includes(d.ticker)) {
-                        map[d.ticker] = -1;
-                    } else {
-                        map[d.ticker] = nonBenchCount++;
-                    }
-                });
-                return map;
+            // 色決定ロジック
+            const getBarColor = (ticker, value) => {
+                // 日経・TOPIX -> 濃い灰色
+                if (BENCHMARKS_JP.includes(ticker)) return '#475569';
+                // 米国株 -> 薄い灰色
+                if (BENCHMARKS_US.includes(ticker)) return '#cbd5e1';
+                
+                // その他: プラスなら紫、マイナスならピンク
+                // valueは meanDiff または flow
+                return value > 0 ? '#7C4DFF' : '#FF4081';
             };
 
             const toggleTicker = (ticker) => {
                 const newSet = new Set(activeTickers);
-                if (newSet.has(ticker)) {
-                    newSet.delete(ticker);
-                } else {
-                    newSet.add(ticker);
-                }
+                if (newSet.has(ticker)) newSet.delete(ticker);
+                else newSet.add(ticker);
                 setActiveTickers(newSet);
             };
 
@@ -255,7 +280,7 @@
                 const newStr = d.toISOString().split('T')[0];
                 if (type === 'start') setStartDate(newStr);
                 else setEndDate(newStr);
-                setActiveTickers(new Set()); // 期間変更時はリセットして再計算
+                setActiveTickers(new Set());
             };
 
             if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500 animate-pulse">データを読み込んでいます...</div>;
@@ -269,8 +294,6 @@
                 </div>
             );
             if (!processedData) return <div className="min-h-screen flex items-center justify-center">指定された期間のデータがありません。</div>;
-
-            const rankMap = getRankMap(processedData.chartData);
 
             return (
                 <div className="min-h-screen bg-[#f8fafc] pb-20">
@@ -294,13 +317,13 @@
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center">
                                         <button onClick={() => shiftDate('start', -1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronLeft" size={16} /></button>
-                                        <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveTickers(new Set()); }} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1" />
+                                        <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActiveTickers(new Set()); }} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-28 cursor-pointer hover:bg-slate-50" />
                                         <button onClick={() => shiftDate('start', 1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronRight" size={16} /></button>
                                     </div>
                                     <span className="text-slate-400">〜</span>
                                     <div className="flex items-center">
                                         <button onClick={() => shiftDate('end', -1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronLeft" size={16} /></button>
-                                        <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveTickers(new Set()); }} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1" />
+                                        <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActiveTickers(new Set()); }} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-28 cursor-pointer hover:bg-slate-50" />
                                         <button onClick={() => shiftDate('end', 1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronRight" size={16} /></button>
                                     </div>
                                 </div>
@@ -313,66 +336,82 @@
                             </div>
                         </div>
 
-                        {/* グラフエリア */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* 感応度チャート */}
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in">
-                                <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                                    <Icon name="BarChart2" className="text-[#7C4DFF]" />
-                                    セクター感応度 (リターン乖離)
-                                    <button onClick={() => setShowModal(true)} className="ml-1 text-slate-400 hover:text-[#7C4DFF] transition-colors" title="詳細を見る">
-                                        <Icon name="HelpCircle" size={18} />
-                                    </button>
-                                </h2>
-                                <p className="text-xs text-slate-500 mb-4">海外勢の買い越し時と売り越し時のリターン差。</p>
-                                <div className="h-[500px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart layout="vertical" data={processedData.chartData} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis type="number" fontSize={12} tickFormatter={(val) => `${val.toFixed(2)}%`} />
-                                            <YAxis type="category" dataKey="name" width={120} fontSize={11} interval={0} />
-                                            <Tooltip formatter={(val) => `${val.toFixed(3)}%`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                                            <ReferenceLine x={0} stroke="#94a3b8" />
-                                            <Bar dataKey="meanDiff" radius={[0, 4, 4, 0]} name="感応度 (Mean Diff)" barSize={20}>
-                                                {processedData.chartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getBarColor(entry.ticker, rankMap[entry.ticker])} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                        {/* 統合グラフカード */}
+                        <div id="chart-container" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in relative">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                        <Icon name="BarChart2" className="text-[#7C4DFF]" />
+                                        分析レポート
+                                    </h2>
+                                    <p className="text-xs text-slate-500">市場動向とセクター反応の相関分析</p>
                                 </div>
+                                <ScreenshotButton targetId="chart-container" title="Market_Sensitivity_Report" className="bg-slate-50 border border-slate-200" />
                             </div>
 
-                            {/* 資金フローチャート (週次バー表示) */}
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in">
-                                <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Icon name="TrendingUp" className="text-[#7C4DFF]" />期間内 資金流出入推移</h2>
-                                <p className="text-xs text-slate-500 mb-4">選択された期間における、海外投資家の週次買越額推移（プラスは流入、マイナスは流出）。</p>
-                                <div className="h-[500px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={processedData.timeSeries}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="weekLabel" fontSize={11} />
-                                            <YAxis fontSize={11} tickFormatter={(val) => `${val.toLocaleString()}億`} width={45} />
-                                            <Tooltip 
-                                                cursor={{fill: 'transparent'}}
-                                                labelFormatter={(label, payload) => {
-                                                    if(payload && payload[0]) {
-                                                        const d = new Date(payload[0].payload.date);
-                                                        return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} (${label})`; 
-                                                    }
-                                                    return label;
-                                                }} 
-                                                formatter={(val) => `${Math.round(val).toLocaleString()}億円`} 
-                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} 
-                                            />
-                                            <ReferenceLine y={0} stroke="#94a3b8" />
-                                            <Bar dataKey="flow" name="純流出入額" radius={[2, 2, 0, 0]} barSize={20}>
-                                                {processedData.timeSeries.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.flow >= 0 ? '#BE9EFF' : '#FF4081'} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* 感応度チャート */}
+                                <div id="chart-sensitivity" className="relative p-2 rounded hover:bg-slate-50/50 transition-colors">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                            セクター感応度 (リターン乖離)
+                                            <button onClick={() => setShowModal(true)} className="text-slate-400 hover:text-[#7C4DFF]" title="詳細"><Icon name="HelpCircle" size={16} /></button>
+                                        </h3>
+                                        <ScreenshotButton targetId="chart-sensitivity" title="Sector_Sensitivity" />
+                                    </div>
+                                    <div className="h-[500px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart layout="vertical" data={processedData.chartData} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis type="number" fontSize={12} tickFormatter={(val) => `${val.toFixed(2)}%`} />
+                                                <YAxis type="category" dataKey="name" width={120} fontSize={11} interval={0} />
+                                                <Tooltip formatter={(val) => `${val.toFixed(3)}%`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                                                <ReferenceLine x={0} stroke="#94a3b8" />
+                                                <Bar dataKey="meanDiff" radius={[0, 4, 4, 0]} name="感応度 (Mean Diff)" barSize={20}>
+                                                    {processedData.chartData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={getBarColor(entry.ticker, entry.meanDiff)} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* 資金フローチャート */}
+                                <div id="chart-flow" className="relative p-2 rounded hover:bg-slate-50/50 transition-colors">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                            <Icon name="TrendingUp" size={16} /> 期間内 資金流出入推移
+                                        </h3>
+                                        <ScreenshotButton targetId="chart-flow" title="Fund_Flow" />
+                                    </div>
+                                    <div className="h-[500px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={processedData.timeSeries}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="weekLabel" fontSize={11} />
+                                                <YAxis fontSize={11} tickFormatter={(val) => `${val.toLocaleString()}億`} width={45} />
+                                                <Tooltip 
+                                                    cursor={{fill: 'transparent'}}
+                                                    labelFormatter={(label, payload) => {
+                                                        if(payload && payload[0]) {
+                                                            const d = new Date(payload[0].payload.date);
+                                                            return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} (${label})`; 
+                                                        }
+                                                        return label;
+                                                    }} 
+                                                    formatter={(val) => `${Math.round(val).toLocaleString()}億円`} 
+                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} 
+                                                />
+                                                <ReferenceLine y={0} stroke="#94a3b8" />
+                                                <Bar dataKey="flow" name="純流出入額" radius={[2, 2, 0, 0]} barSize={20}>
+                                                    {processedData.timeSeries.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={getBarColor(null, entry.flow)} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
                             </div>
                         </div>
