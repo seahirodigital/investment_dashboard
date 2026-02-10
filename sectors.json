@@ -1,0 +1,13 @@
+[
+  { "ticker": "1306.T", "name": "TOPIX (1306)", "category": "ベンチマーク" },
+  { "ticker": "^N225", "name": "日経平均株価", "category": "ベンチマーク" },
+  { "ticker": "2644.T", "name": "半導体 (2644)", "category": "グロース" },
+  { "ticker": "1615.T", "name": "銀行 (1615)", "category": "バリュー" },
+  { "ticker": "1618.T", "name": "エネ資源 (1618)", "category": "シクリカル" },
+  { "ticker": "1489.T", "name": "高配当 (1489)", "category": "バリュー" },
+  { "ticker": "2516.T", "name": "マザーズ (2516)", "category": "小型株" },
+  { "ticker": "1570.T", "name": "日経レバ (1570)", "category": "レバレッジ" },
+  { "ticker": "1357.T", "name": "日経ダブルインバ (1357)", "category": "インバース" },
+  { "ticker": "1624.T", "name": "機械 (1624)", "category": "シクリカル" },
+  { "ticker": "1621.T", "name": "医薬品 (1621)", "category": "ディフェンシブ" }
+]
