@@ -9,10 +9,32 @@ SECTORS_FILE = 'sectors.json'
 HISTORY_CSV = 'history.csv'
 OUTPUT_JSON = 'sector_data.json'
 
-# 【修正】デフォルト設定は最小限にし、sectors.jsonでの管理を基本とする
+# デフォルト設定
 DEFAULT_SECTORS = [
-    {"ticker": "^N225", "name": "日経平均", "category": "Benchmark"},
-    {"ticker": "1306.T", "name": "TOPIX", "category": "Benchmark"}
+  { "ticker": "^N225", "name": "日経平均", "category": "Benchmark" },
+  { "ticker": "1306.T", "name": "TOPIX", "category": "Benchmark" },
+  { "ticker": "^GSPC", "name": "S&P 500", "category": "Benchmark" },
+  { "ticker": "^NDX", "name": "NASDAQ 100", "category": "Benchmark" },
+  { "ticker": "213A.T", "name": "半導体(国内) 213A", "category": "Semicon" },
+  { "ticker": "2243.T", "name": "半導体(米国SOX)", "category": "Semicon" },
+  { "ticker": "346A.T", "name": "半導体(米国S&P)", "category": "Semicon" },
+  { "ticker": "1617.T", "name": "食品", "category": "Defensive" },
+  { "ticker": "1618.T", "name": "エネルギー資源", "category": "Cyclical" },
+  { "ticker": "1619.T", "name": "建設・資材", "category": "Cyclical" },
+  { "ticker": "1620.T", "name": "素材・化学", "category": "Cyclical" },
+  { "ticker": "1621.T", "name": "医薬品", "category": "Defensive" },
+  { "ticker": "1622.T", "name": "自動車・輸送機", "category": "Cyclical" },
+  { "ticker": "1623.T", "name": "鉄鋼・非鉄", "category": "Cyclical" },
+  { "ticker": "1624.T", "name": "機械", "category": "Cyclical" },
+  { "ticker": "1625.T", "name": "電機・精密", "category": "Tech" },
+  { "ticker": "1626.T", "name": "情報通信・サービス", "category": "Tech" },
+  { "ticker": "1627.T", "name": "電力・ガス", "category": "Defensive" },
+  { "ticker": "1628.T", "name": "運輸・物流", "category": "Cyclical" },
+  { "ticker": "1629.T", "name": "商社・卸売", "category": "Value" },
+  { "ticker": "1630.T", "name": "小売", "category": "Consumer" },
+  { "ticker": "1631.T", "name": "銀行", "category": "Financial" },
+  { "ticker": "1632.T", "name": "金融(除く銀行)", "category": "Financial" },
+  { "ticker": "1633.T", "name": "不動産", "category": "Financial" }
 ]
 
 def load_sectors():
@@ -24,14 +46,13 @@ def load_sectors():
         except Exception as e:
             print(f"Error loading {SECTORS_FILE}: {e}")
     
-    # ファイルがない場合は最小限のデフォルトを作成
     print(f"Using default sectors and creating {SECTORS_FILE}")
     with open(SECTORS_FILE, 'w', encoding='utf-8') as f:
         json.dump(DEFAULT_SECTORS, f, ensure_ascii=False, indent=2)
     return DEFAULT_SECTORS
 
 def load_jpx_history():
-    """既存のhistory.csvを読み込み、週次データ(金曜基準)として整形する"""
+    """既存のhistory.csvを読み込み、週次データとして整形する"""
     if not os.path.exists(HISTORY_CSV):
         print(f"Error: {HISTORY_CSV} not found. Run main.py first.")
         return None
@@ -45,10 +66,6 @@ def load_jpx_history():
         df['date'] = pd.to_datetime(df['date'])
         df = df.sort_values('date')
         df.set_index('date', inplace=True)
-        
-        # 日次データが含まれる場合を考慮し、週次（金曜日）にリサンプリングして重複を排除
-        df = df.resample('W-FRI').last().dropna()
-        
         return df
     except Exception as e:
         print(f"Error loading history.csv: {e}")
@@ -68,6 +85,7 @@ def fetch_market_data(sectors, start_date, end_date):
             print("Warning: No data fetched from Yahoo Finance.")
             return pd.DataFrame()
 
+        # カラム構造の確認とデータ抽出
         target_col = 'Adj Close'
         
         if isinstance(df.columns, pd.MultiIndex):
@@ -93,6 +111,7 @@ def fetch_market_data(sectors, start_date, end_date):
             if len(tickers) == 1 and data.columns[0] != tickers[0]:
                 data.columns = tickers
             
+        # 週次リターン(%)の計算
         returns = data.pct_change() * 100
         returns.index = pd.to_datetime(returns.index).tz_localize(None)
         
@@ -136,22 +155,33 @@ def main():
             jpx_date = row['date']
             balance = row['balance']
             
-            # 直近の過去のYahoo日付(月曜)を探す (method='pad')
-            idx_loc = market_returns.index.get_indexer([jpx_date], method='pad')[0]
+            # 【重要修正】
+            # CSVのDD部分(day)を週番号として扱う (01=1週目, 02=2週目...)
+            target_year = jpx_date.year
+            target_month = jpx_date.month
+            target_week_idx = jpx_date.day - 1  # 01->0, 02->1
             
-            if idx_loc == -1: continue
-                
-            market_date = market_returns.index[idx_loc]
+            # Yahooデータから該当する年月のデータを抽出
+            # market_returnsのインデックスはDatetimeIndex
+            mask = (market_returns.index.year == target_year) & (market_returns.index.month == target_month)
+            monthly_data = market_returns[mask].sort_index()
             
-            if abs((market_date - jpx_date).days) > 7: continue
-                
+            # 該当する週のデータが存在するか確認
+            # (例: CSVが第5週を指定したが、その月のYahooデータが4週分しかない場合などはスキップ)
+            if target_week_idx < 0 or target_week_idx >= len(monthly_data):
+                continue
+            
+            # 対象週の日付を特定し、その日のデータを取得
+            market_date = monthly_data.index[target_week_idx]
+            
+            # 値の取得 (locを使用)
             target_week_data = {}
             has_valid = False
             
             for sector in sectors:
                 ticker = sector['ticker']
                 if ticker in market_returns.columns:
-                    val = market_returns.iloc[idx_loc][ticker]
+                    val = market_returns.loc[market_date, ticker]
                     if pd.notna(val):
                         target_week_data[ticker] = round(val, 2)
                         has_valid = True
@@ -162,13 +192,15 @@ def main():
             
             if has_valid:
                 entry = {
-                    "date": jpx_date.strftime("%Y-%m-%d"),
+                    "date": jpx_date.strftime("%Y-%m-%d"), # JSONには元の擬似日付(YYYY-MM-Week)を出力
                     "flow": int(balance),
                     "returns": target_week_data
                 }
                 output["data"].append(entry)
                 processed_count += 1
+                
         except Exception as e:
+            # エラー時はスキップ
             continue
 
     if processed_count > 0:
