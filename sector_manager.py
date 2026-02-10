@@ -9,33 +9,12 @@ SECTORS_FILE = 'sectors.json'
 HISTORY_CSV = 'history.csv'
 OUTPUT_JSON = 'sector_data.json'
 
-# デフォルト設定
+# 【修正】デフォルト設定は最小限にし、sectors.jsonでの管理を基本とする
 DEFAULT_SECTORS = [
-  { "ticker": "^N225", "name": "日経平均", "category": "Benchmark" },
-  { "ticker": "1306.T", "name": "TOPIX", "category": "Benchmark" },
-  { "ticker": "^GSPC", "name": "S&P 500", "category": "Benchmark" },
-  { "ticker": "^NDX", "name": "NASDAQ 100", "category": "Benchmark" },
-  { "ticker": "213A.T", "name": "半導体(国内) 213A", "category": "Semicon" },
-  { "ticker": "2243.T", "name": "グローバル半導体", "category": "Semicon" },
-  { "ticker": "1617.T", "name": "食品", "category": "Defensive" },
-  { "ticker": "1618.T", "name": "エネルギー資源", "category": "Cyclical" },
-  { "ticker": "1619.T", "name": "建設・資材", "category": "Cyclical" },
-  { "ticker": "1620.T", "name": "素材・化学", "category": "Cyclical" },
-  { "ticker": "1621.T", "name": "医薬品", "category": "Defensive" },
-  { "ticker": "1622.T", "name": "自動車・輸送機", "category": "Cyclical" },
-  { "ticker": "1623.T", "name": "鉄鋼・非鉄", "category": "Cyclical" },
-  { "ticker": "1624.T", "name": "機械", "category": "Cyclical" },
-  { "ticker": "1625.T", "name": "電機・精密", "category": "Tech" },
-  { "ticker": "1626.T", "name": "情報通信・サービス", "category": "Tech" },
-  { "ticker": "1627.T", "name": "電力・ガス", "category": "Defensive" },
-  { "ticker": "1628.T", "name": "運輸・物流", "category": "Cyclical" },
-  { "ticker": "1629.T", "name": "商社・卸売", "category": "Value" },
-  { "ticker": "1630.T", "name": "小売", "category": "Consumer" },
-  { "ticker": "1631.T", "name": "銀行", "category": "Financial" },
-  { "ticker": "1632.T", "name": "金融(除く銀行)", "category": "Financial" },
-  { "ticker": "1633.T", "name": "不動産", "category": "Financial" }
-  { "ticker": "1568.T", "name": "TOPIXダブル(1568)","category": "Benchmark" },
+    {"ticker": "^N225", "name": "日経平均", "category": "Benchmark"},
+    {"ticker": "1306.T", "name": "TOPIX", "category": "Benchmark"}
 ]
+
 def load_sectors():
     """sectors.jsonから設定を読み込む"""
     if os.path.exists(SECTORS_FILE):
@@ -45,6 +24,7 @@ def load_sectors():
         except Exception as e:
             print(f"Error loading {SECTORS_FILE}: {e}")
     
+    # ファイルがない場合は最小限のデフォルトを作成
     print(f"Using default sectors and creating {SECTORS_FILE}")
     with open(SECTORS_FILE, 'w', encoding='utf-8') as f:
         json.dump(DEFAULT_SECTORS, f, ensure_ascii=False, indent=2)
@@ -66,8 +46,7 @@ def load_jpx_history():
         df = df.sort_values('date')
         df.set_index('date', inplace=True)
         
-        # 【修正】日次データが含まれる場合を考慮し、週次（金曜日）にリサンプリングして重複を排除
-        # balanceはその週の最終値を採用
+        # 日次データが含まれる場合を考慮し、週次（金曜日）にリサンプリングして重複を排除
         df = df.resample('W-FRI').last().dropna()
         
         return df
