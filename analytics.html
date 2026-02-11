@@ -173,11 +173,22 @@
 
                 fetch(`./sector_data.json?t=${new Date().getTime()}`)
                     .then(res => {
-                        if (!res.ok) throw new Error("データファイルが見つかりません。GitHub Actionsの完了をお待ちください。");
+                        if (!res.ok) {
+                            if (res.status === 404) {
+                                throw new Error("データファイル(sector_data.json)が未生成です。GitHub Actionsの完了をお待ちください。");
+                            }
+                            throw new Error(`データ読み込み失敗: ${res.status} ${res.statusText}`);
+                        }
                         return res.json();
                     })
                     .then(json => {
-                        if (!json.data || json.data.length === 0) throw new Error("データが空です。");
+                        if (!json.data || json.data.length === 0) {
+                            // データが空の場合でも、フォーマットとしては正しいのでエラーにはしないが、
+                            // UI側で空表示をするためにstateにはセットする
+                            setRawData(json);
+                            setLoading(false);
+                            return;
+                        }
                         setRawData(json);
                         
                         const today = new Date();
@@ -199,7 +210,7 @@
             }, []);
 
             const allStats = useMemo(() => {
-                if (!rawData || !startDate || !endDate) return null;
+                if (!rawData || !rawData.data || !startDate || !endDate) return null;
                 const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
                 if (filtered.length === 0) return [];
 
@@ -303,7 +314,7 @@
 
             const hasData = processedData && processedData.chartData.length > 0;
             const totalFlowDisplay = processedData ? processedData.totalFlow : 0;
-            const generatedAt = rawData ? rawData.metadata.generated_at : "";
+            const generatedAt = rawData && rawData.metadata ? rawData.metadata.generated_at : "";
 
             return (
                 <div className="min-h-screen bg-[#f8fafc] pb-20">
