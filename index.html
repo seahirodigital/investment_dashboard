@@ -235,12 +235,12 @@
             event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
         };
 
-        const EasyMDEEditor = ({ value, onChange, uploadConfig, onSave }) => {
+        const EasyMDEEditor = ({ value, onChange, uploadConfig, onSave, isVisible }) => {
             const textareaRef = useRef(null);
             const mdeRef = useRef(null);
             const onSaveRef = useRef(onSave);
             const isInitializedRef = useRef(false);
-
+        
             useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
             
             useEffect(() => {
@@ -320,8 +320,19 @@
                 } 
             }, [value]);
             
+            // 表示状態が変わったときにrefreshを実行
+            useEffect(() => {
+                if (isVisible && mdeRef.current && mdeRef.current.codemirror) {
+                    setTimeout(() => {
+                        mdeRef.current.codemirror.refresh();
+                    }, 10);
+                }
+            }, [isVisible]);
+            
             return <textarea ref={textareaRef} />;
         };
+
+        
 
         const QuotesManager = ({ quotes, setQuotes, prefillBody, uploadConfig }) => {
             const [input, setInput] = useState("");
@@ -829,16 +840,16 @@
                                         </div>
                                     </div>
                                     <button onClick={() => setEditData({ ...editData, important: !editData.important })} className={`ml-4 p-1.5 rounded-lg border transition-colors ${editData.important ? 'bg-purple-100 border-[#7C4DFF] text-[#7C4DFF]' : 'bg-white border-slate-200 text-slate-300 hover:text-slate-500'}`} title="Mark as Important"><Icon name="Bookmark" size={16} fill={editData.important ? "#7C4DFF" : "none"} /></button>
-                                </div>
+                                </div>        
                                 <div className="flex-1 overflow-hidden relative">
                                     <div style={{ display: pcDiaryTab === 'diary' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
-                                        <EasyMDEEditor key="diary-editor" value={editData.diary} onChange={(val) => setEditData({ ...editData, diary: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                        <EasyMDEEditor key="diary-editor" value={editData.diary} onChange={(val) => setEditData({ ...editData, diary: val })} uploadConfig={uploadConfig} onSave={handleSave} isVisible={pcDiaryTab === 'diary'} />
                                     </div>
                                     <div style={{ display: pcDiaryTab === 'market' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
-                                        <EasyMDEEditor key="market-editor" value={editData.market} onChange={(val) => setEditData({ ...editData, market: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                        <EasyMDEEditor key="market-editor" value={editData.market} onChange={(val) => setEditData({ ...editData, market: val })} uploadConfig={uploadConfig} onSave={handleSave} isVisible={pcDiaryTab === 'market'} />
                                     </div>
                                     <div style={{ display: pcDiaryTab === 'info' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
-                                        <EasyMDEEditor key="info-editor" value={editData.info} onChange={(val) => setEditData({ ...editData, info: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                        <EasyMDEEditor key="info-editor" value={editData.info} onChange={(val) => setEditData({ ...editData, info: val })} uploadConfig={uploadConfig} onSave={handleSave} isVisible={pcDiaryTab === 'info'} />
                                     </div>
                                 </div>
                                 {youtubeThumbnails.length > 0 && (<div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0 custom-scrollbar">{youtubeThumbnails.map((id, idx) => (<div key={idx} className="relative cursor-pointer group shrink-0 aspect-video h-full rounded-md overflow-hidden bg-black" onClick={() => window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')}><img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt="Thumbnail" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="bg-black/50 p-1 rounded-full"><div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[8px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div></div></div></div>))}</div>)}
