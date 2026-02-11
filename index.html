@@ -238,12 +238,16 @@
         const EasyMDEEditor = ({ value, onChange, uploadConfig, onSave }) => {
             const textareaRef = useRef(null);
             const mdeRef = useRef(null);
-            const onSaveRef = useRef(onSave); 
+            const onSaveRef = useRef(onSave);
+            const isInitializedRef = useRef(false);
 
             useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
             
             useEffect(() => {
-                if (!textareaRef.current) return;
+                if (!textareaRef.current || isInitializedRef.current) return;
+                
+                isInitializedRef.current = true;
+                
                 mdeRef.current = new EasyMDE({
                     element: textareaRef.current, initialValue: value, spellChecker: false, status: false,
                     toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "side-by-side", "fullscreen"],
@@ -251,6 +255,7 @@
                     previewRender: function(plainText) { return window.marked ? window.marked.parse(plainText) : plainText; },
                     extraKeys: { "Ctrl-S": function(cm) { if (onSaveRef.current) onSaveRef.current(); }, "Cmd-S": function(cm) { if (onSaveRef.current) onSaveRef.current(); } }
                 });
+                
                 mdeRef.current.codemirror.on("change", () => onChange(mdeRef.current.value()));
                 mdeRef.current.codemirror.on("paste", async (cm, event) => {
                     const items = (event.clipboardData || event.originalEvent.clipboardData).items;
@@ -292,9 +297,29 @@
                         }
                     }
                 });
-                return () => { mdeRef.current.toTextArea(); mdeRef.current = null; };
+                
+                return () => { 
+                    if (mdeRef.current && textareaRef.current) {
+                        try {
+                            mdeRef.current.toTextArea();
+                        } catch (e) {
+                            console.warn("EasyMDE cleanup warning:", e);
+                        }
+                    }
+                    mdeRef.current = null; 
+                    isInitializedRef.current = false;
+                };
             }, []);
-            useEffect(() => { if (mdeRef.current && value !== mdeRef.current.value()) { mdeRef.current.value(value); } }, [value]);
+            
+            useEffect(() => { 
+                if (mdeRef.current && value !== mdeRef.current.value()) { 
+                    mdeRef.current.value(value); 
+                    if (mdeRef.current.codemirror) {
+                        mdeRef.current.codemirror.refresh();
+                    }
+                } 
+            }, [value]);
+            
             return <textarea ref={textareaRef} />;
         };
 
@@ -806,23 +831,23 @@
                                     <button onClick={() => setEditData({ ...editData, important: !editData.important })} className={`ml-4 p-1.5 rounded-lg border transition-colors ${editData.important ? 'bg-purple-100 border-[#7C4DFF] text-[#7C4DFF]' : 'bg-white border-slate-200 text-slate-300 hover:text-slate-500'}`} title="Mark as Important"><Icon name="Bookmark" size={16} fill={editData.important ? "#7C4DFF" : "none"} /></button>
                                 </div>
                                 <div className="flex-1 overflow-hidden relative">
-                                    {pcDiaryTab === 'diary' && <EasyMDEEditor value={editData.diary} onChange={(val) => setEditData({ ...editData, diary: val })} uploadConfig={uploadConfig} onSave={handleSave} />}
-                                    {pcDiaryTab === 'market' && <EasyMDEEditor value={editData.market} onChange={(val) => setEditData({ ...editData, market: val })} uploadConfig={uploadConfig} onSave={handleSave} />}
-                                    {pcDiaryTab === 'info' && <EasyMDEEditor value={editData.info} onChange={(val) => setEditData({ ...editData, info: val })} uploadConfig={uploadConfig} onSave={handleSave} />}
+                                    {pcDiaryTab === 'diary' && <EasyMDEEditor key="diary-editor" value={editData.diary} onChange={(val) => setEditData({ ...editData, diary: val })} uploadConfig={uploadConfig} onSave={handleSave} />}
+                                    {pcDiaryTab === 'market' && <EasyMDEEditor key="market-editor" value={editData.market} onChange={(val) => setEditData({ ...editData, market: val })} uploadConfig={uploadConfig} onSave={handleSave} />}
+                                    {pcDiaryTab === 'info' && <EasyMDEEditor key="info-editor" value={editData.info} onChange={(val) => setEditData({ ...editData, info: val })} uploadConfig={uploadConfig} onSave={handleSave} />}
                                 </div>
                                 {youtubeThumbnails.length > 0 && (<div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0 custom-scrollbar">{youtubeThumbnails.map((id, idx) => (<div key={idx} className="relative cursor-pointer group shrink-0 aspect-video h-full rounded-md overflow-hidden bg-black" onClick={() => window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')}><img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt="Thumbnail" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="bg-black/50 p-1 rounded-full"><div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[8px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div></div></div></div>))}</div>)}
                             </div>
                             {/* スマホ版: 日記タブ */}
                             <div className={`flex-1 bg-white overflow-hidden p-2 flex-col lg:hidden ${mobileModalTab === 'diary' ? 'flex' : 'hidden'}`}>
-                                <EasyMDEEditor value={editData.diary} onChange={(val) => setEditData({ ...editData, diary: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                <EasyMDEEditor key="mobile-diary-editor" value={editData.diary} onChange={(val) => setEditData({ ...editData, diary: val })} uploadConfig={uploadConfig} onSave={handleSave} />
                             </div>
                             {/* Mobile市況タブ */}
                             <div className={`flex-1 bg-white overflow-hidden p-2 flex-col lg:hidden ${mobileModalTab === 'market' ? 'flex' : 'hidden'}`}>
-                                <EasyMDEEditor value={editData.market} onChange={(val) => setEditData({ ...editData, market: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                <EasyMDEEditor key="mobile-market-editor" value={editData.market} onChange={(val) => setEditData({ ...editData, market: val })} uploadConfig={uploadConfig} onSave={handleSave} />
                             </div>
                             {/* Mobile情報タブ */}
                             <div className={`flex-1 bg-white overflow-hidden p-2 flex-col lg:hidden ${mobileModalTab === 'info' ? 'flex' : 'hidden'}`}>
-                                <EasyMDEEditor value={editData.info} onChange={(val) => setEditData({ ...editData, info: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                <EasyMDEEditor key="mobile-info-editor" value={editData.info} onChange={(val) => setEditData({ ...editData, info: val })} uploadConfig={uploadConfig} onSave={handleSave} />
                             </div>
                         </div><div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0"><button onClick={handleSaveAndQuote} className="px-4 py-2 bg-slate-100 text-[#7C4DFF] border border-[#7C4DFF] hover:bg-purple-50 rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Send" size={16} className="hidden md:inline" /><span className="md:hidden">格言</span><span className="hidden md:inline">格言行き</span></button><button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-xs md:text-sm font-bold transition-colors">キャンセル</button><button onClick={handleSave} className="px-6 py-2 bg-[#7C4DFF] text-white hover:bg-[#651FFF] rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Check" size={16} className="hidden md:inline" /> 保存</button></div></div></div>
                     )}
