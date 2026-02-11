@@ -42,7 +42,6 @@ jobs:
           python main.py
           
           # 2. セクター分析データの生成 (sector_data.json生成)
-          # history.csvの存在を確認してから実行
           if [ -f history.csv ]; then
             python sector_manager.py
           else
@@ -52,8 +51,11 @@ jobs:
       - name: Check for changes
         id: check_changes
         run: |
-          # sector_data.json も監視対象に追加
-          if git diff --quiet history.csv trend.png sector_data.json; then
+          # 新規ファイル(sector_data.json等)も含めて全ての変更をステージングして確認
+          git add -A
+          
+          # ステージングエリアに差分があるか確認
+          if git diff --staged --quiet; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "No changes detected"
           else
@@ -67,8 +69,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # sector_data.json もコミット対象に追加
-          git add history.csv trend.png sector_data.json
+          # すでに check_changes で git add -A しているので、ここではコミットのみ行う
           git commit -m "Update JPX & Sector data: $(date)"
           git push origin HEAD
       
@@ -76,21 +77,22 @@ jobs:
         run: |
           mkdir -p deploy
           
-          # 単一ファイルのコピー
-          [ -f index.html ] && cp index.html deploy/
-          [ -f advanced.html ] && cp advanced.html deploy/
-          [ -f analytics.html ] && cp analytics.html deploy/  # 追加
-          [ -f history.csv ] && cp history.csv deploy/
-          [ -f trend.png ] && cp trend.png deploy/
-          [ -f sector_data.json ] && cp sector_data.json deploy/  # 追加
+          # ファイルの存在確認とコピー（ログ出力付き）
+          for file in index.html advanced.html analytics.html history.csv trend.png sector_data.json; do
+            if [ -f "$file" ]; then
+              cp "$file" deploy/
+              echo "✅ Copied $file to deploy/"
+            else
+              echo "⚠️ Warning: $file not found"
+            fi
+          done
           
-          # ▼▼▼ フォルダごとのコピーを追加 (ここが重要) ▼▼▼
+          # フォルダコピー
           [ -d css ] && cp -r css deploy/
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
-          # ▲▲▲ 追加終わり ▲▲▲
           
-          echo "Files prepared for deployment"
+          echo "Deploy directory content:"
           ls -laR deploy/
       
       - name: Deploy to GitHub Pages

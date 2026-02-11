@@ -88,23 +88,37 @@ def fetch_market_data(sectors, start_date, end_date):
         # カラム構造の確認とデータ抽出
         target_col = 'Adj Close'
         
+        # yfinanceのバージョンやデータ数によってカラム構造が変わるための対応
+        data = None
         if isinstance(df.columns, pd.MultiIndex):
+            # MultiIndexの場合 (Price, Ticker) または (Ticker, Price)
             if target_col in df.columns.get_level_values(0):
                 data = df[target_col]
             elif 'Close' in df.columns.get_level_values(0):
                 print("Note: 'Adj Close' not found, using 'Close' instead.")
                 data = df['Close']
             else:
-                print(f"Error: Neither 'Adj Close' nor 'Close' found. Columns: {df.columns}")
-                return pd.DataFrame()
+                # カラムレベルの入替や探索
+                print(f"Note: Complex MultiIndex columns detected. Levels: {df.columns.levels}")
+                try:
+                    # 試行: tickerがlevel 0にある場合
+                    data = df.xs(target_col, level=1, axis=1)
+                except:
+                    print(f"Error: Neither 'Adj Close' nor 'Close' found properly. Columns: {df.columns}")
+                    return pd.DataFrame()
         else:
+            # Single Indexの場合
             if target_col in df.columns:
                 data = df[target_col]
             elif 'Close' in df.columns:
                 print("Note: 'Adj Close' not found, using 'Close' instead.")
                 data = df['Close']
             else:
+                # 1銘柄だけでカラム名がTickerになっている場合などのフォールバック
                 data = df 
+
+        if data is None or data.empty:
+            return pd.DataFrame()
 
         if isinstance(data, pd.Series):
             data = data.to_frame()
@@ -126,18 +140,21 @@ def main():
     
     sectors = load_sectors()
     jpx_df = load_jpx_history()
+    
     if jpx_df is None:
+        print("JPX history data is missing. Exiting.")
         return
 
     # 期間設定
     start_date = jpx_df.index.min() - timedelta(days=14)
     end_date = datetime.now() + timedelta(days=1)
 
+    print(f"Analysis period: {start_date.date()} to {end_date.date()}")
     market_returns = fetch_market_data(sectors, start_date, end_date)
     
+    # マーケットデータが空でも、空のJSONを出力するために処理は続行させる
     if market_returns.empty:
-        print("Skipping analysis due to missing market data.")
-        return
+        print("Warning: Market data is empty. Generating empty dataset.")
     
     output = {
         "metadata": {
@@ -147,68 +164,75 @@ def main():
         "data": []
     }
 
-    jpx_reset = jpx_df.reset_index()
-    processed_count = 0
-    
-    for _, row in jpx_reset.iterrows():
-        try:
-            jpx_date = row['date']
-            balance = row['balance']
-            
-            # 【重要修正】
-            # CSVのDD部分(day)を週番号として扱う (01=1週目, 02=2週目...)
-            target_year = jpx_date.year
-            target_month = jpx_date.month
-            target_week_idx = jpx_date.day - 1  # 01->0, 02->1
-            
-            # Yahooデータから該当する年月のデータを抽出
-            # market_returnsのインデックスはDatetimeIndex
-            mask = (market_returns.index.year == target_year) & (market_returns.index.month == target_month)
-            monthly_data = market_returns[mask].sort_index()
-            
-            # 該当する週のデータが存在するか確認
-            # (例: CSVが第5週を指定したが、その月のYahooデータが4週分しかない場合などはスキップ)
-            if target_week_idx < 0 or target_week_idx >= len(monthly_data):
-                continue
-            
-            # 対象週の日付を特定し、その日のデータを取得
-            market_date = monthly_data.index[target_week_idx]
-            
-            # 値の取得 (locを使用)
-            target_week_data = {}
-            has_valid = False
-            
-            for sector in sectors:
-                ticker = sector['ticker']
-                if ticker in market_returns.columns:
-                    val = market_returns.loc[market_date, ticker]
-                    if pd.notna(val):
-                        target_week_data[ticker] = round(val, 2)
-                        has_valid = True
+    if not market_returns.empty:
+        jpx_reset = jpx_df.reset_index()
+        processed_count = 0
+        
+        for _, row in jpx_reset.iterrows():
+            try:
+                jpx_date = row['date']
+                balance = row['balance']
+                
+                # CSVのDD部分(day)を週番号として扱う (01=1週目, 02=2週目...)
+                target_year = jpx_date.year
+                target_month = jpx_date.month
+                target_week_idx = jpx_date.day - 1  # 01->0, 02->1
+                
+                # Yahooデータから該当する年月のデータを抽出
+                mask = (market_returns.index.year == target_year) & (market_returns.index.month == target_month)
+                monthly_data = market_returns[mask].sort_index()
+                
+                # 該当する週のデータが存在するか確認
+                if target_week_idx < 0 or target_week_idx >= len(monthly_data):
+                    continue
+                
+                # 対象週の日付を特定し、その日のデータを取得
+                market_date = monthly_data.index[target_week_idx]
+                
+                # 値の取得
+                target_week_data = {}
+                has_valid = False
+                
+                for sector in sectors:
+                    ticker = sector['ticker']
+                    if ticker in market_returns.columns:
+                        val = market_returns.loc[market_date, ticker]
+                        if pd.notna(val):
+                            target_week_data[ticker] = round(val, 2)
+                            has_valid = True
+                        else:
+                            target_week_data[ticker] = 0.0
                     else:
                         target_week_data[ticker] = 0.0
-                else:
-                    target_week_data[ticker] = 0.0
-            
-            if has_valid:
-                entry = {
-                    "date": jpx_date.strftime("%Y-%m-%d"), # JSONには元の擬似日付(YYYY-MM-Week)を出力
-                    "flow": int(balance),
-                    "returns": target_week_data
-                }
-                output["data"].append(entry)
-                processed_count += 1
                 
-        except Exception as e:
-            # エラー時はスキップ
-            continue
+                if has_valid:
+                    entry = {
+                        "date": jpx_date.strftime("%Y-%m-%d"), # JSONには元の擬似日付(YYYY-MM-Week)を出力
+                        "flow": int(balance),
+                        "returns": target_week_data
+                    }
+                    output["data"].append(entry)
+                    processed_count += 1
+                    
+            except Exception as e:
+                # 個別の行エラーはスキップして続行
+                continue
+    else:
+        processed_count = 0
 
-    if processed_count > 0:
+    # 【重要修正】データ件数が0でも必ずJSONファイルを生成する
+    # これによりHTML側で404エラーになるのを防ぐ
+    try:
         with open(OUTPUT_JSON, 'w', encoding='utf-8') as f:
             json.dump(output, f, ensure_ascii=False, indent=2)
-        print(f"Successfully generated {OUTPUT_JSON} with {processed_count} records.")
-    else:
-        print("No records processed.")
+        
+        if processed_count > 0:
+            print(f"Successfully generated {OUTPUT_JSON} with {processed_count} records.")
+        else:
+            print(f"Warning: Generated {OUTPUT_JSON} with 0 records (No matched data).")
+            
+    except Exception as e:
+        print(f"Error saving JSON: {e}")
 
 if __name__ == "__main__":
     main()

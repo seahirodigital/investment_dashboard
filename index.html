@@ -235,15 +235,19 @@
             event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
         };
 
-        const EasyMDEEditor = ({ value, onChange, uploadConfig, onSave }) => {
+        const EasyMDEEditor = ({ value, onChange, uploadConfig, onSave, isVisible }) => {
             const textareaRef = useRef(null);
             const mdeRef = useRef(null);
-            const onSaveRef = useRef(onSave); 
-
+            const onSaveRef = useRef(onSave);
+            const isInitializedRef = useRef(false);
+        
             useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
             
             useEffect(() => {
-                if (!textareaRef.current) return;
+                if (!textareaRef.current || isInitializedRef.current) return;
+                
+                isInitializedRef.current = true;
+                
                 mdeRef.current = new EasyMDE({
                     element: textareaRef.current, initialValue: value, spellChecker: false, status: false,
                     toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "side-by-side", "fullscreen"],
@@ -251,6 +255,7 @@
                     previewRender: function(plainText) { return window.marked ? window.marked.parse(plainText) : plainText; },
                     extraKeys: { "Ctrl-S": function(cm) { if (onSaveRef.current) onSaveRef.current(); }, "Cmd-S": function(cm) { if (onSaveRef.current) onSaveRef.current(); } }
                 });
+                
                 mdeRef.current.codemirror.on("change", () => onChange(mdeRef.current.value()));
                 mdeRef.current.codemirror.on("paste", async (cm, event) => {
                     const items = (event.clipboardData || event.originalEvent.clipboardData).items;
@@ -292,11 +297,42 @@
                         }
                     }
                 });
-                return () => { mdeRef.current.toTextArea(); mdeRef.current = null; };
+                
+                return () => { 
+                    if (mdeRef.current && textareaRef.current) {
+                        try {
+                            mdeRef.current.toTextArea();
+                        } catch (e) {
+                            console.warn("EasyMDE cleanup warning:", e);
+                        }
+                    }
+                    mdeRef.current = null; 
+                    isInitializedRef.current = false;
+                };
             }, []);
-            useEffect(() => { if (mdeRef.current && value !== mdeRef.current.value()) { mdeRef.current.value(value); } }, [value]);
+            
+            useEffect(() => { 
+                if (mdeRef.current && value !== mdeRef.current.value()) { 
+                    mdeRef.current.value(value); 
+                    if (mdeRef.current.codemirror) {
+                        mdeRef.current.codemirror.refresh();
+                    }
+                } 
+            }, [value]);
+            
+            // 表示状態が変わったときにrefreshを実行
+            useEffect(() => {
+                if (isVisible && mdeRef.current && mdeRef.current.codemirror) {
+                    setTimeout(() => {
+                        mdeRef.current.codemirror.refresh();
+                    }, 10);
+                }
+            }, [isVisible]);
+            
             return <textarea ref={textareaRef} />;
         };
+
+        
 
         const QuotesManager = ({ quotes, setQuotes, prefillBody, uploadConfig }) => {
             const [input, setInput] = useState("");
@@ -455,7 +491,18 @@
             const [isImportModalOpen, setIsImportModalOpen] = useState(false);
             const [isSettingsOpen, setIsSettingsOpen] = useState(false);
             const [isMenuOpen, setIsMenuOpen] = useState(false);
-            const [editData, setEditData] = useState({ event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', important: false, details: [] });
+            const [editData, setEditData] = useState({ 
+                event: '', 
+                stocks: 0, 
+                margin: 0, 
+                foreign: 0, 
+                cfd: 0, 
+                diary: '', 
+                market: '', 
+                info: '', 
+                important: false, 
+                details: [] 
+            });
             const [importCategory, setImportCategory] = useState('stocks');
             const [dragActive, setDragActive] = useState(false);
             
@@ -465,6 +512,7 @@
             const [repoName, setRepoName] = useState(localStorage.getItem('repo_name') || 'investment_dashboard');
             
             const [mobileModalTab, setMobileModalTab] = useState('diary');
+            const [pcDiaryTab, setPcDiaryTab] = useState('diary'); // PC版タブ管理: 'diary' | 'market' | 'info'
             const [chartMode, setChartMode] = useState('daily');
             const [searchQuery, setSearchQuery] = useState('');
             const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -498,9 +546,12 @@
                 if (!searchQuery.trim()) return [];
                 const query = searchQuery.toLowerCase();
                 return Object.entries(historyData).filter(([key, val]) => {
-                        const noteMatch = val.note && val.note.toLowerCase().includes(query);
+                        const diaryMatch = val.diary && val.diary.toLowerCase().includes(query);
+                        const marketMatch = val.market && val.market.toLowerCase().includes(query);
+                        const infoMatch = val.info && val.info.toLowerCase().includes(query);
+                        const noteMatch = val.note && val.note.toLowerCase().includes(query); // Legacy check
                         const eventMatch = val.event && val.event.toLowerCase().includes(query);
-                        return noteMatch || eventMatch;
+                        return diaryMatch || marketMatch || infoMatch || noteMatch || eventMatch;
                     }).sort((a, b) => new Date(b[0]) - new Date(a[0])).map(([key, val]) => ({ date: key, ...val }));
             }, [searchQuery, historyData]);
             
@@ -510,7 +561,9 @@
                 const matches = []; let match; while ((match = regExp.exec(text)) !== null) { if (!matches.includes(match[1])) matches.push(match[1]); }
                 return matches; 
             };
-            const youtubeThumbnails = useMemo(() => extractYoutubeIds(editData.note), [editData.note]);
+            const diaryYoutubeThumbnails = useMemo(() => extractYoutubeIds(editData.diary), [editData.diary]);
+            const marketYoutubeThumbnails = useMemo(() => extractYoutubeIds(editData.market), [editData.market]);
+            const infoYoutubeThumbnails = useMemo(() => extractYoutubeIds(editData.info), [editData.info]);
 
             const stats = useMemo(() => {
                 const currentYearKey = currentDate.getFullYear().toString();
@@ -601,7 +654,7 @@
                 }
                 const newHistory = { ...historyData }; let count = 0;
                 Object.entries(detailDataMap).forEach(([key, newDetailsList]) => {
-                    if (!newHistory[key]) newHistory[key] = { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', important: false, details: [] };
+                    if (!newHistory[key]) newHistory[key] = { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, diary: '', market: '', info: '', important: false, details: [] };
                     const existingDetails = newHistory[key].details || [];
                     let addedAmount = 0; const finalNewDetails = [];
                     newDetailsList.forEach(newItem => {
@@ -649,13 +702,48 @@
             const openModal = (dateOrStr) => {
                 if (!dateOrStr) return;
                 let date; if (typeof dateOrStr === 'string') { date = new Date(dateOrStr); } else { date = dateOrStr; }
-                const key = getDateKey(date); const data = historyData[key] || { event: '', stocks: 0, margin: 0, foreign: 0, cfd: 0, note: '', important: false, details: [] };
-                if (!data.note) data.note = `# ${key.replace(/-/g, '/')}`;
-                setSelectedDate(date); setEditData({ ...data }); setMobileModalTab('diary'); setIsModalOpen(true); setSearchQuery(''); 
+                const key = getDateKey(date);
+                const data = historyData[key] || { 
+                    event: '', 
+                    stocks: 0, 
+                    margin: 0, 
+                    foreign: 0, 
+                    cfd: 0, 
+                    diary: '', 
+                    market: '', 
+                    info: '', 
+                    important: false, 
+                    details: [] 
+                };
+                
+                // 後方互換性: 旧データの`note`を`diary`に移行
+                if (data.note && !data.diary) {
+                    data.diary = data.note;
+                }
+                
+                // デフォルト日付設定
+                if (!data.diary) data.diary = `# ${key.replace(/-/g, '/')}`;
+                if (!data.market) data.market = `# ${key.replace(/-/g, '/')}`;
+                if (!data.info) data.info = `# ${key.replace(/-/g, '/')}`;
+                
+                setSelectedDate(date); 
+                setEditData({ ...data }); 
+                setMobileModalTab('diary'); 
+                setPcDiaryTab('diary');
+                setIsModalOpen(true); 
+                setSearchQuery(''); 
             };
             const handleSave = () => { const key = getDateKey(selectedDate); updateHistoryData({ ...historyData, [key]: editData }); setIsModalOpen(false); };
-            const handleSaveAndQuote = () => { handleSave(); if (onMoveToQuotes) onMoveToQuotes(editData.note); };
+            const handleSaveAndQuote = () => { handleSave(); if (onMoveToQuotes) onMoveToQuotes(editData.diary); };
             const handleDeleteEvent = (e, date) => { e.stopPropagation(); if (!window.confirm("イベントを削除しますか？")) return; const key = getDateKey(date); const current = historyData[key]; if (current) { const newData = { ...historyData, [key]: { ...current, event: '' } }; updateHistoryData(newData); } };
+
+            const getDatePrefix = () => {
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                return `${y}${m}${d}`;
+            };
 
             const handleExportMD = () => {
                 const year = currentDate.getFullYear(); const month = currentDate.getMonth() + 1;
@@ -663,16 +751,39 @@
                 const sortedKeys = Object.keys(historyData).filter(k => k.startsWith(getMonthKey(currentDate))).sort();
                 sortedKeys.forEach(key => {
                     const d = historyData[key]; const total = (d.stocks || 0) + (d.margin || 0) + (d.foreign || 0) + (d.cfd || 0);
-                    if (total === 0 && !d.note && !d.event) return;
-                    md += `## ${key} ${d.event ? `(${d.event})` : ''}\n### 収支データ\n- 現物: ${d.stocks || 0} / 信用: ${d.margin || 0} / 米国: ${d.foreign || 0} / CFD: ${d.cfd || 0}\n### 振り返り\n${d.note || '（記載なし）'}\n\n`;
+                    if (total === 0 && !d.diary && !d.market && !d.info && !d.note && !d.event) return;
+                    md += `## ${key} ${d.event ? `(${d.event})` : ''}\n`;
+                    md += `### 収支データ\n- 現物: ${d.stocks || 0} / 信用: ${d.margin || 0} / 米国: ${d.foreign || 0} / CFD: ${d.cfd || 0}\n`;
+                    if (d.diary || d.note) { md += `### 日記\n${d.diary || d.note || '（記載なし）'}\n\n`; }
+                    if (d.market) { md += `### 市況\n${d.market}\n\n`; }
+                    if (d.info) { md += `### 情報\n${d.info}\n\n`; }
+                    md += `\n`;
                 });
-                const blob = new Blob([md], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `investment_diary_${year}_${month}.md`; a.click(); setIsMenuOpen(false); 
+                const blob = new Blob([md], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; 
+                const datePrefix = getDatePrefix();
+                a.download = `${datePrefix}_investment_diary_${year}_${month}.md`; 
+                a.click(); setIsMenuOpen(false); 
             };
-            const handleExportCSV = () => { const backupData = { history: historyData, links: customLinks, quotes: quotes }; const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `market_dashboard_full_backup.json`; a.click(); setIsMenuOpen(false); };
+            const handleExportCSV = () => { 
+                const backupData = { history: historyData, links: customLinks, quotes: quotes }; 
+                const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' }); 
+                const url = URL.createObjectURL(blob); 
+                const a = document.createElement('a'); a.href = url; 
+                const datePrefix = getDatePrefix();
+                a.download = `${datePrefix}_market_dashboard_full_backup.json`; 
+                a.click(); setIsMenuOpen(false); 
+            };
 
             const DayCell = ({ date }) => {
                 if (!date) return <div className="cal-cell bg-slate-50"></div>;
-                const key = getDateKey(date); const data = historyData[key]; const hasNote = data && data.note && data.note.trim().length > 0; const hasEvent = data && data.event && data.event.trim().length > 0; const isImportant = data && data.important; const isToday = getDateKey(new Date()) === key;
+                const key = getDateKey(date); const data = historyData[key]; 
+                const hasNote = data && (
+                    (data.diary && data.diary.trim().length > 0) ||
+                    (data.market && data.market.trim().length > 0) ||
+                    (data.info && data.info.trim().length > 0) ||
+                    (data.note && data.note.trim().length > 0)
+                );
+                const hasEvent = data && data.event && data.event.trim().length > 0; const isImportant = data && data.important; const isToday = getDateKey(new Date()) === key;
                 let tooltipContent = null;
                 if (data && data.details && data.details.length > 0) {
                     tooltipContent = (
@@ -705,7 +816,7 @@
                         <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                             <div className="flex items-center gap-4"><h2 className="text-sm md:text-xl font-bold text-[#334155] flex items-center gap-2"><Icon name="Calendar" size={20} />{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h2><div className="flex gap-1"><button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronLeft" size={20} /></button><button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white hover:shadow rounded">Today</button><button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-white hover:shadow rounded text-slate-500"><Icon name="ChevronRight" size={20} /></button></div></div>
                             <div className="flex gap-2 relative">
-                                <div className="relative"><div className={`flex items-center gap-1 border rounded px-2 py-1.5 bg-white transition-all shadow-sm ${isSearchFocused ? 'border-[#7C4DFF] w-64' : 'border-slate-300 w-32 md:w-48'}`}><Icon name="Search" size={14} className="text-slate-400" /><input type="text" placeholder="日記を検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsSearchFocused(true)} className="w-full text-xs outline-none bg-transparent" />{searchQuery && <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={12} /></button>}</div>{searchQuery && (<div className="search-results-dropdown">{searchResults.length === 0 ? (<div className="p-3 text-xs text-slate-500 text-center">一致するデータはありません</div>) : (<ul>{searchResults.map((res) => (<li key={res.date} onClick={() => openModal(res.date)} className="p-2 border-b border-slate-100 hover:bg-purple-50 cursor-pointer flex flex-col gap-1"><div className="flex justify-between items-center"><span className="text-xs font-bold text-[#7C4DFF]">{res.date}</span>{res.event && <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-600 truncate max-w-[100px]">{res.event}</span>}</div>{res.note && <div className="text-xs text-slate-500 truncate">{res.note.replace(/[#\-*]/g, '').trim()}</div>}</li>))}</ul>)}</div>)}</div>
+                                <div className="relative"><div className={`flex items-center gap-1 border rounded px-2 py-1.5 bg-white transition-all shadow-sm ${isSearchFocused ? 'border-[#7C4DFF] w-64' : 'border-slate-300 w-32 md:w-48'}`}><Icon name="Search" size={14} className="text-slate-400" /><input type="text" placeholder="日記を検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsSearchFocused(true)} className="w-full text-xs outline-none bg-transparent" />{searchQuery && <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={12} /></button>}</div>{searchQuery && (<div className="search-results-dropdown">{searchResults.length === 0 ? (<div className="p-3 text-xs text-slate-500 text-center">一致するデータはありません</div>) : (<ul>{searchResults.map((res) => (<li key={res.date} onClick={() => openModal(res.date)} className="p-2 border-b border-slate-100 hover:bg-purple-50 cursor-pointer flex flex-col gap-1"><div className="flex justify-between items-center"><span className="text-xs font-bold text-[#7C4DFF]">{res.date}</span>{res.event && <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-600 truncate max-w-[100px]">{res.event}</span>}</div>{(res.diary || res.market || res.info) && <div className="text-xs text-slate-500 truncate">{(res.diary || res.market || res.info).replace(/[#\-*]/g, '').trim()}</div>}</li>))}</ul>)}</div>)}</div>
                                 <div className="relative"><button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${isMenuOpen ? 'bg-purple-50 border-[#7C4DFF] text-[#7C4DFF]' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`} title="設定・メニュー"><Icon name="Settings" size={18} /></button>{isMenuOpen && (<div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1 animate-fade-in-up overflow-hidden"><div className="px-3 py-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Actions</div><button onClick={() => { setIsMenuOpen(false); setIsImportModalOpen(true); }} className="w-full text-left px-4 py-2.5 text-xs hover:bg-purple-50 flex items-center gap-3 text-slate-600 transition-colors"><div className="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-blue-500"><Icon name="FileUp" size={12} /></div>インポート (CSV/JSON)</button><button onClick={() => { handleExportMD(); }} className="w-full text-left px-4 py-2.5 text-xs hover:bg-purple-50 flex items-center gap-3 text-slate-600 transition-colors"><div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center text-green-500"><Icon name="FileText" size={12} /></div>MD表記出力 (レポート)</button><button onClick={() => { handleExportCSV(); }} className="w-full text-left px-4 py-2.5 text-xs hover:bg-purple-50 flex items-center gap-3 text-slate-600 transition-colors"><div className="w-5 h-5 rounded-full bg-orange-50 flex items-center justify-center text-orange-500"><Icon name="Database" size={12} /></div>バックアップ (JSON)</button><div className="my-1 border-t border-slate-100"></div><button onClick={() => { setIsMenuOpen(false); setIsSettingsOpen(true); }} className="w-full text-left px-4 py-2.5 text-xs hover:bg-purple-50 flex items-center gap-3 text-slate-600 transition-colors"><div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><Icon name="Settings" size={12} /></div>同期設定 (GitHub)</button></div>)}</div>
                             </div>
                         </div>
@@ -719,7 +830,53 @@
                         <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={dailyChartData} margin={{ top: 5, right: 30, left: -10, bottom: 5 }} barCategoryGap="40%"><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey={chartMode === 'daily' ? "day" : "name"} tickLine={false} axisLine={false} tick={<CustomAxisTick />} /><YAxis tickFormatter={(val) => `${(val / 10000).toFixed(0)}万`} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} width={40} /><Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(val) => [`¥${val.toLocaleString()}`, "損益"]} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><ReferenceLine y={0} stroke="#94a3b8" /><Bar dataKey="total" radius={[4, 4, 0, 0]}>{dailyChartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.total >= 0 ? '#7C4DFF' : '#FF4081'} />))}</Bar></BarChart></ResponsiveContainer></div>
                     </div>
                     {isModalOpen && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}><div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden"><div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="FileText" size={20} />{selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月{selectedDate.getDate()}日</h3><button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button></div><div className="flex border-b border-slate-200 lg:hidden"><button onClick={() => setMobileModalTab('diary')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${mobileModalTab === 'diary' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>日記 (Diary)</button><button onClick={() => setMobileModalTab('inputs')} className={`flex-1 py-3 text-sm font-bold border-b-2 ${mobileModalTab === 'inputs' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>収支入力</button></div><div className="flex-1 flex flex-col lg:flex-row overflow-hidden"><div className={`w-full lg:w-1/4 p-6 border-r border-slate-200 bg-slate-50/50 overflow-y-auto shrink-0 ${mobileModalTab === 'inputs' ? 'block' : 'hidden'} lg:block`}><div className="mb-6"><label className="block text-xs font-bold text-[#7C4DFF] mb-1 uppercase">Event (Top Layer)</label><input type="text" placeholder="決算, FRB会合, etc." value={editData.event || ''} onChange={(e) => setEditData({ ...editData, event: e.target.value })} className="w-full border border-purple-200 rounded p-2 text-sm focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div><h4 className="text-sm font-bold text-[#64748B] uppercase mb-4">収支入力 (円)</h4><div className="space-y-4">{[{ k: 'stocks', l: '現物収支' }, { k: 'margin', l: '信用収支' }, { k: 'foreign', l: '米国株収支' }, { k: 'cfd', l: 'CFD/先物' }].map(f => (<div key={f.k}><label className="block text-xs font-bold text-slate-500 mb-1">{f.l}</label><input type="number" value={editData[f.k] || ''} onChange={(e) => setEditData({ ...editData, [f.k]: parseInt(e.target.value) || 0 })} className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div>))}<div className="pt-4 border-t border-slate-200 mt-4"><div className="flex justify-between items-center"><span className="font-bold text-slate-700">合計</span><span className={`text-xl font-bold font-mono ${(editData.stocks + editData.margin + editData.foreign + editData.cfd) >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span></div></div>{editData.details && editData.details.length > 0 && (<div className="mt-6 pt-4 border-t border-slate-200"><h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV集計)</h4><div className="bg-white border border-slate-200 rounded p-2 space-y-1 text-xs max-h-40 overflow-y-auto">{editData.details.map((d, i) => (<div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0 hover:bg-slate-50 group/item" title={d.name}><span className="text-slate-600 truncate flex-1">{d.name}</span><div className="flex items-center gap-2 pl-2"><span className={`font-mono ${d.amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span><button onClick={(e) => handleDeleteDetail(getDateKey(selectedDate), i, e)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5"><Icon name="X" size={12} /></button></div></div>))}</div></div>)}</div></div><div className={`flex-1 bg-white overflow-hidden p-2 lg:p-6 flex-col ${mobileModalTab === 'diary' ? 'flex' : 'hidden'} lg:flex`}><div className="flex justify-between items-center mb-2"><div className="flex items-center gap-2"><Icon name="Pencil" size={14} className="text-slate-500" /><span className="text-xs font-bold text-slate-500 uppercase">Investment Diary (Markdown)</span></div><button onClick={() => setEditData({ ...editData, important: !editData.important })} className={`p-1.5 rounded-lg border transition-colors ${editData.important ? 'bg-purple-100 border-[#7C4DFF] text-[#7C4DFF]' : 'bg-white border-slate-200 text-slate-300 hover:text-slate-500'}`} title="Mark as Important"><Icon name="Bookmark" size={16} fill={editData.important ? "#7C4DFF" : "none"} /></button></div><div className="flex-1 overflow-hidden relative"><EasyMDEEditor value={editData.note} onChange={(val) => setEditData({ ...editData, note: val })} uploadConfig={uploadConfig} onSave={handleSave} /></div>{youtubeThumbnails.length > 0 && (<div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0 custom-scrollbar">{youtubeThumbnails.map((id, idx) => (<div key={idx} className="relative cursor-pointer group shrink-0 aspect-video h-full rounded-md overflow-hidden bg-black" onClick={() => window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')}><img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt="Thumbnail" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="bg-black/50 p-1 rounded-full"><div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[8px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div></div></div></div>))}</div>)}</div></div><div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0"><button onClick={handleSaveAndQuote} className="px-4 py-2 bg-slate-100 text-[#7C4DFF] border border-[#7C4DFF] hover:bg-purple-50 rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Send" size={16} className="hidden md:inline" /><span className="md:hidden">格言</span><span className="hidden md:inline">格言行き</span></button><button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-xs md:text-sm font-bold transition-colors">キャンセル</button><button onClick={handleSave} className="px-6 py-2 bg-[#7C4DFF] text-white hover:bg-[#651FFF] rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Check" size={16} className="hidden md:inline" /> 保存</button></div></div></div>
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}><div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden"><div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="FileText" size={20} />{selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月{selectedDate.getDate()}日</h3><button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button></div><div className="flex border-b border-slate-200 lg:hidden overflow-x-auto"><button onClick={() => setMobileModalTab('inputs')} className={`flex-1 py-3 text-sm font-bold border-b-2 whitespace-nowrap ${mobileModalTab === 'inputs' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>収支入力</button><button onClick={() => setMobileModalTab('diary')} className={`flex-1 py-3 text-sm font-bold border-b-2 whitespace-nowrap ${mobileModalTab === 'diary' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>日記</button><button onClick={() => setMobileModalTab('market')} className={`flex-1 py-3 text-sm font-bold border-b-2 whitespace-nowrap ${mobileModalTab === 'market' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>市況</button><button onClick={() => setMobileModalTab('info')} className={`flex-1 py-3 text-sm font-bold border-b-2 whitespace-nowrap ${mobileModalTab === 'info' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500'}`}>情報</button></div><div className="flex-1 flex flex-col lg:flex-row overflow-hidden"><div className={`w-full lg:w-1/4 p-6 border-r border-slate-200 bg-slate-50/50 overflow-y-auto shrink-0 ${mobileModalTab === 'inputs' ? 'block' : 'hidden'} lg:block`}><div className="mb-6"><label className="block text-xs font-bold text-[#7C4DFF] mb-1 uppercase">Event (Top Layer)</label><input type="text" placeholder="決算, FRB会合, etc." value={editData.event || ''} onChange={(e) => setEditData({ ...editData, event: e.target.value })} className="w-full border border-purple-200 rounded p-2 text-sm focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div><h4 className="text-sm font-bold text-[#64748B] uppercase mb-4">収支入力 (円)</h4><div className="space-y-4">{[{ k: 'stocks', l: '現物収支' }, { k: 'margin', l: '信用収支' }, { k: 'foreign', l: '米国株収支' }, { k: 'cfd', l: 'CFD/先物' }].map(f => (<div key={f.k}><label className="block text-xs font-bold text-slate-500 mb-1">{f.l}</label><input type="number" value={editData[f.k] || ''} onChange={(e) => setEditData({ ...editData, [f.k]: parseInt(e.target.value) || 0 })} className="w-full border border-slate-300 rounded p-2 font-mono text-right focus:ring-2 focus:ring-[#7C4DFF] outline-none" /></div>))}<div className="pt-4 border-t border-slate-200 mt-4"><div className="flex justify-between items-center"><span className="font-bold text-slate-700">合計</span><span className={`text-xl font-bold font-mono ${(editData.stocks + editData.margin + editData.foreign + editData.cfd) >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(editData.stocks + editData.margin + editData.foreign + editData.cfd)}</span></div></div>{editData.details && editData.details.length > 0 && (<div className="mt-6 pt-4 border-t border-slate-200"><h4 className="text-xs font-bold text-slate-500 mb-2">銘柄別損益 (CSV集計)</h4><div className="bg-white border border-slate-200 rounded p-2 space-y-1 text-xs max-h-40 overflow-y-auto">{editData.details.map((d, i) => (<div key={i} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0 hover:bg-slate-50 group/item" title={d.name}><span className="text-slate-600 truncate flex-1">{d.name}</span><div className="flex items-center gap-2 pl-2"><span className={`font-mono ${d.amount >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>{formatMoney(d.amount)}</span><button onClick={(e) => handleDeleteDetail(getDateKey(selectedDate), i, e)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5"><Icon name="X" size={12} /></button></div></div>))}</div></div>)}</div></div>
+                            {/* PC版専用: タブで切り替え表示（常に表示） */}
+                            <div className="hidden lg:flex flex-1 bg-white overflow-hidden p-6 flex-col">
+                                <div className="flex justify-between items-center mb-2">
+                                    <div className="flex-1">
+                                        <div className="flex border-b border-slate-200 mb-2">
+                                            <button onClick={() => setPcDiaryTab('diary')} className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${pcDiaryTab === 'diary' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>日記</button>
+                                            <button onClick={() => setPcDiaryTab('market')} className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${pcDiaryTab === 'market' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>市況</button>
+                                            <button onClick={() => setPcDiaryTab('info')} className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${pcDiaryTab === 'info' ? 'border-[#7C4DFF] text-[#7C4DFF]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>情報</button>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setEditData({ ...editData, important: !editData.important })} className={`ml-4 p-1.5 rounded-lg border transition-colors ${editData.important ? 'bg-purple-100 border-[#7C4DFF] text-[#7C4DFF]' : 'bg-white border-slate-200 text-slate-300 hover:text-slate-500'}`} title="Mark as Important"><Icon name="Bookmark" size={16} fill={editData.important ? "#7C4DFF" : "none"} /></button>
+                                </div>        
+                                <div className="flex-1 overflow-hidden relative">
+                                    <div style={{ display: pcDiaryTab === 'diary' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
+                                        <EasyMDEEditor key="diary-editor" value={editData.diary} onChange={(val) => setEditData({ ...editData, diary: val })} uploadConfig={uploadConfig} onSave={handleSave} isVisible={pcDiaryTab === 'diary'} />
+                                    </div>
+                                    <div style={{ display: pcDiaryTab === 'market' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
+                                        <EasyMDEEditor key="market-editor" value={editData.market} onChange={(val) => setEditData({ ...editData, market: val })} uploadConfig={uploadConfig} onSave={handleSave} isVisible={pcDiaryTab === 'market'} />
+                                    </div>
+                                    <div style={{ display: pcDiaryTab === 'info' ? 'flex' : 'none', flexDirection: 'column', height: '100%' }}>
+                                        <EasyMDEEditor key="info-editor" value={editData.info} onChange={(val) => setEditData({ ...editData, info: val })} uploadConfig={uploadConfig} onSave={handleSave} isVisible={pcDiaryTab === 'info'} />
+                                    </div>
+                                </div>
+                               {pcDiaryTab === 'diary' && diaryYoutubeThumbnails.length > 0 && (<div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0 custom-scrollbar">{diaryYoutubeThumbnails.map((id, idx) => (<div key={idx} className="relative cursor-pointer group shrink-0 aspect-video h-full rounded-md overflow-hidden bg-black" onClick={() => window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')}><img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt="Thumbnail" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="bg-black/50 p-1 rounded-full"><div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[8px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div></div></div></div>))}</div>)}
+                                 {pcDiaryTab === 'market' && marketYoutubeThumbnails.length > 0 && (<div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0 custom-scrollbar">{marketYoutubeThumbnails.map((id, idx) => (<div key={idx} className="relative cursor-pointer group shrink-0 aspect-video h-full rounded-md overflow-hidden bg-black" onClick={() => window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')}><img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt="Thumbnail" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="bg-black/50 p-1 rounded-full"><div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[8px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div></div></div></div>))}</div>)}
+                                {pcDiaryTab === 'info' && infoYoutubeThumbnails.length > 0 && (<div className="flex gap-2 mt-2 pt-2 border-t border-slate-100 overflow-x-auto h-[90px] shrink-0 custom-scrollbar">{infoYoutubeThumbnails.map((id, idx) => (<div key={idx} className="relative cursor-pointer group shrink-0 aspect-video h-full rounded-md overflow-hidden bg-black" onClick={() => window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')}><img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt="Thumbnail" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="bg-black/50 p-1 rounded-full"><div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[8px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div></div></div></div>))}</div>)}
+                            </div>
+                            {/* スマホ版: 日記タブ */}
+                            {mobileModalTab === 'diary' && (
+                                <div className="flex-1 bg-white overflow-hidden p-2 flex flex-col lg:hidden">
+                                    <EasyMDEEditor key="mobile-diary-editor" value={editData.diary} onChange={(val) => setEditData({ ...editData, diary: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                </div>
+                            )}
+                            {/* Mobile市況タブ */}
+                            {mobileModalTab === 'market' && (
+                                <div className="flex-1 bg-white overflow-hidden p-2 flex flex-col lg:hidden">
+                                    <EasyMDEEditor key="mobile-market-editor" value={editData.market} onChange={(val) => setEditData({ ...editData, market: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                </div>
+                            )}
+                            {/* Mobile情報タブ */}
+                            {mobileModalTab === 'info' && (
+                                <div className="flex-1 bg-white overflow-hidden p-2 flex flex-col lg:hidden">
+                                    <EasyMDEEditor key="mobile-info-editor" value={editData.info} onChange={(val) => setEditData({ ...editData, info: val })} uploadConfig={uploadConfig} onSave={handleSave} />
+                                </div>
+                            )}
+                        </div><div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0"><button onClick={handleSaveAndQuote} className="px-4 py-2 bg-slate-100 text-[#7C4DFF] border border-[#7C4DFF] hover:bg-purple-50 rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Send" size={16} className="hidden md:inline" /><span className="md:hidden">格言</span><span className="hidden md:inline">格言行き</span></button><button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-xs md:text-sm font-bold transition-colors">キャンセル</button><button onClick={handleSave} className="px-6 py-2 bg-[#7C4DFF] text-white hover:bg-[#651FFF] rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 transition-colors"><Icon name="Check" size={16} className="hidden md:inline" /> 保存</button></div></div></div>
                     )}
                     {isSettingsOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up" onClick={(e) => { if (e.target === e.currentTarget) setIsSettingsOpen(false); }}><div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"><div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-lg text-[#334155] flex items-center gap-2"><Icon name="Settings" size={20} /> 設定 (Sync & Upload)</h3><button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" /></button></div><div className="p-6 space-y-4"><p className="text-xs text-slate-500">GitHubを利用してデータの同期と画像のアップロードを行います。<br/>画像UPにはリポジトリの読み書き権限(repo scope)が必要です。</p><div><label className="block text-xs font-bold text-slate-700 mb-1">GitHub Token (repo scope推奨)</label><input type="password" value={gistToken} onChange={(e) => setGistToken(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="ghp_..." /></div><div><label className="block text-xs font-bold text-slate-700 mb-1">Gist ID (Sync用)</label><input type="text" value={gistId} onChange={(e) => setGistId(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="32桁のID" /></div><div className="grid grid-cols-2 gap-2"><div><label className="block text-xs font-bold text-slate-700 mb-1">Repo Owner</label><input type="text" value={repoOwner} onChange={(e) => setRepoOwner(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="UserName" /></div><div><label className="block text-xs font-bold text-slate-700 mb-1">Repo Name</label><input type="text" value={repoName} onChange={(e) => setRepoName(e.target.value)} className="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-[#7C4DFF]" placeholder="RepoName" /></div></div><div className="pt-2 flex justify-end"><button onClick={handleSaveSettings} className="bg-[#7C4DFF] text-white px-4 py-2 rounded text-sm font-bold hover:bg-[#651FFF]">保存</button></div></div></div></div>
@@ -1146,8 +1303,8 @@
                             <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
                             <NavItem id="option" label="Option 分析" icon="BarChart3" />
                             <NavItem id="participant" label="手口上位" icon="Briefcase" />
-                            {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center">{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[#7C4DFF] hover:bg-white hover:shadow-md transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-full bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
-                            {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.05-sbi-oi-support</div>}
+                            {!isCollapsed && (<><div className="flex-1 min-h-[20px]"></div><div className="pb-16">{customLinks.length > 0 && (<div className="space-y-0.5"><div className="text-[10px] font-bold text-slate-400 px-2 mb-2">QUICK LINKS</div>{renderCustomLinks()}</div>)}</div><div className="fixed bottom-4 z-50 transition-all duration-75" style={{ left: isCollapsed ? '15px' : `${sidebarWidth - 60}px` }}>{!isAddingLink ? (<button onClick={() => setIsAddingLink(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-[#7C4DFF] border border-[#7C4DFF] text-white shadow-lg hover:bg-[#651FFF] transition-all duration-200"><Icon name="Plus" size={20} /></button>) : (<div className="w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-fade-in-up absolute bottom-0 right-0"><div className="flex justify-between items-center mb-3"><p className="text-xs font-bold text-slate-500 uppercase">Add Item</p><button onClick={() => setIsAddingLink(false)} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={14} /></button></div><div className="flex bg-slate-100 p-1 rounded-lg mb-3"><button onClick={() => setLinkType('link')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'link' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>LINK</button><button onClick={() => setLinkType('divider')} className={`flex-1 text-xs py-1.5 rounded-md font-bold transition-all ${linkType === 'divider' ? 'bg-white text-[#7C4DFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>CATEGORY</button></div><div className="space-y-3"><input type="text" placeholder="Name" autoFocus className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} />{linkType === 'link' && (<input type="text" placeholder="URL" className="w-full text-xs p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#7C4DFF]" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} />)}<button onClick={addCustomLink} disabled={!newLinkLabel || (linkType === 'link' && !newLinkUrl)} className="w-full bg-[#7C4DFF] text-white text-xs py-2 rounded-lg hover:bg-[#651FFF] disabled:opacity-50 font-bold">追加</button></div></div>)}</div></>)}
+                            {!isCollapsed && <div className="mt-4 px-4 pb-2 text-[10px] text-slate-300 text-center">v2026.02.11-mobile-fix</div>}
                         </div>
                         {!isCollapsed && (<div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#7C4DFF] transition-colors z-50 flex flex-col justify-center items-center group" onMouseDown={startResizing}><div className="h-8 w-1 bg-slate-300 rounded-full group-hover:bg-[#7C4DFF]"></div></div>)}
                     </aside>
