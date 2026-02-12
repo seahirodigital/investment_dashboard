@@ -189,10 +189,6 @@ def main():
                 # 対象週の日付を特定し、その日のデータを取得
                 market_date = monthly_data.index[target_week_idx]
                 
-                # 週の開始日と終了日を計算（Yahoo Financeの週次データから）
-                week_start = market_date - timedelta(days=market_date.weekday())  # 月曜日
-                week_end = week_start + timedelta(days=6)  # 日曜日
-                
                 # 値の取得
                 target_week_data = {}
                 has_valid = False
@@ -212,8 +208,6 @@ def main():
                 if has_valid:
                     entry = {
                         "date": jpx_date.strftime("%Y-%m-%d"), # JSONには元の擬似日付(YYYY-MM-Week)を出力
-                        "week_start": week_start.strftime("%Y-%m-%d"),  # 週の開始日
-                        "week_end": week_end.strftime("%Y-%m-%d"),      # 週の終了日
                         "flow": int(balance),
                         "returns": target_week_data
                     }
