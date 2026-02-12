@@ -92,7 +92,7 @@
                         <div className="text-sm text-slate-600 space-y-4">
                             <p>
                                 <strong>意味合い:</strong><br/>
-                                海外投資家が日本株を「買い越している週」と「売り越している週」で、そのセクターがどれだけパフォーマンス（株価変動率）に差が出るかを表します。値が大きいほど、海外マネーの流入出に敏感に反応するセクターと言えます。
+                                海外投資家が日本株を「買い越している週」と「売り越している週」で、そのセクターがどれだけパフォーマンス(株価変動率)に差が出るかを表します。値が大きいほど、海外マネーの流入出に敏感に反応するセクターと言えます。
                             </p>
                             <div className="bg-slate-50 p-3 rounded border border-slate-200">
                                 <strong>計算式:</strong><br/>
@@ -131,7 +131,7 @@
                         }
                         const item = new ClipboardItem({ "image/png": blob });
                         navigator.clipboard.write([item])
-                            .then(() => alert("画像をクリップボードにコピーしました！"))
+                            .then(() => alert("画像をクリップボードにコピーしました!"))
                             .catch(err => {
                                 console.error("Clipboard write failed:", err);
                                 alert("クリップボードへのコピーに失敗しました。");
@@ -183,8 +183,6 @@
                     })
                     .then(json => {
                         if (!json.data || json.data.length === 0) {
-                            // データが空の場合でも、フォーマットとしては正しいのでエラーにはしないが、
-                            // UI側で空表示をするためにstateにはセットする
                             setRawData(json);
                             setLoading(false);
                             return;
@@ -211,7 +209,14 @@
 
             const allStats = useMemo(() => {
                 if (!rawData || !rawData.data || !startDate || !endDate) return null;
-                const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
+                
+                // 【修正】週の期間でフィルタリング
+                const filtered = rawData.data.filter(d => {
+                    if (!d.week_start || !d.week_end) return false;
+                    // 週の開始日が分析終了日以前 かつ 週の終了日が分析開始日以降
+                    return d.week_start <= endDate && d.week_end >= startDate;
+                });
+                
                 if (filtered.length === 0) return [];
 
                 const flowPositive = filtered.filter(d => d.flow > 0);
@@ -243,7 +248,11 @@
 
                 const chartData = allStats.filter(s => activeTickers.has(s.ticker));
 
-                const filtered = rawData.data.filter(d => d.date >= startDate && d.date <= endDate);
+                // 【修正】週の期間でフィルタリング
+                const filtered = rawData.data.filter(d => {
+                    if (!d.week_start || !d.week_end) return false;
+                    return d.week_start <= endDate && d.week_end >= startDate;
+                });
                 
                 filtered.sort((a, b) => a.date.localeCompare(b.date));
                 
