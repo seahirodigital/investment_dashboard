@@ -40,6 +40,15 @@
             position: relative;
             cursor: pointer;
         }
+        
+        /* Calendar: Monday start (ISO 8601) */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+        }
+        input[type="date"] {
+            /* Force Monday-first week via locale hint */
+            -webkit-locale: "ja-JP";
+        }
     </style>
 </head>
 <body>
