@@ -225,16 +225,14 @@
                 TrendingUp: <svg width={size} height={size} className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
             };
             return icons[name] || null;
-        };
-
-        const CATEGORY_STYLES = {
-            stocks: { bg: 'bg-[#F3E5F5]', text: 'text-[#7E57C2]', label: '現物' },
-            margin: { bg: 'bg-[#E8EAF6]', text: 'text-[#5C6BC0]', label: '信用' },
-            foreign: { bg: 'bg-[#EDE7F6]', text: 'text-[#673AB7]', label: '米国' },
-            cfd: { bg: 'bg-[#FCE4EC]', text: 'text-[#D81B60]', label: 'CFD' },
-            event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
-        };
-
+            };
+            const CATEGORY_STYLES = {
+                stocks: { bg: 'bg-[#F3E5F5]', text: 'text-[#7E57C2]', label: '現物' },
+                margin: { bg: 'bg-[#E8EAF6]', text: 'text-[#5C6BC0]', label: '信用' },
+                foreign: { bg: 'bg-[#EDE7F6]', text: 'text-[#673AB7]', label: '米国' },
+                cfd: { bg: 'bg-[#FCE4EC]', text: 'text-[#7C4DFF]', label: 'CFD' },
+                event: { bg: 'bg-white', text: 'text-[#7C4DFF]', label: 'Event' }
+            };
         const EasyMDEEditor = ({ value, onChange, uploadConfig, onSave, isVisible }) => {
             const textareaRef = useRef(null);
             const mdeRef = useRef(null);
@@ -816,14 +814,35 @@
                             </div></div>
                     );
                 }
-                const StatCard = ({ type, val }) => (<div className={`flex justify-end items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}><span className={`w-full text-right ${type === 'cfd' ? (val >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]') : (val < 0 ? 'text-[#FF4081]' : '')}`}>{formatMoney(val)}</span></div>);
+                const StatCard = ({ type, val }) => (<div className={`flex justify-end items-center px-1.5 py-0.5 rounded text-[10px] font-medium mb-0.5 ${CATEGORY_STYLES[type].bg} ${CATEGORY_STYLES[type].text}`}><span className={`w-full text-right ${val < 0 ? 'text-[#FF4081]' : ''}`}>{formatMoney(val)}</span></div>);
                 return (
                     <div onClick={() => openModal(date)} className={`cal-cell cursor-pointer hover:bg-[#F3E5F5] transition-colors border-r border-b border-slate-100 group ${isToday ? 'bg-[#F3E5F5]/30 ring-2 ring-inset ring-[#7C4DFF]/20' : ''}`}>
                         {tooltipContent}
                         <div className="flex justify-center items-center mb-1 relative"><span className={`text-xs font-bold ${isToday ? 'bg-[#7C4DFF] text-white px-1.5 py-0.5 rounded-full' : 'text-slate-500'}`}>{date.getDate()}</span>{hasNote && <Icon name="FileText" size={10} className={`absolute right-0 top-0.5 ${isImportant ? "text-[#7C4DFF]" : "text-[#64748B]"}`} style={isImportant ? {fill: "#7C4DFF"} : {}} />}</div>
                         <div className="flex flex-col gap-0.5">
                             {hasEvent ? (<div className="group/event relative flex justify-between items-center px-1.5 py-1 rounded text-[10px] font-bold mb-1 bg-white border-l-4 border-[#7C4DFF] shadow-sm text-[#7C4DFF]"><span className="truncate">{data.event}</span><div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover/event:flex gap-1 bg-white pl-1"><button onClick={(e) => { e.stopPropagation(); openModal(date); }} className="hover:text-[#7C4DFF]"><Icon name="Pencil" size={10} /></button><button onClick={(e) => handleDeleteEvent(e, date)} className="hover:text-[#FF4081]"><Icon name="X" size={10} /></button></div></div>) : (<div className="h-[22px] mb-1"></div>)}
-                            {data ? (<><StatCard type="stocks" val={data.stocks || 0} /><StatCard type="margin" val={data.margin || 0} /><StatCard type="foreign" val={data.foreign || 0} /><StatCard type="cfd" val={data.cfd || 0} /></>) : (<><div className="h-[18px]"></div><div className="h-[18px]"></div><div className="h-[18px]"></div><div className="h-[18px]"></div></>)}
+                        {data ? (
+                            <>
+                                <StatCard type="stocks" val={data.stocks || 0} />
+                                <StatCard type="margin" val={data.margin || 0} />
+                                <StatCard type="foreign" val={data.foreign || 0} />
+                                <StatCard type="cfd" val={data.cfd || 0} />
+                                <div className={`flex justify-end items-center px-1.5 py-0.5 rounded text-[10px] font-bold mt-0.5 bg-slate-100 border-t border-slate-200`}>
+                                    <span className={`w-full text-right ${((data.stocks || 0) + (data.margin || 0) + (data.foreign || 0) + (data.cfd || 0)) >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>
+                                        {formatMoney((data.stocks || 0) + (data.margin || 0) + (data.foreign || 0) + (data.cfd || 0))}
+                                    </span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="h-[18px]"></div>
+                                <div className="h-[18px]"></div>
+                                <div className="h-[18px]"></div>
+                                <div className="h-[18px]"></div>
+                                <div className="h-[18px]"></div>
+                            </>
+                        )}
+                            
                         </div>
                     </div>
                 );
