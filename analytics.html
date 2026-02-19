@@ -179,7 +179,7 @@
                     setLoading(false);
                     return;
                 }
-            
+
                 fetch(`./sector_data.json?t=${new Date().getTime()}`)
                     .then(res => {
                         if (!res.ok) {
@@ -201,21 +201,11 @@
                         const today = new Date();
                         const formatYMD = (d) => d.toISOString().split('T')[0];
                         
-                        // 今日を終了日に設定
                         setEndDate(formatYMD(today));
-            
-                        // 今週の月曜日を取得
-                        const currentDayOfWeek = today.getDay(); // 0=日曜, 1=月曜, ..., 6=土曜
-                        const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1; // 日曜の場合は6日前、それ以外は (曜日 - 1)
-                        const thisMonday = new Date(today);
-                        thisMonday.setDate(today.getDate() - daysFromMonday);
-            
-                        // 先週の月曜日を取得（今週の月曜日から7日前）
-                        const lastMonday = new Date(thisMonday);
-                        lastMonday.setDate(thisMonday.getDate() - 7);
-                        
-                        // 先週の月曜日を開始日に設定
-                        setStartDate(formatYMD(lastMonday));
+
+                        const twoMonthsAgo = new Date(today);
+                        twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+                        setStartDate(formatYMD(twoMonthsAgo));
                         
                         setLoading(false);
                     })
@@ -224,7 +214,7 @@
                         setError(err.message);
                         setLoading(false);
                     });
-            }, []);;
+            }, []);
 
             const allStats = useMemo(() => {
                 if (!rawData || !rawData.data || !startDate || !endDate) return null;
