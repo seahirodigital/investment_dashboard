@@ -1,0 +1,83 @@
+name: Daily JPX Participant Analysis & NF Option Fetch
+
+on:
+  schedule:
+    - cron: '5 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Daily Analysis Script
+        run: python scripts/daily_participant_analyzer.py
+
+      - name: Fetch JPX Data and Export JSON
+        env:
+          FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
+        run: |
+          python scripts/fetch_teguchi.py
+          python scripts/fetch_option.py
+
+      - name: Commit and Push Data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Add all modified json files
+          [ -f data/daily_participant.json ] && git add data/daily_participant.json
+          [ -f data.json ] && git add data.json
+          [ -f option_history.json ] && git add option_history.json
+          
+          # 変更がある場合のみコミット
+          if ! git diff --staged --quiet; then
+            git commit -m "Update Daily Participant & Option Data: $(date +'%Y-%m-%d')"
+            git push
+            echo "Data updated and pushed."
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Prepare deployment files
+        run: |
+          mkdir -p deploy
+          
+          for file in index.html option.html teguchi.html data.json option_history.json advanced.html analytics.html history.csv trend.png sector_data.json; do
+            if [ -f "$file" ]; then
+              cp "$file" deploy/
+              echo "✅ Copied $file to deploy/"
+            else
+              echo "⚠️ Warning: $file not found"
+            fi
+          done
+          
+          [ -d css ] && cp -r css deploy/
+          [ -d js ] && cp -r js deploy/
+          [ -d data ] && cp -r data deploy/
+          
+          echo "Deploy directory content:"
+          ls -laR deploy/
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy
+          keep_files: false

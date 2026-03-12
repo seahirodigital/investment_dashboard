@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPX Derivatives Delta Analytics</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#7C4DFF',
+                        secondary: '#651FFF',
+                        bgLight: '#f8fafc',
+                        textPrimary: '#334155',
+                        textSecondary: '#64748b',
+                        borderLight: '#e2e8f0',
+                        positive: '#7C4DFF',
+                        negative: '#f43f5e',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMTP8g8Ku1Vy6IAq9wHdESP3pRkDberOM",
+            authDomain: "nkf-option.firebaseapp.com",
+            projectId: "nkf-option",
+            storageBucket: "nkf-option.firebasestorage.app",
+            messagingSenderId: "1061572991366",
+            appId: "1:1061572991366:web:e326d645e8be1047153407",
+            measurementId: "G-8DLH6CCC3W"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Make db globally available for Vue
+        window.firebaseDb = db;
+        window.firebaseCollection = collection;
+        window.firebaseGetDocs = getDocs;
+        window.firebaseDoc = doc;
+        window.firebaseGetDoc = getDoc;
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+    <style>
+        body { background-color: #f8fafc; color: #334155; font-family: 'Helvetica Neue', Arial, sans-serif; min-height: 100vh; }
+        .glass-panel { background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+        .btn-primary { background: #7C4DFF; color: white; font-weight: bold; transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s; }
+        .btn-primary:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-primary:hover:not(:disabled) { background: #651FFF; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(124, 77, 255, 0.3); }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .loading {
+            display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 50; }
+        .table-container { overflow: auto; max-height: 75vh; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 0.875rem; }
+        th, td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; white-space: nowrap; }
+        th:last-child, td:last-child { border-right: none; }
+        thead th { background: #f8fafc; color: #334155; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+        tbody tr:hover { background: #f1f5f9; }
+
+        .sticky-col { position: sticky; z-index: 5; }
+        .sticky-company { left: 0; min-width: 160px; }
+        .sticky-c { left: 160px; min-width: 70px; }
+        .sticky-p { left: 230px; min-width: 70px; }
+        .sticky-net { left: 300px; min-width: 80px; border-right: 2px solid #cbd5e1; }
+        thead .sticky-col { z-index: 20; background: #f8fafc; top: 0; }
+        tbody .sticky-col { z-index: 10; background: white; }
+
+        .cat-US td:first-child { border-left: 4px solid #6b21a8; }
+        .cat-EU td:first-child { border-left: 4px solid #be185d; }
+        .cat-JP td:first-child { border-left: 4px solid #a78bfa; }
+        .cat-Net td:first-child { border-left: 4px solid #64748b; }
+
+        .tag { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; }
+        .tag.US { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+        .tag.EU { background: #fce7f3; color: #be185d; border: 1px solid #f9a8d4; }
+        .tag.JP { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+        .tag.Net { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .tag.Others { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
+
+        .val-positive { color: #7C4DFF; font-weight: 600; }
+        .val-negative { color: #f43f5e; font-weight: 600; }
+        .val-zero { color: #94a3b8; }
+
+        .heat-cell { text-align: right; font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-700">
+    <div id="app">
+        <!-- Header / Control Bar -->
+        <header class="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-6">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xs font-bold text-[#7C4DFF]">JPX 手口データ分析</h1>
+                <span class="text-slate-400 text-xs font-medium ml-2">{{ statusText }}</span>
+            </div>
+            
+            <div class="flex items-center gap-4 text-xs mt-3 md:mt-0 relative">
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-500 shrink-0">データ基準日:</span>
+                    <select v-model="selectedDate" @change="fetchDataForDate" class="bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-[#7C4DFF]">
+                        <option v-for="d in availableDates" :key="d" :value="d">{{ formatDate(d) }}</option>
+                        <option v-if="availableDates.length === 0" value="">読込中...</option>
+                    </select>
+                </div>
+                <button @click="fetchLatest" :disabled="loading" class="btn-primary font-bold px-3 py-1 rounded flex items-center gap-2 transition-colors shadow-sm">
+                    <span>データ再読込</span>
+                    <div v-if="loading" class="loading w-3 h-3 !border-white/30 !border-t-white"></div>
+                </button>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto space-y-6 px-6 pb-10">
+            <!-- Error message -->
+            <div v-if="error" class="bg-rose-50 border border-rose-200 text-rose-600 p-3 rounded text-sm">
+                {{ error }}
+            </div>
+
+            <!-- Main Results -->
+            <div v-if="results.length > 0 && !loading" class="glass-panel p-4">
+                <div class="flex gap-2 mb-4">
+                    <button @click="activeTab = 'delta'" :class="['px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors', activeTab === 'delta' ? 'bg-[#eff6ff] text-[#7C4DFF] border-[#7C4DFF]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50']">
+                        デルタ一覧表
+                    </button>
+                    <button @click="activeTab = 'matrix'" :class="['px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors', activeTab === 'matrix' ? 'bg-[#eff6ff] text-[#7C4DFF] border-[#7C4DFF]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50']">
+                        オプションマトリクス
+                    </button>
+                </div>
+
+                <!-- Delta Table -->
+                <div v-if="activeTab === 'delta'">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th @click="sortBy('Category')" class="cursor-pointer hover:bg-slate-200">分類属性 ↕</th>
+                                    <th @click="sortBy('Company')" class="cursor-pointer hover:bg-slate-200">証券会社 ↕</th>
+                                    <th @click="sortBy('NK225F')" class="cursor-pointer hover:bg-slate-200 text-right">日経225先物 ↕</th>
+                                    <th @click="sortBy('NK225M')" class="cursor-pointer hover:bg-slate-200 text-right">日経225mini ↕</th>
+                                    <th @click="sortBy('TOPIXF')" class="cursor-pointer hover:bg-slate-200 text-right">TOPIX先物 ↕</th>
+                                    <th @click="sortBy('DeltaOku')" class="cursor-pointer hover:bg-slate-200 text-right">デルタ金額(億円) ↕</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in sortedResults" :key="row.Company" :class="'cat-' + row.Category">
+                                    <td><span class="tag" :class="row.Category">{{ row.Category }}</span></td>
+                                    <td class="font-medium">{{ row.Company }}</td>
+                                    <td class="text-right" :class="formatValClass(row.NK225F)">{{ formatNum(row.NK225F) }}</td>
+                                    <td class="text-right" :class="formatValClass(row.NK225M)">{{ formatNum(row.NK225M) }}</td>
+                                    <td class="text-right" :class="formatValClass(row.TOPIXF)">{{ formatNum(row.TOPIXF) }}</td>
+                                    <td class="text-right bg-amber-50/50 font-bold" :class="formatValClass(row.DeltaOku)">
+                                        <span :class="Math.abs(row.DeltaOku) > 100 ? 'text-sm' : ''">{{ formatNum(row.DeltaOku) }}</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Matrix -->
+                <div v-if="activeTab === 'matrix'">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" class="sticky-col sticky-company">証券会社</th>
+                                    <th rowspan="2" class="sticky-col sticky-c shadow-[1px_0_0_#cbd5e1]">C合計</th>
+                                    <th rowspan="2" class="sticky-col sticky-p shadow-[1px_0_0_#cbd5e1]">P合計</th>
+                                    <th rowspan="2" class="sticky-col sticky-net shadow-[1px_0_0_#cbd5e1]">Net計</th>
+                                    <template v-for="strike in strikes" :key="strike">
+                                        <th class="text-center border-l border-slate-200" colspan="2">{{ strike }}</th>
+                                    </template>
+                                </tr>
+                                <tr>
+                                    <template v-for="strike in strikes" :key="strike + 'sub'">
+                                        <th class="text-right text-xs bg-slate-50 border-l border-slate-200 !top-[36px]">Call</th>
+                                        <th class="text-right text-xs bg-slate-50 !top-[36px]">Put</th>
+                                    </template>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="m in matrixData" :key="m.Company" :class="'cat-' + m.Category">
+                                    <td class="sticky-col sticky-company font-medium">
+                                        <span class="tag mr-2" :class="m.Category">{{ m.Category }}</span>{{ m.Company }}
+                                    </td>
+                                    <td class="sticky-col sticky-c heat-cell shadow-[1px_0_0_#e2e8f0]" :class="formatValClass(m.C_Total)">{{ m.C_Total }}</td>
+                                    <td class="sticky-col sticky-p heat-cell shadow-[1px_0_0_#e2e8f0]" :class="formatValClass(m.P_Total)">{{ m.P_Total }}</td>
+                                    <td class="sticky-col sticky-net heat-cell font-bold shadow-[2px_0_0_#cbd5e1]" :class="formatValClass(m.Net_Total)">{{ m.Net_Total }}</td>
+                                    
+                                    <template v-for="strike in strikes" :key="strike">
+                                        <td class="heat-cell border-l border-slate-100" :style="getHeatmapStyle(m['C_' + strike])">{{ m['C_' + strike] || '-' }}</td>
+                                        <td class="heat-cell" :style="getHeatmapStyle(m['P_' + strike])">{{ m['P_' + strike] || '-' }}</td>
+                                    </template>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    loading: false,
+                    error: null,
+                    statusText: '読み込み中...',
+                    activeTab: 'delta',
+                    results: [],
+                    matrixData: [],
+                    strikes: [],
+                    availableDates: [],
+                    selectedDate: '',
+                    sortKey: 'Rank',
+                    sortAsc: true
+                }
+            },
+            computed: {
+                sortedResults() {
+                    return [...this.results].sort((a, b) => {
+                        let valA = a[this.sortKey]
+                        let valB = b[this.sortKey]
+                        
+                        if (typeof valA === 'string') valA = valA.toLowerCase()
+                        if (typeof valB === 'string') valB = valB.toLowerCase()
+
+                        if (valA < valB) return this.sortAsc ? -1 : 1
+                        if (valA > valB) return this.sortAsc ? 1 : -1
+                        return 0
+                    })
+                }
+            },
+            mounted() {
+                if (window.firebaseDb) {
+                    this.initFirebase();
+                } else {
+                    // Wait for the async module to load the Firebase SDK
+                    window.addEventListener('firebase-ready', () => {
+                        this.initFirebase();
+                    });
+                    
+                    setTimeout(() => {
+                        if (!window.firebaseDb) {
+                            this.loading = false;
+                            this.statusText = "通信エラー";
+                            this.error = "サーバーへの接続がタイムアウトしました。通信環境を確認の上、再読み込みしてください。";
+                        }
+                    }, 5000);
+                }
+            },
+            methods: {
+                formatDate(dateStr) {
+                    if (!dateStr || dateStr.length !== 8) return dateStr;
+                    return `${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)}`;
+                },
+                async initFirebase() {
+                    if (!window.firebaseDb) return; // Prevent premature execution
+                    
+                    this.loading = true;
+                    this.statusText = "日付リスト読込中...";
+                    try {
+                        const db = window.firebaseDb;
+                        
+                        const teguchiCol = window.firebaseCollection(db, 'teguchi_data');
+                        const snapshot = await window.firebaseGetDocs(teguchiCol);
+                        
+                        let dates = [];
+                        snapshot.forEach(doc => {
+                            dates.push(doc.id);
+                        });
+                        
+                        dates.sort().reverse(); // 降順
+                        this.availableDates = dates;
+                        
+                        if(dates.length > 0) {
+                            this.selectedDate = dates[0];
+                            await this.fetchDataForDate();
+                        } else {
+                            this.statusText = "データなし";
+                            this.loading = false;
+                        }
+                    } catch (err) {
+                        console.error("Firebase init error:", err);
+                        // Fallback
+                        this.fetchLatest();
+                    }
+                },
+                async fetchDataForDate() {
+                    if(!this.selectedDate) return;
+                    this.loading = true;
+                    this.error = null;
+                    this.statusText = `${this.formatDate(this.selectedDate)} 読込中...`;
+                    
+                    try {
+                        const db = window.firebaseDb;
+                        const docRef = window.firebaseDoc(db, 'teguchi_data', this.selectedDate);
+                        const docSnap = await window.firebaseGetDoc(docRef);
+                        
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            this.results = data.results || [];
+                            this.matrixData = data.matrix || [];
+                            this.strikes = data.strikes || [];
+                            this.statusText = "読込完了";
+                        } else {
+                            this.error = `${this.formatDate(this.selectedDate)} のデータが見つかりません。`;
+                            this.statusText = "エラー";
+                            this.results = [];
+                            this.matrixData = [];
+                        }
+                    } catch(err) {
+                        console.error(err);
+                        this.error = "Firebase通信エラーが発生しました。";
+                        this.statusText = "エラー";
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                sortBy(key) {
+                    if (this.sortKey === key) {
+                        this.sortAsc = !this.sortAsc
+                    } else {
+                        this.sortKey = key
+                        this.sortAsc = false
+                    }
+                },
+                formatNum(num) {
+                    if (num === 0 || !num) return "0";
+                    return new Intl.NumberFormat('ja-JP').format(num)
+                },
+                formatValClass(num) {
+                    if (!num) return 'val-zero'
+                    return num > 0 ? 'val-positive' : 'val-negative'
+                },
+                getHeatmapStyle(val) {
+                    if (!val || val === 0) return {};
+                    let intensity = Math.min(Math.abs(val) / 5000, 1) * 0.6;
+                    if (val > 0) {
+                        return { backgroundColor: `rgba(124, 77, 255, ${intensity})` }; 
+                    } else {
+                        return { backgroundColor: `rgba(244, 63, 94, ${intensity})` }; 
+                    }
+                },
+                async fetchLatest() {
+                    if (window.firebaseDb) {
+                        this.initFirebase();
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

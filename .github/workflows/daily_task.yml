@@ -1,0 +1,103 @@
+name: JPX Automation
+on:
+  workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: 'Debug mode (5 files only)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  schedule:
+    - cron: '0 9 * * 4'  # 毎週木曜日 9:00 UTC (日本時間 18:00)
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  run-and-save:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run Script
+        env:
+          DEBUG_MODE: ${{ github.event.inputs.debug_mode || 'false' }}
+        run: |
+          # 1. JPXデータの取得 (history.csv生成)
+          python main.py
+          
+          # 2. セクター分析データの生成 (sector_data.json生成)
+          if [ -f history.csv ]; then
+            python sector_manager.py
+          else
+            echo "Warning: history.csv not found, skipping sector analysis."
+          fi
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          # 新規ファイル(sector_data.json等)も含めて全ての変更をステージングして確認
+          git add -A
+          
+          # ステージングエリアに差分があるか確認
+          if git diff --staged --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected"
+          fi
+      
+      - name: Commit to main branch
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # すでに check_changes で git add -A しているので、ここではコミットのみ行う
+          git commit -m "Update JPX & Sector data: $(date)"
+          git push origin HEAD
+      
+      - name: Prepare deployment files
+        run: |
+          mkdir -p deploy
+          
+          # ファイルの存在確認とコピー（ログ出力付き）
+          for file in index.html option.html teguchi.html data.json option_history.json advanced.html analytics.html history.csv trend.png sector_data.json; do
+            if [ -f "$file" ]; then
+              cp "$file" deploy/
+              echo "✅ Copied $file to deploy/"
+            else
+              echo "⚠️ Warning: $file not found"
+            fi
+          done
+          
+          # フォルダコピー
+          [ -d css ] && cp -r css deploy/
+          [ -d js ] && cp -r js deploy/
+          [ -d data ] && cp -r data deploy/
+          
+          echo "Deploy directory content:"
+          ls -laR deploy/
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy
+          keep_files: false
