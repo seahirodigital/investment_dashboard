@@ -1245,26 +1245,71 @@
             useEffect(() => {
                 const loadData = async () => {
                     let cloudLoaded = false;
+                    let initialLinks = customLinks;
+                    let initialQuotes = quotes;
+                    
                     if (gistToken && gistId) {
                         try {
-                            const response = await fetch(`https://api.github.com/gists/${gistId.trim()}`, { headers: { 'Authorization': `token ${gistToken.trim()}` } });
+                            const response = await fetch(`https://api.github.com/gists/${gistId.trim()}`, { 
+                                headers: { 'Authorization': `token ${gistToken.trim()}` } 
+                            });
                             if (response.ok) {
                                 const json = await response.json();
                                 if (json.files && json.files['market_data.json']) {
                                     const content = JSON.parse(json.files['market_data.json'].content);
-                                    if (content.history) { setHistoryData(content.history); localStorage.setItem('history_data', JSON.stringify(content.history)); }
-                                    if (content.links && content.links.length > 0) { setCustomLinks(content.links); localStorage.setItem('market-dash-links', JSON.stringify(content.links)); }
-                                    if (content.quotes && content.quotes.length > 0) { setQuotes(content.quotes); localStorage.setItem('market-dash-quotes', JSON.stringify(content.quotes)); }
-                                    cloudLoaded = true;
+                                    let hasNewData = false;
+                                    
+                                    if (content.history) { 
+                                        setHistoryData(content.history); 
+                                        localStorage.setItem('history_data', JSON.stringify(content.history)); 
+                                    }
+                                    if (content.links && content.links.length > 0) { 
+                                        setCustomLinks(content.links); 
+                                        localStorage.setItem('market-dash-links', JSON.stringify(content.links));
+                                        hasNewData = true;
+                                    }
+                                    if (content.quotes && content.quotes.length > 0) { 
+                                        setQuotes(content.quotes); 
+                                        localStorage.setItem('market-dash-quotes', JSON.stringify(content.quotes));
+                                        hasNewData = true;
+                                    }
+                                    if (hasNewData) cloudLoaded = true;
                                 }
                             }
                         } catch (e) { console.error("❌ Sync: Gist load failed", e); }
                     }
+
                     if (!cloudLoaded) {
                         try {
-                            const h = localStorage.getItem('history_data'); if (h) setHistoryData(JSON.parse(h));
-                            const l = localStorage.getItem('market-dash-links'); if (l) { const pl = JSON.parse(l); if(pl.length > 0) setCustomLinks(pl); }
-                            const q = localStorage.getItem('market-dash-quotes'); if (q) { const pq = JSON.parse(q); if(pq.length > 0) setQuotes(pq); }
+                            const h = localStorage.getItem('history_data'); 
+                            if (h) setHistoryData(JSON.parse(h));
+                            
+                            const l = localStorage.getItem('market-dash-links'); 
+                            let localLinksEmpty = true;
+                            if (l) { 
+                                const pl = JSON.parse(l); 
+                                if(pl && pl.length > 0) {
+                                    setCustomLinks(pl);
+                                    localLinksEmpty = false;
+                                } 
+                            }
+                            
+                            const q = localStorage.getItem('market-dash-quotes');
+                            let localQuotesEmpty = true;
+                            if (q) { 
+                                const pq = JSON.parse(q); 
+                                if(pq && pq.length > 0) {
+                                    setQuotes(pq);
+                                    localQuotesEmpty = false;
+                                } 
+                            }
+
+                            // もしGitHub連携設定があるのにリモート/ローカル共に空だった場合
+                            // HTML内の初期値を保存して、以降Gistを優先するようにする
+                            if (gistToken && gistId && localLinksEmpty && localQuotesEmpty) {
+                                console.log("🔄 Initializing Gist with backup data...");
+                                saveAllData(undefined, initialLinks, initialQuotes);
+                            }
                         } catch (e) { console.error("Local Load Failed", e); }
                     }
                 };
