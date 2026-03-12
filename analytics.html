@@ -49,6 +49,14 @@
             /* Force Monday-first week via locale hint */
             -webkit-locale: "ja-JP";
         }
+        
+        /* Sidebar Styles (Copy from index.html) */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -82,7 +90,15 @@
                 HelpCircle: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
                 X: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
                 Camera: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
-                Copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
+                Menu: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
+                Calendar: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+                Lightbulb: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M7 11c0-3.87 3.13-7 7-7s7 3.13 7 7c0 1.93-.78 3.68-2.04 4.95l-.46.47c-.52.52-.8 1.25-.8 2.01l-.01 1.57h-7.38l-.01-1.57c0-.76-.28-1.49-.8-2.01l-.46-.47C7.78 14.68 7 12.93 7 11z"></path></svg>,
+                Activity: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
+                Database: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>,
+                BarChart3: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path x1="13" y1="17" x2="13" y2="12"></path><path d="M8 17v-3"></path></svg>,
+                LineChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>,
+                Briefcase: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
             };
             return <span className={className}>{icons[name] || null}</span>;
         };
@@ -163,6 +179,23 @@
             );
         };
 
+        const NavItem = ({ id, label, icon, active = false, collapsed = false, onToggleSidebar }) => {
+            const handleClick = () => {
+                if (id === 'analytics') return;
+                window.top.location.href = `index.html?view=${id}`;
+            };
+            return (
+                <button 
+                    onClick={handleClick} 
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${active ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${collapsed ? 'justify-center' : ''}`}
+                    title={collapsed ? label : ''}
+                >
+                    <Icon name={icon} size={20} />
+                    {!collapsed && <span className="font-medium text-sm">{label}</span>}
+                </button>
+            );
+        };
+
         const App = () => {
             const [rawData, setRawData] = useState(null);
             const [loading, setLoading] = useState(true);
@@ -172,6 +205,11 @@
             const [showModal, setShowModal] = useState(false);
             
             const [activeTickers, setActiveTickers] = useState(new Set());
+            
+            // Sidebar states
+            const [isStandalone, setIsStandalone] = useState(window.top === window.self);
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            const [isCollapsed, setIsCollapsed] = useState(false);
 
             useEffect(() => {
                 if (!window.Recharts) {
@@ -344,203 +382,237 @@
             const totalFlowDisplay = processedData ? processedData.totalFlow : 0;
             const generatedAt = rawData && rawData.metadata ? rawData.metadata.generated_at : "";
 
+            const content = (
+                <div className="space-y-6">
+                    {/* Header Card */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-wrap gap-4 items-center justify-between animate-fade-in relative">
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2 text-slate-600"><Icon name="Filter" size={16} /><span className="text-sm font-bold">分析期間:</span></div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center">
+                                    <button onClick={() => shiftDate('start', -1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronLeft" size={16} /></button>
+                                    <input 
+                                        type="date" 
+                                        value={startDate} 
+                                        onChange={(e) => { setStartDate(e.target.value); setActiveTickers(new Set()); }} 
+                                        onClick={handleDateClick}
+                                        className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-32 cursor-pointer hover:bg-slate-50" 
+                                    />
+                                    <button onClick={() => shiftDate('start', 1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronRight" size={16} /></button>
+                                </div>
+                                <span className="text-slate-400">〜</span>
+                                <div className="flex items-center">
+                                    <button onClick={() => shiftDate('end', -1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronLeft" size={16} /></button>
+                                    <input 
+                                        type="date" 
+                                        value={endDate} 
+                                        onChange={(e) => { setEndDate(e.target.value); setActiveTickers(new Set()); }} 
+                                        onClick={handleDateClick}
+                                        className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-32 cursor-pointer hover:bg-slate-50" 
+                                    />
+                                    <button onClick={() => shiftDate('end', 1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronRight" size={16} /></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs text-slate-400">期間内 累積海外資金流入額</p>
+                            <p className={`text-lg font-bold font-mono ${totalFlowDisplay >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>
+                                {(totalFlowDisplay / 100000).toLocaleString(undefined, { maximumFractionDigits: 0 })} 億円
+                            </p>
+                        </div>
+                        <button onClick={() => setShowModal(true)} className="absolute top-2 right-2 text-slate-300 hover:text-slate-500"><Icon name="HelpCircle" size={18} /></button>
+                    </div>
+
+                    {!hasData ? (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">
+                            <p className="mb-2 font-bold text-lg">指定された期間のデータがありません。</p>
+                            <p className="text-sm">日付を変更して再度お試しください。</p>
+                        </div>
+                    ) : (
+                        <>
+                        <div id="chart-container" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in relative">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                        <Icon name="Activity" className="text-[#7C4DFF]" />
+                                        分析レポート
+                                    </h2>
+                                    <p className="text-xs text-slate-500">市場動向とセクター反応の相関分析</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <ScreenshotButton targetId="chart-container" />
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                        <h3 className="text-sm font-bold text-slate-600">海外資金感応度 (Mean DIFF)</h3>
+                                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">UNIT: % Performance</span>
+                                    </div>
+                                    <div id="chart-main" className="h-[750px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={processedData.chartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                                                <XAxis type="number" fontSize={11} tickFormatter={(val) => `${val}%`} />
+                                                <YAxis dataKey="name" type="category" width={100} fontSize={10} interval={0} />
+                                                <Tooltip 
+                                                    cursor={{fill: '#f8fafc'}}
+                                                    formatter={(val) => [`${val.toFixed(3)}%`, '平均感応度']} 
+                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                                                />
+                                                <ReferenceLine x={0} stroke="#94a3b8" />
+                                                <Bar dataKey="meanDiff" radius={[0, 4, 4, 0]} barSize={25}>
+                                                    {processedData.chartData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={getBarColor(entry.ticker, entry.meanDiff)} fillOpacity={0.8} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                        <h3 className="text-sm font-bold text-slate-600">週次 買越・売越額 (億円)</h3>
+                                        <ScreenshotButton targetId="chart-flow" />
+                                    </div>
+                                    <div id="chart-flow" className="h-[500px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={processedData.timeSeries} margin={{ top: 5, right: 30, left: 5, bottom: 60 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis 
+                                                    dataKey="weekLabel" 
+                                                    fontSize={11} 
+                                                    interval={0}
+                                                    angle={-45}
+                                                    textAnchor="end"
+                                                    height={80}
+                                                />
+                                                <YAxis fontSize={11} tickFormatter={(val) => `${val.toLocaleString()}億`} width={45} />
+                                                <Tooltip 
+                                                    cursor={{fill: 'transparent'}}
+                                                    labelFormatter={(label, payload) => {
+                                                        if(payload && payload[0]) {
+                                                            const dateStr = payload[0].payload.date;
+                                                            const parts = dateStr.split('-');
+                                                            const year = parts[0];
+                                                            const month = parseInt(parts[1]);
+                                                            const week = parseInt(parts[2]);
+                                                            return `${year}年${month}月第${week}週 (${label})`; 
+                                                        }
+                                                        return label;
+                                                    }} 
+                                                    formatter={(val) => `${Math.round(val).toLocaleString()}億円`} 
+                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} 
+                                                />
+                                                <ReferenceLine y={0} stroke="#94a3b8" />
+                                                <Bar dataKey="flow" name="純流出入額" radius={[2, 2, 0, 0]} barSize={20}>
+                                                    {processedData.timeSeries.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.flow > 0 ? '#A78BFA' : '#F472B6'} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in mb-20">
+                            <div className="p-6 border-b border-slate-200 flex items-center gap-2">
+                                <h2 className="text-lg font-bold text-slate-800">詳細統計データ一覧</h2>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left text-slate-600">
+                                    <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3 text-center w-16">操作</th>
+                                            <th className="px-6 py-3">セクター / ETF</th>
+                                            <th className="px-6 py-3 text-right text-[#7C4DFF]">感応度 (Diff)</th>
+                                            <th className="px-6 py-3 text-right">平均リターン (買越時)</th>
+                                            <th className="px-6 py-3 text-right">平均リターン (売越時)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {processedData.allStats.map((row) => {
+                                            const isActive = activeTickers.has(row.ticker);
+                                            return (
+                                                <tr key={row.ticker} className={`transition-colors ${isActive ? 'bg-purple-50/50' : 'hover:bg-slate-50'}`}>
+                                                    <td className="px-4 py-4 text-center">
+                                                        <button 
+                                                            onClick={() => toggleTicker(row.ticker)}
+                                                            className={`p-1.5 rounded-full transition-colors border ${
+                                                                isActive 
+                                                                    ? 'bg-slate-200 border-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 hover:border-red-200' 
+                                                                    : 'bg-white border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white'
+                                                            }`}
+                                                            title={isActive ? "グラフから削除" : "グラフに追加"}
+                                                        >
+                                                            {isActive ? <Icon name="Trash2" size={14} /> : <Icon name="Plus" size={14} />}
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-6 py-4 font-medium text-slate-800">
+                                                        {row.name} 
+                                                        <span className="text-xs text-slate-400 ml-1">({row.ticker})</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-bold text-[#7C4DFF]">{row.meanDiff > 0 ? '+' : ''}{row.meanDiff.toFixed(3)}%</td>
+                                                    <td className="px-6 py-4 text-right">{row.meanPos.toFixed(3)}%</td>
+                                                    <td className="px-6 py-4 text-right">{row.meanNeg.toFixed(3)}%</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        </>
+                    )}
+                </div>
+            );
+
             return (
-                <div className="min-h-screen bg-[#f8fafc] pb-20">
-                    {showModal && <InfoModal onClose={() => setShowModal(false)} />}
-                    
-                    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-                        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-[#7C4DFF] text-white p-2 rounded-lg"><Icon name="BarChart2" /></div>
-                                <div><h1 className="font-bold text-slate-800 text-lg">セクター別 海外資金感応度分析</h1><p className="text-xs text-slate-500">Foreign Flow Sensitivity & Sector Performance</p></div>
+                <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+                    {/* Sidebar (Only in standalone) */}
+                    {isStandalone && (
+                        <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-75 shadow-xl lg:shadow-none flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`} style={{ width: isCollapsed ? 70 : 260 }}>
+                            <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
+                                {!isCollapsed && <span className="font-bold text-lg tracking-tight text-[#334155]">Dashboard</span>}
+                                <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 text-slate-400 hover:text-[#7C4DFF] hover:bg-slate-50 rounded mx-auto lg:mx-0">
+                                    <Icon name={isCollapsed ? "ChevronRight" : "ChevronLeft"} size={20} />
+                                </button>
                             </div>
-                            <div className="text-xs text-slate-400 font-mono hidden md:block">最終更新: {generatedAt}</div>
-                        </div>
-                    </header>
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
+                                {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
+                                <NavItem id="calendar" label="投資カレンダー" icon="Calendar" collapsed={isCollapsed} />
+                                <NavItem id="quotes" label="投資の格言集" icon="Lightbulb" collapsed={isCollapsed} />
+                                <NavItem id="analytics" label="セクター別感応度" icon="Activity" active={true} collapsed={isCollapsed} />
+                                <NavItem id="trends" label="主体別投資動向" icon="TrendingUp" collapsed={isCollapsed} />
+                                <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" collapsed={isCollapsed} />
+                                <NavItem id="nf_option" label="オプション建玉監視" icon="Database" collapsed={isCollapsed} />
+                                <NavItem id="nf_teguchi" label="手口データ分析" icon="BarChart3" collapsed={isCollapsed} />
+                            </div>
+                        </aside>
+                    )}
 
-                    <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap gap-4 items-center justify-between animate-fade-in">
-                            <div className="flex items-center gap-4 flex-wrap">
-                                <div className="flex items-center gap-2 text-slate-600"><Icon name="Filter" size={16} /><span className="text-sm font-bold">分析期間:</span></div>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center">
-                                        <button onClick={() => shiftDate('start', -1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronLeft" size={16} /></button>
-                                        <input 
-                                            type="date" 
-                                            value={startDate} 
-                                            onChange={(e) => { setStartDate(e.target.value); setActiveTickers(new Set()); }} 
-                                            onClick={handleDateClick}
-                                            className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-32 cursor-pointer hover:bg-slate-50" 
-                                        />
-                                        <button onClick={() => shiftDate('start', 1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronRight" size={16} /></button>
-                                    </div>
-                                    <span className="text-slate-400">〜</span>
-                                    <div className="flex items-center">
-                                        <button onClick={() => shiftDate('end', -1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronLeft" size={16} /></button>
-                                        <input 
-                                            type="date" 
-                                            value={endDate} 
-                                            onChange={(e) => { setEndDate(e.target.value); setActiveTickers(new Set()); }} 
-                                            onClick={handleDateClick}
-                                            className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-32 cursor-pointer hover:bg-slate-50" 
-                                        />
-                                        <button onClick={() => shiftDate('end', 1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronRight" size={16} /></button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-xs text-slate-400">期間内 累積海外資金流入額</p>
-                                <p className={`text-lg font-bold font-mono ${totalFlowDisplay >= 0 ? 'text-[#7C4DFF]' : 'text-[#FF4081]'}`}>
-                                    {(totalFlowDisplay / 100000).toLocaleString(undefined, { maximumFractionDigits: 0 })} 億円
-                                </p>
-                            </div>
-                        </div>
-
-                        {!hasData ? (
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">
-                                <p className="mb-2 font-bold text-lg">指定された期間のデータがありません。</p>
-                                <p className="text-sm">日付を変更して再度お試しください。</p>
-                            </div>
-                        ) : (
-                            <>
-                            <div id="chart-container" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in relative">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                            <Icon name="BarChart2" className="text-[#7C4DFF]" />
-                                            分析レポート
-                                        </h2>
-                                        <p className="text-xs text-slate-500">市場動向とセクター反応の相関分析</p>
-                                    </div>
-                                    <ScreenshotButton targetId="chart-container" className="bg-slate-50 border border-slate-200" />
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div id="chart-sensitivity" className="relative p-2 rounded hover:bg-slate-50/50 transition-colors">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                                セクター感応度 (リターン乖離)
-                                                <button onClick={() => setShowModal(true)} className="text-slate-400 hover:text-[#7C4DFF]" title="詳細"><Icon name="HelpCircle" size={16} /></button>
-                                            </h3>
-                                            <ScreenshotButton targetId="chart-sensitivity" />
-                                        </div>
-                                        <div className="h-[500px]">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart layout="vertical" data={processedData.chartData} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis type="number" fontSize={12} tickFormatter={(val) => `${val.toFixed(2)}%`} />
-                                                    <YAxis type="category" dataKey="name" width={120} fontSize={11} interval={0} />
-                                                    <Tooltip formatter={(val) => `${val.toFixed(3)}%`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                                                    <ReferenceLine x={0} stroke="#94a3b8" />
-                                                    <Bar dataKey="meanDiff" radius={[0, 4, 4, 0]} name="感応度 (Mean Diff)" barSize={20}>
-                                                        {processedData.chartData.map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={getBarColor(entry.ticker, entry.meanDiff)} />
-                                                        ))}
-                                                    </Bar>
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-
-                                    <div id="chart-flow" className="relative p-2 rounded hover:bg-slate-50/50 transition-colors">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                                <Icon name="TrendingUp" size={16} /> 期間内 資金流出入推移
-                                            </h3>
-                                            <ScreenshotButton targetId="chart-flow" />
-                                        </div>
-                                        <div className="h-[500px]">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={processedData.timeSeries} margin={{ top: 5, right: 30, left: 5, bottom: 60 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                    <XAxis 
-                                                        dataKey="weekLabel" 
-                                                        fontSize={11} 
-                                                        interval={0}
-                                                        angle={-45}
-                                                        textAnchor="end"
-                                                        height={80}
-                                                    />
-                                                    <YAxis fontSize={11} tickFormatter={(val) => `${val.toLocaleString()}億`} width={45} />
-                                                    <Tooltip 
-                                                        cursor={{fill: 'transparent'}}
-                                                        labelFormatter={(label, payload) => {
-                                                            if(payload && payload[0]) {
-                                                                const dateStr = payload[0].payload.date;
-                                                                const parts = dateStr.split('-');
-                                                                const year = parts[0];
-                                                                const month = parseInt(parts[1]);
-                                                                const week = parseInt(parts[2]);
-                                                                return `${year}年${month}月第${week}週 (${label})`; 
-                                                            }
-                                                            return label;
-                                                        }} 
-                                                        formatter={(val) => `${Math.round(val).toLocaleString()}億円`} 
-                                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} 
-                                                    />
-                                                    <ReferenceLine y={0} stroke="#94a3b8" />
-                                                    <Bar dataKey="flow" name="純流出入額" radius={[2, 2, 0, 0]} barSize={20}>
-                                                        {processedData.timeSeries.map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={entry.flow > 0 ? '#A78BFA' : '#F472B6'} />
-                                                        ))}
-                                                    </Bar>
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in">
-                                <div className="p-6 border-b border-slate-200 flex items-center gap-2">
-                                    <h2 className="text-lg font-bold text-slate-800">詳細統計データ一覧</h2>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left text-slate-600">
-                                        <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500">
-                                            <tr>
-                                                <th className="px-4 py-3 text-center w-16">操作</th>
-                                                <th className="px-6 py-3">セクター / ETF</th>
-                                                <th className="px-6 py-3 text-right text-[#7C4DFF]">感応度 (Diff)</th>
-                                                <th className="px-6 py-3 text-right">平均リターン (買越時)</th>
-                                                <th className="px-6 py-3 text-right">平均リターン (売越時)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {processedData.allStats.map((row) => {
-                                                const isActive = activeTickers.has(row.ticker);
-                                                return (
-                                                    <tr key={row.ticker} className={`transition-colors ${isActive ? 'bg-purple-50/50' : 'hover:bg-slate-50'}`}>
-                                                        <td className="px-4 py-4 text-center">
-                                                            <button 
-                                                                onClick={() => toggleTicker(row.ticker)}
-                                                                className={`p-1.5 rounded-full transition-colors border ${
-                                                                    isActive 
-                                                                        ? 'bg-slate-200 border-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 hover:border-red-200' 
-                                                                        : 'bg-white border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white'
-                                                                }`}
-                                                                title={isActive ? "グラフから削除" : "グラフに追加"}
-                                                            >
-                                                                {isActive ? <Icon name="Trash2" size={14} /> : <Icon name="Plus" size={14} />}
-                                                            </button>
-                                                        </td>
-                                                        <td className="px-6 py-4 font-medium text-slate-800">
-                                                            {row.name} 
-                                                            <span className="text-xs text-slate-400 ml-1">({row.ticker})</span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right font-bold text-[#7C4DFF]">{row.meanDiff > 0 ? '+' : ''}{row.meanDiff.toFixed(3)}%</td>
-                                                        <td className="px-6 py-4 text-right">{row.meanPos.toFixed(3)}%</td>
-                                                        <td className="px-6 py-4 text-right">{row.meanNeg.toFixed(3)}%</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            </>
+                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                        {isStandalone && (
+                            <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
+                                <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
+                                <span className="ml-4 font-bold text-[#334155]">セクター別感応度</span>
+                            </header>
                         )}
-                    </main>
+                        
+                        <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
+                            <div className="max-w-7xl mx-auto">
+                                {content}
+                            </div>
+                        </main>
+                        
+                        {showModal && <InfoModal onClose={() => setShowModal(false)} />}
+                        
+                        {sidebarOpen && isStandalone && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+                    </div>
                 </div>
             );
         };
