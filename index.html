@@ -1253,8 +1253,8 @@
                                 if (json.files && json.files['market_data.json']) {
                                     const content = JSON.parse(json.files['market_data.json'].content);
                                     if (content.history) { setHistoryData(content.history); localStorage.setItem('history_data', JSON.stringify(content.history)); }
-                                    if (content.links) { setCustomLinks(content.links); localStorage.setItem('market-dash-links', JSON.stringify(content.links)); }
-                                    if (content.quotes) { setQuotes(content.quotes); localStorage.setItem('market-dash-quotes', JSON.stringify(content.quotes)); }
+                                    if (content.links && content.links.length > 0) { setCustomLinks(content.links); localStorage.setItem('market-dash-links', JSON.stringify(content.links)); }
+                                    if (content.quotes && content.quotes.length > 0) { setQuotes(content.quotes); localStorage.setItem('market-dash-quotes', JSON.stringify(content.quotes)); }
                                     cloudLoaded = true;
                                 }
                             }
@@ -1263,8 +1263,8 @@
                     if (!cloudLoaded) {
                         try {
                             const h = localStorage.getItem('history_data'); if (h) setHistoryData(JSON.parse(h));
-                            const l = localStorage.getItem('market-dash-links'); if (l) setCustomLinks(JSON.parse(l));
-                            const q = localStorage.getItem('market-dash-quotes'); if (q) setQuotes(JSON.parse(q));
+                            const l = localStorage.getItem('market-dash-links'); if (l) { const pl = JSON.parse(l); if(pl.length > 0) setCustomLinks(pl); }
+                            const q = localStorage.getItem('market-dash-quotes'); if (q) { const pq = JSON.parse(q); if(pq.length > 0) setQuotes(pq); }
                         } catch (e) { console.error("Local Load Failed", e); }
                     }
                 };
