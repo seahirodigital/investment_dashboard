@@ -1267,10 +1267,19 @@
                                         setCustomLinks(content.links); 
                                         localStorage.setItem('market-dash-links', JSON.stringify(content.links));
                                         hasNewData = true;
+                                    } else {
+                                        // クラウドが空、または存在しない場合は、バックアップを強制的にクラウドへ書き込む
+                                        console.log("☁️ Cloud links empty. Syncing backup to Gist...");
+                                        saveAllData(undefined, initialLinks, initialQuotes);
+                                        hasNewData = true;
                                     }
                                     if (content.quotes && content.quotes.length > 0) { 
                                         setQuotes(content.quotes); 
                                         localStorage.setItem('market-dash-quotes', JSON.stringify(content.quotes));
+                                        hasNewData = true;
+                                    } else {
+                                        console.log("☁️ Cloud quotes empty. Syncing backup to Gist...");
+                                        saveAllData(undefined, undefined, initialQuotes);
                                         hasNewData = true;
                                     }
                                     if (hasNewData) cloudLoaded = true;
