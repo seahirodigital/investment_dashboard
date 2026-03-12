@@ -480,6 +480,20 @@
                             </div>
                         </div>
                     </div>
+                    <div className="bg-gradient-to-r from-[#7C4DFF] to-[#651FFF] rounded-xl shadow-lg p-6 mt-8 flex items-center justify-between text-white animate-fade-in-up">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                                <Icon name="Activity" size={28} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-lg">セクター別 海外資金感応度分析</h3>
+                                <p className="text-white/80 text-sm">海外投資家の売買動向と各セクターの株価反応をビジュアル分析</p>
+                            </div>
+                        </div>
+                        <a href="analytics.html" className="bg-white text-[#7C4DFF] px-6 py-3 rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center gap-2 shadow-md hover:shadow-xl transform hover:-translate-y-1">
+                            ダッシュボードを開く <Icon name="ArrowRight" size={18} />
+                        </a>
+                    </div>
                 </div>
             );
         };
@@ -1229,7 +1243,10 @@
         const OptionOI=({charts,setCharts})=>{const[ticker,setTicker]=useState('');const[error,setError]=useState(null);const handleData=(rows)=>{const step=50;const res=processOptionData(rows,step);if(res.error){setError(res.error);}else{setError(null);const newChart={id:Date.now().toString(),data:res.data,step:step,rawRows:rows};setCharts([...charts,newChart]);}};const handleStepChange=(id,newStep,newData)=>{setCharts(charts.map(c=>c.id===id?{...c,step:newStep,data:newData}:c));};const handleTickerNav=()=>{if(!ticker)return;const symbol=ticker.trim().toUpperCase();window.open(`https://optioncharts.io/options/${symbol}/option-chain`,'_blank');};return(<div className="h-full flex flex-col pb-20"><div className="unified-header-card"><div className="unified-header-title"><Icon name="BarChart3" size={28} /> Option 分析</div><p className="unified-header-sub">建玉の壁を可視化</p></div>{charts.length>0&&<button onClick={()=>setCharts([])} className="text-sm text-red-500 hover:underline mb-4">データをクリア</button>}{charts.map(chart=>(<OIChart key={chart.id} id={chart.id} initialData={chart.data} initialStep={chart.step} rawRows={chart.rawRows} onStepChange={handleStepChange}/>))}{error&&<div className="mb-4 p-3 bg-red-50 text-red-600 rounded flex items-center gap-2"><Icon name="AlertTriangle"/>{error}</div>}<div className="flex flex-col items-center justify-center py-8 border-t border-slate-200 mt-4 bg-slate-50/50 rounded-xl"><p className="text-slate-400 font-bold mb-4 text-sm uppercase">Add New Chart</p><div className="mb-6 flex flex-wrap justify-center gap-x-4 gap-y-2 max-w-4xl px-4">{[{label:'JPX',url:'https://www.jpx.co.jp/markets/derivatives/quotes/index.html'},{label:'QQQ',url:'https://optioncharts.io/options/QQQ/option-chain'},{label:'SPY',url:'https://optioncharts.io/options/SPY/option-chain'},{label:'DJI',url:'https://optioncharts.io/options/$DJX/option-chain'},{label:'IWM',url:'https://optioncharts.io/options/IWM/option-chain'},{label:'VIX',url:'https://optioncharts.io/options/$VIX/option-chain'},{label:'NVIDIA',url:'https://optioncharts.io/options/NVDA/option-chain'},{label:'APPL',url:'https://optioncharts.io/options/AAPL/option-chain'},{label:'AMZN',url:'https://optioncharts.io/options/AMZN/option-chain'},{label:'GLD',url:'https://optioncharts.io/options/GLD/option-chain'},{label:'SLV',url:'https://optioncharts.io/options/SLV/option-chain'}].map(l=>(<a key={l.label} href={l.url} target="_blank" className="text-[#536DFE] hover:underline text-sm font-medium flex items-center gap-1">{l.label} <Icon name="ExternalLink" size={10}/></a>))}</div><div className="mb-10 flex items-center gap-2"><span className="text-sm text-slate-500 font-bold">Ticker:</span><input type="text" className="border border-slate-300 rounded px-2 py-1 text-sm w-24 focus:outline-none focus:border-[#7C4DFF]" placeholder="e.g. TSLA" value={ticker} onChange={(e)=>setTicker(e.target.value)} onKeyDown={(e)=>e.key==='Enter'&&handleTickerNav()}/><button onClick={handleTickerNav} className="bg-[#7C4DFF] text-white text-xs px-3 py-1.5 rounded hover:bg-[#651FFF] font-medium">Go</button></div><DataInput onDataParsed={handleData}/></div></div>);};
 
         const App = () => {
-            const [view, setView] = useState('calendar');
+            const [view, setView] = useState(() => {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('view') || 'calendar';
+            });
             const [sidebarOpen, setSidebarOpen] = useState(false);
             const [sidebarWidth, setSidebarWidth] = useState(260);
             const [isCollapsed, setIsCollapsed] = useState(false);
@@ -1377,6 +1394,7 @@
                             {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
                             <NavItem id="calendar" label="投資カレンダー" icon="Calendar" />
                             <NavItem id="quotes" label="投資の格言集" icon="Lightbulb" />
+                            <NavItem id="analytics" label="セクター別感応度" icon="Activity" />
                             <NavItem id="trends" label="主体別投資動向" icon="TrendingUp" />
                             <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
                             <NavItem id="nf_option" label="オプション建玉監視" icon="Database" />
@@ -1390,7 +1408,7 @@
                     </aside>
                     {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
                     <div className="flex-1 flex flex-col min-w-0">
-                        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0"><button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button><span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'nf_option' ? 'オプション建玉監視' : view === 'nf_teguchi' ? '手口データ分析' : view === 'jpx' ? 'JPX 海外動向' : view === 'quotes' ? '投資の格言集' : view === 'trends' ? '主体別投資動向' : '取引参加者別取引高'}</span></header>
+                        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0"><button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button><span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'nf_option' ? 'オプション建玉監視' : view === 'nf_teguchi' ? '手口データ分析' : view === 'jpx' ? 'JPX 海外動向' : view === 'quotes' ? '投資の格言集' : view === 'analytics' ? 'セクター別感応度' : view === 'trends' ? '主体別投資動向' : '取引参加者別取引高'}</span></header>
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
                             <div className="max-w-7xl mx-auto h-full">
                                 {view === 'calendar' ? <ProfitManager historyData={historyData} updateHistoryData={(nd) => saveAllData(nd, undefined, undefined)} customLinks={customLinks} setCustomLinks={(nl) => saveAllData(undefined, nl, undefined)} quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} saveAllData={saveAllData} onMoveToQuotes={handleMoveToQuotes} /> :
@@ -1400,6 +1418,7 @@
                                                 view === 'trends' ? <InvestorTrends /> :
                                                     view === 'nf_option' ? <iframe src="option.html" className="w-full h-[90vh] border-none rounded-xl" title="オプション建玉監視"></iframe> :
                                                         view === 'nf_teguchi' ? <iframe src="teguchi.html" className="w-full h-[90vh] border-none rounded-xl" title="手口データ分析"></iframe> :
+                                                            view === 'analytics' ? <iframe src="analytics.html" className="w-full h-[90vh] border-none rounded-xl" title="セクター別解析"></iframe> :
                                                 <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
                             </div>
                         </main>
