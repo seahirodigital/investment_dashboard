@@ -1,8 +1,8 @@
-name: Daily JPX Participant Analysis & NF Option Fetch
+name: Daily ETF Sector Analysis
 
 on:
   schedule:
-    - cron: '5 11 * * *'
+    - cron: '0 7 * * *'  # 16:00 JST (07:00 UTC)
   workflow_dispatch:
 
 permissions:
@@ -26,29 +26,19 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Run Daily Analysis Script
-        run: python scripts/daily_participant_analyzer.py
-
-      - name: Fetch JPX Data and Export JSON
-        env:
-          FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
+      - name: Fetch ETF Data
         run: |
-          python scripts/fetch_teguchi.py
-          python scripts/fetch_option.py
+          python scripts/etf_data_manager.py
 
       - name: Commit and Push Data
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Add all modified json files
-          [ -f data/daily_participant.json ] && git add data/daily_participant.json
-          [ -f data.json ] && git add data.json
-          [ -f option_history.json ] && git add option_history.json
+          [ -f data/etf_data.json ] && git add data/etf_data.json
           
-          # 変更がある場合のみコミット
           if ! git diff --staged --quiet; then
-            git commit -m "Update Daily Participant & Option Data: $(date +'%Y-%m-%d')"
+            git commit -m "Update ETF Data: $(date +'%Y-%m-%d')"
             git push
             echo "Data updated and pushed."
           else

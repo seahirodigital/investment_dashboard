@@ -15,7 +15,6 @@
     
     <!-- Plotly -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script src="https://unpkg.com/react-plotly.js@2.6.0/dist/create-plotly-component.js"></script>
     
     <!-- Utilities -->
     <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
@@ -52,10 +51,27 @@
         };
     </script>
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-        const Plot = createPlotlyComponent(Plotly);
+        const { useState, useEffect, useMemo, useRef } = React;
+        const Plot = ({ data, layout, config, style, useResizeHandler }) => {
+            const divRef = useRef(null);
+            
+            useEffect(() => {
+                if (divRef.current && window.Plotly) Plotly.react(divRef.current, data, layout, config);
+            }, [data, layout, config]);
 
+            useEffect(() => {
+                let resizeObserver;
+                if (useResizeHandler && divRef.current && window.Plotly) {
+                    resizeObserver = new ResizeObserver(() => window.Plotly.Plots.resize(divRef.current));
+                    resizeObserver.observe(divRef.current);
+                }
+                return () => resizeObserver && resizeObserver.disconnect();
+            }, [useResizeHandler]);
+
+            useEffect(() => () => divRef.current && window.Plotly && Plotly.purge(divRef.current), []);
+
+            return <div ref={divRef} style={style} />;
+        };
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
                 TrendingUp: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>,
