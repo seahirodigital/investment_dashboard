@@ -1396,6 +1396,7 @@
                             <NavItem id="quotes" label="投資の格言集" icon="Lightbulb" />
                             <NavItem id="etf" label="セクター分析" icon="PieChart" />
                             <NavItem id="analytics" label="セクター別感応度" icon="Activity" />
+                            <NavItem id="gpif" label="GPIF分析" icon="Database" />
                             <NavItem id="trends" label="主体別投資動向" icon="TrendingUp" />
                             <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" />
                             <NavItem id="nf_option" label="オプション建玉監視" icon="Database" />
@@ -1409,7 +1410,7 @@
                     </aside>
                     {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
                     <div className="flex-1 flex flex-col min-w-0">
-                        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0"><button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button><span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'nf_option' ? 'オプション建玉監視' : view === 'nf_teguchi' ? '手口データ分析' : view === 'jpx' ? 'JPX 海外動向' : view === 'quotes' ? '投資の格言集' : view === 'etf' ? 'セクター分析' : view === 'analytics' ? 'セクター別感応度' : view === 'trends' ? '主体別投資動向' : '取引参加者別取引高'}</span></header>
+                        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0"><button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button><span className="ml-4 font-bold text-[#334155]">{view === 'calendar' ? '投資カレンダー' : view === 'option' ? 'Option 分析' : view === 'nf_option' ? 'オプション建玉監視' : view === 'nf_teguchi' ? '手口データ分析' : view === 'jpx' ? 'JPX 海外動向' : view === 'quotes' ? '投資の格言集' : view === 'etf' ? 'セクター分析' : view === 'analytics' ? 'セクター別感応度' : view === 'gpif' ? 'GPIF分析' : view === 'trends' ? '主体別投資動向' : '取引参加者別取引高'}</span></header>
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
                             <div className="max-w-7xl mx-auto h-full">
                                 {view === 'calendar' ? <ProfitManager historyData={historyData} updateHistoryData={(nd) => saveAllData(nd, undefined, undefined)} customLinks={customLinks} setCustomLinks={(nl) => saveAllData(undefined, nl, undefined)} quotes={quotes} setQuotes={(nq) => saveAllData(undefined, undefined, nq)} saveAllData={saveAllData} onMoveToQuotes={handleMoveToQuotes} /> :
@@ -1420,7 +1421,8 @@
                                                     view === 'nf_option' ? <iframe src="option.html" className="w-full h-[90vh] border-none rounded-xl" title="オプション建玉監視"></iframe> :
                                                         view === 'nf_teguchi' ? <iframe src="teguchi.html" className="w-full h-[90vh] border-none rounded-xl" title="手口データ分析"></iframe> :
                                                             view === 'analytics' ? <iframe src="analytics.html" className="w-full h-[90vh] border-none rounded-xl" title="セクター別解析"></iframe> :
-                                                                view === 'etf' ? <iframe src="etf.html" className="w-full h-[90vh] border-none rounded-xl" title="セクター分析"></iframe> :
+                                                                view === 'gpif' ? <iframe src="http://localhost:3000" className="w-full h-[90vh] border-none rounded-xl bg-white shadow-sm" title="GPIF分析"></iframe> :
+                                                                    view === 'etf' ? <iframe src="etf.html" className="w-full h-[90vh] border-none rounded-xl" title="セクター分析"></iframe> :
                                                 <OptionOI charts={optionCharts} setCharts={setOptionCharts} />}
                             </div>
                         </main>
