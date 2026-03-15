@@ -44,12 +44,24 @@ export default function App() {
     setError(null);
     try {
       const lookbackDays = parseInt(lookbackDaysInput) || 7;
-      const response = await fetch(`/api/market-data?lookback=${lookbackDays}`);
+      // Fetch pre-generated data from static JSON instead of node backend
+      const response = await fetch('../../data/gpif_data.json');
       if (!response.ok) {
         throw new Error('マーケットデータの取得に失敗しました');
       }
-      const data = await response.json();
-      setMarketData(data);
+      const fullData = await response.json();
+      
+      // Filter the full data by lookbackDays locally (+30 days overlap like original API)
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - (lookbackDays + 30));
+      const cutoffStr = cutoffDate.toISOString().split('T')[0];
+      
+      const filteredData = {} as MarketData;
+      for (const [key, records] of Object.entries(fullData)) {
+        filteredData[key as keyof MarketData] = (records as any[]).filter(r => r.date >= cutoffStr);
+      }
+      
+      setMarketData(filteredData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {

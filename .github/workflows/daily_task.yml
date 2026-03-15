@@ -50,6 +50,9 @@ jobs:
           else
             echo "Warning: history.csv not found, skipping sector analysis."
           fi
+          
+          # 3. GPIF分析データ取得
+          python scripts/fetch_gpif_data.py
       
       - name: Check for changes
         id: check_changes
@@ -95,8 +98,13 @@ jobs:
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
           
+          # GPIFの静的ビルドファイルをデプロイ用にコピー
+          mkdir -p deploy/GPIF
+          [ -d GPIF/dist ] && cp -r GPIF/dist deploy/GPIF/
+          
           echo "Deploy directory content:"
           ls -laR deploy/
+
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
