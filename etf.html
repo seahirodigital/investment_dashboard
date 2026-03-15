@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>セクター分析 (ETFシミュレーション)</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://unpkg.com/react-plotly.js@2.6.0/dist/create-plotly-component.js"></script>
+    
+    <!-- Utilities -->
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Error Box */
+        #global-error { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fee2e2; color: #b91c1c; padding: 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 90%; width: 400px; border: 1px solid #ef4444; }
+        
+        /* Sidebar Styles */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="global-error"></div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const el = document.getElementById('global-error');
+            el.style.display = 'block';
+            el.innerHTML = `<strong>システムエラー:</strong><br>${message}<br><small class="text-xs opacity-75">${source}:${lineno}</small>`;
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const Plot = createPlotlyComponent(Plotly);
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icons = {
+                TrendingUp: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>,
+                TrendingDown: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></svg>,
+                RefreshCw: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>,
+                Copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
+                Menu: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
+                ChevronLeft: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>,
+                ChevronRight: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>,
+                Calendar: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+                Lightbulb: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M7 11c0-3.87 3.13-7 7-7s7 3.13 7 7c0 1.93-.78 3.68-2.04 4.95l-.46.47c-.52.52-.8 1.25-.8 2.01l-.01 1.57h-7.38l-.01-1.57c0-.76-.28-1.49-.8-2.01l-.46-.47C7.78 14.68 7 12.93 7 11z"></path></svg>,
+                Activity: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
+                Database: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>,
+                BarChart3: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path x1="13" y1="17" x2="13" y2="12"></path><path d="M8 17v-3"></path></svg>,
+                LineChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>,
+                Briefcase: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>,
+                PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+            };
+            return <span className={className}>{icons[name] || null}</span>;
+        };
+
+        const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+        const PERIODS = [
+            { value: '1d', label: '1日' },
+            { value: '3d', label: '3日' },
+            { value: '1wk', label: '1週間' },
+            { value: '1mo', label: '1ヶ月' },
+            { value: '3mo', label: '3ヶ月' },
+            { value: '6mo', label: '6ヶ月' },
+            { value: '1y', label: '1年' },
+        ];
+
+        const COLORS = [
+            '#2563eb', '#db2777', '#d97706', '#059669', '#7c3aed', '#dc2626', '#0891b2',
+            '#4f46e5', '#ea580c', '#16a34a', '#9333ea', '#e11d48', '#0284c7', '#ca8a04',
+            '#65a30d', '#475569', '#0f766e', '#14b8a6'
+        ];
+
+        const NavItem = ({ id, label, icon, active = false, collapsed = false }) => {
+            const handleClick = () => {
+                if (id === 'etf') return;
+                window.top.location.href = `index.html?view=${id}`;
+            };
+            return (
+                <button 
+                    onClick={handleClick} 
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors mb-1 ${active ? 'bg-[#7C4DFF] text-white shadow' : 'text-[#64748B] hover:bg-slate-100'} ${collapsed ? 'justify-center' : ''}`}
+                    title={collapsed ? label : ''}
+                >
+                    <Icon name={icon} size={20} />
+                    {!collapsed && <span className="font-medium text-sm">{label}</span>}
+                </button>
+            );
+        };
+
+        const App = () => {
+            const [period, setPeriod] = useState('1wk');
+            const [rawData, setRawData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            // Sidebar states
+            const [isStandalone, setIsStandalone] = useState(window.top === window.self);
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            const [isCollapsed, setIsCollapsed] = useState(false);
+
+            const fetchRawData = async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                    const res = await fetch(`./data/etf_data.json?t=${new Date().getTime()}`);
+                    if (!res.ok) {
+                        if (res.status === 404) {
+                            throw new Error("データファイル(etf_data.json)が未生成です。GitHub Actionsの完了をお待ちください。");
+                        }
+                        throw new Error(`データ読み込み失敗: ${res.status} ${res.statusText}`);
+                    }
+                    const json = await res.json();
+                    if (!json.dates || json.dates.length === 0) {
+                        throw new Error("データが空です。");
+                    }
+                    setRawData(json);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                fetchRawData();
+            }, []);
+
+            const processedData = useMemo(() => {
+                if (!rawData) return null;
+
+                const { dates, prices, benchmark, sectors } = rawData;
+                const L = dates.length;
+                let startIndex = 0;
+                
+                // Calculate date target
+                const today = new Date();
+                const targetDates = {
+                    '1d': 1, // 1 trading day (often today vs yesterday)
+                    '3d': 3,
+                    '1wk': 7, 
+                    '1mo': 30,
+                    '3mo': 90,
+                    '6mo': 180,
+                    '1y': 365
+                };
+                
+                const daysAgo = targetDates[period] || 30;
+                const targetTimestamp = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000).getTime();
+                
+                // Find closest date before or equal to target
+                for (let i = L - 1; i >= 0; i--) {
+                    const d = new Date(dates[i]).getTime();
+                    if (d <= targetTimestamp) {
+                        startIndex = i;
+                        break;
+                    }
+                }
+                
+                // Buffer logic: for very short periods (1d, 3d), just use literal offsets in trading days
+                if (period === '1d') startIndex = Math.max(0, L - 2);
+                if (period === '3d') startIndex = Math.max(0, L - 4);
+                
+                const endIndex = L - 1;
+                const bPrices = prices[benchmark];
+
+                const timeSeries = [];
+                for (let i = startIndex; i <= endIndex; i++) {
+                    const point = { date: dates[i] };
+                    const bStart = bPrices[startIndex];
+                    const bCurrent = bPrices[i];
+                    
+                    if (!bStart || !bCurrent) continue;
+
+                    const bReturn = (bCurrent / bStart) - 1;
+                    point.TOPIX = bReturn * 100;
+
+                    Object.keys(sectors).forEach(symbol => {
+                        const name = sectors[symbol];
+                        const sPrices = prices[symbol];
+                        if (!sPrices) return;
+                        
+                        const sStart = sPrices[startIndex];
+                        const sCurrent = sPrices[i];
+                        
+                        if (sStart && sCurrent) {
+                            const sReturn = (sCurrent / sStart) - 1;
+                            point[name] = (sReturn - bReturn) * 100;
+                        } else {
+                            point[name] = 0;
+                        }
+                    });
+                    
+                    timeSeries.push(point);
+                }
+
+                // Build Ranking List
+                const ranking = [];
+                if (timeSeries.length > 0) {
+                    const latest = timeSeries[timeSeries.length - 1];
+                    Object.keys(sectors).forEach(symbol => {
+                        const name = sectors[symbol];
+                        if (latest[name] !== undefined) {
+                            ranking.push({
+                                symbol,
+                                name,
+                                performance: latest[name]
+                            });
+                        }
+                    });
+                    ranking.sort((a, b) => b.performance - a.performance);
+                }
+
+                return {
+                    period,
+                    startDate: dates[startIndex],
+                    endDate: dates[endIndex],
+                    timeSeries,
+                    ranking
+                };
+                
+            }, [rawData, period]);
+
+            const copySummary = () => {
+                if (!processedData || processedData.ranking.length === 0) return;
+                
+                const { ranking, endDate } = processedData;
+                const top3 = ranking.slice(0, 3);
+                const worst = ranking[ranking.length - 1];
+
+                const text = `【セクター資金流入分析サマリー】
+基準日: ${endDate.replace(/-/g, '/')}（期間: ${PERIODS.find(p => p.value === period)?.label}）
+
+🚀 アウトパフォーム・トップ（資金流入中）
+1位: ${top3[0]?.name} (+${top3[0]?.performance.toFixed(2)}%)
+2位: ${top3[1]?.name} (+${top3[1]?.performance.toFixed(2)}%)
+3位: ${top3[2]?.name} (+${top3[2]?.performance.toFixed(2)}%)
+
+📉 アンダーパフォーム・ワースト（資金流出中）
+・${worst?.name} (${worst?.performance.toFixed(2)}%)
+
+※TOPIX(1306.T)を基準とした相対騰落率を算出。`;
+
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('サマリーをクリップボードにコピーしました。');
+                });
+            };
+
+            const maxAbsPerformance = useMemo(() => {
+                if (!processedData || !processedData.ranking.length) return 100;
+                const max = Math.max(...processedData.ranking.map(r => Math.abs(r.performance)));
+                return max === 0 ? 1 : max;
+            }, [processedData]);
+
+            const content = (
+                <div className="space-y-6">
+                    {/* Header Card */}
+                    <div 
+                        className="rounded-xl px-6 py-4 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between animate-fade-in-up relative" 
+                        style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%)', color: 'white', minHeight: '96px' }}
+                    >
+                        <div className="flex flex-col items-start pr-[200px]">
+                            <h1 className="text-[1.25rem] sm:text-[1.5rem] font-bold">ETF Sector Dashboard</h1>
+                            <p className="text-[0.75rem] opacity-90 mt-1">TOPIX Sector Relative Performance / ETFシミュレーション</p>
+                        </div>
+                        <div className="flex items-center gap-4 mt-4 sm:mt-0 sm:absolute sm:right-6">
+                            <select
+                                value={period}
+                                onChange={(e) => setPeriod(e.target.value)}
+                                className="block w-32 rounded-lg border border-slate-200 p-2 text-xs text-slate-700 focus:ring-2 focus:ring-[#7C4DFF] outline-none bg-white font-medium"
+                                disabled={loading}
+                            >
+                                {PERIODS.map(p => (
+                                    <option key={p.value} value={p.value} className="text-sm">{p.label}</option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={fetchRawData}
+                                className="p-2 text-white hover:text-[#7C4DFF] hover:bg-white rounded-full transition-colors flex items-center justify-center shrink-0"
+                                disabled={loading}
+                            >
+                                <Icon name="RefreshCw" className={cn(loading && "animate-spin")} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {loading && !processedData && (
+                        <div className="flex justify-center items-center h-64">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7C4DFF]"></div>
+                        </div>
+                    )}
+
+                    {!loading && processedData && processedData.timeSeries.length > 0 && (
+                        <div className="flex flex-col gap-8 animate-fade-in">
+                            {/* Chart Area */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[600px] p-6 lg:h-[700px]">
+                                <div className="mb-4">
+                                    <h2 className="text-sm font-bold text-slate-500">相対パフォーマンス推移 (vs TOPIX)</h2>
+                                </div>
+                                <div className="flex-1 min-h-0 relative z-10 w-full h-full">
+                                    <Plot
+                                        data={processedData.ranking.map((item, i) => {
+                                            const activeSectors = [
+                                                '不動産', '銀行', '金融（除く銀行）', '機械', 
+                                                '自動車・輸送機', '鉄鋼・非鉄', 'エネルギー資源', '商社・卸売', '半導体', '日経指数'
+                                            ];
+                                            const isVisible = activeSectors.includes(item.name);
+                                            
+                                            return {
+                                                x: processedData.timeSeries.map(d => d.date),
+                                                y: processedData.timeSeries.map(d => d[item.name]),
+                                                type: 'scatter',
+                                                mode: 'lines',
+                                                name: item.name,
+                                                visible: isVisible ? true : 'legendonly',
+                                                line: { color: COLORS[i % COLORS.length], width: 2 },
+                                                hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                            };
+                                        })}
+                                        layout={{
+                                            autosize: true,
+                                            margin: { t: 10, r: 10, l: 40, b: 80 },
+                                            dragmode: 'pan',
+                                            xaxis: {
+                                                showgrid: true,
+                                                gridcolor: '#e2e8f0',
+                                                tickfont: { color: '#64748b' },
+                                            },
+                                            yaxis: {
+                                                showgrid: true,
+                                                gridcolor: '#e2e8f0',
+                                                tickfont: { color: '#64748b' },
+                                                ticksuffix: '%',
+                                                zeroline: true,
+                                                zerolinecolor: '#0f172a',
+                                                zerolinewidth: 2,
+                                            },
+                                            paper_bgcolor: 'transparent',
+                                            plot_bgcolor: 'transparent',
+                                            showlegend: true,
+                                            legend: {
+                                                orientation: 'h',
+                                                yanchor: 'top',
+                                                y: -0.15,
+                                                xanchor: 'center',
+                                                x: 0.5
+                                            },
+                                            hovermode: 'closest',
+                                        }}
+                                        config={{
+                                            responsive: true,
+                                            scrollZoom: true,
+                                            displayModeBar: false,
+                                        }}
+                                        style={{ width: '100%', height: '100%' }}
+                                        useResizeHandler={true}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Ranking Area */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[700px] p-6 relative z-0">
+                                <div className="mb-4 flex justify-between items-center">
+                                    <h2 className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                                        <Icon name="PieChart" className="text-[#7C4DFF]" size={16} />
+                                        セクターランキング
+                                    </h2>
+                                    <span className="text-xs text-slate-400 border border-slate-200 px-3 py-1 rounded bg-slate-50 font-mono">
+                                        {processedData.startDate} 〜 {processedData.endDate}
+                                    </span>
+                                </div>
+                                <div className="overflow-y-auto flex-1 space-y-3 custom-scrollbar pr-2 mt-2">
+                                    {processedData.ranking.map((item, index) => {
+                                        const isPositive = item.performance >= 0;
+                                        const width = `${(Math.abs(item.performance) / maxAbsPerformance) * 100}%`;
+                                        
+                                        return (
+                                            <div key={item.symbol} className="relative group h-9 flex items-center">
+                                                {/* Background Bar */}
+                                                <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
+                                                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
+                                                    <div className="w-1/2 flex justify-end">
+                                                        {!isPositive && (
+                                                            <div 
+                                                                className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance) / maxAbsPerformance) * 100}%` }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-1/2 flex justify-start">
+                                                        {isPositive && (
+                                                            <div 
+                                                                className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance) / maxAbsPerformance) * 100}%` }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Text Content */}
+                                                <div className="flex justify-between items-center w-full text-sm z-20 relative px-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-slate-400 w-5 text-right text-xs font-bold">{index + 1}</span>
+                                                        <div 
+                                                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" 
+                                                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                                        />
+                                                        <span className="font-bold truncate max-w-[140px] lg:max-w-xs text-slate-700" title={item.name}>{item.name}</span>
+                                                    </div>
+                                                    <span className={cn(
+                                                        "font-mono font-bold text-sm",
+                                                        isPositive ? "text-emerald-600" : "text-rose-600"
+                                                    )}>
+                                                        {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-slate-200">
+                                    <button
+                                        onClick={copySummary}
+                                        className="w-full flex items-center justify-center gap-2 bg-[#7C4DFF] hover:bg-[#651FFF] text-white py-3 rounded-lg font-bold transition-all shadow-sm hover:shadow"
+                                    >
+                                        <Icon name="Copy" size={16} />
+                                        サマリーをコピー
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+
+            return (
+                <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+                    {/* Sidebar (Only in standalone) */}
+                    {isStandalone && (
+                        <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-75 shadow-xl lg:shadow-none flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`} style={{ width: isCollapsed ? 70 : 260 }}>
+                            <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
+                                {!isCollapsed && <span className="font-bold text-lg tracking-tight text-[#334155]">Dashboard</span>}
+                                <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1 text-slate-400 hover:text-[#7C4DFF] hover:bg-slate-50 rounded mx-auto lg:mx-0">
+                                    <Icon name={isCollapsed ? "ChevronRight" : "ChevronLeft"} size={20} />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 flex flex-col relative custom-scrollbar">
+                                {!isCollapsed && <div className="text-[10px] font-bold text-slate-400 px-2 mb-2 mt-2">MENU</div>}
+                                <NavItem id="calendar" label="投資カレンダー" icon="Calendar" collapsed={isCollapsed} />
+                                <NavItem id="quotes" label="投資の格言集" icon="Lightbulb" collapsed={isCollapsed} />
+                                <NavItem id="etf" label="セクター分析" icon="PieChart" active={true} collapsed={isCollapsed} />
+                                <NavItem id="analytics" label="セクター別感応度" icon="Activity" collapsed={isCollapsed} />
+                                <NavItem id="trends" label="主体別投資動向" icon="TrendingUp" collapsed={isCollapsed} />
+                                <NavItem id="jpx" label="JPX 海外動向" icon="LineChart" collapsed={isCollapsed} />
+                                <NavItem id="nf_option" label="オプション建玉監視" icon="Database" collapsed={isCollapsed} />
+                                <NavItem id="nf_teguchi" label="手口データ分析" icon="BarChart3" collapsed={isCollapsed} />
+                            </div>
+                        </aside>
+                    )}
+
+                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                        {isStandalone && (
+                            <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
+                                <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
+                                <span className="ml-4 font-bold text-[#334155]">セクター分析</span>
+                            </header>
+                        )}
+                        
+                        <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
+                            <div className="max-w-7xl mx-auto">
+                                {content}
+                            </div>
+                        </main>
+                        
+                        {sidebarOpen && isStandalone && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

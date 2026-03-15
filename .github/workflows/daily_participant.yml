@@ -35,6 +35,7 @@ jobs:
         run: |
           python scripts/fetch_teguchi.py
           python scripts/fetch_option.py
+          python scripts/etf_data_manager.py
 
       - name: Commit and Push Data
         run: |
@@ -45,6 +46,7 @@ jobs:
           [ -f data/daily_participant.json ] && git add data/daily_participant.json
           [ -f data.json ] && git add data.json
           [ -f option_history.json ] && git add option_history.json
+          [ -f data/etf_data.json ] && git add data/etf_data.json
           
           # 変更がある場合のみコミット
           if ! git diff --staged --quiet; then
@@ -59,7 +61,7 @@ jobs:
         run: |
           mkdir -p deploy
           
-          for file in index.html option.html teguchi.html data.json option_history.json advanced.html analytics.html history.csv trend.png sector_data.json; do
+          for file in index.html option.html etf.html teguchi.html data.json option_history.json advanced.html analytics.html history.csv trend.png sector_data.json; do
             if [ -f "$file" ]; then
               cp "$file" deploy/
               echo "✅ Copied $file to deploy/"
