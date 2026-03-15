@@ -29,9 +29,7 @@ SECTORS = {
 ALL_SYMBOLS = [BENCHMARK] + list(SECTORS.keys())
 FETCH_DAYS = 400
 
-def fetch_data():
-    start_date = (datetime.now() - timedelta(days=FETCH_DAYS)).strftime('%Y-%m-%d')
-    end_date = datetime.now().strftime('%Y-%m-%d')
+def fetch_data(period="400d", interval="1d"):
     output = {
         "benchmark": BENCHMARK,
         "sectors": SECTORS,
@@ -39,10 +37,10 @@ def fetch_data():
         "prices": {}
     }
     
-    print(f"Fetching data from {start_date} to {end_date}...")
+    print(f"Fetching data (period={period}, interval={interval})...")
     
     # Download data
-    df = yf.download(ALL_SYMBOLS, start=start_date, end=end_date, auto_adjust=False, progress=False)
+    df = yf.download(ALL_SYMBOLS, period=period, interval=interval, auto_adjust=False, progress=False)
     
     if df.empty:
         print("Warning: No data fetched from Yahoo Finance.")
@@ -70,18 +68,27 @@ def fetch_data():
     for symbol in valid_symbols:
         output["prices"][symbol] = [round(x, 2) if pd.notna(x) else None for x in df[symbol].tolist()]
         
-    output["dates"] = [d.strftime('%Y-%m-%d') for d in df.index]
+    if interval == "1d":
+        output["dates"] = [d.strftime('%Y-%m-%d') for d in df.index]
+    else:
+        output["dates"] = [d.strftime('%Y-%m-%d %H:%M') for d in df.index]
 
     return output
 
 def main():
     os.makedirs('data', exist_ok=True)
-    data = fetch_data()
     
+    # Fetch daily
+    data_daily = fetch_data(period="400d", interval="1d")
     with open('data/etf_data.json', 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(data_daily, f, ensure_ascii=False)
         
-    print(f"Successfully saved {len(data['dates'])} days of ETF data.")
+    # Fetch intraday 5m
+    data_intraday = fetch_data(period="5d", interval="5m")
+    with open('data/etf_intraday_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data_intraday, f, ensure_ascii=False)
+        
+    print(f"Successfully saved {len(data_daily['dates'])} days of daily ETF data, and {len(data_intraday['dates'])} ticks of intraday data.")
 
 if __name__ == "__main__":
     main()
