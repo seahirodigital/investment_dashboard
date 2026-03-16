@@ -275,35 +275,65 @@
                     return `${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)}`;
                 },
                 async initFirebase() {
-                    if (!window.firebaseDb) return; // Prevent premature execution
-                    
+                    if (!window.firebaseDb) {
+                        await this.fetchFromJson();
+                        return;
+                    }
+
                     this.loading = true;
                     this.statusText = "日付リスト読込中...";
                     try {
                         const db = window.firebaseDb;
-                        
+
                         const teguchiCol = window.firebaseCollection(db, 'teguchi_data');
                         const snapshot = await window.firebaseGetDocs(teguchiCol);
-                        
+
                         let dates = [];
                         snapshot.forEach(doc => {
                             dates.push(doc.id);
                         });
-                        
+
                         dates.sort().reverse(); // 降順
                         this.availableDates = dates;
-                        
+
                         if(dates.length > 0) {
                             this.selectedDate = dates[0];
                             await this.fetchDataForDate();
                         } else {
-                            this.statusText = "データなし";
-                            this.loading = false;
+                            // Firebaseに日付なし → JSONフォールバック
+                            await this.fetchFromJson();
                         }
                     } catch (err) {
                         console.error("Firebase init error:", err);
-                        // Fallback
-                        this.fetchLatest();
+                        // Firebase通信失敗 → JSONフォールバック
+                        await this.fetchFromJson();
+                    }
+                },
+                async fetchFromJson() {
+                    this.loading = true;
+                    this.statusText = "JSONから読込中...";
+                    try {
+                        const res = await fetch(`./data/teguchi.json?t=${Date.now()}`);
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        const data = await res.json();
+                        const date = data.date || '';
+                        if (date) {
+                            // Firebase日付リストにない場合のみ追加
+                            if (!this.availableDates.includes(date)) {
+                                this.availableDates = [date, ...this.availableDates].sort().reverse();
+                            }
+                            this.selectedDate = date;
+                        }
+                        this.results = data.results || [];
+                        this.matrixData = data.matrix || [];
+                        this.strikes = data.strikes || [];
+                        this.statusText = date ? `${this.formatDate(date)} (JSON)` : "読込完了 (JSON)";
+                    } catch(e) {
+                        console.error("JSON fallback error:", e);
+                        this.error = "データの読み込みに失敗しました。";
+                        this.statusText = "エラー";
+                    } finally {
+                        this.loading = false;
                     }
                 },
                 async fetchDataForDate() {
@@ -365,6 +395,8 @@
                 async fetchLatest() {
                     if (window.firebaseDb) {
                         this.initFirebase();
+                    } else {
+                        await this.fetchFromJson();
                     }
                 }
             }
