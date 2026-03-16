@@ -84,7 +84,7 @@ def main():
         json.dump(data_daily, f, ensure_ascii=False)
         
     # Fetch intraday 5m
-    data_intraday = fetch_data(period="5d", interval="5m")
+    data_intraday = fetch_data(period="14d", interval="5m")
     with open('data/etf_intraday_data.json', 'w', encoding='utf-8') as f:
         json.dump(data_intraday, f, ensure_ascii=False)
         

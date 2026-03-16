@@ -26,9 +26,6 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Run Daily Analysis Script
-        run: python scripts/jpx/daily_participant_analyzer.py
-
       - name: Fetch JPX Data and Export JSON
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
@@ -42,7 +39,6 @@ jobs:
           git config --local user.name "GitHub Action"
           
           # Add all modified json files
-          [ -f data/daily_participant.json ] && git add data/daily_participant.json
           [ -f data/teguchi.json ] && git add data/teguchi.json
           [ -f data/option_history.json ] && git add data/option_history.json
           
