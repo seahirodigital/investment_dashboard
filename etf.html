@@ -187,7 +187,7 @@
             }, []);
 
             const processedData = useMemo(() => {
-                const isIntraday = ['1d', '2d', '3d', '4d', '5d'].includes(period);
+                const isIntraday = ['1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', '10d', '14d'].includes(period);
                 const rawData = (isIntraday && rawIntraday) ? rawIntraday : rawDaily;
                 if (!rawData) return null;
 
