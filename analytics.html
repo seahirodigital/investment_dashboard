@@ -218,7 +218,7 @@
                     return;
                 }
             
-                fetch(`./sector_data.json?t=${new Date().getTime()}`)
+                fetch(`./data/sector_data.json?t=${new Date().getTime()}`)
                     .then(res => {
                         if (!res.ok) {
                             if (res.status === 404) {
