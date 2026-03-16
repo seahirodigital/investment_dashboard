@@ -141,6 +141,52 @@ basket_price[t] = mean( stock_price[t] / stock_price[t0] ) × 100
 
 ---
 
+## 🕐 データ更新スケジュール
+
+### 更新タイミング一覧
+
+| ページ | データファイル | GitHub Actions 実行（JST） | 更新頻度 | ワークフロー |
+|---|---|---|---|---|
+| 手口データ分析（`teguchi.html`） | `data/teguchi.json` | **毎日 20:05** | 毎営業日 ※1 | `daily_participant.yml` |
+| 日経225建玉・オプション（`option.html`） | `data/option_history.json` | **毎日 20:05** | 毎営業日 ※2 | `daily_participant.yml` |
+| セクター分析・分類分析（`etf.html`, `sector_category.html`） | `data/etf_data.json`<br>`data/etf_intraday_data.json` | **毎日 16:00** | 毎日 | `daily_etf.yml` |
+| セクター感応度（`analytics.html`） | `data/sector_data.json` | **毎週木曜 18:00** | 週1回 | `daily_task.yml` |
+| GPIF分析 | `data/gpif_data.json` | **毎週木曜 18:00** | 週1回 | `daily_task.yml` |
+
+### ⚠️ 重要：「古いデータ」に見える理由と JPX の公開タイミング
+
+#### ※1 手口データ（`teguchi.html`）— **JPXは翌営業日の10:30頃に公開**
+
+| 確認タイミング | 画面に表示される最新日付 | 理由 |
+|---|---|---|
+| 月曜〜金曜 20:05以降 | **前営業日**分 | JPXは当日分を翌営業日10:30頃に公開するため |
+| 土曜・日曜・祝日 | 直前の金曜分 | 週末・祝日はJPXがデータを公開しない |
+
+> **例（実際に発生した状況）**: 3/16（月）22:33 に確認 → 表示は 3/13（金）分
+> - 3/16（月）のワークフローは 20:05 に実行済み
+> - この時点でJPXから取得できる最新は「3/13（金）分」のみ（3/16分はJPXが3/17に公開予定）
+> - → **正常動作。バグではない。**
+> - 次の更新（3/16分）は 3/17（火）の 20:05 頃。
+
+#### ※2 オプション建玉（`option.html`）— **JPXは当日取引終了後（16:30〜17:30頃）に公開**
+
+| 確認タイミング | 画面に表示される最新日付 |
+|---|---|
+| 平日 20:05 以降 | **当日**分（ワークフロー実行時に取得済み） |
+| 土曜・日曜・祝日 | 直前の金曜分 |
+
+### セクター分析の自動リフレッシュ
+
+`sector_category.html`（セクター分類分析）は、**市場時間中に15分ごと自動更新**されます。
+
+| セッション | 時間帯 | 動作 |
+|---|---|---|
+| 前場 | 09:00〜11:30 | 15分ごとにデータ自動取得・描画更新 |
+| 後場 | 12:30〜15:30 | 15分ごとにデータ自動取得・描画更新 |
+| 時間外 | 上記以外 | 自動取得なし（手動リロードのみ） |
+
+---
+
 ## 📁 ファイル構成
 
 ```
@@ -150,33 +196,37 @@ investment_dasboard/
 ├── etf.html                            # セクター分析（全セクター単一チャート）
 ├── sector_category.html                # セクター分類分析（7カテゴリ × チャート+ランキング）
 ├── analytics.html                      # セクター別感応度分析
-├── option.html                         # オプション建玉監視
+├── option.html                         # オプション建玉監視（日経225・TOPIX）
 ├── teguchi.html                        # 手口データ分析（売買参加者別）
 ├── advanced.html                       # 詳細分析
+├── history.csv                         # JPX 履歴データ（main.py 生成）
+├── sector_data.json                    # セクター集計データ（ルート直置き・旧形式）
 ├── sectors.json                        # セクター定義（旧形式）
-├── history.csv                         # 履歴データ
 ├── requirements.txt                    # Python 依存パッケージ
 ├── design_reference.md                 # UIデザイン参考資料
+├── trend.png                           # トレンド画像
 │
 ├── main.py                             # エントリーポイント（旧スクリプト）
 ├── sector_manager.py                   # セクター管理（旧スクリプト）
 │
 ├── data/                               # 自動生成データ（GitHub Actions）
-│   ├── etf_data.json                   # ETF・バスケット 日次データ
-│   ├── etf_intraday_data.json          # ETF・バスケット 5分足イントラデイ
-│   ├── sector_data.json                # セクター集計データ
-│   ├── option_history.json             # オプション建玉履歴
-│   ├── teguchi.json                    # 手口データ（売買参加者別）
+│   ├── etf_data.json                   # ETF・バスケット 日次データ（daily_etf.yml）
+│   ├── etf_intraday_data.json          # ETF・バスケット 5分足イントラデイ（daily_etf.yml）
+│   ├── sector_data.json                # セクター集計データ（daily_task.yml）
+│   ├── option_history.json             # オプション建玉履歴（daily_participant.yml）
+│   ├── teguchi.json                    # 手口データ（売買参加者別）（daily_participant.yml）
 │   ├── daily_participant.json          # 日次参加者データ
-│   └── gpif_data.json                  # GPIF 運用資産データ
+│   └── gpif_data.json                  # GPIF 運用資産データ（daily_task.yml）
 │
 ├── scripts/
 │   ├── market/
 │   │   ├── etf_data_manager.py         # ETF・バスケット データ取得（本ドキュメント対応）
 │   │   └── fetch_gpif_data.py          # GPIF データ取得
 │   └── jpx/
-│       ├── fetch_option.py             # オプション建玉データ取得（JPX）
-│       └── fetch_teguchi.py            # 手口データ取得（JPX）
+│       ├── fetch_option.py             # オプション建玉データ取得（JPX スクレイピング）
+│       └── fetch_teguchi.py            # 手口データ取得（JPX API + Excel 解析）
+│
+├── docs/                               # ドキュメント類
 │
 ├── GPIF/                               # GPIF 分析サブアプリ（Node.js）
 │   ├── index.html                      # GPIF ダッシュボード
@@ -187,9 +237,9 @@ investment_dasboard/
 │
 └── .github/
     └── workflows/
-        ├── daily_task.yml              # 日次総合タスク（オプション・手口）
-        ├── daily_etf.yml               # 日次 ETF・バスケットデータ取得
-        └── daily_participant.yml       # 日次 参加者データ取得
+        ├── daily_task.yml              # 週次総合タスク（毎週木曜 JST 18:00）※セクター・GPIF
+        ├── daily_etf.yml               # 日次 ETF・バスケットデータ取得（毎日 JST 16:00）
+        └── daily_participant.yml       # 日次 手口・建玉データ取得（毎日 JST 20:05）
 ```
 
 ---

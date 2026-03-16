@@ -238,11 +238,13 @@ def run():
     
     # Generate JSON data
     output_data = process_dataframe(df)
-    
+    # 取引日付をJSONに含める（HTMLフォールバック読み込み用）
+    output_data['date'] = data_date
+
     # Write to data/teguchi.json
     os.makedirs('data', exist_ok=True)
     out_path = os.path.join('data', 'teguchi.json')
-    
+
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)
         
