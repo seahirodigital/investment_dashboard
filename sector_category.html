@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>セクター分類分析</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <!-- Utilities -->
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Error Box */
+        #global-error { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fee2e2; color: #b91c1c; padding: 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 90%; width: 400px; border: 1px solid #ef4444; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="global-error"></div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const el = document.getElementById('global-error');
+            el.style.display = 'block';
+            el.innerHTML = `<strong>システムエラー:</strong><br>${message}<br><small class="text-xs opacity-75">${source}:${lineno}</small>`;
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // Plotlyラッパー（etf.htmlと同一）
+        const Plot = ({ data, layout, config, style, useResizeHandler }) => {
+            const divRef = useRef(null);
+
+            useEffect(() => {
+                if (divRef.current && window.Plotly) Plotly.react(divRef.current, data, layout, config);
+            }, [data, layout, config]);
+
+            useEffect(() => {
+                let resizeObserver;
+                if (useResizeHandler && divRef.current && window.Plotly) {
+                    resizeObserver = new ResizeObserver(() => window.Plotly.Plots.resize(divRef.current));
+                    resizeObserver.observe(divRef.current);
+                }
+                return () => resizeObserver && resizeObserver.disconnect();
+            }, [useResizeHandler]);
+
+            useEffect(() => () => divRef.current && window.Plotly && Plotly.purge(divRef.current), []);
+
+            return <div ref={divRef} style={style} />;
+        };
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icons = {
+                RefreshCw: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>,
+                PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+            };
+            return <span className={className}>{icons[name] || null}</span>;
+        };
+
+        const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+        // 期間オプション（etf.htmlと同一）
+        const PERIODS = [
+            { value: '1d', label: '1日' },
+            { value: '2d', label: '2日' },
+            { value: '3d', label: '3日' },
+            { value: '4d', label: '4日' },
+            { value: '5d', label: '5日' },
+            { value: '6d', label: '6日' },
+            { value: '7d', label: '7日' },
+            { value: '8d', label: '8日' },
+            { value: '9d', label: '9日' },
+            { value: '10d', label: '10日' },
+            { value: '14d', label: '14日' },
+            { value: '1mo', label: '1ヶ月' },
+            { value: '2mo', label: '2ヶ月' },
+            { value: '3mo', label: '3ヶ月' },
+            { value: '6mo', label: '6ヶ月' },
+            { value: '1y', label: '1年' },
+        ];
+
+        const COLORS = [
+            '#2563eb', '#db2777', '#d97706', '#059669', '#7c3aed', '#dc2626', '#0891b2',
+            '#4f46e5', '#ea580c', '#16a34a', '#9333ea', '#e11d48', '#0284c7', '#ca8a04',
+            '#65a30d', '#475569', '#0f766e', '#14b8a6'
+        ];
+
+        // 7分類とその対応セクター名（etf_data_manager.pyのSECTORSの値に対応）
+        const CATEGORIES = [
+            {
+                id: 'finance',
+                label: '金融・内需系',
+                sectors: ['不動産', '銀行', '金融（除く銀行）']
+            },
+            {
+                id: 'energy',
+                label: 'エネルギー・資源・素材',
+                sectors: ['エネルギー資源', '鉄鋼・非鉄', '商社・卸売', '食品']
+            },
+            {
+                id: 'consumer',
+                label: '消費・サービス・生活',
+                sectors: ['小売', '自動車・輸送機', '医薬品', '電力・ガス', '情報通信・サービスその他', '運輸・物流']
+            },
+            {
+                id: 'tech',
+                label: 'ハイテク・製造・精密',
+                sectors: ['電機・精密', '素材・化学', '機械']
+            },
+            {
+                id: 'market',
+                label: '市場環境 (絶対値)',
+                sectors: ['日経指数', '半導体']
+            },
+            {
+                id: 'smallcap',
+                label: '新興・中小型・資本財',
+                sectors: ['建設・資材']
+            },
+            {
+                id: 'scale',
+                label: '規模別指数',
+                sectors: []
+            },
+        ];
+
+        // カテゴリ別チャート＋ランキングコンポーネント
+        const CategorySection = ({ category, processedData }) => {
+            const catRanking = useMemo(() => {
+                if (!processedData) return [];
+                return processedData.ranking.filter(r => category.sectors.includes(r.name));
+            }, [processedData, category]);
+
+            const maxAbsPerf = useMemo(() => {
+                if (!catRanking.length) return 1;
+                const max = Math.max(...catRanking.map(r => Math.abs(r.performance)));
+                return max === 0 ? 1 : max;
+            }, [catRanking]);
+
+            // カテゴリ内に表示するセクターがない場合
+            const noData = category.sectors.length === 0 || catRanking.length === 0;
+
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <h3 className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2">
+                        <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
+                        {category.label}
+                    </h3>
+                    <div className="flex gap-4 h-[300px]">
+                        {/* 左列：チャート（幅50%、高さ300px） */}
+                        <div className="w-1/2 h-full relative z-10">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">
+                                    データなし（未対応ETF）
+                                </div>
+                            ) : (
+                                <Plot
+                                    data={catRanking.map((item, i) => ({
+                                        x: processedData.timeSeries.map(d => d.date),
+                                        y: processedData.timeSeries.map(d => d[item.name] ?? null),
+                                        type: 'scatter',
+                                        mode: 'lines',
+                                        name: item.name,
+                                        line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                                        hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                    }))}
+                                    layout={{
+                                        autosize: true,
+                                        margin: { t: 5, r: 5, l: 35, b: 55 },
+                                        dragmode: 'pan',
+                                        xaxis: {
+                                            showgrid: true,
+                                            gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            rangebreaks: processedData.isIntraday ? [
+                                                { bounds: ["sat", "mon"] },
+                                                { bounds: [15.5, 9], pattern: "hour" },
+                                                { bounds: [11.5, 12.5], pattern: "hour" }
+                                            ] : [
+                                                { bounds: ["sat", "mon"] }
+                                            ],
+                                        },
+                                        yaxis: {
+                                            showgrid: true,
+                                            gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            ticksuffix: '%',
+                                            zeroline: true,
+                                            zerolinecolor: '#0f172a',
+                                            zerolinewidth: 1.5,
+                                        },
+                                        paper_bgcolor: 'transparent',
+                                        plot_bgcolor: 'transparent',
+                                        showlegend: true,
+                                        legend: {
+                                            orientation: 'h',
+                                            yanchor: 'top',
+                                            y: -0.18,
+                                            xanchor: 'center',
+                                            x: 0.5,
+                                            font: { size: 9 },
+                                            entrywidth: 0.3,
+                                            entrywidthmode: 'fraction'
+                                        },
+                                        hovermode: 'closest',
+                                    }}
+                                    config={{
+                                        responsive: true,
+                                        scrollZoom: true,
+                                        displayModeBar: false,
+                                    }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    useResizeHandler={true}
+                                />
+                            )}
+                        </div>
+
+                        {/* 右列：ランキング（幅50%、高さ300px） */}
+                        <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">
+                                    {category.sectors.length === 0 ? '規模別ETFは未取得' : 'データなし'}
+                                </div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {catRanking.map((item, index) => {
+                                        const isPositive = item.performance >= 0;
+                                        return (
+                                            <div key={item.symbol} className="relative group h-8 flex items-center">
+                                                {/* バー背景 */}
+                                                <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
+                                                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
+                                                    <div className="w-1/2 flex justify-end">
+                                                        {!isPositive && (
+                                                            <div
+                                                                className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance) / maxAbsPerf) * 100}%` }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-1/2 flex justify-start">
+                                                        {isPositive && (
+                                                            <div
+                                                                className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance) / maxAbsPerf) * 100}%` }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {/* テキスト */}
+                                                <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-slate-400 w-4 text-right font-bold">{index + 1}</span>
+                                                        <div
+                                                            className="w-2 h-2 rounded-full shrink-0"
+                                                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                                        />
+                                                        <span className="font-bold truncate max-w-[100px] text-slate-700" title={item.name}>{item.name}</span>
+                                                    </div>
+                                                    <span className={cn(
+                                                        "font-mono font-bold",
+                                                        isPositive ? "text-emerald-600" : "text-rose-600"
+                                                    )}>
+                                                        {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [period, setPeriod] = useState('5d');
+            const [rawDaily, setRawDaily] = useState(null);
+            const [rawIntraday, setRawIntraday] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            // データ取得（etf.htmlと同一）
+            const fetchRawData = async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                    const [resDaily, resIntraday] = await Promise.all([
+                        fetch(`./data/etf_data.json?t=${new Date().getTime()}`),
+                        fetch(`./data/etf_intraday_data.json?t=${new Date().getTime()}`).catch(() => null)
+                    ]);
+
+                    if (!resDaily.ok) {
+                        if (resDaily.status === 404) {
+                            throw new Error("データファイル(etf_data.json)が未生成です。GitHub Actionsの完了をお待ちください。");
+                        }
+                        throw new Error(`データ読み込み失敗: ${resDaily.status} ${resDaily.statusText}`);
+                    }
+                    const jsonDaily = await resDaily.json();
+                    if (!jsonDaily.dates || jsonDaily.dates.length === 0) {
+                        throw new Error("データが空です。");
+                    }
+                    setRawDaily(jsonDaily);
+
+                    if (resIntraday && resIntraday.ok) {
+                        const jsonIntraday = await resIntraday.json();
+                        setRawIntraday(jsonIntraday);
+                    }
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                fetchRawData();
+            }, []);
+
+            // データ加工（etf.htmlと同一）
+            const processedData = useMemo(() => {
+                const isIntraday = ['1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', '10d', '14d'].includes(period);
+                const rawData = (isIntraday && rawIntraday) ? rawIntraday : rawDaily;
+                if (!rawData) return null;
+
+                const { dates, prices, benchmark, sectors } = rawData;
+                const L = dates.length;
+                let startIndex = 0;
+
+                if (isIntraday) {
+                    const calendarDates = [...new Set(dates.map(d => d.split(' ')[0]))];
+                    const daysAgo = parseInt(period.replace('d', '')) || 1;
+                    const targetDateStr = calendarDates[Math.max(0, calendarDates.length - daysAgo)];
+                    startIndex = dates.findIndex(d => d.startsWith(targetDateStr));
+                    if (startIndex === -1) startIndex = 0;
+                } else {
+                    if (period.endsWith('d')) {
+                        const days = parseInt(period.replace('d', ''), 10);
+                        startIndex = Math.max(0, L - (days + 1));
+                    } else {
+                        const latestDateStr = dates[L - 1];
+                        const today = latestDateStr ? new Date(latestDateStr) : new Date();
+                        const targetDates = {
+                            '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365
+                        };
+                        const daysAgo = targetDates[period] || 30;
+                        const targetTimestamp = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000).getTime();
+
+                        for (let i = L - 1; i >= 0; i--) {
+                            const d = new Date(dates[i]).getTime();
+                            if (d <= targetTimestamp) {
+                                startIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                const endIndex = L - 1;
+                const bPrices = prices[benchmark];
+
+                // UTC→JST変換（etf.htmlと同一）
+                const toJST = (utcStr) => {
+                    const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
+                    const j = new Date(d.getTime() + 9 * 3600 * 1000);
+                    const p = n => String(n).padStart(2, '0');
+                    return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+                };
+
+                const timeSeries = [];
+                for (let i = startIndex; i <= endIndex; i++) {
+                    const point = { date: isIntraday ? toJST(dates[i]) : dates[i] };
+                    const bStart = bPrices[startIndex];
+                    const bCurrent = bPrices[i];
+
+                    if (!bStart || !bCurrent) continue;
+
+                    const bReturn = (bCurrent / bStart) - 1;
+                    point.TOPIX = bReturn * 100;
+
+                    Object.keys(sectors).forEach(symbol => {
+                        const name = sectors[symbol];
+                        const sPrices = prices[symbol];
+                        if (!sPrices) return;
+
+                        const sStart = sPrices[startIndex];
+                        const sCurrent = sPrices[i];
+
+                        if (sStart && sCurrent) {
+                            const sReturn = (sCurrent / sStart) - 1;
+                            point[name] = (sReturn - bReturn) * 100;
+                        } else {
+                            point[name] = 0;
+                        }
+                    });
+
+                    timeSeries.push(point);
+                }
+
+                const ranking = [];
+                if (timeSeries.length > 0) {
+                    const latest = timeSeries[timeSeries.length - 1];
+                    Object.keys(sectors).forEach(symbol => {
+                        const name = sectors[symbol];
+                        if (latest[name] !== undefined) {
+                            ranking.push({ symbol, name, performance: latest[name] });
+                        }
+                    });
+                    ranking.sort((a, b) => b.performance - a.performance);
+                }
+
+                return {
+                    period,
+                    isIntraday,
+                    startDate: dates[startIndex],
+                    endDate: dates[endIndex],
+                    timeSeries,
+                    ranking
+                };
+
+            }, [rawDaily, rawIntraday, period]);
+
+            return (
+                <div className="flex flex-col min-h-screen bg-[#f8fafc]">
+                    <main className="flex-1 overflow-auto p-4 md:p-6">
+                        <div className="max-w-full mx-auto space-y-4">
+                            {/* ヘッダーカード */}
+                            <div
+                                className="rounded-xl px-6 py-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between animate-fade-in-up relative"
+                                style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%)', color: 'white', minHeight: '80px' }}
+                            >
+                                <div className="flex flex-col items-start">
+                                    <h1 className="text-[1.1rem] sm:text-[1.25rem] font-bold">セクター分類分析</h1>
+                                    <p className="text-[0.7rem] opacity-90 mt-0.5">7分類 × TOPIX相対パフォーマンス（指数 / TOPIX）</p>
+                                </div>
+                                <div className="flex items-center gap-4 mt-3 sm:mt-0 sm:absolute sm:right-6">
+                                    {processedData && (
+                                        <span className="text-[0.65rem] opacity-75 font-mono hidden sm:block">
+                                            {processedData.startDate} 〜 {processedData.endDate}
+                                        </span>
+                                    )}
+                                    <select
+                                        value={period}
+                                        onChange={(e) => setPeriod(e.target.value)}
+                                        className="block w-28 rounded-lg border border-slate-200 p-2 text-xs text-slate-700 focus:ring-2 focus:ring-[#7C4DFF] outline-none bg-white font-medium"
+                                        disabled={loading}
+                                    >
+                                        {PERIODS.map(p => (
+                                            <option key={p.value} value={p.value} className="text-sm">{p.label}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={fetchRawData}
+                                        className="p-2 text-white hover:text-[#7C4DFF] hover:bg-white rounded-full transition-colors flex items-center justify-center shrink-0"
+                                        disabled={loading}
+                                    >
+                                        <Icon name="RefreshCw" className={cn(loading && "animate-spin")} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* ローディング */}
+                            {loading && !processedData && (
+                                <div className="flex justify-center items-center h-64">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7C4DFF]"></div>
+                                </div>
+                            )}
+
+                            {/* エラー */}
+                            {!loading && error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+                                    <strong>エラー:</strong> {error}
+                                </div>
+                            )}
+
+                            {/* 7カテゴリ チャート一覧 */}
+                            {!loading && processedData && processedData.timeSeries.length > 0 && (
+                                <div className="flex flex-col gap-4 animate-fade-in">
+                                    {CATEGORIES.map(category => (
+                                        <CategorySection
+                                            key={category.id}
+                                            category={category}
+                                            processedData={processedData}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
