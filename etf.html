@@ -376,11 +376,11 @@
                                     <Plot
                                         data={processedData.ranking.map((item, i) => {
                                             const activeSectors = [
-                                                '不動産', '銀行', '金融（除く銀行）', '機械', 
+                                                '不動産', '銀行', '金融（除く銀行）', '機械',
                                                 '自動車・輸送機', '鉄鋼・非鉄', 'エネルギー資源', '商社・卸売', '半導体', '日経指数'
                                             ];
                                             const isVisible = activeSectors.includes(item.name);
-                                            
+
                                             return {
                                                 x: processedData.timeSeries.map(d => d.date),
                                                 y: processedData.timeSeries.map(d => d[item.name]),
@@ -394,17 +394,16 @@
                                         })}
                                         layout={{
                                             autosize: true,
-                                            margin: { t: 10, r: 10, l: 40, b: 80 },
+                                            margin: { t: 10, r: 10, l: 40, b: 10 },
                                             dragmode: 'pan',
                                             xaxis: {
                                                 showgrid: true,
                                                 gridcolor: '#e2e8f0',
                                                 tickfont: { color: '#64748b' },
-                                                // 非取引時間を横軸から除外
                                                 rangebreaks: processedData.isIntraday ? [
                                                     { bounds: ["sat", "mon"] },
-                                                    { bounds: [15.5, 9], pattern: "hour" },  // 15:30以降〜翌9:00を除外
-                                                    { bounds: [11.5, 12.5], pattern: "hour" } // 昼休み(11:30-12:30)を除外
+                                                    { bounds: [15.5, 9], pattern: "hour" },
+                                                    { bounds: [11.5, 12.5], pattern: "hour" }
                                                 ] : [
                                                     { bounds: ["sat", "mon"] }
                                                 ],
@@ -420,16 +419,7 @@
                                             },
                                             paper_bgcolor: 'transparent',
                                             plot_bgcolor: 'transparent',
-                                            showlegend: true,
-                                            legend: {
-                                                orientation: 'h',
-                                                yanchor: 'top',
-                                                y: -0.15,
-                                                xanchor: 'center',
-                                                x: 0.5,
-                                                entrywidth: 0.19,
-                                                entrywidthmode: 'fraction'
-                                            },
+                                            showlegend: false,
                                             hovermode: 'closest',
                                         }}
                                         config={{
@@ -440,6 +430,23 @@
                                         style={{ width: '100%', height: '100%' }}
                                         useResizeHandler={true}
                                     />
+                                </div>
+                                {/* カスタム凡例（色丸） */}
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-3 pt-2 border-t border-slate-100">
+                                    {processedData.ranking.map((item, i) => {
+                                        const activeSectors = [
+                                            '不動産', '銀行', '金融（除く銀行）', '機械',
+                                            '自動車・輸送機', '鉄鋼・非鉄', 'エネルギー資源', '商社・卸売', '半導体', '日経指数'
+                                        ];
+                                        const isVisible = activeSectors.includes(item.name);
+                                        return (
+                                            <div key={item.name} className={`flex items-center gap-1 ${isVisible ? '' : 'opacity-40'}`}>
+                                                <div className="w-2 h-2 rounded-full shrink-0"
+                                                    style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                                <span className="text-[9px] text-slate-600">{item.name}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
