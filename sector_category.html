@@ -51,7 +51,7 @@
     </script>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
         // Plotlyラッパー（etf.htmlと同一）
         const Plot = ({ data, layout, config, style, useResizeHandler }) => {
@@ -152,29 +152,43 @@
             ],
         };
 
-        // カテゴリ詳細ツールチップコンポーネント
+        // カテゴリ詳細ツールチップコンポーネント（クリックで表示・✕で閉じる）
         const InfoTooltip = ({ categoryId }) => {
-            const [visible, setVisible] = useState(false);
+            const [open, setOpen] = useState(false);
+            const tooltipRef = useRef(null);
             const details = CATEGORY_DETAILS[categoryId] || [];
             const TYPE_STYLE = {
                 'ETF':      { bg: 'bg-blue-100',   text: 'text-blue-700',   label: 'ETF' },
                 'バスケット': { bg: 'bg-amber-100',  text: 'text-amber-700',  label: '🧺' },
                 '指数':      { bg: 'bg-slate-100',  text: 'text-slate-600',  label: '指数' },
             };
+
+            useEffect(() => {
+                if (!open) return;
+                const handleClickOutside = (e) => {
+                    if (tooltipRef.current && !tooltipRef.current.contains(e.target)) setOpen(false);
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [open]);
+
             return (
-                <span
-                    className="relative inline-flex items-center cursor-pointer"
-                    onMouseEnter={() => setVisible(true)}
-                    onMouseLeave={() => setVisible(false)}
-                >
-                    <span className="text-slate-400 hover:text-[#7C4DFF] transition-colors">
+                <span ref={tooltipRef} className="relative inline-flex items-center">
+                    <span
+                        className="cursor-pointer text-slate-400 hover:text-[#7C4DFF] transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+                    >
                         <Icon name="Info" size={12} />
                     </span>
-                    {visible && (
+                    {open && (
                         <div
-                            className="absolute left-5 top-0 z-50 bg-white border border-slate-200 rounded-xl shadow-xl p-3 min-w-[320px] max-w-[420px]"
+                            className="absolute left-5 top-0 z-[9999] bg-white border border-slate-200 rounded-xl shadow-xl p-3 min-w-[320px] max-w-[420px]"
                             style={{ fontSize: '11px', lineHeight: '1.5' }}
                         >
+                            <button
+                                onClick={() => setOpen(false)}
+                                className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 text-xs font-bold leading-none"
+                            >✕</button>
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-100">
@@ -208,6 +222,178 @@
                         </div>
                     )}
                 </span>
+            );
+        };
+
+        // ── ランキングチャート用定数 ────────────────────────────────────────
+        // 除外: TOPIX規模系・市場指標・旧コード・複合ETF（バスケットで代替済み）
+        const EXCLUDE_FROM_SECTOR_RANKING = new Set([
+            'TOPIX Core30','TOPIX Large70','TOPIX Mid400','TOPIX Small',
+            'TOPIX 100','TOPIX 500','TOPIX 1000',
+            'TOPIX500バリュー','TOPIX500グロース',
+            '日経指数','日経225ETF','米国債10年','GX日本成長',
+            '銀行','半導体',  // 旧コード（銀行業・半導体ETFで代替）
+            '食品','エネルギー資源','素材・化学','自動車・輸送機',
+            '鉄鋼・非鉄','商社・卸売','運輸・物流','金融（除く銀行）',
+        ]);
+        const NIKKEI_NAME  = '日経指数';
+        const NIKKEI_COLOR = '#94a3b8';  // slate-400（点線で他と区別）
+
+        // ── 上位 / 下位 セクターランキングチャート ──────────────────────────
+        const SectorRankingChart = ({ processedData, type }) => {
+            const isTop = type === 'top';
+
+            const sectorOnly = useMemo(() => {
+                if (!processedData) return [];
+                return processedData.ranking.filter(r => !EXCLUDE_FROM_SECTOR_RANKING.has(r.name));
+            }, [processedData]);
+
+            const selected = useMemo(() => {
+                if (isTop) return sectorOnly.filter(r => r.performance > 0).slice(0, 7);
+                return [...sectorOnly].slice(-7).reverse(); // 下位7を worst-first で表示
+            }, [sectorOnly, isTop]);
+
+            const nikkeiEntry = useMemo(() =>
+                processedData?.ranking.find(r => r.name === NIKKEI_NAME),
+            [processedData]);
+
+            const maxAbsPerf = useMemo(() => {
+                if (!selected.length) return 1;
+                const max = Math.max(...selected.map(r => Math.abs(r.performance)));
+                return max === 0 ? 1 : max;
+            }, [selected]);
+
+            const noData = !processedData || selected.length === 0;
+
+            const chartTraces = useMemo(() => {
+                if (!processedData || !selected.length) return [];
+                const traces = selected.map((item, i) => ({
+                    x: processedData.timeSeries.map(d => d.date),
+                    y: processedData.timeSeries.map(d => d[item.name] ?? null),
+                    type: 'scatter', mode: 'lines', name: item.name,
+                    line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                    hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                }));
+                if (nikkeiEntry) traces.push({
+                    x: processedData.timeSeries.map(d => d.date),
+                    y: processedData.timeSeries.map(d => d[NIKKEI_NAME] ?? null),
+                    type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
+                    line: { color: NIKKEI_COLOR, width: 1.5, dash: 'dot' },
+                    hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                });
+                return traces;
+            }, [processedData, selected, nikkeiEntry]);
+
+            const borderClass = isTop ? 'border-emerald-200' : 'border-rose-200';
+            const titleClass  = isTop ? 'text-emerald-700'   : 'text-rose-700';
+            const iconClass   = isTop ? 'text-emerald-500'   : 'text-rose-500';
+            const title = isTop
+                ? '▲ TOP 7 アウトパフォーマー（TOPIX超過）＋ 日経平均'
+                : '▼ BOTTOM 7 アンダーパフォーマー（TOPIX超過）＋ 日経平均';
+
+            return (
+                <div className={`bg-white rounded-xl shadow-sm border p-4 ${borderClass}`}>
+                    <h3 className={`text-xs font-bold mb-3 flex items-center gap-2 ${titleClass}`}>
+                        <Icon name="PieChart" className={iconClass} size={14} />
+                        {title}
+                    </h3>
+                    <div className="flex gap-4 h-[280px]">
+                        {/* 左：チャート */}
+                        <div className="w-1/2 h-full relative z-10">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                            ) : (
+                                <Plot
+                                    data={chartTraces}
+                                    layout={{
+                                        autosize: true,
+                                        margin: { t: 5, r: 5, l: 35, b: 10 },
+                                        dragmode: 'pan',
+                                        xaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            rangebreaks: processedData.isIntraday ? [
+                                                { bounds: ["sat","mon"] },
+                                                { bounds: [15.5,9], pattern:"hour" },
+                                                { bounds: [11.5,12.5], pattern:"hour" }
+                                            ] : [{ bounds: ["sat","mon"] }],
+                                        },
+                                        yaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            ticksuffix: '%',
+                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 1.5,
+                                        },
+                                        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                        showlegend: false, hovermode: 'closest',
+                                    }}
+                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    useResizeHandler={true}
+                                />
+                            )}
+                        </div>
+                        {/* 右：ランキング */}
+                        <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {selected.map((item, index) => {
+                                        const isPositive = item.performance >= 0;
+                                        return (
+                                            <div key={item.symbol || item.name} className="relative group h-8 flex items-center">
+                                                <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
+                                                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
+                                                    <div className="w-1/2 flex justify-end">
+                                                        {!isPositive && (
+                                                            <div className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-1/2 flex justify-start">
+                                                        {isPositive && (
+                                                            <div className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-slate-400 w-4 text-right font-bold">{index+1}</span>
+                                                        <div className="w-2 h-2 rounded-full shrink-0"
+                                                            style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                        <span className="font-bold truncate max-w-[100px] text-slate-700" title={item.name}>{item.name}</span>
+                                                    </div>
+                                                    <span className={cn("font-mono font-bold", isPositive ? "text-emerald-600" : "text-rose-600")}>
+                                                        {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {/* カスタム凡例（色丸） */}
+                    {!noData && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
+                            {selected.map((item, i) => (
+                                <div key={item.name} className="flex items-center gap-1">
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                    <span className="text-[9px] text-slate-600">{item.name}</span>
+                                </div>
+                            ))}
+                            {nikkeiEntry && (
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: NIKKEI_COLOR }} />
+                                    <span className="text-[9px] text-slate-500 italic">{NIKKEI_NAME}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             );
         };
 
@@ -313,8 +499,19 @@
                 return max === 0 ? 1 : max;
             }, [catRanking]);
 
-            // カテゴリ内に表示するセクターがない場合
+            // 日経平均を追加（市場環境カテゴリは既に含むので重複除外）
+            const shouldAddNikkei = !category.sectors.includes(NIKKEI_NAME);
+            const nikkeiEntry = useMemo(() =>
+                processedData?.ranking.find(r => r.name === NIKKEI_NAME),
+            [processedData]);
+
             const noData = category.sectors.length === 0 || catRanking.length === 0;
+
+            // チャート凡例用アイテム（日経は末尾）
+            const legendItems = useMemo(() => [
+                ...catRanking,
+                ...(shouldAddNikkei && nikkeiEntry ? [nikkeiEntry] : []),
+            ], [catRanking, shouldAddNikkei, nikkeiEntry]);
 
             return (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
@@ -323,8 +520,8 @@
                         {category.label}
                         <InfoTooltip categoryId={category.id} />
                     </h3>
-                    <div className="flex gap-4 h-[300px]">
-                        {/* 左列：チャート（幅50%、高さ300px） */}
+                    <div className="flex gap-4 h-[280px]">
+                        {/* 左列：チャート */}
                         <div className="w-1/2 h-full relative z-10">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">
@@ -332,67 +529,53 @@
                                 </div>
                             ) : (
                                 <Plot
-                                    data={catRanking.map((item, i) => ({
-                                        x: processedData.timeSeries.map(d => d.date),
-                                        y: processedData.timeSeries.map(d => d[item.name] ?? null),
-                                        type: 'scatter',
-                                        mode: 'lines',
-                                        name: item.name,
-                                        line: { color: COLORS[i % COLORS.length], width: 1.5 },
-                                        hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
-                                    }))}
+                                    data={[
+                                        ...catRanking.map((item, i) => ({
+                                            x: processedData.timeSeries.map(d => d.date),
+                                            y: processedData.timeSeries.map(d => d[item.name] ?? null),
+                                            type: 'scatter', mode: 'lines', name: item.name,
+                                            line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                                            hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                        })),
+                                        ...(shouldAddNikkei && nikkeiEntry ? [{
+                                            x: processedData.timeSeries.map(d => d.date),
+                                            y: processedData.timeSeries.map(d => d[NIKKEI_NAME] ?? null),
+                                            type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
+                                            line: { color: NIKKEI_COLOR, width: 1.5, dash: 'dot' },
+                                            hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                        }] : []),
+                                    ]}
                                     layout={{
                                         autosize: true,
-                                        margin: { t: 5, r: 5, l: 35, b: 55 },
+                                        margin: { t: 5, r: 5, l: 35, b: 10 },
                                         dragmode: 'pan',
                                         xaxis: {
-                                            showgrid: true,
-                                            gridcolor: '#e2e8f0',
+                                            showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
                                             rangebreaks: processedData.isIntraday ? [
-                                                { bounds: ["sat", "mon"] },
-                                                { bounds: [15.5, 9], pattern: "hour" },
-                                                { bounds: [11.5, 12.5], pattern: "hour" }
-                                            ] : [
-                                                { bounds: ["sat", "mon"] }
-                                            ],
+                                                { bounds: ["sat","mon"] },
+                                                { bounds: [15.5,9], pattern:"hour" },
+                                                { bounds: [11.5,12.5], pattern:"hour" }
+                                            ] : [{ bounds: ["sat","mon"] }],
                                         },
                                         yaxis: {
-                                            showgrid: true,
-                                            gridcolor: '#e2e8f0',
+                                            showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
                                             ticksuffix: '%',
-                                            zeroline: true,
-                                            zerolinecolor: '#0f172a',
-                                            zerolinewidth: 1.5,
+                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 1.5,
                                         },
-                                        paper_bgcolor: 'transparent',
-                                        plot_bgcolor: 'transparent',
-                                        showlegend: true,
-                                        legend: {
-                                            orientation: 'h',
-                                            yanchor: 'top',
-                                            y: -0.18,
-                                            xanchor: 'center',
-                                            x: 0.5,
-                                            font: { size: 9 },
-                                            entrywidth: 0.3,
-                                            entrywidthmode: 'fraction'
-                                        },
+                                        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                        showlegend: false,
                                         hovermode: 'closest',
                                     }}
-                                    config={{
-                                        responsive: true,
-                                        scrollZoom: true,
-                                        displayModeBar: false,
-                                    }}
+                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
                                     style={{ width: '100%', height: '100%' }}
                                     useResizeHandler={true}
                                 />
                             )}
                         </div>
 
-                        {/* 右列：ランキング（幅50%、高さ300px） */}
+                        {/* 右列：ランキング */}
                         <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">
@@ -404,40 +587,29 @@
                                         const isPositive = item.performance >= 0;
                                         return (
                                             <div key={item.symbol} className="relative group h-8 flex items-center">
-                                                {/* バー背景 */}
                                                 <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
                                                     <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
                                                     <div className="w-1/2 flex justify-end">
                                                         {!isPositive && (
-                                                            <div
-                                                                className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
-                                                                style={{ width: `${(Math.abs(item.performance) / maxAbsPerf) * 100}%` }}
-                                                            />
+                                                            <div className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
                                                         )}
                                                     </div>
                                                     <div className="w-1/2 flex justify-start">
                                                         {isPositive && (
-                                                            <div
-                                                                className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
-                                                                style={{ width: `${(Math.abs(item.performance) / maxAbsPerf) * 100}%` }}
-                                                            />
+                                                            <div className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
                                                         )}
                                                     </div>
                                                 </div>
-                                                {/* テキスト */}
                                                 <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 w-4 text-right font-bold">{index + 1}</span>
-                                                        <div
-                                                            className="w-2 h-2 rounded-full shrink-0"
-                                                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                                                        />
+                                                        <span className="text-slate-400 w-4 text-right font-bold">{index+1}</span>
+                                                        <div className="w-2 h-2 rounded-full shrink-0"
+                                                            style={{ backgroundColor: COLORS[index % COLORS.length] }} />
                                                         <span className="font-bold truncate max-w-[100px] text-slate-700" title={item.name}>{item.name}</span>
                                                     </div>
-                                                    <span className={cn(
-                                                        "font-mono font-bold",
-                                                        isPositive ? "text-emerald-600" : "text-rose-600"
-                                                    )}>
+                                                    <span className={cn("font-mono font-bold", isPositive ? "text-emerald-600" : "text-rose-600")}>
                                                         {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
                                                     </span>
                                                 </div>
@@ -448,19 +620,36 @@
                             )}
                         </div>
                     </div>
+                    {/* カスタム凡例（色丸） */}
+                    {!noData && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
+                            {catRanking.map((item, i) => (
+                                <div key={item.name} className="flex items-center gap-1">
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                    <span className="text-[9px] text-slate-600">{item.name}</span>
+                                </div>
+                            ))}
+                            {shouldAddNikkei && nikkeiEntry && (
+                                <div className="flex items-center gap-1">
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: NIKKEI_COLOR }} />
+                                    <span className="text-[9px] text-slate-500 italic">{NIKKEI_NAME}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             );
         };
 
         const App = () => {
-            const [period, setPeriod] = useState('5d');
+            const [period, setPeriod] = useState('1d');
             const [rawDaily, setRawDaily] = useState(null);
             const [rawIntraday, setRawIntraday] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
 
-            // データ取得（etf.htmlと同一）
-            const fetchRawData = async () => {
+            // データ取得（useCallbackで安定参照）
+            const fetchRawData = useCallback(async () => {
                 setLoading(true);
                 setError(null);
                 try {
@@ -490,11 +679,21 @@
                 } finally {
                     setLoading(false);
                 }
-            };
-
-            useEffect(() => {
-                fetchRawData();
             }, []);
+
+            // 初回取得
+            useEffect(() => { fetchRawData(); }, [fetchRawData]);
+
+            // 自動更新: 前場(9:00-11:30) / 後場(12:30-15:30) の間、15分毎に再取得
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    const jst = new Date(Date.now() + 9 * 3600 * 1000);
+                    const t = jst.getUTCHours() * 60 + jst.getUTCMinutes();
+                    const inSession = (t >= 540 && t <= 690) || (t >= 750 && t <= 930);
+                    if (inSession) fetchRawData();
+                }, 15 * 60 * 1000);
+                return () => clearInterval(interval);
+            }, [fetchRawData]);
 
             // データ加工（etf.htmlと同一）
             const processedData = useMemo(() => {
@@ -652,9 +851,14 @@
                                 </div>
                             )}
 
-                            {/* 7カテゴリ チャート一覧 */}
+                            {/* 全チャート一覧 */}
                             {!loading && processedData && processedData.timeSeries.length > 0 && (
                                 <div className="flex flex-col gap-4 animate-fade-in">
+                                    {/* 上位ランキング（7カテゴリの上） */}
+                                    <SectorRankingChart processedData={processedData} type="top" />
+                                    {/* 下位ランキング */}
+                                    <SectorRankingChart processedData={processedData} type="bottom" />
+                                    {/* 7カテゴリ 分類チャート */}
                                     {CATEGORIES.map(category => (
                                         <CategorySection
                                             key={category.id}
