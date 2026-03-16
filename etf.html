@@ -230,11 +230,12 @@
                 const bPrices = prices[benchmark];
 
                 // UTC→JST変換ヘルパー（イントラデイデータはUTC保存のため+9時間）
+                // ※getUTCxxx()を使う: ローカルTZで二重加算されるのを防ぐ
                 const toJST = (utcStr) => {
                     const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
                     const j = new Date(d.getTime() + 9 * 3600 * 1000);
                     const p = n => String(n).padStart(2, '0');
-                    return `${j.getFullYear()}-${p(j.getMonth()+1)}-${p(j.getDate())} ${p(j.getHours())}:${p(j.getMinutes())}`;
+                    return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
                 };
 
                 const timeSeries = [];
