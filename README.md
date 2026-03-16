@@ -145,21 +145,51 @@ basket_price[t] = mean( stock_price[t] / stock_price[t0] ) × 100
 
 ```
 investment_dasboard/
-├── index.html                          # メインダッシュボード
-├── etf.html                            # セクター分析（単一チャート）
-├── sector_category.html                # セクター分類分析（7カテゴリ）
-├── analytics.html                      # セクター別感応度
+│
+├── index.html                          # メインダッシュボード（サイドバー統合ナビ）
+├── etf.html                            # セクター分析（全セクター単一チャート）
+├── sector_category.html                # セクター分類分析（7カテゴリ × チャート+ランキング）
+├── analytics.html                      # セクター別感応度分析
 ├── option.html                         # オプション建玉監視
-├── teguchi.html                        # 手口データ分析
-├── data/
-│   ├── etf_data.json                   # 日次データ（自動生成）
-│   └── etf_intraday_data.json          # イントラデイ5分足（自動生成）
+├── teguchi.html                        # 手口データ分析（売買参加者別）
+├── advanced.html                       # 詳細分析
+├── sectors.json                        # セクター定義（旧形式）
+├── history.csv                         # 履歴データ
+├── requirements.txt                    # Python 依存パッケージ
+├── design_reference.md                 # UIデザイン参考資料
+│
+├── main.py                             # エントリーポイント（旧スクリプト）
+├── sector_manager.py                   # セクター管理（旧スクリプト）
+│
+├── data/                               # 自動生成データ（GitHub Actions）
+│   ├── etf_data.json                   # ETF・バスケット 日次データ
+│   ├── etf_intraday_data.json          # ETF・バスケット 5分足イントラデイ
+│   ├── sector_data.json                # セクター集計データ
+│   ├── option_history.json             # オプション建玉履歴
+│   ├── teguchi.json                    # 手口データ（売買参加者別）
+│   ├── daily_participant.json          # 日次参加者データ
+│   └── gpif_data.json                  # GPIF 運用資産データ
+│
 ├── scripts/
-│   └── market/
-│       └── etf_data_manager.py         # データ取得スクリプト（本ドキュメント対応）
+│   ├── market/
+│   │   ├── etf_data_manager.py         # ETF・バスケット データ取得（本ドキュメント対応）
+│   │   └── fetch_gpif_data.py          # GPIF データ取得
+│   └── jpx/
+│       ├── fetch_option.py             # オプション建玉データ取得（JPX）
+│       └── fetch_teguchi.py            # 手口データ取得（JPX）
+│
+├── GPIF/                               # GPIF 分析サブアプリ（Node.js）
+│   ├── index.html                      # GPIF ダッシュボード
+│   ├── package.json
+│   └── metadata.json
+│
+├── JPEG/                               # スクリーンショット等の画像
+│
 └── .github/
     └── workflows/
-        └── daily_task.yml              # GitHub Actions 自動実行設定
+        ├── daily_task.yml              # 日次総合タスク（オプション・手口）
+        ├── daily_etf.yml               # 日次 ETF・バスケットデータ取得
+        └── daily_participant.yml       # 日次 参加者データ取得
 ```
 
 ---
