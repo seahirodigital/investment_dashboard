@@ -78,9 +78,137 @@
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
                 RefreshCw: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>,
-                PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>,
+                Info: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             };
             return <span className={className}>{icons[name] || null}</span>;
+        };
+
+        // カテゴリ詳細情報（ツールチップ用）
+        const CATEGORY_DETAILS = {
+            finance: [
+                { name: '不動産',        type: 'ETF',      code: '1633.T' },
+                { name: '保険業',        type: 'バスケット', stocks: '東京海上HD(8766)・MS&AD(8725)・SOMPO(8630)・第一生命(8750)・T&D(8795)・かんぽ生命(7181)' },
+                { name: '証券業',        type: 'バスケット', stocks: '野村HD(8604)・大和証券GHD(8601)・SBI HD(8473)・JPX(8697)・松井(8628)・マネックス(8698)' },
+                { name: 'その他金融',    type: 'バスケット', stocks: 'オリックス(8591)・アコム(8572)・クレセゾン(8253)・アイフル(8515)・東京センチュリー(8439)' },
+                { name: '銀行業',        type: 'ETF',      code: '1615.T' },
+                { name: '銀行',          type: 'ETF',      code: '1631.T' },
+                { name: 'TOPIX500バリュー', type: 'ETF',   code: '1311.T' },
+            ],
+            energy: [
+                { name: '鉱業',          type: 'バスケット', stocks: 'INPEX(1605)・石油資源開発(1662)・日鉄鉱業(1515)・三井松島HD(1518)・K&Oエナジー(1663)' },
+                { name: '石油・石炭',    type: 'バスケット', stocks: 'ENEOS HD(5020)・出光興産(5019)・コスモエネルギー(5021)' },
+                { name: '鉄鋼',          type: 'バスケット', stocks: '日本製鉄(5401)・JFE HD(5411)・神戸製鋼(5406)・東京製鐵(5429)・丸一鋼管(5463)' },
+                { name: 'ゴム製品',      type: 'バスケット', stocks: 'ブリヂストン(5108)・横浜ゴム(5105)・住友ゴム(5110)・TOYO TIRE(5104)' },
+                { name: '水産・農林',    type: 'バスケット', stocks: '日本水産(1332)・マルハニチロ(1333)・極洋(1301)' },
+                { name: '卸売業',        type: 'バスケット', stocks: '三菱商事(8058)・三井物産(8031)・伊藤忠(8001)・住友商事(8053)・丸紅(8002)・豊田通商(8015)' },
+                { name: '金属製品',      type: 'バスケット', stocks: 'LIXIL(5938)・東洋製罐GHD(5901)・フジクラ(5803)・昭和電線HD(5805)・GSユアサ(5970)' },
+                { name: 'その他製品',    type: 'バスケット', stocks: '任天堂(7974)・コナミ(9766)・カプコン(9697)・バンダイナムコ(7832)・ヤマハ(7951)' },
+            ],
+            consumer: [
+                { name: '小売',          type: 'ETF',      code: '1630.T' },
+                { name: '空運業',        type: 'バスケット', stocks: 'ANA HD(9202)・日本航空(9201)・スカイマーク(9205)' },
+                { name: '陸運業',        type: 'バスケット', stocks: 'JR東海(9022)・JR東(9020)・JR西(9021)・ヤマトHD(9064)・東急(9005)・小田急(9008)' },
+                { name: '食料品',        type: 'バスケット', stocks: 'アサヒ(2502)・キリン(2503)・味の素(2802)・JT(2914)・日清食品(2897)・明治HD(2269)' },
+                { name: '医薬品',        type: 'ETF',      code: '1621.T' },
+                { name: '電力・ガス',    type: 'ETF',      code: '1627.T' },
+                { name: '輸送用機器',    type: 'バスケット', stocks: 'トヨタ(7203)・ホンダ(7267)・スズキ(7269)・SUBARU(7270)・日産(7201)・マツダ(7261)' },
+                { name: '情報・通信業',  type: 'ETF',      code: '1613.T' },
+            ],
+            tech: [
+                { name: '倉庫・運輸',    type: 'バスケット', stocks: '日本通運(9062)・三菱倉庫(9302)・住友倉庫(9303)・山九(9065)・安田倉庫(9305)' },
+                { name: 'サービス業',    type: 'バスケット', stocks: 'リクルートHD(6098)・電通G(4324)・エムスリー(2413)・東宝(9602)・セコム(9735)・メルカリ(4385)' },
+                { name: 'パルプ・紙',    type: 'バスケット', stocks: '王子HD(3861)・日本製紙(3863)・大王製紙(3880)・北越コーポ(3865)・中越パルプ(3877)' },
+                { name: '繊維製品',      type: 'バスケット', stocks: '東レ(3402)・帝人(3401)・日清紡HD(3105)・ダイワボウHD(3107)・ユニチカ(3103)' },
+                { name: '情報通信・サービスその他', type: 'ETF', code: '1626.T' },
+                { name: 'ガラス・土石',  type: 'バスケット', stocks: 'AGC(5201)・日本電気硝子(5214)・太平洋セメント(5233)・住友大阪セメント(5232)・東海カーボン(5301)' },
+                { name: '電機・精密',    type: 'ETF',      code: '1625.T' },
+                { name: 'TOPIX500グロース', type: 'ETF',   code: '1312.T' },
+            ],
+            market: [
+                { name: '日経指数',      type: '指数',      code: '^N225 (Yahoo Finance)' },
+                { name: '日経225ETF',    type: 'ETF',      code: '1321.T' },
+                { name: '米国債10年',    type: '指数',      code: '^TNX (CBOE 10年債利回り)' },
+                { name: '半導体ETF',     type: 'ETF',      code: '2644.T (Global X)' },
+                { name: '半導体',        type: 'ETF',      code: '213A.T (旧コード)' },
+            ],
+            smallcap: [
+                { name: '化学',          type: 'バスケット', stocks: '信越化学(4063)・三井化学(4183)・三菱ケミカル(4188)・富士フイルム(4901)・旭化成(3407)' },
+                { name: '機械',          type: 'バスケット', stocks: 'ダイキン(6367)・コマツ(6301)・SMC(6273)・三菱重工(7011)・クボタ(6326)・川崎重工(7012)' },
+                { name: '非鉄金属',      type: 'バスケット', stocks: '住友金属鉱山(5713)・三菱マテリアル(5711)・DOWA(5714)・SUMCO(3436)・JX金属(5016)' },
+                { name: '建設・資材',    type: 'ETF',      code: '1619.T' },
+                { name: '海運業',        type: 'バスケット', stocks: '日本郵船(9101)・商船三井(9104)・川崎汽船(9107)・飯野海運(9119)・乾汽船(9112)' },
+                { name: 'GX日本成長',    type: 'ETF',      code: '200A.T (GX 日本成長投資ETF)' },
+                { name: '半導体ETF',     type: 'ETF',      code: '2644.T / TOPIX 相対' },
+            ],
+            scale: [
+                { name: 'TOPIX Core30',  type: 'ETF',      code: '1310.T (超大型株 上位30)' },
+                { name: 'TOPIX Large70', type: 'ETF',      code: '1020.T (大型株 上位70)' },
+                { name: 'TOPIX Mid400',  type: 'ETF',      code: '1589.T (中型株 400銘柄)' },
+                { name: 'TOPIX Small',   type: 'ETF',      code: '1022.T (小型株全体)' },
+                { name: 'TOPIX 100',     type: 'ETF',      code: '1023.T (大型計 100銘柄)' },
+                { name: 'TOPIX 500',     type: 'ETF',      code: '1024.T (500銘柄)' },
+                { name: 'TOPIX 1000',    type: 'ETF',      code: '1025.T (1000銘柄)' },
+            ],
+        };
+
+        // カテゴリ詳細ツールチップコンポーネント
+        const InfoTooltip = ({ categoryId }) => {
+            const [visible, setVisible] = useState(false);
+            const details = CATEGORY_DETAILS[categoryId] || [];
+            const TYPE_STYLE = {
+                'ETF':      { bg: 'bg-blue-100',   text: 'text-blue-700',   label: 'ETF' },
+                'バスケット': { bg: 'bg-amber-100',  text: 'text-amber-700',  label: '🧺' },
+                '指数':      { bg: 'bg-slate-100',  text: 'text-slate-600',  label: '指数' },
+            };
+            return (
+                <span
+                    className="relative inline-flex items-center cursor-pointer"
+                    onMouseEnter={() => setVisible(true)}
+                    onMouseLeave={() => setVisible(false)}
+                >
+                    <span className="text-slate-400 hover:text-[#7C4DFF] transition-colors">
+                        <Icon name="Info" size={12} />
+                    </span>
+                    {visible && (
+                        <div
+                            className="absolute left-5 top-0 z-50 bg-white border border-slate-200 rounded-xl shadow-xl p-3 min-w-[320px] max-w-[420px]"
+                            style={{ fontSize: '11px', lineHeight: '1.5' }}
+                        >
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-100">
+                                        <th className="text-left py-1 pr-2 font-bold text-slate-500 w-[30%]">セクター</th>
+                                        <th className="text-center py-1 pr-2 font-bold text-slate-500 w-[14%]">種別</th>
+                                        <th className="text-left py-1 font-bold text-slate-500">コード / 構成銘柄</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {details.map((d, i) => {
+                                        const ts = TYPE_STYLE[d.type] || TYPE_STYLE['指数'];
+                                        return (
+                                            <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
+                                                <td className="py-1 pr-2 font-semibold text-slate-700 truncate" title={d.name}>{d.name}</td>
+                                                <td className="py-1 pr-2 text-center">
+                                                    <span className={`inline-block px-1.5 py-0.5 rounded-full font-bold ${ts.bg} ${ts.text}`}>
+                                                        {ts.label}
+                                                    </span>
+                                                </td>
+                                                <td className="py-1 text-slate-500" style={{ wordBreak: 'break-all' }}>
+                                                    {d.code || d.stocks || ''}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            <p className="mt-2 text-[10px] text-slate-400 border-t border-slate-100 pt-1.5">
+                                🧺 バスケット = 時価総額上位銘柄の等加重平均で合成した仮想指数
+                            </p>
+                        </div>
+                    )}
+                </span>
+            );
         };
 
         const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -193,6 +321,7 @@
                     <h3 className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2">
                         <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
                         {category.label}
+                        <InfoTooltip categoryId={category.id} />
                     </h3>
                     <div className="flex gap-4 h-[300px]">
                         {/* 左列：チャート（幅50%、高さ300px） */}
