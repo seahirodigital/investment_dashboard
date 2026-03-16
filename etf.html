@@ -229,9 +229,17 @@
                 const endIndex = L - 1;
                 const bPrices = prices[benchmark];
 
+                // UTC→JST変換ヘルパー（イントラデイデータはUTC保存のため+9時間）
+                const toJST = (utcStr) => {
+                    const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
+                    const j = new Date(d.getTime() + 9 * 3600 * 1000);
+                    const p = n => String(n).padStart(2, '0');
+                    return `${j.getFullYear()}-${p(j.getMonth()+1)}-${p(j.getDate())} ${p(j.getHours())}:${p(j.getMinutes())}`;
+                };
+
                 const timeSeries = [];
                 for (let i = startIndex; i <= endIndex; i++) {
-                    const point = { date: dates[i] };
+                    const point = { date: isIntraday ? toJST(dates[i]) : dates[i] };
                     const bStart = bPrices[startIndex];
                     const bCurrent = bPrices[i];
                     
@@ -278,6 +286,7 @@
 
                 return {
                     period,
+                    isIntraday,
                     startDate: dates[startIndex],
                     endDate: dates[endIndex],
                     timeSeries,
@@ -390,6 +399,14 @@
                                                 showgrid: true,
                                                 gridcolor: '#e2e8f0',
                                                 tickfont: { color: '#64748b' },
+                                                // 非取引時間を横軸から除外
+                                                rangebreaks: processedData.isIntraday ? [
+                                                    { bounds: ["sat", "mon"] },
+                                                    { bounds: [15.5, 9], pattern: "hour" },  // 15:30以降〜翌9:00を除外
+                                                    { bounds: [11.5, 12.5], pattern: "hour" } // 昼休み(11:30-12:30)を除外
+                                                ] : [
+                                                    { bounds: ["sat", "mon"] }
+                                                ],
                                             },
                                             yaxis: {
                                                 showgrid: true,
