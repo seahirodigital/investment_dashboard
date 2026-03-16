@@ -27,14 +27,14 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Daily Analysis Script
-        run: python scripts/daily_participant_analyzer.py
+        run: python scripts/jpx/daily_participant_analyzer.py
 
       - name: Fetch JPX Data and Export JSON
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: |
-          python scripts/fetch_teguchi.py
-          python scripts/fetch_option.py
+          python scripts/jpx/fetch_teguchi.py
+          python scripts/jpx/fetch_option.py
 
       - name: Commit and Push Data
         run: |
@@ -43,8 +43,8 @@ jobs:
           
           # Add all modified json files
           [ -f data/daily_participant.json ] && git add data/daily_participant.json
-          [ -f data.json ] && git add data.json
-          [ -f option_history.json ] && git add option_history.json
+          [ -f data/teguchi.json ] && git add data/teguchi.json
+          [ -f data/option_history.json ] && git add data/option_history.json
           
           # 変更がある場合のみコミット
           if ! git diff --staged --quiet; then
@@ -59,7 +59,7 @@ jobs:
         run: |
           mkdir -p deploy
           
-          for file in index.html option.html etf.html teguchi.html data.json option_history.json advanced.html analytics.html history.csv trend.png sector_data.json; do
+          for file in index.html option.html etf.html teguchi.html advanced.html analytics.html; do
             if [ -f "$file" ]; then
               cp "$file" deploy/
               echo "✅ Copied $file to deploy/"

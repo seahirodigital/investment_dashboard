@@ -28,7 +28,7 @@ jobs:
 
       - name: Fetch ETF Data
         run: |
-          python scripts/etf_data_manager.py
+          python scripts/market/etf_data_manager.py
 
       - name: Commit and Push Data
         run: |
@@ -50,7 +50,7 @@ jobs:
         run: |
           mkdir -p deploy
           
-          for file in index.html option.html etf.html teguchi.html data.json option_history.json advanced.html analytics.html history.csv trend.png sector_data.json; do
+          for file in index.html option.html etf.html teguchi.html advanced.html analytics.html; do
             if [ -f "$file" ]; then
               cp "$file" deploy/
               echo "✅ Copied $file to deploy/"

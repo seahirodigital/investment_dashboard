@@ -280,7 +280,7 @@
             loader.classList.remove('hidden');
             logMessage("ローカルJSONからデータを取得中...", 'info');
             
-            const response = await fetch(`./option_history.json?t=${new Date().getTime()}`);
+            const response = await fetch(`./data/option_history.json?t=${new Date().getTime()}`);
             if(!response.ok) throw new Error("データの取得に失敗しました");
             
             storedData = await response.json();

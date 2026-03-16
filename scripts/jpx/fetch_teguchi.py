@@ -12,7 +12,7 @@ from firebase_admin import firestore
 
 def init_firestore():
     if not firebase_admin._apps:
-        key_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'firebase-key.json')
+        key_path = 'firebase-key.json'
         try:
             if os.path.exists(key_path):
                 cred = credentials.Certificate(key_path)
@@ -239,10 +239,9 @@ def run():
     # Generate JSON data
     output_data = process_dataframe(df)
     
-    # Write to docs/data.json
-    output_dir = os.path.dirname(os.path.dirname(__file__))
-    os.makedirs(output_dir, exist_ok=True)
-    out_path = os.path.join(output_dir, 'data.json')
+    # Write to data/teguchi.json
+    os.makedirs('data', exist_ok=True)
+    out_path = os.path.join('data', 'teguchi.json')
     
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)

@@ -52,7 +52,7 @@ jobs:
           fi
           
           # 3. GPIF分析データ取得
-          python scripts/fetch_gpif_data.py
+          python scripts/market/fetch_gpif_data.py
       
       - name: Check for changes
         id: check_changes
@@ -84,7 +84,7 @@ jobs:
           mkdir -p deploy
           
           # ファイルの存在確認とコピー（ログ出力付き）
-          for file in index.html option.html etf.html teguchi.html data.json option_history.json advanced.html analytics.html history.csv trend.png sector_data.json; do
+          for file in index.html option.html etf.html teguchi.html advanced.html analytics.html; do
             if [ -f "$file" ]; then
               cp "$file" deploy/
               echo "✅ Copied $file to deploy/"

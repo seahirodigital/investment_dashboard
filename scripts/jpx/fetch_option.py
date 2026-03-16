@@ -12,7 +12,7 @@ from firebase_admin import firestore
 
 def init_firestore():
     if not firebase_admin._apps:
-        key_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'firebase-key.json')
+        key_path = 'firebase-key.json'
         try:
             if os.path.exists(key_path):
                 cred = credentials.Certificate(key_path)
@@ -173,9 +173,8 @@ def fetch_option_data():
         'p2_225': p2_data
     }
     
-    history_file = 'option_history.json'
-    abs_history_file = os.path.join(os.path.dirname(__file__), '..', history_file)
-    os.makedirs(os.path.dirname(abs_history_file), exist_ok=True)
+    abs_history_file = os.path.join('data', 'option_history.json')
+    os.makedirs('data', exist_ok=True)
     
     if os.path.exists(abs_history_file):
         with open(abs_history_file, 'r', encoding='utf-8') as f:

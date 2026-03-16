@@ -44,9 +44,8 @@ def main():
             results[key] = []
 
     # Save to data/gpif_data.json
-    output_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-    os.makedirs(output_dir, exist_ok=True)
-    out_path = os.path.join(output_dir, 'gpif_data.json')
+    os.makedirs('data', exist_ok=True)
+    out_path = os.path.join('data', 'gpif_data.json')
     
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False)
