@@ -140,10 +140,30 @@
             );
         };
 
+        // 表示から除外するシンボルキー（重複・ノイズ除去）
+        const HIDDEN_SYMBOLS = new Set([
+            // TOPIX 規模別（ノイズ）
+            '1310.T', '1020.T', '1589.T', '1022.T', '1023.T', '1024.T', '1025.T',
+            // TOPIX500 グロース/バリュー
+            '1311.T', '1312.T',
+            // GX日本成長 / 米国債10年
+            '200A.T', '^TNX',
+            // 独自バスケット「機械」→ 1624.T ETF を使用
+            '機械',
+            // 鉄鋼・非鉄 ETF → 個別バスケット（鉄鋼/非鉄金属）を使用
+            '1623.T',
+            // 金融（除く銀行）ETF → 詳細バスケット（保険業/証券業/その他金融）を使用
+            '1632.T',
+            // 銀行（旧コード1631.T）→ 銀行業（1615.T）を使用
+            '1631.T',
+            // 半導体（旧コード213A.T）→ 半導体ETF（2644.T）を使用
+            '213A.T',
+        ]);
+
         // デフォルト表示セクター（クリックで切り替え）
         const DEFAULT_VISIBLE = new Set([
-            '不動産', '銀行', '金融（除く銀行）', '機械',
-            '自動車・輸送機', '鉄鋼・非鉄', 'エネルギー資源', '商社・卸売', '半導体', '日経指数'
+            '不動産', '銀行業', '機械',
+            '自動車・輸送機', '鉄鋼', '非鉄金属', 'エネルギー資源', '商社・卸売', '半導体ETF', '日経指数'
         ]);
 
         const App = () => {
@@ -263,13 +283,14 @@
                     point.TOPIX = bReturn * 100;
 
                     Object.keys(sectors).forEach(symbol => {
+                        if (HIDDEN_SYMBOLS.has(symbol)) return;
                         const name = sectors[symbol];
                         const sPrices = prices[symbol];
                         if (!sPrices) return;
-                        
+
                         const sStart = sPrices[startIndex];
                         const sCurrent = sPrices[i];
-                        
+
                         if (sStart && sCurrent) {
                             const sReturn = (sCurrent / sStart) - 1;
                             point[name] = (sReturn - bReturn) * 100;
@@ -286,6 +307,7 @@
                 if (timeSeries.length > 0) {
                     const latest = timeSeries[timeSeries.length - 1];
                     Object.keys(sectors).forEach(symbol => {
+                        if (HIDDEN_SYMBOLS.has(symbol)) return;
                         const name = sectors[symbol];
                         if (latest[name] !== undefined) {
                             ranking.push({
