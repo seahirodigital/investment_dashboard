@@ -389,7 +389,6 @@
                     <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-6">
                         <div className="flex items-center gap-3">
                             <h1 className="text-xs font-bold text-[#7C4DFF]">セクター分析</h1>
-                            <span className="text-slate-400 text-xs font-medium ml-2">TOPIX Sector Relative Performance / ETFシミュレーション</span>
                         </div>
                         <div className="flex items-center gap-4 text-xs mt-3 md:mt-0">
                             <div className="flex items-center gap-2">
@@ -404,6 +403,24 @@
                                         <option key={p.value} value={p.value}>{p.label}</option>
                                     ))}
                                 </select>
+                                {processedData && (() => {
+                                    // イントラデイはUTC→JST変換
+                                    const toJST = (s) => {
+                                        const d = new Date(s.replace(' ', 'T') + ':00Z');
+                                        const j = new Date(d.getTime() + 9 * 3600 * 1000);
+                                        const p = n => String(n).padStart(2, '0');
+                                        return s.includes(' ')
+                                            ? `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`
+                                            : s;
+                                    };
+                                    const start = processedData.isIntraday ? toJST(processedData.startDate) : processedData.startDate;
+                                    const end   = processedData.isIntraday ? toJST(processedData.endDate)   : processedData.endDate;
+                                    return (
+                                        <span className="text-slate-400 font-mono whitespace-nowrap">
+                                            {start === end ? start : `${start} 〜 ${end}`}
+                                        </span>
+                                    );
+                                })()}
                             </div>
                             <button
                                 onClick={fetchRawData}
@@ -515,14 +532,11 @@
 
                             {/* Ranking Area */}
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[700px] p-6 relative z-0">
-                                <div className="mb-4 flex justify-between items-center">
+                                <div className="mb-4">
                                     <h2 className="text-sm font-bold text-slate-500 flex items-center gap-2">
                                         <Icon name="PieChart" className="text-[#7C4DFF]" size={16} />
                                         セクターランキング
                                     </h2>
-                                    <span className="text-xs text-slate-400 border border-slate-200 px-3 py-1 rounded bg-slate-50 font-mono">
-                                        {processedData.startDate} 〜 {processedData.endDate}
-                                    </span>
                                 </div>
                                 <div className="overflow-y-auto flex-1 space-y-3 custom-scrollbar pr-2 mt-2">
                                     {processedData.ranking.map((item, index) => {
