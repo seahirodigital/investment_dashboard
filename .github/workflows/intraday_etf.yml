@@ -40,15 +40,28 @@ jobs:
           print(f'完了: {len(data[\"dates\"])} ticks')
           "
 
-      - name: デプロイ準備（etf_intraday_data.json のみ）
+      - name: gh-pages に直接デプロイ（etf_intraday_data.json のみ上書き）
         run: |
-          mkdir -p deploy_intraday
-          cp data/etf_intraday_data.json deploy_intraday/
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Actions [intraday]"
 
-      - name: GitHub Pages にデプロイ（data/etf_intraday_data.json のみ更新）
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy_intraday
-          destination_dir: data
-          keep_files: true
+          # 生成済みファイルを一時保存
+          cp data/etf_intraday_data.json /tmp/etf_intraday_data.json
+
+          # gh-pages ブランチを取得して切り替え
+          git fetch origin gh-pages
+          git checkout gh-pages
+
+          # 対象ファイルのみ更新
+          mkdir -p data
+          cp /tmp/etf_intraday_data.json data/etf_intraday_data.json
+
+          # 変更があればコミット・プッシュ
+          git add data/etf_intraday_data.json
+          if ! git diff --staged --quiet; then
+            git commit -m "Intraday update: $(date +'%Y-%m-%d %H:%M UTC')"
+            git push origin gh-pages
+            echo "✅ gh-pages 更新完了"
+          else
+            echo "変更なし、スキップ"
+          fi

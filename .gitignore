@@ -1,7 +1,9 @@
 .vscode-kanban/
 .vscode/
 __pycache__/
-design_reference.md
+docs/
 add_investment_dashboard
 history.csv
 trend.png
+firebase-key.json
+*.json.bak
