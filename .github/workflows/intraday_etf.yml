@@ -1,0 +1,54 @@
+name: Intraday ETF Update (市場時間中 15分ごと)
+
+on:
+  schedule:
+    # UTC 0:00-6:45 = JST 9:00-15:45（平日のみ）
+    # 前場(9:00-11:30) / 後場(12:30-15:30) をカバー
+    - cron: '0,15,30,45 0-6 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  update_intraday:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 依存パッケージのインストール
+        run: pip install -r requirements.txt
+
+      - name: イントラデイデータ取得（5分足 14日分）
+        run: |
+          python3 -c "
+          import sys, os, json
+          os.makedirs('data', exist_ok=True)
+          sys.path.insert(0, 'scripts/market')
+          from etf_data_manager import fetch_data
+          data = fetch_data(period='14d', interval='5m')
+          with open('data/etf_intraday_data.json', 'w', encoding='utf-8') as f:
+              json.dump(data, f, ensure_ascii=False)
+          print(f'完了: {len(data[\"dates\"])} ticks')
+          "
+
+      - name: デプロイ準備（etf_intraday_data.json のみ）
+        run: |
+          mkdir -p deploy_intraday
+          cp data/etf_intraday_data.json deploy_intraday/
+
+      - name: GitHub Pages にデプロイ（data/etf_intraday_data.json のみ更新）
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy_intraday
+          destination_dir: data
+          keep_files: true
