@@ -37,6 +37,8 @@
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        /* ヘッダー統一スタイル (header-hp) */
+        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
     </style>
 </head>
 <body>
@@ -340,35 +342,36 @@
 
             const content = (
                 <div className="space-y-6">
-                    {/* Header Card */}
-                    <div 
-                        className="rounded-xl px-6 py-4 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between animate-fade-in-up relative" 
-                        style={{ background: 'linear-gradient(135deg, #7C4DFF 0%, #651FFF 100%)', color: 'white', minHeight: '96px' }}
-                    >
-                        <div className="flex flex-col items-start pr-[200px]">
-                            <h1 className="text-[1.25rem] sm:text-[1.5rem] font-bold">ETF Sector Dashboard</h1>
-                            <p className="text-[0.75rem] opacity-90 mt-1">TOPIX Sector Relative Performance / ETFシミュレーション</p>
+                    {/* Header (header-hp 統一スタイル) */}
+                    <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-6">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-xs font-bold text-[#7C4DFF]">セクター分析</h1>
+                            <span className="text-slate-400 text-xs font-medium ml-2">TOPIX Sector Relative Performance / ETFシミュレーション</span>
                         </div>
-                        <div className="flex items-center gap-4 mt-4 sm:mt-0 sm:absolute sm:right-6">
-                            <select
-                                value={period}
-                                onChange={(e) => setPeriod(e.target.value)}
-                                className="block w-32 rounded-lg border border-slate-200 p-2 text-xs text-slate-700 focus:ring-2 focus:ring-[#7C4DFF] outline-none bg-white font-medium"
-                                disabled={loading}
-                            >
-                                {PERIODS.map(p => (
-                                    <option key={p.value} value={p.value} className="text-sm">{p.label}</option>
-                                ))}
-                            </select>
+                        <div className="flex items-center gap-4 text-xs mt-3 md:mt-0">
+                            <div className="flex items-center gap-2">
+                                <span className="text-slate-500 shrink-0">期間:</span>
+                                <select
+                                    value={period}
+                                    onChange={(e) => setPeriod(e.target.value)}
+                                    className="bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-[#7C4DFF] [&>option]:text-slate-800"
+                                    disabled={loading}
+                                >
+                                    {PERIODS.map(p => (
+                                        <option key={p.value} value={p.value}>{p.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <button
                                 onClick={fetchRawData}
-                                className="p-2 text-white hover:text-[#7C4DFF] hover:bg-white rounded-full transition-colors flex items-center justify-center shrink-0"
+                                className="bg-[#7C4DFF] text-white hover:bg-[#651FFF] font-bold px-3 py-1 rounded flex items-center gap-2 transition-colors shadow-sm"
                                 disabled={loading}
                             >
-                                <Icon name="RefreshCw" className={cn(loading && "animate-spin")} />
+                                <Icon name="RefreshCw" size={14} className={cn(loading && "animate-spin")} />
+                                <span>更新</span>
                             </button>
                         </div>
-                    </div>
+                    </header>
 
                     {loading && !processedData && (
                         <div className="flex justify-center items-center h-64">

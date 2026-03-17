@@ -150,6 +150,7 @@ basket_price[t] = mean( stock_price[t] / stock_price[t0] ) × 100
 | 手口データ分析（`teguchi.html`） | `data/teguchi.json` | **毎日 20:05** | 毎営業日 ※1 | `daily_participant.yml` |
 | 日経225建玉・オプション（`option.html`） | `data/option_history.json` | **毎日 20:05** | 毎営業日 ※2 | `daily_participant.yml` |
 | セクター分析・分類分析（`etf.html`, `sector_category.html`） | `data/etf_data.json`<br>`data/etf_intraday_data.json` | **毎日 16:00** | 毎日 | `daily_etf.yml` |
+| セクター分類分析 イントラデイ（`sector_category.html` 1日表示） | `data/etf_intraday_data.json` | **市場時間中 15分ごと** ※3 | 平日 前後場中 | `intraday_etf.yml` |
 | セクター感応度（`analytics.html`） | `data/sector_data.json` | **毎週木曜 18:00** | 週1回 | `daily_task.yml` |
 | GPIF分析 | `data/gpif_data.json` | **毎週木曜 18:00** | 週1回 | `daily_task.yml` |
 
@@ -175,15 +176,48 @@ basket_price[t] = mean( stock_price[t] / stock_price[t0] ) × 100
 | 平日 20:05 以降 | **当日**分（ワークフロー実行時に取得済み） |
 | 土曜・日曜・祝日 | 直前の金曜分 |
 
-### セクター分析の自動リフレッシュ
+### ※3 セクター分類分析の15分自動リフレッシュ（`sector_category.html`）
 
-`sector_category.html`（セクター分類分析）は、**市場時間中に15分ごと自動更新**されます。
+`sector_category.html` の「**1日**」期間表示は、市場時間中に**2段階の仕組み**で15分ごと自動更新されます。
 
-| セッション | 時間帯 | 動作 |
-|---|---|---|
-| 前場 | 09:00〜11:30 | 15分ごとにデータ自動取得・描画更新 |
-| 後場 | 12:30〜15:30 | 15分ごとにデータ自動取得・描画更新 |
-| 時間外 | 上記以外 | 自動取得なし（手動リロードのみ） |
+#### 仕組みの概要
+
+```
+① GitHub Actions (intraday_etf.yml)
+   └─ 平日 JST 9:00〜15:45 に 0分・15分・30分・45分 で起動
+   └─ yfinance から 5分足 14日分を取得（当日9:00以降のデータを含む）
+   └─ data/etf_intraday_data.json を GitHub Pages に上書きデプロイ
+      ↓（約2〜3分後に反映）
+② ブラウザ側 JavaScript (sector_category.html)
+   └─ 前場(9:00〜11:30) / 後場(12:30〜15:30) の間、15分ごとに JSON を再取得
+   └─ 取得した最新データでチャートを再描画
+```
+
+#### セッション別の動作
+
+| セッション | 時間帯（JST） | GitHub Actions | ブラウザ JS |
+|---|---|---|---|
+| 前場 | 09:00〜11:30 | 15分ごとにデータ更新 | 15分ごとに再取得・再描画 |
+| 昼休み | 11:30〜12:30 | 15分ごとにデータ更新（※）| 自動取得なし |
+| 後場 | 12:30〜15:30 | 15分ごとにデータ更新 | 15分ごとに再取得・再描画 |
+| 時間外 | 上記以外 | 自動取得なし | 自動取得なし（手動リロードのみ） |
+
+> ※ 昼休みも Actions は発火するが、市場が閉まっているためデータ変化は小さい
+
+#### 表示データの範囲（1日選択時）
+
+- **当日 9:00 以降**の5分足データを全て表示
+- 15:15 に取得した場合 → 9:00〜15:10 の全データが含まれる
+- TOPIX（1306.T）超過リターンとして正規化して描画
+
+#### ⚠️ 注意事項
+
+| 項目 | 内容 |
+|---|---|
+| Actions の遅延 | GitHub のスケジュール実行は数分〜最大15分遅延することがある |
+| 日本の祝日 | cron は土日を除外するが**祝日は除外不可**（祝日にも発火するが市場データに変化なし） |
+| 他期間（2日以上） | ブラウザ JS は全期間でリフレッシュするが、`etf_intraday_data.json` が変わるのは市場時間中のみ |
+| 16:00 の上書き | `daily_etf.yml`（16:00 JST）が全データを再生成・デプロイし、当日の最終イントラデイデータで確定する |
 
 ---
 
@@ -239,7 +273,8 @@ investment_dasboard/
     └── workflows/
         ├── daily_task.yml              # 週次総合タスク（毎週木曜 JST 18:00）※セクター・GPIF
         ├── daily_etf.yml               # 日次 ETF・バスケットデータ取得（毎日 JST 16:00）
-        └── daily_participant.yml       # 日次 手口・建玉データ取得（毎日 JST 20:05）
+        ├── daily_participant.yml       # 日次 手口・建玉データ取得（毎日 JST 20:05）
+        └── intraday_etf.yml            # 市場時間中 15分ごと イントラデイデータ更新（平日 JST 9:00〜15:45）
 ```
 
 ---

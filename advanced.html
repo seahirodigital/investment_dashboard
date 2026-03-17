@@ -78,9 +78,8 @@
             user-select: none;
         }
         
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
+        /* ヘッダー統一スタイル (header-hp) */
+        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -323,14 +322,15 @@
 
             return (
                 <div className="min-h-screen pb-12">
-                    <div className="gradient-bg text-white shadow-lg">
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                            <h1 className="text-4xl font-bold mb-2">JPX Advanced Viewer</h1>
-                            <p className="text-blue-100 text-lg">3-Pane Synchronized Layout</p>
+                    {/* ヘッダー (header-hp 統一スタイル) */}
+                    <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-6">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-xs font-bold text-[#7C4DFF]">海外動向（JPX）</h1>
+                            <span className="text-slate-400 text-xs font-medium ml-2">JPX Advanced Viewer / 3-Pane Synchronized Layout</span>
                         </div>
-                    </div>
+                    </header>
 
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         {/* モード切替 */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 animate-fade-in-up">
                             <div className="flex gap-2">
