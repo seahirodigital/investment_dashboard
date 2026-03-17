@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, HelpCircle, X } from 'lucide-react';
+import { Activity, RefreshCw, Info } from 'lucide-react';
 import { Chart } from './components/Chart';
 import { ImpactTable } from './components/ImpactTable';
 import { calculateDrift } from './utils';
@@ -29,10 +29,9 @@ const lookbackOptions = [
 ];
 
 export default function App() {
-  const [showInfoModal, setShowInfoModal] = useState<boolean>(false);
   const [lookbackDaysInput, setLookbackDaysInput] = useState<string>('7');
   const [aumInput, setAumInput] = useState<string>('250'); // 250 Trillion JPY
-  
+
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,17 +50,17 @@ export default function App() {
         throw new Error('マーケットデータの取得に失敗しました');
       }
       const fullData = await response.json();
-      
+
       // Filter the full data by lookbackDays locally (+30 days overlap like original API)
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - (lookbackDays + 30));
       const cutoffStr = cutoffDate.toISOString().split('T')[0];
-      
+
       const filteredData = {} as MarketData;
       for (const [key, records] of Object.entries(fullData)) {
         filteredData[key as keyof MarketData] = (records as any[]).filter(r => r.date >= cutoffStr);
       }
-      
+
       setMarketData(filteredData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
@@ -89,21 +88,25 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-700 font-sans selection:bg-[#7C4DFF]/30">
-      {/* Header (header-hp 統一スタイル) */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-10" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <h1 className="text-xs font-bold text-[#7C4DFF]">GPIF分析</h1>
-            <span className="text-slate-400 text-xs font-medium ml-2">運用資産配分 / リバランスインパクト推定</span>
+      {/* Header */}
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-0 sm:h-16 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-[#7C4DFF] to-[#651FFF] flex items-center justify-center shadow-sm">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="font-bold text-lg text-slate-800 tracking-tight">GPIF分析</h1>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs w-full md:w-auto justify-end overflow-x-auto">
+          <div className="flex items-center gap-4 text-sm w-full sm:w-auto justify-between sm:justify-end overflow-x-auto pb-1 sm:pb-0">
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-slate-500 font-bold shrink-0">期間:</span>
+              <label className="font-bold text-slate-500">期間</label>
               <select
                 value={lookbackDaysInput}
                 onChange={(e) => setLookbackDaysInput(e.target.value)}
-                className="bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-[#7C4DFF]"
+                className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7C4DFF]/50 font-medium cursor-pointer"
               >
                 {lookbackOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -112,25 +115,25 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-slate-500 font-bold shrink-0">運用資産:</span>
+              <label className="font-bold text-slate-500">運用資産</label>
               <div className="flex items-center">
                 <input
                   type="text"
                   value={aumInput}
                   onChange={(e) => setAumInput(e.target.value)}
-                  className="bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-700 w-14 text-right focus:outline-none focus:border-[#7C4DFF] font-mono"
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-800 w-16 text-right focus:outline-none focus:ring-2 focus:ring-[#7C4DFF]/50 font-mono"
                 />
-                <span className="ml-1 text-slate-500">兆円</span>
+                <span className="ml-1 text-slate-500 font-bold">兆円</span>
               </div>
             </div>
 
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="flex items-center gap-2 bg-[#7C4DFF] hover:bg-[#651FFF] text-white font-bold px-3 py-1 rounded transition-colors shadow-sm disabled:opacity-50 shrink-0"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#7C4DFF] hover:bg-[#651FFF] text-white font-bold transition-colors shadow-sm disabled:opacity-50 shrink-0"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>更新</span>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">更新</span>
             </button>
           </div>
         </div>
@@ -154,7 +157,7 @@ export default function App() {
               <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#94a3b8]"></div> 外国債券</div>
             </div>
           </div>
-          
+
           {loading && chartData.length === 0 ? (
             <div className="w-full h-[400px] flex items-center justify-center border border-slate-200 rounded-xl bg-slate-50">
               <RefreshCw className="w-6 h-6 text-slate-400 animate-spin" />
@@ -168,72 +171,41 @@ export default function App() {
         <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-sm">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-slate-500">リバランスインパクト</h2>
-            <button
-              onClick={() => setShowInfoModal(true)}
-              className="text-slate-300 hover:text-[#7C4DFF] transition-colors"
-            >
-              <HelpCircle className="w-4 h-4" />
-            </button>
-          </div>
-          <ImpactTable latestDrift={latestDrift} aum={parseInt(aumInput) || 250} />
-        </section>
-      </main>
-
-      {/* リバランスインパクト説明モーダル */}
-      {showInfoModal && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowInfoModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl p-6 w-[90%] max-w-lg shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-[#7C4DFF]" />
-                リバランスの仕組み
-              </h3>
-              <button
-                onClick={() => setShowInfoModal(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="text-sm text-slate-600 space-y-4">
-              <div>
-                <p className="font-bold mb-1 text-[#7C4DFF]">「乖離許容幅」という公式ルール</p>
-                <p className="mb-2">GPIFには、各資産ごとに「ここまではズレてもOK」という<strong>乖離許容幅</strong>が設定されています。2025年度からの第5期中期計画では以下のようになっています。</p>
-                <table className="w-full mb-2 border-collapse text-xs">
+            <div className="relative group">
+              <Info className="w-4 h-4 text-slate-400 cursor-help" />
+              <div className="absolute left-[-1rem] sm:left-0 bottom-full mb-2 hidden group-hover:block w-[calc(100vw-2rem)] sm:w-[480px] p-4 bg-slate-800 text-white text-xs rounded-lg shadow-xl z-50 leading-relaxed">
+                <p className="font-bold mb-1 text-sm text-[#7C4DFF]">2. 「乖離許容幅」という公式ルール</p>
+                <p className="mb-2 text-slate-300">GPIFには、各資産ごとに「ここまではズレてもOK」という<strong>乖離許容幅（かいりきょようはば）</strong>が設定されています。2025年度からの第5期中期計画では以下のようになっています。</p>
+                <table className="w-full mb-2 border-collapse text-slate-300">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="text-left py-1.5 px-2 font-medium text-slate-500">資産クラス</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-slate-500">基本構成割合</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-slate-500">乖離許容幅</th>
+                    <tr className="border-b border-slate-600">
+                      <th className="text-left py-1 font-medium">資産クラス</th>
+                      <th className="text-left py-1 font-medium">基本構成割合</th>
+                      <th className="text-left py-1 font-medium">乖離許容幅</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    <tr><td className="py-1.5 px-2">国内株式</td><td className="py-1.5 px-2">25%</td><td className="py-1.5 px-2">±6% (19.0%〜31.0%)</td></tr>
-                    <tr><td className="py-1.5 px-2">外国株式</td><td className="py-1.5 px-2">25%</td><td className="py-1.5 px-2">±6% (19.0%〜31.0%)</td></tr>
-                    <tr><td className="py-1.5 px-2">国内債券</td><td className="py-1.5 px-2">25%</td><td className="py-1.5 px-2">±6% (19.0%〜31.0%)</td></tr>
-                    <tr><td className="py-1.5 px-2">外国債券</td><td className="py-1.5 px-2">25%</td><td className="py-1.5 px-2">±5% (20.0%〜30.0%)</td></tr>
+                  <tbody className="divide-y divide-slate-700/50">
+                    <tr><td className="py-1">国内株式</td><td>25%</td><td>±6% (19.0% ～ 31.0%)</td></tr>
+                    <tr><td className="py-1">外国株式</td><td>25%</td><td>±6% (19.0% ～ 31.0%)</td></tr>
+                    <tr><td className="py-1">国内債券</td><td>25%</td><td>±6% (19.0% ～ 31.0%)</td></tr>
+                    <tr><td className="py-1">外国債券</td><td>25%</td><td>±5% (20.0% ～ 30.0%)</td></tr>
                   </tbody>
                 </table>
-                <p>日本株が1週間で少しアウトパフォームして比率が26%になっても、許容幅（31.0%まで）の中に収まっていれば、「直ちに売る義務」は生じません。</p>
-              </div>
-              <div>
-                <p className="font-bold mb-1 text-[#7C4DFF]">リバランスの「トリガー」と「手段」</p>
-                <ul className="list-disc pl-4 space-y-1.5">
-                  <li><strong>乖離が限界に近づいたとき:</strong> ±5〜6%に近づくと、計画的に売買が検討されます。</li>
-                  <li><strong>先物での調整:</strong> 株価指数先物を売却し、実質的な比率を素早く調整します。</li>
-                  <li><strong>配当金・利子の再投資:</strong> 比率が下がっている資産の購入に充て、現物を売らずに調整します。</li>
+                <p className="mb-4 text-slate-300">つまり、日本株が1週間で少しアウトパフォームして比率が26%になったとしても、許容幅（31.0%まで）の中に収まっていれば、「直ちに売る義務」は生じません。</p>
+
+                <p className="font-bold mb-1 text-sm text-[#7C4DFF]">3. リバランスの「トリガー」と「手段」</p>
+                <p className="mb-2 text-slate-300">では、いつ売るのか？ 実際には以下のタイミングや手法が使われます。</p>
+                <ul className="list-disc pl-4 space-y-1.5 text-slate-300">
+                  <li><strong className="text-white">乖離が限界に近づいたとき:</strong> 上記の±5〜6%に近づくと、アラートが鳴り、計画的に売買が検討されます。</li>
+                  <li><strong className="text-white">先物（さきもの）での調整:</strong> 現物株を売ると時間がかかるため、株価指数先物を売却することで、一時的に「実質的な比率」を25%に引き戻すテクニックを多用します。</li>
+                  <li><strong className="text-white">配当金や利子の再投資:</strong> 株式から出た配当金を、比率が下がっている債券の購入に充てることで、現物を売らずに比率を整える「自然なリバランス」も行っています。</li>
                 </ul>
               </div>
             </div>
           </div>
-        </div>
-      )}
+          <ImpactTable latestDrift={latestDrift} aum={parseInt(aumInput) || 250} />
+        </section>
+      </main>
     </div>
   );
 }
