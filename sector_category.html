@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>セクター分類分析</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <!-- Utilities -->
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Error Box */
+        #global-error { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fee2e2; color: #b91c1c; padding: 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 90%; width: 400px; border: 1px solid #ef4444; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        /* ヘッダー統一スタイル (header-hp) */
+        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="global-error"></div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const el = document.getElementById('global-error');
+            el.style.display = 'block';
+            el.innerHTML = `<strong>システムエラー:</strong><br>${message}<br><small class="text-xs opacity-75">${source}:${lineno}</small>`;
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+        // Plotlyラッパー（etf.htmlと同一）
+        const Plot = ({ data, layout, config, style, useResizeHandler }) => {
+            const divRef = useRef(null);
+
+            useEffect(() => {
+                if (divRef.current && window.Plotly) Plotly.react(divRef.current, data, layout, config);
+            }, [data, layout, config]);
+
+            useEffect(() => {
+                let resizeObserver;
+                if (useResizeHandler && divRef.current && window.Plotly) {
+                    resizeObserver = new ResizeObserver(() => window.Plotly.Plots.resize(divRef.current));
+                    resizeObserver.observe(divRef.current);
+                }
+                return () => resizeObserver && resizeObserver.disconnect();
+            }, [useResizeHandler]);
+
+            useEffect(() => () => divRef.current && window.Plotly && Plotly.purge(divRef.current), []);
+
+            return <div ref={divRef} style={style} />;
+        };
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icons = {
+                RefreshCw: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>,
+                PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>,
+                Info: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            };
+            return <span className={className}>{icons[name] || null}</span>;
+        };
+
+        // カテゴリ詳細情報（ツールチップ用）
+        const CATEGORY_DETAILS = {
+            finance: [
+                { name: '不動産',        type: 'ETF',      code: '1633.T' },
+                { name: '保険業',        type: 'バスケット', stocks: '東京海上HD(8766)・MS&AD(8725)・SOMPO(8630)・第一生命(8750)・T&D(8795)・かんぽ生命(7181)' },
+                { name: '証券業',        type: 'バスケット', stocks: '野村HD(8604)・大和証券GHD(8601)・SBI HD(8473)・JPX(8697)・松井(8628)・マネックス(8698)' },
+                { name: 'その他金融',    type: 'バスケット', stocks: 'オリックス(8591)・アコム(8572)・クレセゾン(8253)・アイフル(8515)・東京センチュリー(8439)' },
+                { name: '銀行業',        type: 'ETF',      code: '1615.T' },
+                { name: '銀行',          type: 'ETF',      code: '1631.T' },
+                { name: 'TOPIX500バリュー', type: 'ETF',   code: '1311.T' },
+            ],
+            energy: [
+                { name: '鉱業',          type: 'バスケット', stocks: 'INPEX(1605)・石油資源開発(1662)・日鉄鉱業(1515)・三井松島HD(1518)・K&Oエナジー(1663)' },
+                { name: '石油・石炭',    type: 'バスケット', stocks: 'ENEOS HD(5020)・出光興産(5019)・コスモエネルギー(5021)' },
+                { name: '鉄鋼',          type: 'バスケット', stocks: '日本製鉄(5401)・JFE HD(5411)・神戸製鋼(5406)・東京製鐵(5429)・丸一鋼管(5463)' },
+                { name: 'ゴム製品',      type: 'バスケット', stocks: 'ブリヂストン(5108)・横浜ゴム(5105)・住友ゴム(5110)・TOYO TIRE(5104)' },
+                { name: '水産・農林',    type: 'バスケット', stocks: '日本水産(1332)・マルハニチロ(1333)・極洋(1301)' },
+                { name: '卸売業',        type: 'バスケット', stocks: '三菱商事(8058)・三井物産(8031)・伊藤忠(8001)・住友商事(8053)・丸紅(8002)・豊田通商(8015)' },
+                { name: '金属製品',      type: 'バスケット', stocks: 'LIXIL(5938)・東洋製罐GHD(5901)・フジクラ(5803)・昭和電線HD(5805)・GSユアサ(5970)' },
+                { name: 'その他製品',    type: 'バスケット', stocks: '任天堂(7974)・コナミ(9766)・カプコン(9697)・バンダイナムコ(7832)・ヤマハ(7951)' },
+            ],
+            consumer: [
+                { name: '小売',          type: 'ETF',      code: '1630.T' },
+                { name: '空運業',        type: 'バスケット', stocks: 'ANA HD(9202)・日本航空(9201)・スカイマーク(9205)' },
+                { name: '陸運業',        type: 'バスケット', stocks: 'JR東海(9022)・JR東(9020)・JR西(9021)・ヤマトHD(9064)・東急(9005)・小田急(9008)' },
+                { name: '食料品',        type: 'バスケット', stocks: 'アサヒ(2502)・キリン(2503)・味の素(2802)・JT(2914)・日清食品(2897)・明治HD(2269)' },
+                { name: '医薬品',        type: 'ETF',      code: '1621.T' },
+                { name: '電力・ガス',    type: 'ETF',      code: '1627.T' },
+                { name: '輸送用機器',    type: 'バスケット', stocks: 'トヨタ(7203)・ホンダ(7267)・スズキ(7269)・SUBARU(7270)・日産(7201)・マツダ(7261)' },
+                { name: '情報・通信業',  type: 'ETF',      code: '1613.T' },
+            ],
+            tech: [
+                { name: '倉庫・運輸',    type: 'バスケット', stocks: '日本通運(9062)・三菱倉庫(9302)・住友倉庫(9303)・山九(9065)・安田倉庫(9305)' },
+                { name: 'サービス業',    type: 'バスケット', stocks: 'リクルートHD(6098)・電通G(4324)・エムスリー(2413)・東宝(9602)・セコム(9735)・メルカリ(4385)' },
+                { name: 'パルプ・紙',    type: 'バスケット', stocks: '王子HD(3861)・日本製紙(3863)・大王製紙(3880)・北越コーポ(3865)・中越パルプ(3877)' },
+                { name: '繊維製品',      type: 'バスケット', stocks: '東レ(3402)・帝人(3401)・日清紡HD(3105)・ダイワボウHD(3107)・ユニチカ(3103)' },
+                { name: '情報通信・サービスその他', type: 'ETF', code: '1626.T' },
+                { name: 'ガラス・土石',  type: 'バスケット', stocks: 'AGC(5201)・日本電気硝子(5214)・太平洋セメント(5233)・住友大阪セメント(5232)・東海カーボン(5301)' },
+                { name: '電機・精密',    type: 'ETF',      code: '1625.T' },
+                { name: 'TOPIX500グロース', type: 'ETF',   code: '1312.T' },
+            ],
+            market: [
+                { name: '日経指数',      type: '指数',      code: '^N225 (Yahoo Finance)' },
+                { name: '日経225ETF',    type: 'ETF',      code: '1321.T' },
+                { name: '米国債10年',    type: '指数',      code: '^TNX (CBOE 10年債利回り)' },
+                { name: '半導体ETF',     type: 'ETF',      code: '2644.T (Global X)' },
+                { name: '半導体',        type: 'ETF',      code: '213A.T (旧コード)' },
+            ],
+            smallcap: [
+                { name: '化学',          type: 'バスケット', stocks: '信越化学(4063)・三井化学(4183)・三菱ケミカル(4188)・富士フイルム(4901)・旭化成(3407)' },
+                { name: '機械',          type: 'バスケット', stocks: 'ダイキン(6367)・コマツ(6301)・SMC(6273)・三菱重工(7011)・クボタ(6326)・川崎重工(7012)' },
+                { name: '非鉄金属',      type: 'バスケット', stocks: '住友金属鉱山(5713)・三菱マテリアル(5711)・DOWA(5714)・SUMCO(3436)・JX金属(5016)' },
+                { name: '建設・資材',    type: 'ETF',      code: '1619.T' },
+                { name: '海運業',        type: 'バスケット', stocks: '日本郵船(9101)・商船三井(9104)・川崎汽船(9107)・飯野海運(9119)・乾汽船(9112)' },
+                { name: 'GX日本成長',    type: 'ETF',      code: '200A.T (GX 日本成長投資ETF)' },
+                { name: '半導体ETF',     type: 'ETF',      code: '2644.T / TOPIX 相対' },
+            ],
+            scale: [
+                { name: 'TOPIX Core30',  type: 'ETF',      code: '1310.T (超大型株 上位30)' },
+                { name: 'TOPIX Large70', type: 'ETF',      code: '1020.T (大型株 上位70)' },
+                { name: 'TOPIX Mid400',  type: 'ETF',      code: '1589.T (中型株 400銘柄)' },
+                { name: 'TOPIX Small',   type: 'ETF',      code: '1022.T (小型株全体)' },
+                { name: 'TOPIX 100',     type: 'ETF',      code: '1023.T (大型計 100銘柄)' },
+                { name: 'TOPIX 500',     type: 'ETF',      code: '1024.T (500銘柄)' },
+                { name: 'TOPIX 1000',    type: 'ETF',      code: '1025.T (1000銘柄)' },
+            ],
+        };
+
+        // カテゴリ詳細ポップアップコンポーネント（正の説明スタイル統一）
+        const InfoTooltip = ({ categoryId }) => {
+            const [open, setOpen] = useState(false);
+            const tooltipRef = useRef(null);
+            const details = CATEGORY_DETAILS[categoryId] || [];
+            const categoryLabel = (CATEGORIES.find(c => c.id === categoryId) || {}).label || categoryId;
+            const TYPE_STYLE = {
+                'ETF':      { bg: 'bg-purple-100', text: 'text-purple-700', label: 'ETF' },
+                'バスケット': { bg: 'bg-slate-100',  text: 'text-slate-500',  label: 'バスケット' },
+                '指数':      { bg: 'bg-slate-100',  text: 'text-slate-500',  label: '指数' },
+            };
+
+            useEffect(() => {
+                if (!open) return;
+                const handleClickOutside = (e) => {
+                    if (tooltipRef.current && !tooltipRef.current.contains(e.target)) setOpen(false);
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [open]);
+
+            return (
+                <span ref={tooltipRef} className="relative inline-flex items-center">
+                    {/* トリガーアイコン: HelpCircle（正の説明スタイル統一） */}
+                    <span
+                        className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+                    >
+                        <Icon name="HelpCircle" size={13} />
+                    </span>
+                    {open && (
+                        <div
+                            ref={null}
+                            className="absolute left-5 top-0 z-[9999] bg-white rounded-xl p-4 min-w-[340px] max-w-[460px]"
+                            style={{ boxShadow: '0 10px 25px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', fontSize: '12px', lineHeight: '1.5' }}
+                        >
+                            {/* ヘッダー（InfoModal スタイル統一） */}
+                            <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                    <Icon name="HelpCircle" size={15} className="text-[#7C4DFF]" />
+                                    {categoryLabel}　構成セクター
+                                </h3>
+                                <button
+                                    onClick={() => setOpen(false)}
+                                    className="text-slate-400 hover:text-slate-600 p-0.5 rounded hover:bg-slate-100 transition-colors"
+                                >
+                                    <Icon name="X" size={14} />
+                                </button>
+                            </div>
+                            {/* テーブル本体 */}
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-100">
+                                        <th className="text-left py-1 pr-2 font-bold text-slate-500 w-[30%]">セクター</th>
+                                        <th className="text-center py-1 pr-2 font-bold text-slate-500 w-[14%]">種別</th>
+                                        <th className="text-left py-1 font-bold text-slate-500">コード / 構成銘柄</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {details.map((d, i) => {
+                                        const ts = TYPE_STYLE[d.type] || TYPE_STYLE['指数'];
+                                        return (
+                                            <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
+                                                <td className="py-1 pr-2 font-semibold text-slate-700 truncate" title={d.name}>{d.name}</td>
+                                                <td className="py-1 pr-2 text-center">
+                                                    <span className={`inline-block px-1.5 py-0.5 rounded-full font-bold ${ts.bg} ${ts.text}`}>
+                                                        {ts.label}
+                                                    </span>
+                                                </td>
+                                                <td className="py-1 text-slate-500" style={{ wordBreak: 'break-all' }}>
+                                                    {d.code || d.stocks || ''}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            <p className="mt-2 text-[10px] text-slate-400 border-t border-slate-100 pt-1.5">
+                                🧺 バスケット = 時価総額上位銘柄の等加重平均で合成した仮想指数
+                            </p>
+                        </div>
+                    )}
+                </span>
+            );
+        };
+
+        // ── ランキングチャート用定数 ────────────────────────────────────────
+        // 除外: TOPIX規模系・市場指標・旧コード・複合ETF（バスケットで代替済み）
+        const EXCLUDE_FROM_SECTOR_RANKING = new Set([
+            'TOPIX Core30','TOPIX Large70','TOPIX Mid400','TOPIX Small',
+            'TOPIX 100','TOPIX 500','TOPIX 1000',
+            'TOPIX500バリュー','TOPIX500グロース',
+            '日経指数','日経225ETF','米国債10年','GX日本成長',
+            '銀行','半導体',  // 旧コード（銀行業・半導体ETFで代替）
+            '食品','エネルギー資源','素材・化学','自動車・輸送機',
+            '鉄鋼・非鉄','商社・卸売','運輸・物流','金融（除く銀行）',
+        ]);
+        const NIKKEI_NAME  = '日経指数';
+        const NIKKEI_COLOR = '#1e293b';  // 黒（日経指数用）
+
+        // ── 上位 / 下位 セクターランキングチャート ──────────────────────────
+        const SectorRankingChart = ({ processedData, type }) => {
+            const isTop = type === 'top';
+
+            const sectorOnly = useMemo(() => {
+                if (!processedData) return [];
+                return processedData.ranking.filter(r => !EXCLUDE_FROM_SECTOR_RANKING.has(r.name));
+            }, [processedData]);
+
+            const selected = useMemo(() => {
+                if (isTop) return sectorOnly.filter(r => r.performance > 0).slice(0, 7);
+                return [...sectorOnly].slice(-7).reverse(); // 下位7を worst-first で表示
+            }, [sectorOnly, isTop]);
+
+            const nikkeiEntry = useMemo(() =>
+                processedData?.ranking.find(r => r.name === NIKKEI_NAME),
+            [processedData]);
+
+            const maxAbsPerf = useMemo(() => {
+                if (!selected.length) return 1;
+                const max = Math.max(...selected.map(r => Math.abs(r.performance)));
+                return max === 0 ? 1 : max;
+            }, [selected]);
+
+            const noData = !processedData || selected.length === 0;
+
+            // トグル状態（クリックで表示/非表示）
+            const [hiddenTraces, setHiddenTraces] = useState(new Set());
+            const toggleTrace = useCallback((name) => {
+                setHiddenTraces(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
+            }, []);
+
+            const chartTraces = useMemo(() => {
+                if (!processedData || !selected.length) return [];
+                const traces = selected.map((item, i) => ({
+                    x: processedData.timeSeries.map(d => d.date),
+                    y: processedData.timeSeries.map(d => d[item.name] ?? null),
+                    type: 'scatter', mode: 'lines', name: item.name,
+                    line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                    hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                }));
+                if (nikkeiEntry) traces.push({
+                    x: processedData.timeSeries.map(d => d.date),
+                    y: processedData.timeSeries.map(d => d[NIKKEI_NAME] ?? null),
+                    type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
+                    line: { color: NIKKEI_COLOR, width: 2, dash: 'dot' },
+                    hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                });
+                return traces;
+            }, [processedData, selected, nikkeiEntry]);
+
+            const borderClass = isTop ? 'border-emerald-200' : 'border-rose-200';
+            const title = isTop
+                ? '▲ TOP 7 アウトパフォーマー（TOPIX超過）＋ 日経平均'
+                : '▼ BOTTOM 7 アンダーパフォーマー（TOPIX超過）＋ 日経平均';
+
+            return (
+                <div className={`bg-white rounded-xl shadow-sm border p-4 ${borderClass}`}>
+                    <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex items-center gap-2">
+                        <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
+                        {title}
+                    </h3>
+                    <div className="flex gap-4 h-[280px]">
+                        {/* 左：チャート */}
+                        <div className="w-1/2 h-full relative z-10">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                            ) : (
+                                <Plot
+                                    data={chartTraces.map(t => ({ ...t, visible: !hiddenTraces.has(t.name) }))}
+                                    layout={{
+                                        autosize: true,
+                                        margin: { t: 5, r: 5, l: 35, b: 10 },
+                                        dragmode: 'pan',
+                                        xaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            rangebreaks: processedData.isIntraday ? [
+                                                { bounds: ["sat","mon"] },
+                                                { bounds: [15.5,9], pattern:"hour" },
+                                                { bounds: [11.5,12.5], pattern:"hour" }
+                                            ] : [{ bounds: ["sat","mon"] }],
+                                        },
+                                        yaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            ticksuffix: '%',
+                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 1.5,
+                                        },
+                                        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                        showlegend: false, hovermode: 'closest',
+                                    }}
+                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    useResizeHandler={true}
+                                />
+                            )}
+                        </div>
+                        {/* 右：ランキング */}
+                        <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {selected.map((item, index) => {
+                                        const isPositive = item.performance >= 0;
+                                        return (
+                                            <div key={item.symbol || item.name} className="relative group h-8 flex items-center">
+                                                <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
+                                                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
+                                                    <div className="w-1/2 flex justify-end">
+                                                        {!isPositive && (
+                                                            <div className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-1/2 flex justify-start">
+                                                        {isPositive && (
+                                                            <div className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-slate-400 w-4 text-right font-bold">{index+1}</span>
+                                                        <div className="w-2 h-2 rounded-full shrink-0"
+                                                            style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                        <span className="font-bold truncate max-w-[100px] text-slate-700" title={item.name}>{item.name}</span>
+                                                    </div>
+                                                    <span className={cn("font-mono font-bold", isPositive ? "text-emerald-600" : "text-rose-600")}>
+                                                        {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {/* カスタム凡例（色丸・クリックで表示/非表示） */}
+                    {!noData && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
+                            {selected.map((item, i) => (
+                                <div key={item.name}
+                                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(item.name) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                    onClick={() => toggleTrace(item.name)}
+                                >
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                    <span className="text-[9px] text-slate-600">{item.name}</span>
+                                </div>
+                            ))}
+                            {nikkeiEntry && (
+                                <div
+                                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(NIKKEI_NAME) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                    onClick={() => toggleTrace(NIKKEI_NAME)}
+                                >
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: NIKKEI_COLOR }} />
+                                    <span className="text-[9px] text-slate-700 font-medium">{NIKKEI_NAME}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+        // 期間オプション（etf.htmlと同一）
+        const PERIODS = [
+            { value: '1d', label: '1日' },
+            { value: '2d', label: '2日' },
+            { value: '3d', label: '3日' },
+            { value: '4d', label: '4日' },
+            { value: '5d', label: '5日' },
+            { value: '6d', label: '6日' },
+            { value: '7d', label: '7日' },
+            { value: '8d', label: '8日' },
+            { value: '9d', label: '9日' },
+            { value: '10d', label: '10日' },
+            { value: '14d', label: '14日' },
+            { value: '1mo', label: '1ヶ月' },
+            { value: '2mo', label: '2ヶ月' },
+            { value: '3mo', label: '3ヶ月' },
+            { value: '6mo', label: '6ヶ月' },
+            { value: '1y', label: '1年' },
+        ];
+
+        const COLORS = [
+            '#2563eb', '#db2777', '#d97706', '#059669', '#7c3aed', '#dc2626', '#0891b2',
+            '#4f46e5', '#ea580c', '#16a34a', '#9333ea', '#e11d48', '#0284c7', '#ca8a04',
+            '#65a30d', '#475569', '#0f766e', '#14b8a6'
+        ];
+
+        // 7分類とその対応セクター名（etf_data_manager.pyの出力キーに完全対応）
+        // ★ ETF複合部分はバスケット名（日本語）、単独ETFは既存ETF表示名を使用
+        const CATEGORIES = [
+            {
+                id: 'finance',
+                label: '金融・内需系',
+                // RE(1633→'不動産'), INS/SEC/OFB(1632→バスケット分離),
+                // BNK(1615→'銀行業'), 銀行(1631→'銀行'), TPX500V(1311→'TOPIX500バリュー')
+                sectors: ['不動産', '保険業', '証券業', 'その他金融', '銀行業', '銀行', 'TOPIX500バリュー']
+            },
+            {
+                id: 'energy',
+                label: 'エネルギー・資源・素材（バリュー系）',
+                // MT/PET(1618→バスケット分離), COM(1629→'卸売業'バスケット),
+                // IAS(1623→'鉄鋼'バスケット), RBP(1622→'ゴム製品'バスケット),
+                // WT(1617→'水産・農林'バスケット), MIN(1624→'金属製品'バスケット),
+                // OAC(1629→'その他製品'バスケット)
+                sectors: ['鉱業', '卸売業', '石油・石炭', '鉄鋼', 'ゴム製品', '水産・農林', '金属製品', 'その他製品']
+            },
+            {
+                id: 'consumer',
+                label: '消費・サービス・生活',
+                // RT(1630→'小売'), AT(1628→'空運業'バスケット), LT(1628→'陸運業'バスケット),
+                // FD(1617→'食料品'バスケット), PHR(1621→'医薬品'),
+                // EPG(1627→'電力・ガス'), TPXE(1622→'輸送用機器'バスケット),
+                // TPXI(1613→'情報・通信業')
+                sectors: ['小売', '空運業', '陸運業', '食料品', '医薬品', '電力・ガス', '輸送用機器', '情報・通信業']
+            },
+            {
+                id: 'tech',
+                label: 'ハイテク・製造・精密',
+                // WHT(1628→'倉庫・運輸'バスケット), SVS(1629→'サービス業'バスケット),
+                // PAP(1620→'パルプ・紙'バスケット), TXA(1620→'繊維製品'バスケット),
+                // MP(1626→'情報通信・サービスその他'), GAC(1620→'ガラス・土石'バスケット),
+                // ELC(1625→'電機・精密'), TPX500G(1312→'TOPIX500グロース')
+                sectors: ['倉庫・運輸', 'サービス業', 'パルプ・紙', '繊維製品', '情報通信・サービスその他', 'ガラス・土石', '電機・精密', 'TOPIX500グロース']
+            },
+            {
+                id: 'market',
+                label: '市場環境 (絶対値)',
+                // NI225(^N225→'日経指数', 1321→'日経225ETF'), 10501(^TNX→'米国債10年'),
+                // 2644(2644.T→'半導体ETF'), 213A(213A.T→'半導体')
+                sectors: ['日経指数', '日経225ETF', '米国債10年', '半導体ETF', '半導体']
+            },
+            {
+                id: 'smallcap',
+                label: '新興・中小型・資本財',
+                // CAF(1620→'化学'バスケット), MC(1624→'機械'バスケット),
+                // NM(1623→'非鉄金属'バスケット), CON(1619→'建設・資材'),
+                // SHP(1628→'海運業'バスケット), 200A→'GX日本成長', 2644/TPX→'半導体ETF'
+                sectors: ['化学', '機械', '非鉄金属', '建設・資材', '海運業', 'GX日本成長', '半導体ETF']
+            },
+            {
+                id: 'scale',
+                label: '規模別指数',
+                // CORE30(1310), LARGE70(1020), MID400(1589), SMALL(1022),
+                // TPX100(1023), TPX500(1024), TPX1000(1025)
+                sectors: ['TOPIX Core30', 'TOPIX Large70', 'TOPIX Mid400', 'TOPIX Small', 'TOPIX 100', 'TOPIX 500', 'TOPIX 1000']
+            },
+        ];
+
+        // カテゴリ別チャート＋ランキングコンポーネント
+        const CategorySection = ({ category, processedData }) => {
+            const catRanking = useMemo(() => {
+                if (!processedData) return [];
+                return processedData.ranking.filter(r => category.sectors.includes(r.name));
+            }, [processedData, category]);
+
+            const maxAbsPerf = useMemo(() => {
+                if (!catRanking.length) return 1;
+                const max = Math.max(...catRanking.map(r => Math.abs(r.performance)));
+                return max === 0 ? 1 : max;
+            }, [catRanking]);
+
+            // 日経平均を追加（市場環境カテゴリは既に含むので重複除外）
+            const shouldAddNikkei = !category.sectors.includes(NIKKEI_NAME);
+            const nikkeiEntry = useMemo(() =>
+                processedData?.ranking.find(r => r.name === NIKKEI_NAME),
+            [processedData]);
+
+            const noData = category.sectors.length === 0 || catRanking.length === 0;
+
+            // トグル状態（クリックで表示/非表示）
+            const [hiddenTraces, setHiddenTraces] = useState(new Set());
+            const toggleTrace = useCallback((name) => {
+                setHiddenTraces(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
+            }, []);
+
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex items-center gap-2">
+                        <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
+                        {category.label}
+                        <InfoTooltip categoryId={category.id} />
+                    </h3>
+                    <div className="flex gap-4 h-[280px]">
+                        {/* 左列：チャート */}
+                        <div className="w-1/2 h-full relative z-10">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">
+                                    データなし（未対応ETF）
+                                </div>
+                            ) : (
+                                <Plot
+                                    data={[
+                                        ...catRanking.map((item, i) => ({
+                                            x: processedData.timeSeries.map(d => d.date),
+                                            y: processedData.timeSeries.map(d => d[item.name] ?? null),
+                                            type: 'scatter', mode: 'lines', name: item.name,
+                                            visible: !hiddenTraces.has(item.name),
+                                            line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                                            hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                        })),
+                                        ...(shouldAddNikkei && nikkeiEntry ? [{
+                                            x: processedData.timeSeries.map(d => d.date),
+                                            y: processedData.timeSeries.map(d => d[NIKKEI_NAME] ?? null),
+                                            type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
+                                            visible: !hiddenTraces.has(NIKKEI_NAME),
+                                            line: { color: NIKKEI_COLOR, width: 2, dash: 'dot' },
+                                            hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                        }] : []),
+                                    ]}
+                                    layout={{
+                                        autosize: true,
+                                        margin: { t: 5, r: 5, l: 35, b: 10 },
+                                        dragmode: 'pan',
+                                        xaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            rangebreaks: processedData.isIntraday ? [
+                                                { bounds: ["sat","mon"] },
+                                                { bounds: [15.5,9], pattern:"hour" },
+                                                { bounds: [11.5,12.5], pattern:"hour" }
+                                            ] : [{ bounds: ["sat","mon"] }],
+                                        },
+                                        yaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            ticksuffix: '%',
+                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 1.5,
+                                        },
+                                        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                        showlegend: false,
+                                        hovermode: 'closest',
+                                    }}
+                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    useResizeHandler={true}
+                                />
+                            )}
+                        </div>
+
+                        {/* 右列：ランキング */}
+                        <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">
+                                    {category.sectors.length === 0 ? '規模別ETFは未取得' : 'データなし'}
+                                </div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {catRanking.map((item, index) => {
+                                        const isPositive = item.performance >= 0;
+                                        return (
+                                            <div key={item.symbol} className="relative group h-8 flex items-center">
+                                                <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
+                                                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
+                                                    <div className="w-1/2 flex justify-end">
+                                                        {!isPositive && (
+                                                            <div className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-1/2 flex justify-start">
+                                                        {isPositive && (
+                                                            <div className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-slate-400 w-4 text-right font-bold">{index+1}</span>
+                                                        <div className="w-2 h-2 rounded-full shrink-0"
+                                                            style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                        <span className="font-bold truncate max-w-[100px] text-slate-700" title={item.name}>{item.name}</span>
+                                                    </div>
+                                                    <span className={cn("font-mono font-bold", isPositive ? "text-emerald-600" : "text-rose-600")}>
+                                                        {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {/* カスタム凡例（色丸・クリックで表示/非表示） */}
+                    {!noData && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
+                            {catRanking.map((item, i) => (
+                                <div key={item.name}
+                                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(item.name) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                    onClick={() => toggleTrace(item.name)}
+                                >
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                    <span className="text-[9px] text-slate-600">{item.name}</span>
+                                </div>
+                            ))}
+                            {shouldAddNikkei && nikkeiEntry && (
+                                <div
+                                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(NIKKEI_NAME) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                    onClick={() => toggleTrace(NIKKEI_NAME)}
+                                >
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: NIKKEI_COLOR }} />
+                                    <span className="text-[9px] text-slate-700 font-medium">{NIKKEI_NAME}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [period, setPeriod] = useState('1d');
+            const [rawDaily, setRawDaily] = useState(null);
+            const [rawIntraday, setRawIntraday] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            // データ取得（useCallbackで安定参照）
+            const fetchRawData = useCallback(async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                    const [resDaily, resIntraday] = await Promise.all([
+                        fetch(`./data/etf_data.json?t=${new Date().getTime()}`),
+                        fetch(`./data/etf_intraday_data.json?t=${new Date().getTime()}`).catch(() => null)
+                    ]);
+
+                    if (!resDaily.ok) {
+                        if (resDaily.status === 404) {
+                            throw new Error("データファイル(etf_data.json)が未生成です。GitHub Actionsの完了をお待ちください。");
+                        }
+                        throw new Error(`データ読み込み失敗: ${resDaily.status} ${resDaily.statusText}`);
+                    }
+                    const jsonDaily = await resDaily.json();
+                    if (!jsonDaily.dates || jsonDaily.dates.length === 0) {
+                        throw new Error("データが空です。");
+                    }
+                    setRawDaily(jsonDaily);
+
+                    if (resIntraday && resIntraday.ok) {
+                        const jsonIntraday = await resIntraday.json();
+                        setRawIntraday(jsonIntraday);
+                    }
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            }, []);
+
+            // 初回取得
+            useEffect(() => { fetchRawData(); }, [fetchRawData]);
+
+            // 自動更新: 前場(9:00-11:30) / 後場(12:30-15:30) の間、15分毎に再取得
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    const jst = new Date(Date.now() + 9 * 3600 * 1000);
+                    const t = jst.getUTCHours() * 60 + jst.getUTCMinutes();
+                    const inSession = (t >= 540 && t <= 690) || (t >= 750 && t <= 930);
+                    if (inSession) fetchRawData();
+                }, 15 * 60 * 1000);
+                return () => clearInterval(interval);
+            }, [fetchRawData]);
+
+            // データ加工（etf.htmlと同一）
+            const processedData = useMemo(() => {
+                const isIntraday = ['1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', '10d', '14d'].includes(period);
+                const rawData = (isIntraday && rawIntraday) ? rawIntraday : rawDaily;
+                if (!rawData) return null;
+
+                const { dates, prices, benchmark, sectors } = rawData;
+                const L = dates.length;
+                let startIndex = 0;
+
+                if (isIntraday) {
+                    const calendarDates = [...new Set(dates.map(d => d.split(' ')[0]))];
+                    const daysAgo = parseInt(period.replace('d', '')) || 1;
+                    const targetDateStr = calendarDates[Math.max(0, calendarDates.length - daysAgo)];
+                    startIndex = dates.findIndex(d => d.startsWith(targetDateStr));
+                    if (startIndex === -1) startIndex = 0;
+                } else {
+                    if (period.endsWith('d')) {
+                        const days = parseInt(period.replace('d', ''), 10);
+                        startIndex = Math.max(0, L - (days + 1));
+                    } else {
+                        const latestDateStr = dates[L - 1];
+                        const today = latestDateStr ? new Date(latestDateStr) : new Date();
+                        const targetDates = {
+                            '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365
+                        };
+                        const daysAgo = targetDates[period] || 30;
+                        const targetTimestamp = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000).getTime();
+
+                        for (let i = L - 1; i >= 0; i--) {
+                            const d = new Date(dates[i]).getTime();
+                            if (d <= targetTimestamp) {
+                                startIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                const endIndex = L - 1;
+                const bPrices = prices[benchmark];
+
+                // UTC→JST変換（etf.htmlと同一）
+                const toJST = (utcStr) => {
+                    const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
+                    const j = new Date(d.getTime() + 9 * 3600 * 1000);
+                    const p = n => String(n).padStart(2, '0');
+                    return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+                };
+
+                const timeSeries = [];
+                for (let i = startIndex; i <= endIndex; i++) {
+                    const point = { date: isIntraday ? toJST(dates[i]) : dates[i] };
+                    const bStart = bPrices[startIndex];
+                    const bCurrent = bPrices[i];
+
+                    if (!bStart || !bCurrent) continue;
+
+                    const bReturn = (bCurrent / bStart) - 1;
+                    point.TOPIX = bReturn * 100;
+
+                    Object.keys(sectors).forEach(symbol => {
+                        const name = sectors[symbol];
+                        const sPrices = prices[symbol];
+                        if (!sPrices) return;
+
+                        const sStart = sPrices[startIndex];
+                        const sCurrent = sPrices[i];
+
+                        if (sStart && sCurrent) {
+                            const sReturn = (sCurrent / sStart) - 1;
+                            point[name] = (sReturn - bReturn) * 100;
+                        } else {
+                            point[name] = 0;
+                        }
+                    });
+
+                    timeSeries.push(point);
+                }
+
+                const ranking = [];
+                if (timeSeries.length > 0) {
+                    const latest = timeSeries[timeSeries.length - 1];
+                    Object.keys(sectors).forEach(symbol => {
+                        const name = sectors[symbol];
+                        if (latest[name] !== undefined) {
+                            ranking.push({ symbol, name, performance: latest[name] });
+                        }
+                    });
+                    ranking.sort((a, b) => b.performance - a.performance);
+                }
+
+                return {
+                    period,
+                    isIntraday,
+                    startDate: isIntraday ? toJST(dates[startIndex]) : dates[startIndex],
+                    endDate: isIntraday ? toJST(dates[endIndex]) : dates[endIndex],
+                    timeSeries,
+                    ranking
+                };
+
+            }, [rawDaily, rawIntraday, period]);
+
+            return (
+                <div className="flex flex-col min-h-screen bg-[#f8fafc]">
+                    <main className="flex-1 overflow-auto p-4 md:p-6">
+                        <div className="max-w-full mx-auto space-y-4">
+                            {/* ヘッダー (header-hp 統一スタイル) */}
+                            <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-2">
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-xs font-bold text-[#7C4DFF]">セクター分類分析</h1>
+                                    <span className="text-slate-400 text-xs font-medium ml-2">7分類 × TOPIX相対パフォーマンス</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs mt-3 md:mt-0">
+                                    {processedData && (
+                                        <span className="text-slate-400 font-mono hidden sm:block">
+                                            {processedData.startDate} 〜 {processedData.endDate}
+                                        </span>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-slate-500 shrink-0">期間:</span>
+                                        <select
+                                            value={period}
+                                            onChange={(e) => setPeriod(e.target.value)}
+                                            className="bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-[#7C4DFF] [&>option]:text-slate-800"
+                                            disabled={loading}
+                                        >
+                                            {PERIODS.map(p => (
+                                                <option key={p.value} value={p.value}>{p.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={fetchRawData}
+                                        className="bg-[#7C4DFF] text-white hover:bg-[#651FFF] font-bold px-3 py-1 rounded flex items-center gap-2 transition-colors shadow-sm"
+                                        disabled={loading}
+                                    >
+                                        <Icon name="RefreshCw" size={14} className={cn(loading && "animate-spin")} />
+                                        <span>更新</span>
+                                    </button>
+                                </div>
+                            </header>
+
+                            {/* ローディング */}
+                            {loading && !processedData && (
+                                <div className="flex justify-center items-center h-64">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7C4DFF]"></div>
+                                </div>
+                            )}
+
+                            {/* エラー */}
+                            {!loading && error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+                                    <strong>エラー:</strong> {error}
+                                </div>
+                            )}
+
+                            {/* 全チャート一覧 */}
+                            {!loading && processedData && processedData.timeSeries.length > 0 && (
+                                <div className="flex flex-col gap-4 animate-fade-in">
+                                    {/* 上位ランキング（7カテゴリの上） */}
+                                    <SectorRankingChart processedData={processedData} type="top" />
+                                    {/* 下位ランキング */}
+                                    <SectorRankingChart processedData={processedData} type="bottom" />
+                                    {/* 7カテゴリ 分類チャート */}
+                                    {CATEGORIES.map(category => (
+                                        <CategorySection
+                                            key={category.id}
+                                            category={category}
+                                            processedData={processedData}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
