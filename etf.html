@@ -320,13 +320,20 @@
                     ranking.sort((a, b) => b.performance - a.performance);
                 }
 
+                // セクター名→シンボルの逆引きマップ（ホバー表示用）
+                const nameToSymbol = {};
+                Object.keys(sectors).forEach(sym => {
+                    if (!HIDDEN_SYMBOLS.has(sym)) nameToSymbol[sectors[sym]] = sym;
+                });
+
                 return {
                     period,
                     isIntraday,
                     startDate: dates[startIndex],
                     endDate: dates[endIndex],
                     timeSeries,
-                    ranking
+                    ranking,
+                    nameToSymbol,
                 };
                 
             }, [rawDaily, rawIntraday, period]);
@@ -360,6 +367,20 @@
                 if (!processedData || !processedData.ranking.length) return 100;
                 const max = Math.max(...processedData.ranking.map(r => Math.abs(r.performance)));
                 return max === 0 ? 1 : max;
+            }, [processedData]);
+
+            // 上位7業種 / 下位7業種 一括表示（日経指数を含む）
+            const showTop7 = useCallback(() => {
+                if (!processedData) return;
+                const top7 = processedData.ranking.slice(0, 7).map(r => r.name);
+                setVisibleSectors(new Set([...top7, '日経指数']));
+            }, [processedData]);
+
+            const showBottom7 = useCallback(() => {
+                if (!processedData) return;
+                const n = processedData.ranking.length;
+                const bottom7 = processedData.ranking.slice(Math.max(0, n - 7)).map(r => r.name);
+                setVisibleSectors(new Set([...bottom7, '日経指数']));
             }, [processedData]);
 
             const content = (
@@ -405,24 +426,39 @@
                         <div className="flex flex-col gap-8 animate-fade-in">
                             {/* Chart Area */}
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[600px] p-6 lg:h-[700px]">
-                                <div className="mb-4">
+                                <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
                                     <h2 className="text-sm font-bold text-slate-500">相対パフォーマンス推移 (vs TOPIX)</h2>
+                                    <div className="flex gap-2">
+                                        <button onClick={showTop7} className="text-xs px-3 py-1 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-colors shadow-sm">▲ 上位7業種</button>
+                                        <button onClick={showBottom7} className="text-xs px-3 py-1 rounded-full bg-rose-500 hover:bg-rose-600 text-white font-bold transition-colors shadow-sm">▼ 下位7業種</button>
+                                    </div>
                                 </div>
                                 <div className="flex-1 min-h-0 relative z-10 w-full h-full">
                                     <Plot
-                                        data={processedData.ranking.map((item, i) => ({
-                                            x: processedData.timeSeries.map(d => d.date),
-                                            y: processedData.timeSeries.map(d => d[item.name]),
-                                            type: 'scatter',
-                                            mode: 'lines',
-                                            name: item.name,
-                                            visible: visibleSectors.has(item.name),
-                                            line: { color: COLORS[i % COLORS.length], width: 2 },
-                                            hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
-                                        }))}
+                                        data={processedData.ranking.map((item, i) => {
+                                            const sym = processedData.nameToSymbol[item.name];
+                                            const isETF = sym && (sym.endsWith('.T') || sym.startsWith('^'));
+                                            const isNikkei = item.name === '日経指数';
+                                            return {
+                                                x: processedData.timeSeries.map(d => d.date),
+                                                y: processedData.timeSeries.map(d => d[item.name]),
+                                                type: 'scatter',
+                                                mode: 'lines',
+                                                name: item.name,
+                                                visible: visibleSectors.has(item.name),
+                                                line: {
+                                                    color: isNikkei ? '#0f172a' : COLORS[i % COLORS.length],
+                                                    width: isNikkei ? 2 : 2,
+                                                    dash: isNikkei ? 'dot' : 'solid',
+                                                },
+                                                hovertemplate: isETF
+                                                    ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${sym})</span><br>%{y:.2f}%<extra></extra>`
+                                                    : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                            };
+                                        })}
                                         layout={{
                                             autosize: true,
-                                            margin: { t: 10, r: 10, l: 40, b: 10 },
+                                            margin: { t: 10, r: 10, l: 40, b: 40 },
                                             dragmode: 'pan',
                                             xaxis: {
                                                 showgrid: true,
@@ -460,7 +496,7 @@
                                     />
                                 </div>
                                 {/* カスタム凡例（色丸・クリックで表示/非表示） */}
-                                <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-3 pt-2 border-t border-slate-100">
+                                <div className="flex flex-wrap gap-x-3 gap-y-2 justify-center mt-6 pt-3 border-t border-slate-100">
                                     {processedData.ranking.map((item, i) => {
                                         const isVisible = visibleSectors.has(item.name);
                                         return (

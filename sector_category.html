@@ -156,6 +156,12 @@
             ],
         };
 
+        // セクター名→ETFコードの逆引きマップ（ホバーテンプレート用）
+        const NAME_TO_ETF_CODE = {};
+        Object.values(CATEGORY_DETAILS).flat().forEach(d => {
+            if ((d.type === 'ETF' || d.type === '指数') && d.code) NAME_TO_ETF_CODE[d.name] = d.code;
+        });
+
         // カテゴリ詳細ポップアップコンポーネント（正の説明スタイル統一）
         const InfoTooltip = ({ categoryId }) => {
             const [open, setOpen] = useState(false);
@@ -290,19 +296,24 @@
 
             const chartTraces = useMemo(() => {
                 if (!processedData || !selected.length) return [];
-                const traces = selected.map((item, i) => ({
-                    x: processedData.timeSeries.map(d => d.date),
-                    y: processedData.timeSeries.map(d => d[item.name] ?? null),
-                    type: 'scatter', mode: 'lines', name: item.name,
-                    line: { color: COLORS[i % COLORS.length], width: 1.5 },
-                    hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
-                }));
+                const traces = selected.map((item, i) => {
+                    const code = NAME_TO_ETF_CODE[item.name];
+                    return {
+                        x: processedData.timeSeries.map(d => d.date),
+                        y: processedData.timeSeries.map(d => d[item.name] ?? null),
+                        type: 'scatter', mode: 'lines', name: item.name,
+                        line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                        hovertemplate: code
+                            ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${code})</span><br>%{y:.2f}%<extra></extra>`
+                            : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                    };
+                });
                 if (nikkeiEntry) traces.push({
                     x: processedData.timeSeries.map(d => d.date),
                     y: processedData.timeSeries.map(d => d[NIKKEI_NAME] ?? null),
                     type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
                     line: { color: NIKKEI_COLOR, width: 2, dash: 'dot' },
-                    hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                    hovertemplate: `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(^N225)</span><br>%{y:.2f}%<extra></extra>`,
                 });
                 return traces;
             }, [processedData, selected, nikkeiEntry]);
@@ -557,21 +568,26 @@
                             ) : (
                                 <Plot
                                     data={[
-                                        ...catRanking.map((item, i) => ({
-                                            x: processedData.timeSeries.map(d => d.date),
-                                            y: processedData.timeSeries.map(d => d[item.name] ?? null),
-                                            type: 'scatter', mode: 'lines', name: item.name,
-                                            visible: !hiddenTraces.has(item.name),
-                                            line: { color: COLORS[i % COLORS.length], width: 1.5 },
-                                            hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
-                                        })),
+                                        ...catRanking.map((item, i) => {
+                                            const code = NAME_TO_ETF_CODE[item.name];
+                                            return {
+                                                x: processedData.timeSeries.map(d => d.date),
+                                                y: processedData.timeSeries.map(d => d[item.name] ?? null),
+                                                type: 'scatter', mode: 'lines', name: item.name,
+                                                visible: !hiddenTraces.has(item.name),
+                                                line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                                                hovertemplate: code
+                                                    ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${code})</span><br>%{y:.2f}%<extra></extra>`
+                                                    : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                            };
+                                        }),
                                         ...(shouldAddNikkei && nikkeiEntry ? [{
                                             x: processedData.timeSeries.map(d => d.date),
                                             y: processedData.timeSeries.map(d => d[NIKKEI_NAME] ?? null),
                                             type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
                                             visible: !hiddenTraces.has(NIKKEI_NAME),
                                             line: { color: NIKKEI_COLOR, width: 2, dash: 'dot' },
-                                            hovertemplate: '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                                            hovertemplate: `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(^N225)</span><br>%{y:.2f}%<extra></extra>`,
                                         }] : []),
                                     ]}
                                     layout={{
