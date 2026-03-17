@@ -79,6 +79,14 @@ jobs:
           git commit -m "Update JPX & Sector data: $(date)"
           git push origin HEAD
       
+      - name: GPIF React アプリのビルド
+        run: |
+          cd GPIF
+          npm install --prefer-offline
+          npm run build
+          echo "✅ GPIF build 完了"
+          ls dist/
+
       - name: Prepare deployment files
         run: |
           mkdir -p deploy

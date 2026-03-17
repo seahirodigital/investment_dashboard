@@ -73,7 +73,13 @@ jobs:
           git show origin/gh-pages:data/etf_intraday_data.json > deploy/data/etf_intraday_data.json 2>/dev/null \
             && echo "✅ gh-pages の最新 intraday データを使用" \
             || echo "⚠️ intraday データ取得失敗、main ブランチのデータを使用"
-          
+          # gh-pages の GPIF/dist を保持（keep_files:false で消えないよう）
+          mkdir -p deploy/GPIF
+          git show origin/gh-pages:GPIF/dist/index.html > /dev/null 2>&1 \
+            && git archive origin/gh-pages GPIF/dist/ | tar -x -C deploy/ \
+            && echo "✅ gh-pages の GPIF/dist を保持" \
+            || echo "⚠️ GPIF/dist 取得失敗"
+
           echo "Deploy directory content:"
           ls -laR deploy/
       

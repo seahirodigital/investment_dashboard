@@ -62,7 +62,14 @@ jobs:
           [ -d css ] && cp -r css deploy/
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
-          
+          # gh-pages の GPIF/dist を保持（keep_files:false で消えないよう）
+          mkdir -p deploy/GPIF
+          git fetch origin gh-pages 2>/dev/null || true
+          git show origin/gh-pages:GPIF/dist/index.html > /dev/null 2>&1 \
+            && git archive origin/gh-pages GPIF/dist/ | tar -x -C deploy/ \
+            && echo "✅ gh-pages の GPIF/dist を保持" \
+            || echo "⚠️ GPIF/dist 取得失敗"
+
           echo "Deploy directory content:"
           ls -laR deploy/
       
