@@ -57,6 +57,8 @@
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        /* ヘッダー統一スタイル (header-hp) */
+        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
     </style>
 </head>
 <body>
@@ -596,12 +598,15 @@
                     )}
 
                     <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-                        {isStandalone && (
-                            <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 lg:hidden shrink-0">
-                                <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600"><Icon name="Menu" /></button>
-                                <span className="ml-4 font-bold text-[#334155]">セクター別感応度</span>
-                            </header>
-                        )}
+                        <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 shrink-0">
+                            <div className="flex items-center gap-3">
+                                {isStandalone && (
+                                    <button onClick={() => setSidebarOpen(true)} className="p-1 text-slate-400 hover:text-[#7C4DFF] lg:hidden mr-1"><Icon name="Menu" size={18} /></button>
+                                )}
+                                <h1 className="text-xs font-bold text-[#7C4DFF]">セクター別感応度</h1>
+                                <span className="text-slate-400 text-xs font-medium ml-2">海外資金フロー × セクター感応度分析</span>
+                            </div>
+                        </header>
                         
                         <main className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50">
                             <div className="max-w-7xl mx-auto">
