@@ -58,7 +58,7 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
         /* ヘッダー統一スタイル (header-hp) */
-        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
+        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
@@ -388,29 +388,29 @@
                 <div className="space-y-6">
                     {/* Header Card */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-wrap gap-4 items-center justify-between animate-fade-in relative">
-                        <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex flex-wrap items-center gap-3 w-full">
                             <div className="flex items-center gap-2 text-slate-600"><Icon name="Filter" size={16} /><span className="text-sm font-bold">分析期間:</span></div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <div className="flex items-center">
                                     <button onClick={() => shiftDate('start', -1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronLeft" size={16} /></button>
-                                    <input 
-                                        type="date" 
-                                        value={startDate} 
-                                        onChange={(e) => { setStartDate(e.target.value); setActiveTickers(new Set()); }} 
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => { setStartDate(e.target.value); setActiveTickers(new Set()); }}
                                         onClick={handleDateClick}
-                                        className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-32 cursor-pointer hover:bg-slate-50" 
+                                        className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-28 sm:w-32 cursor-pointer hover:bg-slate-50"
                                     />
                                     <button onClick={() => shiftDate('start', 1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronRight" size={16} /></button>
                                 </div>
                                 <span className="text-slate-400">〜</span>
                                 <div className="flex items-center">
                                     <button onClick={() => shiftDate('end', -1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronLeft" size={16} /></button>
-                                    <input 
-                                        type="date" 
-                                        value={endDate} 
-                                        onChange={(e) => { setEndDate(e.target.value); setActiveTickers(new Set()); }} 
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => { setEndDate(e.target.value); setActiveTickers(new Set()); }}
                                         onClick={handleDateClick}
-                                        className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-32 cursor-pointer hover:bg-slate-50" 
+                                        className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-600 focus:border-[#7C4DFF] outline-none mx-1 bg-transparent text-center w-28 sm:w-32 cursor-pointer hover:bg-slate-50"
                                     />
                                     <button onClick={() => shiftDate('end', 1)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Icon name="ChevronRight" size={16} /></button>
                                 </div>
@@ -526,14 +526,14 @@
                                 <h2 className="text-lg font-bold text-slate-800">詳細統計データ一覧</h2>
                             </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left text-slate-600">
+                                <table className="w-full text-sm text-left text-slate-600 min-w-[480px]">
                                     <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500">
                                         <tr>
-                                            <th className="px-4 py-3 text-center w-16">操作</th>
-                                            <th className="px-6 py-3">セクター / ETF</th>
-                                            <th className="px-6 py-3 text-right text-[#7C4DFF]">感応度 (Diff)</th>
-                                            <th className="px-6 py-3 text-right">平均リターン (買越時)</th>
-                                            <th className="px-6 py-3 text-right">平均リターン (売越時)</th>
+                                            <th className="px-3 py-3 text-center w-12">操作</th>
+                                            <th className="px-3 py-3">セクター / ETF</th>
+                                            <th className="px-3 py-3 text-right text-[#7C4DFF]">感応度</th>
+                                            <th className="px-3 py-3 text-right hidden sm:table-cell">買越時</th>
+                                            <th className="px-3 py-3 text-right hidden sm:table-cell">売越時</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -541,12 +541,12 @@
                                             const isActive = activeTickers.has(row.ticker);
                                             return (
                                                 <tr key={row.ticker} className={`transition-colors ${isActive ? 'bg-purple-50/50' : 'hover:bg-slate-50'}`}>
-                                                    <td className="px-4 py-4 text-center">
-                                                        <button 
+                                                    <td className="px-3 py-3 text-center">
+                                                        <button
                                                             onClick={() => toggleTicker(row.ticker)}
                                                             className={`p-1.5 rounded-full transition-colors border ${
-                                                                isActive 
-                                                                    ? 'bg-slate-200 border-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 hover:border-red-200' 
+                                                                isActive
+                                                                    ? 'bg-slate-200 border-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 hover:border-red-200'
                                                                     : 'bg-white border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white'
                                                             }`}
                                                             title={isActive ? "グラフから削除" : "グラフに追加"}
@@ -554,13 +554,13 @@
                                                             {isActive ? <Icon name="Trash2" size={14} /> : <Icon name="Plus" size={14} />}
                                                         </button>
                                                     </td>
-                                                    <td className="px-6 py-4 font-medium text-slate-800">
-                                                        {row.name} 
+                                                    <td className="px-3 py-3 font-medium text-slate-800 text-xs sm:text-sm">
+                                                        {row.name}
                                                         <span className="text-xs text-slate-400 ml-1">({row.ticker})</span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right font-bold text-[#7C4DFF]">{row.meanDiff > 0 ? '+' : ''}{row.meanDiff.toFixed(3)}%</td>
-                                                    <td className="px-6 py-4 text-right">{row.meanPos.toFixed(3)}%</td>
-                                                    <td className="px-6 py-4 text-right">{row.meanNeg.toFixed(3)}%</td>
+                                                    <td className="px-3 py-3 text-right font-bold text-[#7C4DFF] text-xs sm:text-sm">{row.meanDiff > 0 ? '+' : ''}{row.meanDiff.toFixed(3)}%</td>
+                                                    <td className="px-3 py-3 text-right text-xs sm:text-sm hidden sm:table-cell">{row.meanPos.toFixed(3)}%</td>
+                                                    <td className="px-3 py-3 text-right text-xs sm:text-sm hidden sm:table-cell">{row.meanNeg.toFixed(3)}%</td>
                                                 </tr>
                                             );
                                         })}
