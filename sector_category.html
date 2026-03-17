@@ -823,8 +823,8 @@
                 return {
                     period,
                     isIntraday,
-                    startDate: dates[startIndex],
-                    endDate: dates[endIndex],
+                    startDate: isIntraday ? toJST(dates[startIndex]) : dates[startIndex],
+                    endDate: isIntraday ? toJST(dates[endIndex]) : dates[endIndex],
                     timeSeries,
                     ranking
                 };
