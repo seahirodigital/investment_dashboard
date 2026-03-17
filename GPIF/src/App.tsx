@@ -89,10 +89,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-700 font-sans selection:bg-[#7C4DFF]/30">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-0 sm:h-16 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
-            <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-[#7C4DFF] to-[#651FFF] flex items-center justify-center shadow-sm">
                 <Activity className="w-5 h-5 text-white" />
               </div>
