@@ -39,8 +39,8 @@ SECTORS = {
   # ── 規模別指数（絶対値チャート用、TOPIX割り返しなし）──────────────────
   '1311.T': 'TOPIX Core30',              # NEXT FUNDS TOPIX Core 30（超大型株30銘柄）
   '1309.T': 'TOPIX Large70',             # NEXT FUNDS TOPIX Large 70（大型株70銘柄）
-  '1312.T': 'TOPIX Mid400',              # NEXT FUNDS TOPIX Mid 400（中型株400銘柄）
-  '1318.T': 'TOPIX Small',               # 上場インデックスファンドTOPIX Small（小型株）
+  '1591.T': 'JPX400',                    # NEXT FUNDS JPX日経インデックス400（中大型400銘柄）
+  '1492.T': '中小型株',                   # MAXIS JPX日経中小型株指数上場投信
 
   # ── グローバル先物（規模別チャート参照用）─────────────────────────────
   'NQ=F':   'NASDAQ先物',                 # NASDAQ 100先物（CME）

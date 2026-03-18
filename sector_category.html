@@ -127,7 +127,7 @@
                 { name: '情報通信・サービスその他', type: 'ETF', code: '1626.T' },
                 { name: 'ガラス・土石',  type: 'バスケット', stocks: 'AGC(5201)・日本電気硝子(5214)・太平洋セメント(5233)・住友大阪セメント(5232)・東海カーボン(5301)' },
                 { name: '電機・精密',    type: 'ETF',      code: '1625.T' },
-                { name: 'TOPIX500グロース', type: 'ETF',   code: '1312.T' },
+                { name: 'JPX400',        type: 'ETF',      code: '1591.T' },
             ],
             market: [
                 { name: '日経指数',      type: '指数',      code: '^N225 (Yahoo Finance)' },
@@ -147,8 +147,8 @@
             scale: [
                 { name: 'TOPIX Core30',  type: 'ETF',      code: '1311.T (NEXT FUNDS TOPIX Core 30)' },
                 { name: 'TOPIX Large70', type: 'ETF',      code: '1309.T (NEXT FUNDS TOPIX Large 70)' },
-                { name: 'TOPIX Mid400',  type: 'ETF',      code: '1312.T (NEXT FUNDS TOPIX Mid 400)' },
-                { name: 'TOPIX Small',   type: 'ETF',      code: '1318.T (上場インデックスファンドTOPIX Small)' },
+                { name: 'JPX400',        type: 'ETF',      code: '1591.T (NEXT FUNDS JPX日経インデックス400)' },
+                { name: '中小型株',      type: 'ETF',      code: '1492.T (MAXIS JPX日経中小型株指数上場投信)' },
                 { name: 'NASDAQ先物',    type: '指数',      code: 'NQ=F (CME NASDAQ 100先物)' },
                 { name: 'SP500先物',     type: '指数',      code: 'ES=F (CME S&P 500先物)' },
                 { name: '参考ライン',    type: '指数',      code: '日経指数(^N225) / TOPIX(1306.T) / 半導体ETF(2644.T)　— TOPIXで割り返しなし・絶対値表示' },
@@ -506,7 +506,7 @@
         // ── ランキングチャート用定数 ────────────────────────────────────────
         // 除外: TOPIX規模系・市場指標・旧コード・複合ETF（バスケットで代替済み）
         const EXCLUDE_FROM_SECTOR_RANKING = new Set([
-            'TOPIX Core30','TOPIX Large70','TOPIX Mid400','TOPIX Small',
+            'TOPIX Core30','TOPIX Large70','JPX400','中小型株',
             'NASDAQ先物','SP500先物',
             '日経指数','日経225ETF','米国債10年','GX日本成長',
             '銀行','半導体',  // 旧コード（銀行業・半導体ETFで代替）
@@ -516,7 +516,7 @@
         // FullSectorChart 用：全体チャートから除外するシンボルキー
         const FULL_RANKING_HIDDEN = new Set([
             // 規模別指数（絶対値チャートで別管理）
-            '1311.T', '1309.T', '1312.T', '1318.T',
+            '1311.T', '1309.T', '1591.T', '1492.T',
             // 先物（規模別参考ライン）
             'NQ=F', 'ES=F',
             // GX日本成長 / 米国債10年
@@ -745,7 +745,7 @@
                 // CORE30(1311), LARGE70(1309), MID400(1312), SMALL(1318)
                 // 参考ライン: TOPIX(1306.T), 日経指数(^N225・黒点線), NASDAQ先物(NQ=F), SP500先物(ES=F), 半導体ETF(2644.T)
                 absoluteMode: true,
-                sectors: ['TOPIX Core30', 'TOPIX Large70', 'TOPIX Mid400', 'TOPIX Small']
+                sectors: ['TOPIX Core30', 'TOPIX Large70', 'JPX400', '中小型株']
             },
             {
                 id: 'finance',
