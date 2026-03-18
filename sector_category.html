@@ -97,7 +97,6 @@
                 { name: 'その他金融',    type: 'バスケット', stocks: 'オリックス(8591)・アコム(8572)・クレセゾン(8253)・アイフル(8515)・東京センチュリー(8439)・三菱HCキャピタル(8593)・みずほリース(8425)' },
                 { name: '銀行業',        type: 'ETF',      code: '1615.T' },
                 { name: '銀行',          type: 'ETF',      code: '1631.T' },
-                { name: 'TOPIX500バリュー', type: 'ETF',   code: '1311.T' },
             ],
             energy: [
                 { name: '鉱業',          type: 'バスケット', stocks: 'INPEX(1605)・石油資源開発(1662)・日鉄鉱業(1515)・三井松島HD(1518)・K&Oエナジー(1663)' },
@@ -132,7 +131,6 @@
             market: [
                 { name: '日経指数',      type: '指数',      code: '^N225 (Yahoo Finance)' },
                 { name: '日経225ETF',    type: 'ETF',      code: '1321.T' },
-                { name: '米国債10年',    type: '指数',      code: '^TNX (CBOE 10年債利回り)' },
                 { name: '半導体ETF',     type: 'ETF',      code: '2644.T (Global X)' },
                 { name: '半導体',        type: 'ETF',      code: '213A.T (旧コード)' },
             ],
@@ -146,13 +144,13 @@
                 { name: '半導体ETF',     type: 'ETF',      code: '2644.T / TOPIX 相対' },
             ],
             scale: [
-                { name: 'TOPIX Core30',  type: 'ETF',      code: '1310.T (超大型株 上位30)' },
-                { name: 'TOPIX Large70', type: 'ETF',      code: '1020.T (大型株 上位70)' },
-                { name: 'TOPIX Mid400',  type: 'ETF',      code: '1589.T (中型株 400銘柄)' },
-                { name: 'TOPIX Small',   type: 'ETF',      code: '1022.T (小型株全体)' },
-                { name: 'TOPIX 100',     type: 'ETF',      code: '1023.T (大型計 100銘柄)' },
-                { name: 'TOPIX 500',     type: 'ETF',      code: '1024.T (500銘柄)' },
-                { name: 'TOPIX 1000',    type: 'ETF',      code: '1025.T (1000銘柄)' },
+                { name: 'TOPIX Core30',  type: 'ETF',      code: '1311.T (NEXT FUNDS TOPIX Core 30)' },
+                { name: 'TOPIX Large70', type: 'ETF',      code: '1309.T (NEXT FUNDS TOPIX Large 70)' },
+                { name: 'TOPIX Mid400',  type: 'ETF',      code: '1312.T (NEXT FUNDS TOPIX Mid 400)' },
+                { name: 'TOPIX Small',   type: 'ETF',      code: '1318.T (上場インデックスファンドTOPIX Small)' },
+                { name: 'NASDAQ先物',    type: '指数',      code: 'NQ=F (CME NASDAQ 100先物)' },
+                { name: 'SP500先物',     type: '指数',      code: 'ES=F (CME S&P 500先物)' },
+                { name: '参考ライン',    type: '指数',      code: '日経指数(^N225) / TOPIX(1306.T) / 半導体ETF(2644.T)　— TOPIXで割り返しなし・絶対値表示' },
             ],
         };
 
@@ -246,6 +244,11 @@
                                     <p className="text-xs text-slate-400">
                                         🧺 バスケット = 時価総額上位銘柄の等加重平均で合成した仮想指数　／　背景クリックで閉じる
                                     </p>
+                                    {categoryId === 'scale' && (
+                                        <p className="text-xs text-amber-600 mt-1 font-semibold">
+                                            ⚠️ このチャートは例外です：TOPIXで割り返しを行わず、期間開始時点を基準（0%）とした絶対値リターンを表示します。参考ライン（日経指数・TOPIX・NASDAQ先物・SP500先物・半導体ETF）も同様に絶対値表示です。
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -258,8 +261,7 @@
         // 除外: TOPIX規模系・市場指標・旧コード・複合ETF（バスケットで代替済み）
         const EXCLUDE_FROM_SECTOR_RANKING = new Set([
             'TOPIX Core30','TOPIX Large70','TOPIX Mid400','TOPIX Small',
-            'TOPIX 100','TOPIX 500','TOPIX 1000',
-            'TOPIX500バリュー','TOPIX500グロース',
+            'NASDAQ先物','SP500先物',
             '日経指数','日経225ETF','米国債10年','GX日本成長',
             '銀行','半導体',  // 旧コード（銀行業・半導体ETFで代替）
             '食品','エネルギー資源','素材・化学','自動車・輸送機',
@@ -473,11 +475,20 @@
         // ★ ETF複合部分はバスケット名（日本語）、単独ETFは既存ETF表示名を使用
         const CATEGORIES = [
             {
+                id: 'scale',
+                label: '規模別指数（絶対値）',
+                // 絶対値チャート（TOPIXで割り返しなし）
+                // CORE30(1311), LARGE70(1309), MID400(1312), SMALL(1318)
+                // 参考ライン: TOPIX(1306.T), 日経指数(^N225・黒点線), NASDAQ先物(NQ=F), SP500先物(ES=F), 半導体ETF(2644.T)
+                absoluteMode: true,
+                sectors: ['TOPIX Core30', 'TOPIX Large70', 'TOPIX Mid400', 'TOPIX Small']
+            },
+            {
                 id: 'finance',
                 label: '金融・内需系',
                 // RE(1633→'不動産'), INS/SEC/OFB(1632→バスケット分離),
-                // BNK(1615→'銀行業'), 銀行(1631→'銀行'), TPX500V(1311→'TOPIX500バリュー')
-                sectors: ['不動産', '保険業', '証券業', 'その他金融', '銀行業', '銀行', 'TOPIX500バリュー']
+                // BNK(1615→'銀行業'), 銀行(1631→'銀行')
+                sectors: ['不動産', '保険業', '証券業', 'その他金融', '銀行業', '銀行']
             },
             {
                 id: 'energy',
@@ -503,15 +514,15 @@
                 // WHT(1628→'倉庫・運輸'バスケット), SVS(1629→'サービス業'バスケット),
                 // PAP(1620→'パルプ・紙'バスケット), TXA(1620→'繊維製品'バスケット),
                 // MP(1626→'情報通信・サービスその他'), GAC(1620→'ガラス・土石'バスケット),
-                // ELC(1625→'電機・精密'), TPX500G(1312→'TOPIX500グロース')
-                sectors: ['倉庫・運輸', 'サービス業', 'パルプ・紙', '繊維製品', '情報通信・サービスその他', 'ガラス・土石', '電機・精密', 'TOPIX500グロース']
+                // ELC(1625→'電機・精密')
+                sectors: ['倉庫・運輸', 'サービス業', 'パルプ・紙', '繊維製品', '情報通信・サービスその他', 'ガラス・土石', '電機・精密']
             },
             {
                 id: 'market',
                 label: '市場環境 (絶対値)',
-                // NI225(^N225→'日経指数', 1321→'日経225ETF'), 10501(^TNX→'米国債10年'),
+                // NI225(^N225→'日経指数', 1321→'日経225ETF'),
                 // 2644(2644.T→'半導体ETF'), 213A(213A.T→'半導体')
-                sectors: ['日経指数', '日経225ETF', '米国債10年', '半導体ETF', '半導体']
+                sectors: ['日経指数', '日経225ETF', '半導体ETF', '半導体']
             },
             {
                 id: 'smallcap',
@@ -521,21 +532,17 @@
                 // SHP(1628→'海運業'バスケット), 200A→'GX日本成長', 2644/TPX→'半導体ETF'
                 sectors: ['化学', '機械', '非鉄金属', '建設・資材', '海運業', 'GX日本成長', '半導体ETF']
             },
-            {
-                id: 'scale',
-                label: '規模別指数',
-                // CORE30(1310), LARGE70(1020), MID400(1589), SMALL(1022),
-                // TPX100(1023), TPX500(1024), TPX1000(1025)
-                sectors: ['TOPIX Core30', 'TOPIX Large70', 'TOPIX Mid400', 'TOPIX Small', 'TOPIX 100', 'TOPIX 500', 'TOPIX 1000']
-            },
         ];
 
         // カテゴリ別チャート＋ランキングコンポーネント
         const CategorySection = ({ category, processedData }) => {
+            const isAbsolute = !!category.absoluteMode;
+
             const catRanking = useMemo(() => {
                 if (!processedData) return [];
-                return processedData.ranking.filter(r => category.sectors.includes(r.name));
-            }, [processedData, category]);
+                const src = isAbsolute ? processedData.absoluteRanking : processedData.ranking;
+                return src.filter(r => category.sectors.includes(r.name));
+            }, [processedData, category, isAbsolute]);
 
             const maxAbsPerf = useMemo(() => {
                 if (!catRanking.length) return 1;
@@ -543,8 +550,8 @@
                 return max === 0 ? 1 : max;
             }, [catRanking]);
 
-            // 日経平均を追加（市場環境カテゴリは既に含むので重複除外）
-            const shouldAddNikkei = !category.sectors.includes(NIKKEI_NAME);
+            // 日経平均を追加（市場環境カテゴリは既に含むので重複除外、絶対値モードは専用ラインで処理）
+            const shouldAddNikkei = !isAbsolute && !category.sectors.includes(NIKKEI_NAME);
             const nikkeiEntry = useMemo(() =>
                 processedData?.ranking.find(r => r.name === NIKKEI_NAME),
             [processedData]);
@@ -556,6 +563,59 @@
             const toggleTrace = useCallback((name) => {
                 setHiddenTraces(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
             }, []);
+
+            // 絶対値モード用の参考ライン定義
+            const ABS_REF_LINES = isAbsolute ? [
+                { name: 'TOPIX',    color: '#94a3b8', width: 1.5, dash: 'solid',  code: '1306.T' },
+                { name: '日経指数', color: '#1e293b', width: 2,   dash: 'dot',    code: '^N225' },
+                { name: 'NASDAQ先物', color: '#2563eb', width: 1.5, dash: 'solid', code: 'NQ=F' },
+                { name: 'SP500先物',  color: '#dc2626', width: 1.5, dash: 'solid', code: 'ES=F' },
+                { name: '半導体ETF',  color: '#d97706', width: 1.5, dash: 'dash',  code: '2644.T' },
+            ] : [];
+
+            const chartData = useMemo(() => {
+                if (!processedData) return [];
+                const ts = isAbsolute ? processedData.absoluteTimeSeries : processedData.timeSeries;
+                const traces = catRanking.map((item, i) => {
+                    const code = NAME_TO_ETF_CODE[item.name];
+                    return {
+                        x: ts.map(d => d.date),
+                        y: ts.map(d => d[item.name] ?? null),
+                        type: 'scatter', mode: 'lines', name: item.name,
+                        visible: !hiddenTraces.has(item.name),
+                        line: { color: COLORS[i % COLORS.length], width: 2 },
+                        hovertemplate: code
+                            ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${code})</span><br>%{y:.2f}%<extra></extra>`
+                            : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                    };
+                });
+                // 絶対値モード: 参考ライン追加
+                if (isAbsolute) {
+                    ABS_REF_LINES.forEach(ref => {
+                        traces.push({
+                            x: ts.map(d => d.date),
+                            y: ts.map(d => d[ref.name] ?? null),
+                            type: 'scatter', mode: 'lines', name: ref.name,
+                            visible: !hiddenTraces.has(ref.name),
+                            line: { color: ref.color, width: ref.width, dash: ref.dash },
+                            hovertemplate: `<b>%{fullData.name}</b> <span style="color:#64748b;font-size:10px">(${ref.code})</span><br>%{y:.2f}%<extra></extra>`,
+                        });
+                    });
+                }
+                // 通常モード: 日経平均ライン追加
+                if (shouldAddNikkei && nikkeiEntry) {
+                    const ts2 = processedData.timeSeries;
+                    traces.push({
+                        x: ts2.map(d => d.date),
+                        y: ts2.map(d => d[NIKKEI_NAME] ?? null),
+                        type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
+                        visible: !hiddenTraces.has(NIKKEI_NAME),
+                        line: { color: NIKKEI_COLOR, width: 2, dash: 'dot' },
+                        hovertemplate: `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(^N225)</span><br>%{y:.2f}%<extra></extra>`,
+                    });
+                }
+                return traces;
+            }, [processedData, catRanking, hiddenTraces, isAbsolute, shouldAddNikkei, nikkeiEntry]);
 
             return (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
@@ -573,29 +633,7 @@
                                 </div>
                             ) : (
                                 <Plot
-                                    data={[
-                                        ...catRanking.map((item, i) => {
-                                            const code = NAME_TO_ETF_CODE[item.name];
-                                            return {
-                                                x: processedData.timeSeries.map(d => d.date),
-                                                y: processedData.timeSeries.map(d => d[item.name] ?? null),
-                                                type: 'scatter', mode: 'lines', name: item.name,
-                                                visible: !hiddenTraces.has(item.name),
-                                                line: { color: COLORS[i % COLORS.length], width: 1.5 },
-                                                hovertemplate: code
-                                                    ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${code})</span><br>%{y:.2f}%<extra></extra>`
-                                                    : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
-                                            };
-                                        }),
-                                        ...(shouldAddNikkei && nikkeiEntry ? [{
-                                            x: processedData.timeSeries.map(d => d.date),
-                                            y: processedData.timeSeries.map(d => d[NIKKEI_NAME] ?? null),
-                                            type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
-                                            visible: !hiddenTraces.has(NIKKEI_NAME),
-                                            line: { color: NIKKEI_COLOR, width: 2, dash: 'dot' },
-                                            hovertemplate: `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(^N225)</span><br>%{y:.2f}%<extra></extra>`,
-                                        }] : []),
-                                    ]}
+                                    data={chartData}
                                     layout={{
                                         autosize: true,
                                         margin: { t: 5, r: 5, l: 35, b: 10 },
@@ -630,7 +668,7 @@
                         <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">
-                                    {category.sectors.length === 0 ? '規模別ETFは未取得' : 'データなし'}
+                                    データなし
                                 </div>
                             ) : (
                                 <div className="space-y-1.5">
@@ -681,6 +719,15 @@
                                 >
                                     <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                                     <span className="text-[9px] text-slate-600">{item.name}</span>
+                                </div>
+                            ))}
+                            {isAbsolute && ABS_REF_LINES.map(ref => (
+                                <div key={ref.name}
+                                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(ref.name) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                    onClick={() => toggleTrace(ref.name)}
+                                >
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ref.color }} />
+                                    <span className="text-[9px] text-slate-600">{ref.name}</span>
                                 </div>
                             ))}
                             {shouldAddNikkei && nikkeiEntry && (
@@ -803,15 +850,24 @@
                 };
 
                 const timeSeries = [];
+                const absoluteTimeSeries = [];
+
                 for (let i = startIndex; i <= endIndex; i++) {
-                    const point = { date: isIntraday ? toJST(dates[i]) : dates[i] };
+                    const date = isIntraday ? toJST(dates[i]) : dates[i];
                     const bStart = bPrices[startIndex];
                     const bCurrent = bPrices[i];
 
                     if (!bStart || !bCurrent) continue;
 
                     const bReturn = (bCurrent / bStart) - 1;
+
+                    // 相対リターン（TOPIX超過）
+                    const point = { date };
                     point.TOPIX = bReturn * 100;
+
+                    // 絶対リターン（TOPIX割り返しなし）
+                    const absPoint = { date };
+                    absPoint.TOPIX = bReturn * 100;  // TOPIXも絶対値として追加
 
                     Object.keys(sectors).forEach(symbol => {
                         const name = sectors[symbol];
@@ -823,13 +879,16 @@
 
                         if (sStart && sCurrent) {
                             const sReturn = (sCurrent / sStart) - 1;
-                            point[name] = (sReturn - bReturn) * 100;
+                            point[name] = (sReturn - bReturn) * 100;  // 相対
+                            absPoint[name] = sReturn * 100;             // 絶対
                         } else {
                             point[name] = 0;
+                            absPoint[name] = 0;
                         }
                     });
 
                     timeSeries.push(point);
+                    absoluteTimeSeries.push(absPoint);
                 }
 
                 const ranking = [];
@@ -844,13 +903,28 @@
                     ranking.sort((a, b) => b.performance - a.performance);
                 }
 
+                // 絶対値ランキング（規模別指数チャート用）
+                const absoluteRanking = [];
+                if (absoluteTimeSeries.length > 0) {
+                    const latest = absoluteTimeSeries[absoluteTimeSeries.length - 1];
+                    Object.keys(sectors).forEach(symbol => {
+                        const name = sectors[symbol];
+                        if (latest[name] !== undefined) {
+                            absoluteRanking.push({ symbol, name, performance: latest[name] });
+                        }
+                    });
+                    absoluteRanking.sort((a, b) => b.performance - a.performance);
+                }
+
                 return {
                     period,
                     isIntraday,
                     startDate: isIntraday ? toJST(dates[startIndex]) : dates[startIndex],
                     endDate: isIntraday ? toJST(dates[endIndex]) : dates[endIndex],
                     timeSeries,
-                    ranking
+                    absoluteTimeSeries,
+                    ranking,
+                    absoluteRanking,
                 };
 
             }, [rawDaily, rawIntraday, period]);
@@ -912,12 +986,20 @@
                             {/* 全チャート一覧 */}
                             {!loading && processedData && processedData.timeSeries.length > 0 && (
                                 <div className="flex flex-col gap-4 animate-fade-in">
-                                    {/* 上位ランキング（7カテゴリの上） */}
+                                    {/* 規模別指数（絶対値・最上部固定） */}
+                                    {CATEGORIES.filter(c => c.id === 'scale').map(category => (
+                                        <CategorySection
+                                            key={category.id}
+                                            category={category}
+                                            processedData={processedData}
+                                        />
+                                    ))}
+                                    {/* 上位ランキング（TOPIX7アウトパフォーマー） */}
                                     <SectorRankingChart processedData={processedData} type="top" />
-                                    {/* 下位ランキング */}
+                                    {/* 下位ランキング（TOPIX7アンダーパフォーマー） */}
                                     <SectorRankingChart processedData={processedData} type="bottom" />
-                                    {/* 7カテゴリ 分類チャート */}
-                                    {CATEGORIES.map(category => (
+                                    {/* その他カテゴリ分類チャート */}
+                                    {CATEGORIES.filter(c => c.id !== 'scale').map(category => (
                                         <CategorySection
                                             key={category.id}
                                             category={category}
