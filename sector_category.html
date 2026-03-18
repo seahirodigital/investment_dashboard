@@ -92,7 +92,6 @@
         // カテゴリ詳細情報（ツールチップ用）
         const CATEGORY_DETAILS = {
             finance: [
-                { name: '不動産',        type: 'ETF',      code: '1633.T' },
                 { name: '保険業',        type: 'バスケット', stocks: '東京海上HD(8766)・MS&AD(8725)・SOMPO(8630)・第一生命(8750)・T&D(8795)・かんぽ生命(7181)・日本郵政(6178)' },
                 { name: '証券業',        type: 'バスケット', stocks: '野村HD(8604)・大和証券GHD(8601)・SBI HD(8473)・JPX(8697)・松井(8628)・マネックス(8698)・東海東京(8616)・岡三(8702)・ジャフコG(8595)・極東証券(8706)' },
                 { name: 'その他金融',    type: 'バスケット', stocks: 'オリックス(8591)・アコム(8572)・クレセゾン(8253)・アイフル(8515)・東京センチュリー(8439)・三菱HCキャピタル(8593)・みずほリース(8425)' },
@@ -116,32 +115,29 @@
                 { name: '食料品',        type: 'バスケット', stocks: 'アサヒ(2502)・キリン(2503)・味の素(2802)・JT(2914)・日清食品(2897)・明治HD(2269)・ヤクルト(2267)・サントリーBF(2587)' },
                 { name: '医薬品',        type: 'ETF',      code: '1621.T' },
                 { name: '卸売業',        type: 'バスケット', stocks: '三菱商事(8058)・三井物産(8031)・伊藤忠(8001)・住友商事(8053)・丸紅(8002)・豊田通商(8015)・マクニカHD(3132)・兼松(8020)' },
-                { name: '輸送用機器',    type: 'バスケット', stocks: 'トヨタ(7203)・ホンダ(7267)・スズキ(7269)・SUBARU(7270)・日産(7201)・マツダ(7261)・アイシン(7259)・シマノ(7309)' },
                 { name: '情報・通信業',  type: 'ETF',      code: '1613.T' },
+                { name: '海運業',        type: 'バスケット', stocks: '日本郵船(9101)・商船三井(9104)・川崎汽船(9107)・飯野海運(9119)・乾汽船(9112)' },
+                { name: 'GX日本成長',    type: 'ETF',      code: '200A.T (GX 日本成長投資ETF)' },
+                { name: 'サービス業',    type: 'バスケット', stocks: 'リクルートHD(6098)・電通G(4324)・エムスリー(2413)・東宝(9602)・セコム(9735)・メルカリ(4385)・オリエンタルランド(4661)・パーソルHD(2181)' },
+                { name: 'パルプ・紙',    type: 'バスケット', stocks: '王子HD(3861)・日本製紙(3863)・大王製紙(3880)・北越コーポ(3865)・中越パルプ(3877)' },
             ],
             tech: [
                 { name: '倉庫・運輸',    type: 'バスケット', stocks: '日本通運(9062)・三菱倉庫(9302)・住友倉庫(9303)・山九(9065)・安田倉庫(9305)' },
-                { name: 'サービス業',    type: 'バスケット', stocks: 'リクルートHD(6098)・電通G(4324)・エムスリー(2413)・東宝(9602)・セコム(9735)・メルカリ(4385)・オリエンタルランド(4661)・パーソルHD(2181)' },
-                { name: 'パルプ・紙',    type: 'バスケット', stocks: '王子HD(3861)・日本製紙(3863)・大王製紙(3880)・北越コーポ(3865)・中越パルプ(3877)' },
                 { name: '繊維製品',      type: 'バスケット', stocks: '東レ(3402)・帝人(3401)・日清紡HD(3105)・ダイワボウHD(3107)・ユニチカ(3103)' },
                 { name: '情報通信・サービスその他', type: 'ETF', code: '1626.T' },
                 { name: 'ガラス・土石',  type: 'バスケット', stocks: 'AGC(5201)・日本電気硝子(5214)・太平洋セメント(5233)・住友大阪セメント(5232)・東海カーボン(5301)' },
                 { name: '電機・精密',    type: 'ETF',      code: '1625.T' },
-                { name: 'JPX400',        type: 'ETF',      code: '1591.T' },
+                { name: '輸送用機器',    type: 'バスケット', stocks: 'トヨタ(7203)・ホンダ(7267)・スズキ(7269)・SUBARU(7270)・日産(7201)・マツダ(7261)・アイシン(7259)・シマノ(7309)' },
             ],
-            market: [
+            realestate: [
+                { name: '不動産',        type: 'ETF',      code: '1633.T' },
+                { name: '建設・資材',    type: 'ETF',      code: '1619.T' },
                 { name: '日経指数',      type: '指数',      code: '^N225 (Yahoo Finance)' },
-                { name: '日経225ETF',    type: 'ETF',      code: '1321.T' },
-                { name: '半導体ETF',     type: 'ETF',      code: '2644.T (Global X)' },
-                { name: '半導体',        type: 'ETF',      code: '213A.T (旧コード)' },
             ],
             smallcap: [
                 { name: '化学',          type: 'バスケット', stocks: '信越化学(4063)・三井化学(4183)・三菱ケミカル(4188)・富士フイルム(4901)・旭化成(3407)・資生堂(4911)・ユニ・チャーム(8113)・日東電工(6988)' },
                 { name: '機械',          type: 'バスケット', stocks: 'ダイキン(6367)・コマツ(6301)・SMC(6273)・三菱重工(7011)・クボタ(6326)・川崎重工(7012)・ファナック(6954)・ダイフク(6383)・荏原製作所(6361)' },
                 { name: '非鉄金属',      type: 'バスケット', stocks: '住友金属鉱山(5713)・三菱マテリアル(5711)・DOWA(5714)・SUMCO(3436)・JX金属(5016)・住友電気工業(5802)' },
-                { name: '建設・資材',    type: 'ETF',      code: '1619.T' },
-                { name: '海運業',        type: 'バスケット', stocks: '日本郵船(9101)・商船三井(9104)・川崎汽船(9107)・飯野海運(9119)・乾汽船(9112)' },
-                { name: 'GX日本成長',    type: 'ETF',      code: '200A.T (GX 日本成長投資ETF)' },
                 { name: '半導体ETF',     type: 'ETF',      code: '2644.T / TOPIX 相対' },
             ],
             scale: [
@@ -283,6 +279,7 @@
                             ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${sym})</span><br>%{y:.2f}%<extra></extra>`
                             : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
                     };
+
                 });
             }, [filteredRanking, processedData, visibleSectors]);
 
@@ -294,8 +291,8 @@
                         <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
                         相対パフォーマンス推移（全セクター / vs TOPIX）
                         <div className="flex gap-1.5 ml-auto">
-                            <button onClick={showTop7} className="text-xs px-3 py-1 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-colors shadow-sm">▲ 上位7</button>
-                            <button onClick={showBottom7} className="text-xs px-3 py-1 rounded-full bg-rose-500 hover:bg-rose-600 text-white font-bold transition-colors shadow-sm">▼ 下位7</button>
+                            <button onClick={showTop7} className="text-xs px-3 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▲ 上位7</button>
+                            <button onClick={showBottom7} className="text-xs px-3 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▼ 下位7</button>
                         </div>
                     </h3>
                     <div className="flex gap-4 h-[440px]">
@@ -348,16 +345,9 @@
 
                         {/* 右列：セクターランキング */}
                         <div className="w-[42%] h-full flex flex-col">
-                            <div className="flex items-center gap-1.5 mb-2 shrink-0">
-                                <Icon name="PieChart" className="text-[#7C4DFF]" size={13} />
-                                <span className="text-xs font-bold text-slate-500">セクターランキング</span>
-                                <RankingLegendTooltip />
-                            </div>
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1 min-h-0">
                                 {filteredRanking.map((item, index) => {
                                     const isPositive = item.performance >= 0;
-                                    const sym = processedData.nameToSymbol?.[item.name] || '';
-                                    const typeBadge = (sym === item.name) ? '🧺' : (sym.startsWith('^') || sym.includes('=')) ? '📉' : '📈';
                                     return (
                                         <div key={item.symbol} className="relative group h-8 flex items-center">
                                             <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
@@ -377,8 +367,6 @@
                                             </div>
                                             <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-slate-400 w-4 text-right font-bold text-[10px]">{index+1}</span>
-                                                    <span className="text-[10px] w-4 text-center">{typeBadge}</span>
                                                     <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.name === NIKKEI_NAME ? NIKKEI_COLOR : COLORS[index % COLORS.length] }} />
                                                     <span className="font-bold truncate max-w-[90px] text-slate-700 text-[11px]" title={item.name}>{item.name}</span>
                                                 </div>
@@ -508,19 +496,15 @@
             'TOPIX Core30','JPX400','グロース250',
             'NASDAQ先物','SP500先物',
             '日経指数','日経225ETF','米国債10年','GX日本成長',
-            '銀行','半導体',  // 旧コード（銀行業・半導体ETFで代替）
+            '銀行','半導体',
             '食品','エネルギー資源','素材・化学','自動車・輸送機',
             '鉄鋼・非鉄','商社・卸売','運輸・物流','金融（除く銀行）',
         ]);
         // FullSectorChart 用：全体チャートから除外するシンボルキー
         const FULL_RANKING_HIDDEN = new Set([
-            // 規模別指数（絶対値チャートで別管理）
             '1311.T', '1591.T', '2516.T',
-            // 先物（規模別参考ライン）
             'NQ=F', 'ES=F',
-            // GX日本成長 / 米国債10年
             '200A.T', '^TNX',
-            // 複合ETF・旧コード（バスケットで代替済み）
             '機械', '1623.T', '1632.T', '1631.T', '213A.T',
         ]);
 
@@ -740,60 +724,38 @@
             {
                 id: 'scale',
                 label: '規模別指数（絶対値）',
-                // 絶対値チャート（TOPIXで割り返しなし）
-                // CORE30(1311), JPX400(1591), グロース250(2516)
-                // 参考ライン: TOPIX(1306.T), 日経指数(^N225・黒点線), NASDAQ先物(NQ=F), SP500先物(ES=F), 半導体ETF(2644.T)
                 absoluteMode: true,
                 sectors: ['TOPIX Core30', 'JPX400', 'グロース250']
             },
             {
                 id: 'smallcap',
                 label: '非鉄金属・半導体・機械・建設・資材・中小型',
-                // CAF(1620→'化学'バスケット), MC(1624→'機械'バスケット),
-                // NM(1623→'非鉄金属'バスケット), CON(1619→'建設・資材'),
-                // SHP(1628→'海運業'バスケット), 200A→'GX日本成長', 2644/TPX→'半導体ETF'
-                sectors: ['化学', '機械', '非鉄金属', '建設・資材', '海運業', 'GX日本成長', '半導体ETF']
+                sectors: ['化学', '機械', '非鉄金属', '半導体ETF']
             },
             {
                 id: 'finance',
                 label: '金融・内需系',
-                // RE(1633→'不動産'), INS/SEC/OFB(1632→バスケット分離),
-                // BNK(1615→'銀行業'), 銀行(1631→'銀行')
-                sectors: ['不動産', '保険業', '証券業', 'その他金融', '銀行業', '銀行']
+                sectors: ['保険業', '証券業', 'その他金融', '銀行業', '銀行']
+            },
+            {
+                id: 'realestate',
+                label: '不動産・建設・インフラ',
+                sectors: ['不動産', '建設・資材', '日経指数']
             },
             {
                 id: 'energy',
                 label: 'エネルギー・資源・素材（バリュー系）',
-                // MT/PET(1618→バスケット分離), EPG(1627→'電力・ガス'),
-                // IAS(1623→'鉄鋼'バスケット), RBP(1622→'ゴム製品'バスケット),
-                // WT(1617→'水産・農林'バスケット), MIN(1624→'金属製品'バスケット),
-                // OAC(1629→'その他製品'バスケット)
                 sectors: ['鉱業', '電力・ガス', '石油・石炭', '鉄鋼', 'ゴム製品', '水産・農林', '金属製品', 'その他製品']
+            },
+            {
+                id: 'tech',
+                label: '製造・精密・ハイテク',
+                sectors: ['倉庫・運輸', '繊維製品', '情報通信・サービスその他', 'ガラス・土石', '電機・精密', '輸送用機器']
             },
             {
                 id: 'consumer',
                 label: '消費・サービス・生活',
-                // RT(1630→'小売'), AT(1628→'空運業'バスケット), LT(1628→'陸運業'バスケット),
-                // FD(1617→'食料品'バスケット), PHR(1621→'医薬品'),
-                // COM(1629→'卸売業'バスケット), TPXE(1622→'輸送用機器'バスケット),
-                // TPXI(1613→'情報・通信業')
-                sectors: ['小売', '空運業', '陸運業', '食料品', '医薬品', '卸売業', '輸送用機器', '情報・通信業']
-            },
-            {
-                id: 'tech',
-                label: 'ハイテク・製造・精密',
-                // WHT(1628→'倉庫・運輸'バスケット), SVS(1629→'サービス業'バスケット),
-                // PAP(1620→'パルプ・紙'バスケット), TXA(1620→'繊維製品'バスケット),
-                // MP(1626→'情報通信・サービスその他'), GAC(1620→'ガラス・土石'バスケット),
-                // ELC(1625→'電機・精密')
-                sectors: ['倉庫・運輸', 'サービス業', 'パルプ・紙', '繊維製品', '情報通信・サービスその他', 'ガラス・土石', '電機・精密']
-            },
-            {
-                id: 'market',
-                label: '市場環境 (絶対値)',
-                // NI225(^N225→'日経指数', 1321→'日経225ETF'),
-                // 2644(2644.T→'半導体ETF'), 213A(213A.T→'半導体')
-                sectors: ['日経指数', '日経225ETF', '半導体ETF', '半導体']
+                sectors: ['小売', '空運業', '陸運業', '食料品', '医薬品', '卸売業', '情報・通信業', '海運業', 'GX日本成長', 'サービス業', 'パルプ・紙']
             },
         ];
 
@@ -966,7 +928,6 @@
                                         const isPositive = item.performance >= 0;
                                         const refLine = isAbsolute ? ABS_REF_LINES.find(r => r.name === item.name) : null;
                                         const dotColor = refLine ? refLine.color : COLORS[index % COLORS.length];
-                                        const rankLabel = refLine ? '参' : (index + 1);
                                         return (
                                             <div key={item.symbol} className="relative group h-8 flex items-center">
                                                 <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
@@ -986,7 +947,6 @@
                                                 </div>
                                                 <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 w-4 text-right font-bold">{rankLabel}</span>
                                                         <div className="w-2 h-2 rounded-full shrink-0"
                                                             style={{ backgroundColor: dotColor }} />
                                                         <span className="font-bold truncate max-w-[100px] text-slate-700" title={item.name}>{item.name}</span>
@@ -1230,7 +1190,7 @@
                             <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-2">
                                 <div className="flex items-center gap-3">
                                     <h1 className="text-xs font-bold text-[#7C4DFF]">セクター分類分析</h1>
-                                    <span className="text-slate-400 text-xs font-medium ml-2">7分類 × TOPIX相対パフォーマンス</span>
+                                    <a href="https://docs.google.com/spreadsheets/d/1ZT4RgT3KQUE-MXdLGHLliY0gF9EDcVEc6Ju4jsoORuc/edit?gid=1478282922#gid=1478282922" target="_blank" rel="noopener noreferrer" className="text-slate-400 text-xs font-medium ml-2 hover:text-[#7C4DFF] underline underline-offset-2">カテゴリ別TOPIX相対パフォーマンス</a>
                                 </div>
                                 <div className="flex items-center gap-4 text-xs mt-3 md:mt-0">
                                     {processedData && (
@@ -1289,12 +1249,8 @@
                                     ))}
                                     {/* 全セクター相対パフォーマンス + ランキング（etf.htmlから移植） */}
                                     <FullSectorChart processedData={processedData} period={period} />
-                                    {/* 上位ランキング（TOPIX7アウトパフォーマー） */}
-                                    <SectorRankingChart processedData={processedData} type="top" />
-                                    {/* 下位ランキング（TOPIX7アンダーパフォーマー） */}
-                                    <SectorRankingChart processedData={processedData} type="bottom" />
                                     {/* その他カテゴリ分類チャート */}
-                                    {CATEGORIES.filter(c => c.id !== 'scale').map(category => (
+                                    {CATEGORIES.filter(c => c.id !== 'scale' && c.id !== 'market').map(category => (
                                         <CategorySection
                                             key={category.id}
                                             category={category}
