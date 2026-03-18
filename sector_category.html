@@ -83,7 +83,8 @@
                 PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>,
                 Info: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
                 HelpCircle: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-                X: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                X: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+                Copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             };
             return <span className={className}>{icons[name] || null}</span>;
         };
@@ -159,6 +160,251 @@
         Object.values(CATEGORY_DETAILS).flat().forEach(d => {
             if ((d.type === 'ETF' || d.type === '指数') && d.code) NAME_TO_ETF_CODE[d.name] = d.code;
         });
+
+        // セクターランキング凡例ツールチップ（ETF・バスケット・指数の説明）
+        const RankingLegendTooltip = () => {
+            const [open, setOpen] = useState(false);
+            useEffect(() => {
+                document.body.style.overflow = open ? 'hidden' : '';
+                return () => { document.body.style.overflow = ''; };
+            }, [open]);
+            return (
+                <span className="inline-flex items-center">
+                    <span
+                        className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+                    >
+                        <Icon name="HelpCircle" size={13} />
+                    </span>
+                    {open && (
+                        <div
+                            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                            style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}
+                            onClick={() => setOpen(false)}
+                        >
+                            <div
+                                className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col"
+                                style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.25)' }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
+                                    <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                                        <Icon name="HelpCircle" size={18} className="text-[#7C4DFF]" />
+                                        セクターランキング　凡例
+                                    </h3>
+                                    <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                                        <Icon name="X" size={18} />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div>
+                                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-700">📈 ETF</span>
+                                        <p className="text-sm text-slate-600 mt-1.5">NEXT FUNDS などのETFコードで直接取得した市場価格データです。銘柄コード（例: 1633.T）で識別されます。</p>
+                                    </div>
+                                    <div>
+                                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">🧺 バスケット</span>
+                                        <p className="text-sm text-slate-600 mt-1.5">1つのETFに複数業種が混在するため、時価総額上位銘柄の等加重平均で合成した仮想指数です。期間開始時点を基準（100）として正規化されます。</p>
+                                    </div>
+                                    <div>
+                                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">📉 指数</span>
+                                        <p className="text-sm text-slate-600 mt-1.5">Yahoo Finance 経由の市場参照指数（例: 日経225 = ^N225）です。価格ではなく指数値を利用します。</p>
+                                    </div>
+                                </div>
+                                <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+                                    <p className="text-xs text-slate-400">全セクターはTOPIX(1306.T)に対する相対超過リターン(%)として表示　／　背景クリックで閉じる</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </span>
+            );
+        };
+
+        // 全セクター相対パフォーマンス + ランキング（etf.html から移植）
+        const FullSectorChart = ({ processedData, period }) => {
+            const filteredRanking = useMemo(() => {
+                if (!processedData) return [];
+                return processedData.ranking.filter(r => !FULL_RANKING_HIDDEN.has(r.symbol));
+            }, [processedData]);
+
+            const [visibleSectors, setVisibleSectors] = useState(FULL_RANKING_DEFAULT_VISIBLE);
+
+            const toggleSector = useCallback((name) => {
+                setVisibleSectors(prev => {
+                    const next = new Set(prev);
+                    next.has(name) ? next.delete(name) : next.add(name);
+                    return next;
+                });
+            }, []);
+
+            const showTop7 = useCallback(() => {
+                if (!filteredRanking.length) return;
+                const top7 = filteredRanking.slice(0, 7).map(r => r.name);
+                setVisibleSectors(new Set([...top7, NIKKEI_NAME]));
+            }, [filteredRanking]);
+
+            const showBottom7 = useCallback(() => {
+                if (!filteredRanking.length) return;
+                const n = filteredRanking.length;
+                const bottom7 = filteredRanking.slice(Math.max(0, n - 7)).map(r => r.name);
+                setVisibleSectors(new Set([...bottom7, NIKKEI_NAME]));
+            }, [filteredRanking]);
+
+            const maxAbsPerf = useMemo(() => {
+                if (!filteredRanking.length) return 1;
+                const max = Math.max(...filteredRanking.map(r => Math.abs(r.performance)));
+                return max === 0 ? 1 : max;
+            }, [filteredRanking]);
+
+            const copySummary = useCallback(() => {
+                if (!filteredRanking.length || !processedData) return;
+                const top3 = filteredRanking.slice(0, 3);
+                const worst = filteredRanking[filteredRanking.length - 1];
+                const text = `【セクター資金流入分析サマリー】\n基準日: ${processedData.endDate}（期間: ${period}）\n\n🚀 アウトパフォーム・トップ（資金流入中）\n1位: ${top3[0]?.name} (+${top3[0]?.performance.toFixed(2)}%)\n2位: ${top3[1]?.name} (+${top3[1]?.performance.toFixed(2)}%)\n3位: ${top3[2]?.name} (+${top3[2]?.performance.toFixed(2)}%)\n\n📉 アンダーパフォーム・ワースト（資金流出中）\n・${worst?.name} (${worst?.performance.toFixed(2)}%)\n\n※TOPIX(1306.T)を基準とした相対騰落率を算出。`;
+                navigator.clipboard.writeText(text).then(() => alert('サマリーをクリップボードにコピーしました。'));
+            }, [filteredRanking, processedData, period]);
+
+            const chartTraces = useMemo(() => {
+                if (!processedData) return [];
+                return filteredRanking.map((item, i) => {
+                    const sym = processedData.nameToSymbol?.[item.name] || '';
+                    const isNikkei = item.name === NIKKEI_NAME;
+                    const isETF = sym.endsWith('.T') || sym.startsWith('^') || sym.includes('=');
+                    return {
+                        x: processedData.timeSeries.map(d => d.date),
+                        y: processedData.timeSeries.map(d => d[item.name] ?? null),
+                        type: 'scatter', mode: 'lines', name: item.name,
+                        visible: visibleSectors.has(item.name),
+                        line: {
+                            color: isNikkei ? NIKKEI_COLOR : COLORS[i % COLORS.length],
+                            width: 2,
+                            dash: isNikkei ? 'dot' : 'solid',
+                        },
+                        hovertemplate: (isETF && sym)
+                            ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${sym})</span><br>%{y:.2f}%<extra></extra>`
+                            : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                    };
+                });
+            }, [filteredRanking, processedData, visibleSectors]);
+
+            if (!processedData || !filteredRanking.length) return null;
+
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex items-center gap-2">
+                        <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
+                        相対パフォーマンス推移（全セクター / vs TOPIX）
+                        <div className="flex gap-1.5 ml-auto">
+                            <button onClick={showTop7} className="text-xs px-3 py-1 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-colors shadow-sm">▲ 上位7</button>
+                            <button onClick={showBottom7} className="text-xs px-3 py-1 rounded-full bg-rose-500 hover:bg-rose-600 text-white font-bold transition-colors shadow-sm">▼ 下位7</button>
+                        </div>
+                    </h3>
+                    <div className="flex gap-4 h-[440px]">
+                        {/* 左列：チャート + 凡例 */}
+                        <div className="w-[58%] h-full flex flex-col">
+                            <div className="flex-1 min-h-0 relative z-10">
+                                <Plot
+                                    data={chartTraces}
+                                    layout={{
+                                        autosize: true,
+                                        margin: { t: 5, r: 5, l: 40, b: 10 },
+                                        dragmode: 'pan',
+                                        xaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            rangebreaks: processedData.isIntraday ? [
+                                                { bounds: ["sat","mon"] },
+                                                { bounds: [15.5,9], pattern:"hour" },
+                                                { bounds: [11.5,12.5], pattern:"hour" }
+                                            ] : [{ bounds: ["sat","mon"] }],
+                                        },
+                                        yaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            ticksuffix: '%',
+                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 2,
+                                        },
+                                        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                        showlegend: false,
+                                        hovermode: 'closest',
+                                    }}
+                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    useResizeHandler={true}
+                                />
+                            </div>
+                            {/* 凡例 */}
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 justify-start mt-2 pt-2 border-t border-slate-100">
+                                {filteredRanking.map((item, i) => (
+                                    <div key={item.name}
+                                        className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${visibleSectors.has(item.name) ? 'hover:opacity-70' : 'opacity-25'}`}
+                                        onClick={() => toggleSector(item.name)}
+                                    >
+                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.name === NIKKEI_NAME ? NIKKEI_COLOR : COLORS[i % COLORS.length] }} />
+                                        <span className="text-[9px] text-slate-600">{item.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 右列：セクターランキング */}
+                        <div className="w-[42%] h-full flex flex-col">
+                            <div className="flex items-center gap-1.5 mb-2 shrink-0">
+                                <Icon name="PieChart" className="text-[#7C4DFF]" size={13} />
+                                <span className="text-xs font-bold text-slate-500">セクターランキング</span>
+                                <RankingLegendTooltip />
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1 min-h-0">
+                                {filteredRanking.map((item, index) => {
+                                    const isPositive = item.performance >= 0;
+                                    const sym = processedData.nameToSymbol?.[item.name] || '';
+                                    const typeBadge = (sym === item.name) ? '🧺' : (sym.startsWith('^') || sym.includes('=')) ? '📉' : '📈';
+                                    return (
+                                        <div key={item.symbol} className="relative group h-8 flex items-center">
+                                            <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
+                                                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
+                                                <div className="w-1/2 flex justify-end">
+                                                    {!isPositive && (
+                                                        <div className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                            style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                    )}
+                                                </div>
+                                                <div className="w-1/2 flex justify-start">
+                                                    {isPositive && (
+                                                        <div className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                            style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-slate-400 w-4 text-right font-bold text-[10px]">{index+1}</span>
+                                                    <span className="text-[10px] w-4 text-center">{typeBadge}</span>
+                                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.name === NIKKEI_NAME ? NIKKEI_COLOR : COLORS[index % COLORS.length] }} />
+                                                    <span className="font-bold truncate max-w-[90px] text-slate-700 text-[11px]" title={item.name}>{item.name}</span>
+                                                </div>
+                                                <span className={cn("font-mono font-bold text-[11px]", isPositive ? "text-emerald-600" : "text-rose-600")}>
+                                                    {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-2 pt-2 border-t border-slate-200 shrink-0">
+                                <button
+                                    onClick={copySummary}
+                                    className="w-full flex items-center justify-center gap-2 bg-[#7C4DFF] hover:bg-[#651FFF] text-white py-2 rounded-lg font-bold text-xs transition-all shadow-sm"
+                                >
+                                    <Icon name="Copy" size={13} />
+                                    サマリーをコピー
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
         // カテゴリ詳細モーダルコンポーネント（全画面オーバーレイ）
         const InfoTooltip = ({ categoryId }) => {
@@ -267,6 +513,24 @@
             '食品','エネルギー資源','素材・化学','自動車・輸送機',
             '鉄鋼・非鉄','商社・卸売','運輸・物流','金融（除く銀行）',
         ]);
+        // FullSectorChart 用：全体チャートから除外するシンボルキー
+        const FULL_RANKING_HIDDEN = new Set([
+            // 規模別指数（絶対値チャートで別管理）
+            '1311.T', '1309.T', '1312.T', '1318.T',
+            // 先物（規模別参考ライン）
+            'NQ=F', 'ES=F',
+            // GX日本成長 / 米国債10年
+            '200A.T', '^TNX',
+            // 複合ETF・旧コード（バスケットで代替済み）
+            '機械', '1623.T', '1632.T', '1631.T', '213A.T',
+        ]);
+
+        // FullSectorChart デフォルト表示セクター
+        const FULL_RANKING_DEFAULT_VISIBLE = new Set([
+            '不動産', '銀行業', '鉄鋼', '非鉄金属',
+            '石油・石炭', '卸売業', '半導体ETF', '日経指数'
+        ]);
+
         const NIKKEI_NAME  = '日経指数';
         const NIKKEI_COLOR = '#1e293b';  // 黒（日経指数用）
 
@@ -916,6 +1180,10 @@
                     absoluteRanking.sort((a, b) => b.performance - a.performance);
                 }
 
+                // セクター名→シンボルの逆引きマップ（ランキングのホバー・バッジ表示用）
+                const nameToSymbol = {};
+                Object.keys(sectors).forEach(sym => { nameToSymbol[sectors[sym]] = sym; });
+
                 return {
                     period,
                     isIntraday,
@@ -925,6 +1193,7 @@
                     absoluteTimeSeries,
                     ranking,
                     absoluteRanking,
+                    nameToSymbol,
                 };
 
             }, [rawDaily, rawIntraday, period]);
@@ -994,6 +1263,8 @@
                                             processedData={processedData}
                                         />
                                     ))}
+                                    {/* 全セクター相対パフォーマンス + ランキング（etf.htmlから移植） */}
+                                    <FullSectorChart processedData={processedData} period={period} />
                                     {/* 上位ランキング（TOPIX7アウトパフォーマー） */}
                                     <SectorRankingChart processedData={processedData} type="top" />
                                     {/* 下位ランキング（TOPIX7アンダーパフォーマー） */}
