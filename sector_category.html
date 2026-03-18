@@ -145,6 +145,7 @@
                 { name: 'TOPIX Core30',  type: 'ETF',      code: '1311.T (NEXT FUNDS TOPIX Core 30)' },
                 { name: 'JPX400',        type: 'ETF',      code: '1591.T (NEXT FUNDS JPX日経インデックス400)' },
                 { name: 'グロース250',   type: 'ETF',      code: '2516.T (東証グロース市場250指数ETF)' },
+                { name: 'DOW先物',      type: '指数',      code: 'YM=F (CME E-mini Dow Jones Industrial Average先物)' },
                 { name: 'NASDAQ先物',    type: '指数',      code: 'NQ=F (CME NASDAQ 100先物)' },
                 { name: 'SP500先物',     type: '指数',      code: 'ES=F (CME S&P 500先物)' },
                 { name: '参考ライン',    type: '指数',      code: '日経指数(^N225) / TOPIX(1306.T) / 半導体ETF(2644.T)　— TOPIXで割り返しなし・絶対値表示' },
@@ -207,6 +208,56 @@
                                     </div>
                                 </div>
                                 <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+                                    <p className="text-xs text-slate-400">全セクターはTOPIX(1306.T)に対する相対超過リターン(%)として表示　／　背景クリックで閉じる</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </span>
+            );
+        };
+
+        // 全セクター構成銘柄モーダル（? アイコン）
+        const FullSectorLegend = () => {
+            const [open, setOpen] = React.useState(false);
+            return (
+                <span className="relative inline-flex items-center">
+                    <button onClick={() => setOpen(true)} className="text-slate-400 hover:text-[#7C4DFF] transition-colors ml-1" title="全セクター構成銘柄を見る">
+                        <Icon name="HelpCircle" size={13} />
+                    </button>
+                    {open && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setOpen(false)}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 shrink-0">
+                                    <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                                        <Icon name="HelpCircle" size={18} className="text-[#7C4DFF]" />
+                                        全セクター構成銘柄一覧
+                                    </h3>
+                                    <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                                        <Icon name="X" size={18} />
+                                    </button>
+                                </div>
+                                <div className="overflow-y-auto custom-scrollbar p-6 space-y-5">
+                                    {CATEGORIES.filter(c => c.id !== 'scale').map(cat => {
+                                        const details = CATEGORY_DETAILS[cat.id] || [];
+                                        if (!details.length) return null;
+                                        return (
+                                            <div key={cat.id}>
+                                                <div className="text-xs font-bold text-[#7C4DFF] border-b border-purple-100 pb-1 mb-2">{cat.label}</div>
+                                                <div className="space-y-1.5">
+                                                    {details.map(item => (
+                                                        <div key={item.name} className="flex items-start gap-2 text-[11px]">
+                                                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${item.type === 'ETF' ? 'bg-blue-100 text-blue-700' : item.type === '指数' ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-700'}`}>{item.type}</span>
+                                                            <span className="font-semibold text-slate-700 shrink-0 min-w-[72px]">{item.name}</span>
+                                                            <span className="text-slate-400 break-all leading-relaxed">{item.code || item.stocks}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl shrink-0">
                                     <p className="text-xs text-slate-400">全セクターはTOPIX(1306.T)に対する相対超過リターン(%)として表示　／　背景クリックで閉じる</p>
                                 </div>
                             </div>
@@ -291,6 +342,7 @@
                     <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex items-center gap-2">
                         <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
                         相対パフォーマンス推移（全セクター / vs TOPIX）
+                        <FullSectorLegend />
                         <div className="flex gap-1.5 ml-auto">
                             <button onClick={showTop7} className="text-xs px-3 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▲ 上位7</button>
                             <button onClick={showBottom7} className="text-xs px-3 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▼ 下位7</button>
@@ -498,14 +550,14 @@
             'NASDAQ先物','SP500先物',
             '日経指数','日経225ETF','米国債10年','GX日本成長',
             '銀行','半導体',
-            '食品','エネルギー資源','素材・化学','自動車・輸送機',
+            '食品','素材・化学','自動車・輸送機',
             '鉄鋼・非鉄','商社・卸売','運輸・物流','金融（除く銀行）',
         ]);
         // FullSectorChart 用：全体チャートから除外するシンボルキー
         const FULL_RANKING_HIDDEN = new Set([
             '1311.T', '1591.T', '2516.T',
-            'NQ=F', 'ES=F',
-            '200A.T', '^TNX',
+            'NQ=F', 'ES=F', 'YM=F',
+            '1618.T', '200A.T', '^TNX',
             '機械', '1623.T', '1632.T', '1631.T', '213A.T',
         ]);
 
@@ -770,6 +822,7 @@
                 { name: '日経指数',   color: '#1e293b', width: 2,   dash: 'dot',    code: '^N225' },
                 { name: 'NASDAQ先物', color: '#2563eb', width: 1.5, dash: 'solid',  code: 'NQ=F' },
                 { name: 'SP500先物',  color: '#dc2626', width: 1.5, dash: 'solid',  code: 'ES=F' },
+                { name: 'DOW先物',    color: '#16a34a', width: 1.5, dash: 'solid',  code: 'YM=F' },
                 { name: '半導体ETF',  color: '#d97706', width: 1.5, dash: 'dash',   code: '2644.T' },
             ] : [];
 
