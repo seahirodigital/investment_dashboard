@@ -101,11 +101,11 @@
             ],
             energy: [
                 { name: '鉱業',          type: 'バスケット', stocks: 'INPEX(1605)・石油資源開発(1662)・日鉄鉱業(1515)・三井松島HD(1518)・K&Oエナジー(1663)' },
+                { name: '電力・ガス',    type: 'ETF',      code: '1627.T' },
                 { name: '石油・石炭',    type: 'バスケット', stocks: 'ENEOS HD(5020)・出光興産(5019)・コスモエネルギー(5021)' },
                 { name: '鉄鋼',          type: 'バスケット', stocks: '日本製鉄(5401)・JFE HD(5411)・神戸製鋼(5406)・東京製鐵(5429)・丸一鋼管(5463)・大同特殊鋼(5471)・愛知製鋼(5482)' },
                 { name: 'ゴム製品',      type: 'バスケット', stocks: 'ブリヂストン(5108)・横浜ゴム(5105)・住友ゴム(5110)・TOYO TIRE(5104)' },
                 { name: '水産・農林',    type: 'バスケット', stocks: '日本水産(1332)・マルハニチロ(1333)・極洋(1301)' },
-                { name: '卸売業',        type: 'バスケット', stocks: '三菱商事(8058)・三井物産(8031)・伊藤忠(8001)・住友商事(8053)・丸紅(8002)・豊田通商(8015)・マクニカHD(3132)・兼松(8020)' },
                 { name: '金属製品',      type: 'バスケット', stocks: 'LIXIL(5938)・東洋製罐GHD(5901)・フジクラ(5803)・昭和電線HD(5805)・GSユアサ(5970)・三和HD(5929)・リンナイ(5947)' },
                 { name: 'その他製品',    type: 'バスケット', stocks: '任天堂(7974)・コナミ(9766)・カプコン(9697)・バンダイナムコ(7832)・ヤマハ(7951)・TOPPAN(7911)・大日本印刷(7912)' },
             ],
@@ -115,7 +115,7 @@
                 { name: '陸運業',        type: 'バスケット', stocks: 'JR東海(9022)・JR東(9020)・JR西(9021)・ヤマトHD(9064)・東急(9005)・小田急(9008)・SGホールディングス(9143)・阪急阪神HD(9042)・京成電鉄(9009)' },
                 { name: '食料品',        type: 'バスケット', stocks: 'アサヒ(2502)・キリン(2503)・味の素(2802)・JT(2914)・日清食品(2897)・明治HD(2269)・ヤクルト(2267)・サントリーBF(2587)' },
                 { name: '医薬品',        type: 'ETF',      code: '1621.T' },
-                { name: '電力・ガス',    type: 'ETF',      code: '1627.T' },
+                { name: '卸売業',        type: 'バスケット', stocks: '三菱商事(8058)・三井物産(8031)・伊藤忠(8001)・住友商事(8053)・丸紅(8002)・豊田通商(8015)・マクニカHD(3132)・兼松(8020)' },
                 { name: '輸送用機器',    type: 'バスケット', stocks: 'トヨタ(7203)・ホンダ(7267)・スズキ(7269)・SUBARU(7270)・日産(7201)・マツダ(7261)・アイシン(7259)・シマノ(7309)' },
                 { name: '情報・通信業',  type: 'ETF',      code: '1613.T' },
             ],
@@ -748,6 +748,14 @@
                 sectors: ['TOPIX Core30', 'TOPIX Large70', 'JPX400', '中小型株']
             },
             {
+                id: 'smallcap',
+                label: '非鉄金属・半導体・機械・建設・資材・中小型',
+                // CAF(1620→'化学'バスケット), MC(1624→'機械'バスケット),
+                // NM(1623→'非鉄金属'バスケット), CON(1619→'建設・資材'),
+                // SHP(1628→'海運業'バスケット), 200A→'GX日本成長', 2644/TPX→'半導体ETF'
+                sectors: ['化学', '機械', '非鉄金属', '建設・資材', '海運業', 'GX日本成長', '半導体ETF']
+            },
+            {
                 id: 'finance',
                 label: '金融・内需系',
                 // RE(1633→'不動産'), INS/SEC/OFB(1632→バスケット分離),
@@ -757,20 +765,20 @@
             {
                 id: 'energy',
                 label: 'エネルギー・資源・素材（バリュー系）',
-                // MT/PET(1618→バスケット分離), COM(1629→'卸売業'バスケット),
+                // MT/PET(1618→バスケット分離), EPG(1627→'電力・ガス'),
                 // IAS(1623→'鉄鋼'バスケット), RBP(1622→'ゴム製品'バスケット),
                 // WT(1617→'水産・農林'バスケット), MIN(1624→'金属製品'バスケット),
                 // OAC(1629→'その他製品'バスケット)
-                sectors: ['鉱業', '卸売業', '石油・石炭', '鉄鋼', 'ゴム製品', '水産・農林', '金属製品', 'その他製品']
+                sectors: ['鉱業', '電力・ガス', '石油・石炭', '鉄鋼', 'ゴム製品', '水産・農林', '金属製品', 'その他製品']
             },
             {
                 id: 'consumer',
                 label: '消費・サービス・生活',
                 // RT(1630→'小売'), AT(1628→'空運業'バスケット), LT(1628→'陸運業'バスケット),
                 // FD(1617→'食料品'バスケット), PHR(1621→'医薬品'),
-                // EPG(1627→'電力・ガス'), TPXE(1622→'輸送用機器'バスケット),
+                // COM(1629→'卸売業'バスケット), TPXE(1622→'輸送用機器'バスケット),
                 // TPXI(1613→'情報・通信業')
-                sectors: ['小売', '空運業', '陸運業', '食料品', '医薬品', '電力・ガス', '輸送用機器', '情報・通信業']
+                sectors: ['小売', '空運業', '陸運業', '食料品', '医薬品', '卸売業', '輸送用機器', '情報・通信業']
             },
             {
                 id: 'tech',
@@ -788,24 +796,52 @@
                 // 2644(2644.T→'半導体ETF'), 213A(213A.T→'半導体')
                 sectors: ['日経指数', '日経225ETF', '半導体ETF', '半導体']
             },
-            {
-                id: 'smallcap',
-                label: '新興・中小型・資本財',
-                // CAF(1620→'化学'バスケット), MC(1624→'機械'バスケット),
-                // NM(1623→'非鉄金属'バスケット), CON(1619→'建設・資材'),
-                // SHP(1628→'海運業'バスケット), 200A→'GX日本成長', 2644/TPX→'半導体ETF'
-                sectors: ['化学', '機械', '非鉄金属', '建設・資材', '海運業', 'GX日本成長', '半導体ETF']
-            },
         ];
 
         // カテゴリ別チャート＋ランキングコンポーネント
         const CategorySection = ({ category, processedData }) => {
             const isAbsolute = !!category.absoluteMode;
 
+            // 絶対値モード用の参考ライン定義（catRankingより先に定義）
+            const ABS_REF_LINES = isAbsolute ? [
+                { name: 'TOPIX',      color: '#94a3b8', width: 1.5, dash: 'solid',  code: '1306.T' },
+                { name: '日経指数',   color: '#1e293b', width: 2,   dash: 'dot',    code: '^N225' },
+                { name: 'NASDAQ先物', color: '#2563eb', width: 1.5, dash: 'solid',  code: 'NQ=F' },
+                { name: 'SP500先物',  color: '#dc2626', width: 1.5, dash: 'solid',  code: 'ES=F' },
+                { name: '半導体ETF',  color: '#d97706', width: 1.5, dash: 'dash',   code: '2644.T' },
+            ] : [];
+
             const catRanking = useMemo(() => {
                 if (!processedData) return [];
                 const src = isAbsolute ? processedData.absoluteRanking : processedData.ranking;
-                return src.filter(r => category.sectors.includes(r.name));
+                const filtered = src.filter(r => category.sectors.includes(r.name));
+
+                // 同名ETF・バスケット重複排除: ETF優先（symbol !== name がETF）
+                const nameMap = new Map();
+                filtered.forEach(r => {
+                    const existing = nameMap.get(r.name);
+                    if (!existing || (existing.symbol === existing.name && r.symbol !== r.name)) {
+                        nameMap.set(r.name, r);
+                    }
+                });
+                const deduped = [...nameMap.values()].sort((a, b) => b.performance - a.performance);
+
+                if (!isAbsolute) return deduped;
+
+                // 絶対値モード: 参考ラインもランキングに追加
+                const refEntries = [];
+                ABS_REF_LINES.forEach(ref => {
+                    if (ref.name === 'TOPIX') {
+                        const latest = processedData.absoluteTimeSeries?.[processedData.absoluteTimeSeries.length - 1];
+                        if (latest?.TOPIX !== undefined) {
+                            refEntries.push({ symbol: '1306.T', name: 'TOPIX', performance: latest.TOPIX });
+                        }
+                    } else {
+                        const found = src.find(r => r.name === ref.name);
+                        if (found) refEntries.push(found);
+                    }
+                });
+                return [...deduped, ...refEntries].sort((a, b) => b.performance - a.performance);
             }, [processedData, category, isAbsolute]);
 
             const maxAbsPerf = useMemo(() => {
@@ -827,15 +863,6 @@
             const toggleTrace = useCallback((name) => {
                 setHiddenTraces(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
             }, []);
-
-            // 絶対値モード用の参考ライン定義
-            const ABS_REF_LINES = isAbsolute ? [
-                { name: 'TOPIX',    color: '#94a3b8', width: 1.5, dash: 'solid',  code: '1306.T' },
-                { name: '日経指数', color: '#1e293b', width: 2,   dash: 'dot',    code: '^N225' },
-                { name: 'NASDAQ先物', color: '#2563eb', width: 1.5, dash: 'solid', code: 'NQ=F' },
-                { name: 'SP500先物',  color: '#dc2626', width: 1.5, dash: 'solid', code: 'ES=F' },
-                { name: '半導体ETF',  color: '#d97706', width: 1.5, dash: 'dash',  code: '2644.T' },
-            ] : [];
 
             const chartData = useMemo(() => {
                 if (!processedData) return [];
@@ -938,6 +965,9 @@
                                 <div className="space-y-1.5">
                                     {catRanking.map((item, index) => {
                                         const isPositive = item.performance >= 0;
+                                        const refLine = isAbsolute ? ABS_REF_LINES.find(r => r.name === item.name) : null;
+                                        const dotColor = refLine ? refLine.color : COLORS[index % COLORS.length];
+                                        const rankLabel = refLine ? '参' : (index + 1);
                                         return (
                                             <div key={item.symbol} className="relative group h-8 flex items-center">
                                                 <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
@@ -957,9 +987,9 @@
                                                 </div>
                                                 <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 w-4 text-right font-bold">{index+1}</span>
+                                                        <span className="text-slate-400 w-4 text-right font-bold">{rankLabel}</span>
                                                         <div className="w-2 h-2 rounded-full shrink-0"
-                                                            style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                            style={{ backgroundColor: dotColor }} />
                                                         <span className="font-bold truncate max-w-[100px] text-slate-700" title={item.name}>{item.name}</span>
                                                     </div>
                                                     <span className={cn("font-mono font-bold", isPositive ? "text-emerald-600" : "text-rose-600")}>
@@ -976,24 +1006,19 @@
                     {/* カスタム凡例（色丸・クリックで表示/非表示） */}
                     {!noData && (
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
-                            {catRanking.map((item, i) => (
-                                <div key={item.name}
-                                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(item.name) ? 'opacity-25' : 'hover:opacity-70'}`}
-                                    onClick={() => toggleTrace(item.name)}
-                                >
-                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                    <span className="text-[9px] text-slate-600">{item.name}</span>
-                                </div>
-                            ))}
-                            {isAbsolute && ABS_REF_LINES.map(ref => (
-                                <div key={ref.name}
-                                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(ref.name) ? 'opacity-25' : 'hover:opacity-70'}`}
-                                    onClick={() => toggleTrace(ref.name)}
-                                >
-                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ref.color }} />
-                                    <span className="text-[9px] text-slate-600">{ref.name}</span>
-                                </div>
-                            ))}
+                            {catRanking.map((item, i) => {
+                                const refLineL = isAbsolute ? ABS_REF_LINES.find(r => r.name === item.name) : null;
+                                const legendColor = refLineL ? refLineL.color : COLORS[i % COLORS.length];
+                                return (
+                                    <div key={item.name}
+                                        className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(item.name) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                        onClick={() => toggleTrace(item.name)}
+                                    >
+                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: legendColor }} />
+                                        <span className="text-[9px] text-slate-600">{item.name}</span>
+                                    </div>
+                                );
+                            })}
                             {shouldAddNikkei && nikkeiEntry && (
                                 <div
                                     className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(NIKKEI_NAME) ? 'opacity-25' : 'hover:opacity-70'}`}
