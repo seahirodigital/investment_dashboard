@@ -27,16 +27,16 @@
 
 処理:
   1. fetch_intraday.py を実行（5分足 14日分、yfinance取得、最大3回リトライ）
-     → data/etf_intraday_data.json 生成（generated_at タイムスタンプ付き）
+     → data/etf_intraday.json 生成（generated_at タイムスタンプ付き）
 
 デプロイ方式: peaceirisを使わず、git コマンドで gh-pages に直接プッシュ
   git fetch origin gh-pages
   git checkout -B gh-pages origin/gh-pages
-  # data/etf_intraday_data.json のみ上書きしてコミット・プッシュ
+  # data/etf_intraday.json のみ上書きしてコミット・プッシュ
   git push --force-with-lease origin gh-pages
   # 失敗時はリフェッチ後に --force でリトライ
 
-更新対象: gh-pages の data/etf_intraday_data.json のみ（サイト全体は触らない）
+更新対象: gh-pages の data/etf_intraday.json のみ（サイト全体は触らない）
 concurrency: intraday-etf-update グループで同時実行1つに制限（cancel-in-progress）
 ```
 
@@ -49,7 +49,7 @@ concurrency: intraday-etf-update グループで同時実行1つに制限（canc
 処理:
   1. etf_data_manager.py を実行
      → data/etf_data.json    （日次 400日分）生成
-     → data/etf_intraday_data.json （5分足 14日分）生成
+     → data/etf_intraday.json （5分足 14日分）生成
      ※ どちらも generated_at タイムスタンプ付き
   2. 変更があれば main ブランチにコミット・プッシュ
 
@@ -75,7 +75,7 @@ concurrency: intraday-etf-update グループで同時実行1つに制限（canc
   deploy/ に以下をコピーして全デプロイ:
     - HTML ファイル群
     - css/, js/, data/ フォルダ
-    - gh-pages の最新 etf_intraday_data.json を取得して上書き保持
+    - gh-pages の最新 etf_intraday.json を取得して上書き保持
       （main ブランチの古いデータより gh-pages の直接プッシュ版を優先）
     - gh-pages から GPIF/dist を取得して保持
 ```
@@ -96,7 +96,7 @@ concurrency: intraday-etf-update グループで同時実行1つに制限（canc
   4. 変更があれば main ブランチにコミット・プッシュ
   5. GPIF React アプリをビルド（cd GPIF && npm run build）
   6. [デプロイ直前] ETFデータを最新取得:
-       fetch_intraday.py  → data/etf_intraday_data.json を最新化
+       fetch_intraday.py  → data/etf_intraday.json を最新化
        etf_data_manager.py → data/etf_data.json を最新化
        （失敗しても後続のデプロイは継続）
 
@@ -120,14 +120,14 @@ concurrency: intraday-etf-update グループで同時実行1つに制限（canc
 ```
 [動作イメージ]
 gh-pages（既存）:
-  data/etf_intraday_data.json  ← intraday_etf.yml が直接プッシュ済み
+  data/etf_intraday.json  ← intraday_etf.yml が直接プッシュ済み
   GPIF/dist/index.html          ← daily_task.yml でビルド済み
 
 peaceiris（keep_files: true）で deploy/ をマージ:
   data/etf_data.json            ← 更新
   data/teguchi.json             ← 更新
   sector_category.html          ← 更新
-  data/etf_intraday_data.json   ← 既存のまま保持（deploy/ に含まなければ上書きされない）
+  data/etf_intraday.json   ← 既存のまま保持（deploy/ に含まなければ上書きされない）
   GPIF/dist/index.html          ← 既存のまま保持
 ```
 
@@ -150,7 +150,7 @@ peaceiris（keep_files: true）で deploy/ をマージ:
         ├─ yfinance API（ETF・バスケット銘柄・市場指数）
         │      │
         │      ├─ etf_data_manager.py  →  data/etf_data.json（日次 400日）
-        │      │                           data/etf_intraday_data.json（5分足 14日）
+        │      │                           data/etf_intraday.json（5分足 14日）
         │      │
         │      └─ fetch_gpif_data.py   →  data/gpif_data.json
         │
@@ -163,10 +163,10 @@ peaceiris（keep_files: true）で deploy/ をマージ:
 [GitHub Actions]
         │
         ├─ intraday_etf.yml  （15分ごと）
-        │    └─ fetch_intraday.py → etf_intraday_data.json → gh-pages に直接プッシュ
+        │    └─ fetch_intraday.py → etf_intraday.json → gh-pages に直接プッシュ
         │
         ├─ daily_etf.yml    （毎日 JST 16:00）
-        │    └─ etf_data_manager.py → etf_data.json + etf_intraday_data.json
+        │    └─ etf_data_manager.py → etf_data.json + etf_intraday.json
         │         → main コミット → peaceiris で gh-pages 全面デプロイ
         │
         ├─ daily_participant.yml  （毎日 JST 20:05）
@@ -191,7 +191,7 @@ peaceiris（keep_files: true）で deploy/ をマージ:
 | ファイル | 生成スクリプト | 参照HTML | 更新頻度 |
 |---|---|---|---|
 | `data/etf_data.json` | `etf_data_manager.py` | `etf.html`, `sector_category.html` | 毎日 JST 16:00 |
-| `data/etf_intraday_data.json` | `fetch_intraday.py` / `etf_data_manager.py` | `sector_category.html` | 市場中15分ごと + 毎日 JST 16:00 |
+| `data/etf_intraday.json` | `fetch_intraday.py` / `etf_data_manager.py` | `sector_category.html` | 市場中15分ごと + 毎日 JST 16:00 |
 | `data/sector_data.json` | `sector_manager.py` | `analytics.html` | 週1回（木曜） |
 | `data/teguchi.json` | `fetch_teguchi.py` | `teguchi.html` | 毎営業日 JST 20:05 |
 | `data/option_history.json` | `fetch_option.py` | `option.html` | 毎営業日 JST 20:05 |
@@ -218,7 +218,7 @@ peaceiris（keep_files: true）で deploy/ をマージ:
 
 fetchRawData():
   - Cache-Control: no-cache + クエリ文字列タイムスタンプでキャッシュ回避
-  - etf_data.json と etf_intraday_data.json を並列取得
+  - etf_data.json と etf_intraday.json を並列取得
   - 重複呼び出し防止（fetchingRef フラグ）
   - intraday 取得失敗時は日次データにフォールバック（チャートは継続表示）
   - 既存データがある場合、更新失敗時もエラー表示せず前回データを維持
@@ -255,7 +255,7 @@ const intradayAvailable = rawIntraday?.dates?.length > 1
 
 | タイミング | 実行内容 | 結果 |
 |---|---|---|
-| 市場中 毎15分（JST 9:00〜15:45） | `fetch_intraday.py` | gh-pages の etf_intraday_data.json のみ直接更新 |
+| 市場中 毎15分（JST 9:00〜15:45） | `fetch_intraday.py` | gh-pages の etf_intraday.json のみ直接更新 |
 | 毎日 JST 16:00 | `etf_data_manager.py` | 日次+イントラデイ両方再生成 → gh-pages 全面デプロイ |
 | 毎日 JST 20:05 | `fetch_teguchi.py` + `fetch_option.py` | 手口・建玉 → gh-pages 全面デプロイ |
 | 毎週木曜 JST 18:00 | JPX週次 + GPIF + ETF最新化 | → gh-pages 全面デプロイ |
@@ -298,7 +298,7 @@ investment_dasboard/
 │
 ├── data/
 │   ├── etf_data.json                   # ETF・バスケット 日次（daily_etf.yml）
-│   ├── etf_intraday_data.json          # ETF・バスケット 5分足（intraday_etf.yml / daily_etf.yml）
+│   ├── etf_intraday.json          # ETF・バスケット 5分足（intraday_etf.yml / daily_etf.yml）
 │   ├── sector_data.json                # セクター集計（daily_task.yml）
 │   ├── option_history.json             # オプション建玉（daily_participant.yml）
 │   ├── teguchi.json                    # 手口データ（daily_participant.yml）

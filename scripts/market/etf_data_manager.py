@@ -436,7 +436,7 @@ def main():
     data_intraday = fetch_data(period="14d", interval="5m")
     data_intraday['generated_at'] = ts_utc
     data_intraday['generated_at_jst'] = ts_jst
-    with open('data/etf_intraday_data.json', 'w', encoding='utf-8') as f:
+    with open('data/etf_intraday.json', 'w', encoding='utf-8') as f:
         json.dump(data_intraday, f, ensure_ascii=False)
 
     print(f"Done: {len(data_daily['dates'])} days daily, {len(data_intraday['dates'])} ticks intraday.")

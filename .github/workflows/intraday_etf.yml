@@ -48,8 +48,8 @@ jobs:
       - name: デプロイ用ディレクトリ準備（イントラデイデータのみ）
         run: |
           mkdir -p deploy/data
-          cp data/etf_intraday_data.json deploy/data/etf_intraday_data.json
-          echo "✅ deploy/data/etf_intraday_data.json 準備完了"
+          cp data/etf_intraday.json deploy/data/etf_intraday.json
+          echo "✅ deploy/data/etf_intraday.json 準備完了"
           ls -la deploy/data/
 
       - name: peaceiris で gh-pages にデプロイ

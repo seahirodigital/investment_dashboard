@@ -1,5 +1,6 @@
 .vscode-kanban/
 .vscode/
+.claude/
 __pycache__/
 docs/
 add_investment_dashboard
@@ -9,4 +10,4 @@ firebase-key.json
 *.json.bak
 
 # イントラデイデータはgh-pagesのみ管理（mainに含めるとpeaceirisが古いデータで上書きする）
-data/etf_intraday_data.json
+data/etf_intraday.json

@@ -36,7 +36,7 @@ jobs:
           git config --local user.name "GitHub Action"
           
           [ -f data/etf_data.json ] && git add data/etf_data.json
-          [ -f data/etf_intraday_data.json ] && git add data/etf_intraday_data.json
+          [ -f data/etf_intraday.json ] && git add data/etf_intraday.json
           
           if ! git diff --staged --quiet; then
             git commit -m "Update ETF Data: $(date +'%Y-%m-%d')"

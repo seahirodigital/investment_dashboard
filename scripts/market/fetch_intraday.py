@@ -1,7 +1,7 @@
 """
 イントラデイETFデータ取得スクリプト
 GitHub Actions intraday_etf.yml から呼び出される（15分ごと）。
-5分足 14日分のデータを取得し data/etf_intraday_data.json に書き出す。
+5分足 14日分のデータを取得し data/etf_intraday.json に書き出す。
 リトライ付き: 最大3回まで再試行（yfinance タイムアウト対策）。
 """
 import sys
@@ -17,7 +17,7 @@ project_root = os.path.dirname(os.path.dirname(script_dir))
 sys.path.insert(0, script_dir)
 
 os.makedirs(os.path.join(project_root, 'data'), exist_ok=True)
-output_path = os.path.join(project_root, 'data', 'etf_intraday_data.json')
+output_path = os.path.join(project_root, 'data', 'etf_intraday.json')
 
 from etf_data_manager import fetch_data
 

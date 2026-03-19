@@ -1119,7 +1119,7 @@
                     const ts = Date.now();
                     const [resDaily, resIntraday] = await Promise.all([
                         fetch(`./data/etf_data.json?t=${ts}`, { headers, cache: 'no-store' }),
-                        fetch(`./data/etf_intraday_data.json?t=${ts}`, { headers, cache: 'no-store' }).catch(() => null)
+                        fetch(`./data/etf_intraday.json?t=${ts}`, { headers, cache: 'no-store' }).catch(() => null)
                     ]);
 
                     if (!resDaily.ok) {
