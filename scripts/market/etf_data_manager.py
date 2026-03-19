@@ -46,6 +46,44 @@ SECTORS = {
   'YM=F':   'DOW先物',                   # Dow Jones Industrial Average先物（CME）
 }
 
+# ── 半導体銘柄（日本・米国、個別株式）─────────────────────────────────────
+SEMICONDUCTOR_JP = {
+  '2644.T': 'GX半導体ETF',
+  '5801.T': '古河電工',
+  '285A.T': 'キオクシア',
+  '5802.T': '住友電工',
+  '5803.T': 'フジクラ',
+  '6146.T': 'ディスコ',
+  '7729.T': '東京精密',
+  '7735.T': 'SCREEN',
+  '6857.T': 'アドバンテスト',
+  '6315.T': 'TOWA',
+  '6920.T': 'レーザーテック',
+  '6723.T': 'ルネサス',
+  '8035.T': '東京エレクトロン',
+  '6525.T': 'KOKUSAI',
+  '6526.T': 'ソシオネクスト',
+  '9984.T': 'ソフトバンクG',
+}
+
+SEMICONDUCTOR_US = {
+  '^SOX':   'SOX指数',
+  'SNDK':   'サンディスク',
+  'WDC':    'ウエスタンデジタル',
+  'MU':     'マイクロン',
+  'AMAT':   'アプライドマテリアルズ',
+  'LRCX':   'ラムリサーチ',
+  'ASML':   'ASML',
+  'KLAC':   'KLA',
+  'INTC':   'インテル',
+  'ARM':    'アーム',
+  'TSM':    'TSMC',
+  'NVDA':   'エヌビディア',
+  'AVGO':   'ブロードコム',
+  'AMD':    'AMD',
+  'ORCL':   'オラクル',
+}
+
 # ── バスケットセクター（時価総額上位銘柄で構成）─────────────────────────
 # 同一ETFコードに複数業種が混在しているため、代表銘柄の等加重平均で分離
 BASKET_SECTORS = {
@@ -315,16 +353,27 @@ BASKET_SECTORS = {
     ],
 }
 
-# 全シンボルリスト（ETF + バスケット構成銘柄）
+# 全シンボルリスト（ETF + バスケット構成銘柄 + 半導体個別株）
 ALL_BASKET_SYMBOLS = list(set(s for stocks in BASKET_SECTORS.values() for s in stocks))
-ALL_SYMBOLS = [BENCHMARK] + list(SECTORS.keys()) + ALL_BASKET_SYMBOLS
+ALL_SYMBOLS = list(set(
+    [BENCHMARK]
+    + list(SECTORS.keys())
+    + list(SEMICONDUCTOR_JP.keys())
+    + list(SEMICONDUCTOR_US.keys())
+    + ALL_BASKET_SYMBOLS
+))
 FETCH_DAYS = 400
 
 
 def fetch_data(period="400d", interval="1d"):
+    # sectors 定義（ETF + 半導体銘柄）
+    sectors_def = dict(SECTORS)
+    sectors_def.update(SEMICONDUCTOR_JP)
+    sectors_def.update(SEMICONDUCTOR_US)
+
     output = {
         "benchmark": BENCHMARK,
-        "sectors": dict(SECTORS),  # ETFセクターをベースにコピー
+        "sectors": sectors_def,
         "dates": [],
         "prices": {}
     }
@@ -355,8 +404,8 @@ def fetch_data(period="400d", interval="1d"):
     if BENCHMARK in df.columns:
         df = df[df[BENCHMARK].notna()]
 
-    # ── ETFセクター価格の保存（ベンチマーク + SECTORSのみ）──
-    etf_symbols = [BENCHMARK] + list(SECTORS.keys())
+    # ── ETFセクター・半導体銘柄価格の保存──
+    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys())
     for symbol in etf_symbols:
         if symbol in df.columns:
             output["prices"][symbol] = [
