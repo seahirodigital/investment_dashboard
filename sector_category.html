@@ -317,6 +317,195 @@
             );
         };
 
+        // 米国セクター構成銘柄モーダル（? アイコン）
+        const USSectorLegend = () => {
+            const [open, setOpen] = React.useState(false);
+            useEffect(() => {
+                document.body.style.overflow = open ? 'hidden' : '';
+                return () => { document.body.style.overflow = ''; };
+            }, [open]);
+            const US_SECTOR_LIST = [
+                { ticker: 'XLK',  name: '情報技術',       desc: 'Apple・Microsoft・NVIDIA等のテクノロジー大型株' },
+                { ticker: 'XLF',  name: '金融',           desc: 'JPMorgan・BofA・Berkshire等の大手金融機関' },
+                { ticker: 'XLC',  name: '通信サービス',   desc: 'Meta・Alphabet・Netflix等のコミュニケーション企業' },
+                { ticker: 'XLV',  name: 'ヘルスケア',     desc: 'UnitedHealth・J&J・Pfizer等の医療・製薬大手' },
+                { ticker: 'XLI',  name: '資本財',         desc: 'GE Aerospace・Caterpillar・Honeywell等の産業コングロマリット' },
+                { ticker: 'XLB',  name: '素材',           desc: 'Linde・Sherwin-Williams等の化学・素材企業' },
+                { ticker: 'XLU',  name: '公共事業',       desc: 'NextEra・Duke Energy等の電力・ガス公益企業' },
+                { ticker: 'XLE',  name: 'エネルギー',     desc: 'ExxonMobil・Chevron等の石油・ガス大手' },
+                { ticker: 'XLP',  name: '生活必需品',     desc: 'P&G・Coca-Cola・Walmart等の消費財・小売大手' },
+                { ticker: 'XLRE', name: '不動産',         desc: 'Prologis・American Tower等のREIT・不動産' },
+                { ticker: 'XLY',  name: '一般消費財',     desc: 'Amazon・Tesla・Home Depot等の消費財企業' },
+                { ticker: 'XSD',  name: '半導体',         desc: 'SPDR S&P半導体ETF（均等加重）' },
+                { ticker: 'XSW',  name: 'ソフトウェア',   desc: 'SPDR S&Pソフトウェア・サービスETF' },
+                { ticker: 'XBI',  name: 'バイオテクノロジー', desc: 'SPDR S&Pバイオテック（均等加重）' },
+                { ticker: 'XPH',  name: '製薬',           desc: 'SPDR S&P製薬ETF（均等加重）' },
+                { ticker: 'XHE',  name: '医療機器',       desc: 'SPDR S&Pヘルスケア機器ETF' },
+                { ticker: 'XHS',  name: '医療サービス',   desc: 'SPDR S&Pヘルスケアサービスセレクトインダストリー' },
+                { ticker: 'XME',  name: '金属・採掘',     desc: 'SPDR S&P金属・採掘ETF（均等加重）' },
+                { ticker: 'XRT',  name: '小売',           desc: 'SPDR S&Pリテール（均等加重）' },
+                { ticker: 'XHB',  name: '住宅建設',       desc: 'SPDR S&Pホームビルダーズ（均等加重）' },
+                { ticker: 'XTN',  name: '輸送',           desc: 'SPDR S&P輸送ETF（均等加重）' },
+                { ticker: 'XTL',  name: '通信機器',       desc: 'SPDR S&Pテレコム（均等加重）' },
+                { ticker: 'XAR',  name: '防衛',           desc: 'SPDR S&P航空宇宙・防衛ETF（均等加重）' },
+                { ticker: 'KBE',  name: '銀行',           desc: 'SPDR S&P銀行ETF（均等加重）' },
+                { ticker: 'KRE',  name: '地方銀行',       desc: 'SPDR S&Pリージョナルバンク（均等加重）' },
+                { ticker: 'XOP',  name: '石油探索・生産', desc: 'SPDR S&P石油・ガス探査&生産ETF' },
+                { ticker: 'XES',  name: 'エネルギー設備', desc: 'SPDR S&P石油・ガス設備&サービスETF' },
+                { ticker: 'PAVE', name: 'インフラ',       desc: 'Global X US Infrastructure Development ETF' },
+            ];
+            return (
+                <span className="inline-flex items-center">
+                    <span className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+                        <Icon name="HelpCircle" size={13} />
+                    </span>
+                    {open && (
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }} onClick={() => setOpen(false)}>
+                            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.25)' }} onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
+                                    <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                                        <Icon name="HelpCircle" size={18} className="text-[#7C4DFF]" />
+                                        米国セクターETF　構成一覧
+                                    </h3>
+                                    <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"><Icon name="X" size={18} /></button>
+                                </div>
+                                <div className="overflow-y-auto flex-1 px-6 py-3">
+                                    <table className="w-full border-collapse text-sm">
+                                        <thead className="sticky top-0 bg-white">
+                                            <tr className="border-b-2 border-slate-100">
+                                                <th className="text-left py-2 pr-3 font-bold text-slate-500 w-[10%]">Ticker</th>
+                                                <th className="text-left py-2 pr-3 font-bold text-slate-500 w-[18%]">セクター</th>
+                                                <th className="text-left py-2 font-bold text-slate-500">説明</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {US_SECTOR_LIST.map((s, i) => (
+                                                <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                                                    <td className="py-2 pr-3 font-mono font-bold text-[#7C4DFF] text-xs">{s.ticker}</td>
+                                                    <td className="py-2 pr-3 font-semibold text-slate-700">{s.name}</td>
+                                                    <td className="py-2 text-slate-500 text-xs">{s.desc}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+                                    <p className="text-xs text-slate-400">SPDR Select Sector / Industry ETFs　—　TOPIXで割り返しなし・絶対値表示 / 基準線: NASDAQ先物(NQ=F)・SP500先物(ES=F)　／　背景クリックで閉じる</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </span>
+            );
+        };
+
+        // 半導体銘柄モーダル（? アイコン）— 企業説明付き
+        const SemiconductorLegend = () => {
+            const [open, setOpen] = React.useState(false);
+            useEffect(() => {
+                document.body.style.overflow = open ? 'hidden' : '';
+                return () => { document.body.style.overflow = ''; };
+            }, [open]);
+            const SEMI_JP_LIST = [
+                { ticker: '2644.T', name: 'GX半導体ETF',     desc: 'Global X 日本半導体ETF（日本半導体関連株の指数連動型ETF）' },
+                { ticker: '8035.T', name: '東京エレクトロン', desc: '半導体製造装置メーカー（コータ/デベロッパ・エッチング装置で世界大手）' },
+                { ticker: '6857.T', name: 'アドバンテスト',   desc: '半導体テスト装置メーカー（SoCテスタ・メモリテスタで世界首位級）' },
+                { ticker: '6920.T', name: 'レーザーテック',   desc: 'EUVマスク検査装置の世界唯一のメーカー（半導体微細化の要）' },
+                { ticker: '6146.T', name: 'ディスコ',         desc: '精密加工装置メーカー（ウェハーの切断・研削・研磨装置で世界トップ）' },
+                { ticker: '7735.T', name: 'SCREEN',           desc: '半導体洗浄装置メーカー（ウェハー洗浄で世界トップシェア）' },
+                { ticker: '7729.T', name: '東京精密',         desc: '半導体ウェハー測定・加工装置メーカー（プロービング装置で世界大手）' },
+                { ticker: '6315.T', name: 'TOWA',             desc: '半導体封止装置メーカー（モールディング装置で世界シェア1位）' },
+                { ticker: '6525.T', name: 'KOKUSAI',          desc: '半導体製造装置メーカー（バッチ成膜装置で世界大手）' },
+                { ticker: '285A.T', name: 'キオクシア',       desc: 'NANDフラッシュメモリメーカー（旧東芝メモリ・世界3位）' },
+                { ticker: '6723.T', name: 'ルネサス',         desc: '半導体チップメーカー（車載マイコン・SoC世界首位級）' },
+                { ticker: '6526.T', name: 'ソシオネクスト',   desc: 'ファブレスSoCメーカー（富士通・パナソニック統合のカスタムチップ設計）' },
+                { ticker: '5801.T', name: '古河電工',         desc: '光ファイバ・電線メーカー（半導体パッケージ基板材料も展開）' },
+                { ticker: '5802.T', name: '住友電工',         desc: '電線・光ファイバ大手（化合物半導体・GaN基板も製造）' },
+                { ticker: '5803.T', name: 'フジクラ',         desc: '電線・光ファイバメーカー（FPC・半導体パッケージ基板で成長）' },
+                { ticker: '9984.T', name: 'ソフトバンクG',    desc: '投資会社（ARM親会社・AI半導体投資で半導体セクターに影響大）' },
+            ];
+            const SEMI_US_LIST = [
+                { ticker: '^SOX',  name: 'SOX指数',             desc: 'フィラデルフィア半導体指数（米国半導体30銘柄の時価総額加重指数）' },
+                { ticker: 'NVDA',  name: 'エヌビディア',       desc: 'GPU・AIチップメーカー（データセンターAI向けGPUで世界独占的シェア）' },
+                { ticker: 'AVGO',  name: 'ブロードコム',       desc: '半導体・インフラソフト大手（ネットワークチップ・カスタムAIチップ）' },
+                { ticker: 'AMD',   name: 'AMD',                desc: 'CPU・GPUメーカー（PCプロセッサ・データセンターGPUでNVIDIA対抗）' },
+                { ticker: 'TSM',   name: 'TSMC',               desc: '世界最大の半導体受託製造（ファウンドリ）企業（最先端プロセス独占）' },
+                { ticker: 'ASML',  name: 'ASML',               desc: 'EUV露光装置の世界唯一のメーカー（半導体微細化の最重要装置）' },
+                { ticker: 'INTC',  name: 'インテル',           desc: 'CPU・半導体メーカー（PC/サーバー向けプロセッサ・自社ファウンドリ）' },
+                { ticker: 'ARM',   name: 'アーム',             desc: '半導体IP設計企業（スマホ・IoT・AI向けプロセッサ設計ライセンス）' },
+                { ticker: 'AMAT',  name: 'アプライドマテリアルズ', desc: '半導体製造装置メーカー（成膜・イオン注入・CMP等で世界最大手）' },
+                { ticker: 'LRCX',  name: 'ラムリサーチ',       desc: '半導体製造装置メーカー（エッチング・洗浄装置で世界大手）' },
+                { ticker: 'KLAC',  name: 'KLA',                desc: '半導体検査装置メーカー（ウェハー検査・計測装置で世界トップ）' },
+                { ticker: 'MU',    name: 'マイクロン',         desc: 'DRAMメモリ・NANDフラッシュメーカー（HBMメモリでAI市場に参入）' },
+                { ticker: 'SNDK',  name: 'サンディスク',       desc: 'NANDフラッシュメモリメーカー（WDから分社・コンシューマSSD大手）' },
+                { ticker: 'WDC',   name: 'ウエスタンデジタル', desc: 'HDD・NANDメモリメーカー（データセンター向けストレージ大手）' },
+                { ticker: 'ORCL',  name: 'オラクル',           desc: 'データベース・クラウド大手（AI向けクラウドインフラ急拡大で半導体関連銘柄）' },
+            ];
+            return (
+                <span className="inline-flex items-center">
+                    <span className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+                        <Icon name="HelpCircle" size={13} />
+                    </span>
+                    {open && (
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }} onClick={() => setOpen(false)}>
+                            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.25)' }} onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
+                                    <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                                        <Icon name="HelpCircle" size={18} className="text-[#7C4DFF]" />
+                                        半導体銘柄　構成一覧
+                                    </h3>
+                                    <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"><Icon name="X" size={18} /></button>
+                                </div>
+                                <div className="overflow-y-auto flex-1 px-6 py-3">
+                                    <p className="text-xs font-bold text-[#7C4DFF] border-b border-purple-100 pb-1 mb-2">JP 日本半導体銘柄（16銘柄）</p>
+                                    <table className="w-full border-collapse text-sm mb-4">
+                                        <thead className="sticky top-0 bg-white">
+                                            <tr className="border-b-2 border-slate-100">
+                                                <th className="text-left py-1.5 pr-2 font-bold text-slate-500 w-[12%]">Ticker</th>
+                                                <th className="text-left py-1.5 pr-2 font-bold text-slate-500 w-[18%]">銘柄</th>
+                                                <th className="text-left py-1.5 font-bold text-slate-500">説明</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {SEMI_JP_LIST.map((s, i) => (
+                                                <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                                                    <td className="py-1.5 pr-2 font-mono font-bold text-[#7C4DFF] text-xs">{s.ticker}</td>
+                                                    <td className="py-1.5 pr-2 font-semibold text-slate-700 text-xs">{s.name}</td>
+                                                    <td className="py-1.5 text-slate-500 text-xs">{s.desc}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <p className="text-xs font-bold text-[#7C4DFF] border-b border-purple-100 pb-1 mb-2">US 米国半導体銘柄（15銘柄）</p>
+                                    <table className="w-full border-collapse text-sm">
+                                        <thead className="sticky top-0 bg-white">
+                                            <tr className="border-b-2 border-slate-100">
+                                                <th className="text-left py-1.5 pr-2 font-bold text-slate-500 w-[12%]">Ticker</th>
+                                                <th className="text-left py-1.5 pr-2 font-bold text-slate-500 w-[18%]">銘柄</th>
+                                                <th className="text-left py-1.5 font-bold text-slate-500">説明</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {SEMI_US_LIST.map((s, i) => (
+                                                <tr key={i} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                                                    <td className="py-1.5 pr-2 font-mono font-bold text-[#7C4DFF] text-xs">{s.ticker}</td>
+                                                    <td className="py-1.5 pr-2 font-semibold text-slate-700 text-xs">{s.name}</td>
+                                                    <td className="py-1.5 text-slate-500 text-xs">{s.desc}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+                                    <p className="text-xs text-slate-400">TOPIXで割り返しなし・絶対値表示 / JP: SOX指数(^SOX)を黒点線基準 / US: UTC時刻ベースでNY取引セッションを表示　／　背景クリックで閉じる</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </span>
+            );
+        };
+
         // 全セクター相対パフォーマンス + ランキング（etf.html から移植）
         const FullSectorChart = ({ processedData, period, rawIntraday, rawDaily }) => {
             const [market, setMarket] = useState('jp');
@@ -361,6 +550,11 @@
                     const timeSeries = [];
                     const rankingMap = {};
 
+                    // 基準ライン用シンボル（NASDAQ/SP500先物）
+                    const refSymbols = [
+                        { code: 'NQ=F', name: 'NASDAQ先物' },
+                        { code: 'ES=F', name: 'SP500先物' },
+                    ];
                     filteredIndices.forEach(i => {
                         const point = { date: dates[i] };
                         usSymbols.forEach(sym => {
@@ -373,6 +567,15 @@
                                 const ret = ((sCurrent / sStart) - 1) * 100;
                                 point[name] = ret;
                                 rankingMap[sym] = { symbol: sym, name, performance: ret };
+                            }
+                        });
+                        refSymbols.forEach(ref => {
+                            const rPrices = prices[ref.code];
+                            if (!rPrices) return;
+                            const rStart = rPrices[startIdx];
+                            const rCurrent = rPrices[i];
+                            if (rStart && rCurrent && rStart !== 0) {
+                                point[ref.name] = ((rCurrent / rStart) - 1) * 100;
                             }
                         });
                         timeSeries.push(point);
@@ -394,6 +597,10 @@
                             if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
                         }
                     }
+                    const refSymbolsD = [
+                        { code: 'NQ=F', name: 'NASDAQ先物' },
+                        { code: 'ES=F', name: 'SP500先物' },
+                    ];
                     const timeSeries = [];
                     const rankingMap = {};
                     for (let i = startIndex; i < L; i++) {
@@ -408,6 +615,15 @@
                                 const ret = ((sCurrent / sStart) - 1) * 100;
                                 point[name] = ret;
                                 rankingMap[sym] = { symbol: sym, name, performance: ret };
+                            }
+                        });
+                        refSymbolsD.forEach(ref => {
+                            const rPrices = prices[ref.code];
+                            if (!rPrices) return;
+                            const rStart = rPrices[startIndex];
+                            const rCurrent = rPrices[i];
+                            if (rStart && rCurrent && rStart !== 0) {
+                                point[ref.name] = ((rCurrent / rStart) - 1) * 100;
                             }
                         });
                         timeSeries.push(point);
@@ -475,20 +691,29 @@
                 navigator.clipboard.writeText(text).then(() => alert('サマリーをクリップボードにコピーしました。'));
             }, [activeRanking, period, market]);
 
-            // US用: ticker→日本語名の逆引き
+            // US用: 日本語名(ティッカー) の表示
             const getDisplayName = (item) => {
+                if (market === 'us') {
+                    const name = US_SECTORS[item.symbol] || item.name;
+                    return `${name}（${item.symbol}）`;
+                }
+                return item.name;
+            };
+            // US用: チャートtrace名（短い名前）
+            const getChartName = (item) => {
                 if (market === 'us') return US_SECTORS[item.symbol] || item.name;
                 return item.name;
             };
 
             const chartTraces = useMemo(() => {
                 if (!activeRanking.length || !activeTimeSeries.length) return [];
+                const traces = [];
                 if (market === 'jp') {
-                    return activeRanking.map((item, i) => {
+                    activeRanking.forEach((item, i) => {
                         const sym = processedData?.nameToSymbol?.[item.name] || '';
                         const isNikkei = item.name === NIKKEI_NAME;
                         const isETF = sym.endsWith('.T') || sym.startsWith('^') || sym.includes('=');
-                        return {
+                        traces.push({
                             x: activeTimeSeries.map(d => d.date),
                             y: activeTimeSeries.map(d => d[item.name] ?? null),
                             type: 'scatter', mode: 'lines', name: item.name,
@@ -499,23 +724,41 @@
                                 dash: isNikkei ? 'dot' : 'solid',
                             },
                             hovertemplate: (isETF && sym)
-                                ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${sym})</span><br>%{y:.2f}%<extra></extra>`
+                                ? `<b>%{fullData.name}</b> <span style="color:white;font-size:10px">(${sym})</span><br>%{y:.2f}%<extra></extra>`
                                 : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
-                        };
+                        });
                     });
                 } else {
-                    return activeRanking.map((item, i) => {
-                        const displayName = getDisplayName(item);
-                        return {
+                    activeRanking.forEach((item, i) => {
+                        const chartName = getChartName(item);
+                        traces.push({
                             x: activeTimeSeries.map(d => d.date),
                             y: activeTimeSeries.map(d => d[item.name] ?? null),
-                            type: 'scatter', mode: 'lines', name: displayName,
+                            type: 'scatter', mode: 'lines', name: chartName,
                             visible: visibleSectors.has(item.name),
                             line: { color: COLORS[i % COLORS.length], width: 2 },
-                            hovertemplate: `<b>${displayName}</b> <span style="color:#7C4DFF;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
-                        };
+                            hovertemplate: `<b>${chartName}</b> <span style="color:white;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
+                        });
+                    });
+                    // NASDAQ/SP500 基準ライン追加
+                    const refLines = [
+                        { key: 'NASDAQ先物', code: 'NQ=F', color: '#2563eb', dash: 'dot' },
+                        { key: 'SP500先物', code: 'ES=F', color: '#dc2626', dash: 'dashdot' },
+                    ];
+                    refLines.forEach(ref => {
+                        if (activeTimeSeries.some(d => d[ref.key] !== undefined)) {
+                            traces.push({
+                                x: activeTimeSeries.map(d => d.date),
+                                y: activeTimeSeries.map(d => d[ref.key] ?? null),
+                                type: 'scatter', mode: 'lines', name: ref.key,
+                                visible: true,
+                                line: { color: ref.color, width: 1.5, dash: ref.dash },
+                                hovertemplate: `<b>${ref.key}</b> <span style="color:white;font-size:10px">(${ref.code})</span><br>%{y:.2f}%<extra></extra>`,
+                            });
+                        }
                     });
                 }
+                return traces;
             }, [activeRanking, activeTimeSeries, visibleSectors, market, processedData]);
 
             // Rangebreaks
@@ -547,8 +790,11 @@
                     <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex items-center gap-2">
                         <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
                         {titleLabel}
-                        {market === 'jp' && <FullSectorLegend />}
-                        <div className="flex gap-1.5 ml-auto">
+                        {market === 'jp' ? <FullSectorLegend /> : <USSectorLegend />}
+                        <div className="flex items-center gap-1.5 ml-auto">
+                            <span className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors" onClick={copySummary} title="サマリーをコピー">
+                                <Icon name="Copy" size={14} />
+                            </span>
                             <button
                                 onClick={() => setMarket('jp')}
                                 className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
@@ -651,15 +897,6 @@
                                         </div>
                                     );
                                 })}
-                            </div>
-                            <div className="mt-2 pt-2 border-t border-slate-200 shrink-0">
-                                <button
-                                    onClick={copySummary}
-                                    className="w-full flex items-center justify-center gap-2 bg-[#7C4DFF] hover:bg-[#651FFF] text-white py-2 rounded-lg font-bold text-xs transition-all shadow-sm"
-                                >
-                                    <Icon name="Copy" size={13} />
-                                    サマリーをコピー
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -833,7 +1070,7 @@
                         type: 'scatter', mode: 'lines', name: item.name,
                         line: { color: COLORS[i % COLORS.length], width: 1.5 },
                         hovertemplate: code
-                            ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${code})</span><br>%{y:.2f}%<extra></extra>`
+                            ? `<b>%{fullData.name}</b> <span style="color:white;font-size:10px">(${code})</span><br>%{y:.2f}%<extra></extra>`
                             : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
                     };
                 });
@@ -842,7 +1079,7 @@
                     y: processedData.timeSeries.map(d => d[NIKKEI_NAME] ?? null),
                     type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
                     line: { color: NIKKEI_COLOR, width: 2, dash: 'dot' },
-                    hovertemplate: `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(^N225)</span><br>%{y:.2f}%<extra></extra>`,
+                    hovertemplate: `<b>%{fullData.name}</b> <span style="color:white;font-size:10px">(^N225)</span><br>%{y:.2f}%<extra></extra>`,
                 });
                 return traces;
             }, [processedData, selected, nikkeiEntry]);
@@ -1185,7 +1422,7 @@
                         visible: !hiddenTraces.has(item.name),
                         line: { color: COLORS[i % COLORS.length], width: 2 },
                         hovertemplate: code
-                            ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${code})</span><br>%{y:.2f}%<extra></extra>`
+                            ? `<b>%{fullData.name}</b> <span style="color:white;font-size:10px">(${code})</span><br>%{y:.2f}%<extra></extra>`
                             : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
                     };
                 });
@@ -1198,7 +1435,7 @@
                             type: 'scatter', mode: 'lines', name: ref.name,
                             visible: !hiddenTraces.has(ref.name),
                             line: { color: ref.color, width: ref.width, dash: ref.dash },
-                            hovertemplate: `<b>%{fullData.name}</b> <span style="color:#64748b;font-size:10px">(${ref.code})</span><br>%{y:.2f}%<extra></extra>`,
+                            hovertemplate: `<b>%{fullData.name}</b> <span style="color:white;font-size:10px">(${ref.code})</span><br>%{y:.2f}%<extra></extra>`,
                         });
                     });
                 }
@@ -1211,7 +1448,7 @@
                         type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
                         visible: !hiddenTraces.has(NIKKEI_NAME),
                         line: { color: NIKKEI_COLOR, width: 2, dash: 'dot' },
-                        hovertemplate: `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(^N225)</span><br>%{y:.2f}%<extra></extra>`,
+                        hovertemplate: `<b>%{fullData.name}</b> <span style="color:white;font-size:10px">(^N225)</span><br>%{y:.2f}%<extra></extra>`,
                     });
                 }
                 return traces;
@@ -1566,7 +1803,7 @@
                         y: activeTimeSeries.map(d => d[item.name] ?? null),
                         type: 'scatter', mode: 'lines', name: displayName,
                         line: { color: COLORS[i % COLORS.length], width: 1.5 },
-                        hovertemplate: `<b>${displayName}</b> <span style="color:#7C4DFF;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
+                        hovertemplate: `<b>${displayName}</b> <span style="color:white;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
                     };
                 });
                 // 米国株モード時: SOX指数を基準ラインとして追加（黒点線）
@@ -1606,6 +1843,7 @@
                         <h3 className="text-[13px] font-bold text-[#7C4DFF] flex items-center gap-2">
                             <Icon name="PieChart" size={14} />
                             半導体銘柄（絶対値）
+                            <SemiconductorLegend />
                         </h3>
                         <div className="flex items-center gap-1">
                             <button
