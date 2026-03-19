@@ -1137,20 +1137,133 @@
         };
 
         // 半導体銘柄カード（日米切り替えトグル付き）
-        const SemiconductorSection = ({ processedData }) => {
+        const SemiconductorSection = ({ processedData, rawIntraday, rawDaily, period }) => {
             const [market, setMarket] = useState('jp');
 
             const symbolMap = market === 'jp' ? SEMICONDUCTOR_JP : SEMICONDUCTOR_US;
             const symbolKeys = Object.keys(symbolMap);
 
-            // 絶対値ランキング（TOPIX差引なし）でフィルタ — symbolで突合
-            const catRanking = useMemo(() => {
-                if (!processedData) return [];
-                const src = processedData.absoluteRanking;
-                return src
+            // === 日本株モード: processedDataの絶対値データを使用 ===
+            const jpData = useMemo(() => {
+                if (market !== 'jp' || !processedData) return null;
+                const ranking = processedData.absoluteRanking
                     .filter(r => symbolKeys.includes(r.symbol))
                     .sort((a, b) => b.performance - a.performance);
+                return {
+                    ranking,
+                    timeSeries: processedData.absoluteTimeSeries,
+                    isIntraday: processedData.isIntraday,
+                };
             }, [processedData, market]);
+
+            // === 米国株モード: rawデータからUTCベースで独立計算 ===
+            const usData = useMemo(() => {
+                if (market !== 'us') return null;
+                const wantIntraday = ['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d'].includes(period);
+                const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
+                    && rawIntraday.dates[0].includes(' ');
+                const isIntraday = wantIntraday && intradayAvailable;
+                const rawData = isIntraday ? rawIntraday : rawDaily;
+                if (!rawData) return null;
+
+                const { dates, prices, sectors } = rawData;
+                const usSymbols = Object.keys(SEMICONDUCTOR_US);
+
+                if (isIntraday) {
+                    // UTC時刻のまま処理（JST変換しない）
+                    // 米国取引時間: UTC 13:00-20:00 を含むタイムスタンプを抽出
+                    const usTradingIndices = [];
+                    dates.forEach((d, i) => {
+                        const parts = d.split(' ');
+                        if (parts.length < 2) return;
+                        const hour = parseInt(parts[1].split(':')[0], 10);
+                        // UTC 13-20時 = ET 9-16時（サマータイム時はUTC 13:30-20:00）
+                        if (hour >= 13 && hour < 21) {
+                            usTradingIndices.push(i);
+                        }
+                    });
+
+                    if (usTradingIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+
+                    // 取引セッション日を特定（UTC日付ベース）
+                    const sessionDates = [...new Set(usTradingIndices.map(i => dates[i].split(' ')[0]))];
+                    const daysAgo = parseInt(period.replace('d', '')) || 1;
+                    const targetDateStr = sessionDates[Math.max(0, sessionDates.length - daysAgo)];
+
+                    // targetDate以降のUS取引時間インデックスのみ使用
+                    const filteredIndices = usTradingIndices.filter(i => dates[i] >= targetDateStr);
+                    if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+
+                    const startIdx = filteredIndices[0];
+
+                    // 時系列計算（UTCタイムスタンプをそのまま使用）
+                    const timeSeries = [];
+                    const rankingMap = {};
+
+                    filteredIndices.forEach(i => {
+                        const point = { date: dates[i] };
+                        usSymbols.forEach(sym => {
+                            const name = SEMICONDUCTOR_US[sym];
+                            const sPrices = prices[sym];
+                            if (!sPrices) return;
+                            const sStart = sPrices[startIdx];
+                            const sCurrent = sPrices[i];
+                            if (sStart && sCurrent && sStart !== 0) {
+                                const ret = ((sCurrent / sStart) - 1) * 100;
+                                point[name] = ret;
+                                rankingMap[sym] = { symbol: sym, name, performance: ret };
+                            }
+                        });
+                        timeSeries.push(point);
+                    });
+
+                    const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
+                    return { ranking, timeSeries, isIntraday: true };
+
+                } else {
+                    // 日次データ: 期間に応じてstartIndex計算
+                    const L = dates.length;
+                    let startIndex = 0;
+                    if (period.endsWith('d')) {
+                        const days = parseInt(period.replace('d', ''), 10);
+                        startIndex = Math.max(0, L - Math.max(days + 1, 3));
+                    } else {
+                        const daysAgo = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 }[period] || 30;
+                        const latest = new Date(dates[L - 1]);
+                        const target = new Date(latest.getTime() - daysAgo * 86400000).getTime();
+                        for (let i = L - 1; i >= 0; i--) {
+                            if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
+                        }
+                    }
+
+                    const timeSeries = [];
+                    const rankingMap = {};
+                    for (let i = startIndex; i < L; i++) {
+                        const point = { date: dates[i] };
+                        usSymbols.forEach(sym => {
+                            const name = SEMICONDUCTOR_US[sym];
+                            const sPrices = prices[sym];
+                            if (!sPrices) return;
+                            const sStart = sPrices[startIndex];
+                            const sCurrent = sPrices[i];
+                            if (sStart && sCurrent && sStart !== 0) {
+                                const ret = ((sCurrent / sStart) - 1) * 100;
+                                point[name] = ret;
+                                rankingMap[sym] = { symbol: sym, name, performance: ret };
+                            }
+                        });
+                        timeSeries.push(point);
+                    }
+                    const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
+                    return { ranking, timeSeries, isIntraday: false };
+                }
+            }, [rawIntraday, rawDaily, period, market]);
+
+            // 統合データ
+            const activeData = market === 'jp' ? jpData : usData;
+            const catRanking = activeData ? activeData.ranking : [];
+            const activeTimeSeries = activeData ? activeData.timeSeries : [];
+            const isIntraday = activeData ? activeData.isIntraday : false;
 
             const maxAbsPerf = useMemo(() => {
                 if (!catRanking.length) return 1;
@@ -1158,7 +1271,7 @@
                 return max === 0 ? 1 : max;
             }, [catRanking]);
 
-            const noData = !processedData || catRanking.length === 0;
+            const noData = catRanking.length === 0;
 
             // トグル状態
             const [hiddenTraces, setHiddenTraces] = useState(new Set());
@@ -1169,24 +1282,24 @@
             // 表示名をシンボル(ticker)から引き当て
             const getDisplayName = (item) => symbolMap[item.symbol] || item.name;
 
-            // チャートデータ — absoluteTimeSeries を使用（TOPIX差引なし）
+            // チャートデータ
             const chartTraces = useMemo(() => {
-                if (!processedData || !catRanking.length) return [];
+                if (!catRanking.length || !activeTimeSeries.length) return [];
                 return catRanking.map((item, i) => {
                     const displayName = getDisplayName(item);
                     return {
-                        x: processedData.absoluteTimeSeries.map(d => d.date),
-                        y: processedData.absoluteTimeSeries.map(d => d[item.name] ?? null),
+                        x: activeTimeSeries.map(d => d.date),
+                        y: activeTimeSeries.map(d => d[item.name] ?? null),
                         type: 'scatter', mode: 'lines', name: displayName,
                         line: { color: COLORS[i % COLORS.length], width: 1.5 },
                         hovertemplate: `<b>${displayName}</b> <span style="color:#7C4DFF;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
                     };
                 });
-            }, [processedData, catRanking, market]);
+            }, [activeTimeSeries, catRanking, market]);
 
             // Rangebreaks設定
             const rangebreaks = useMemo(() => {
-                if (!processedData || !processedData.isIntraday) return [{ bounds: ["sat","mon"] }];
+                if (!isIntraday) return [{ bounds: ["sat","mon"] }];
                 if (market === 'jp') {
                     return [
                         { bounds: ["sat","mon"] },
@@ -1199,7 +1312,7 @@
                         { bounds: [20, 13.5], pattern: "hour" }
                     ];
                 }
-            }, [processedData, market]);
+            }, [isIntraday, market]);
 
             return (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
@@ -1683,7 +1796,7 @@
                                         />
                                     ))}
                                     {/* 半導体銘柄カード（日米切り替えトグル付き）— 金融・内需系の上 */}
-                                    <SemiconductorSection processedData={processedData} />
+                                    <SemiconductorSection processedData={processedData} rawIntraday={rawIntraday} rawDaily={rawDaily} period={period} />
                                     {/* 残りのカテゴリ分類チャート */}
                                     {CATEGORIES.filter(c => c.id !== 'scale' && c.id !== 'market' && c.id !== 'smallcap').map(category => (
                                         <CategorySection
