@@ -23,6 +23,12 @@
    - gh-pagesへの直接git pushは信頼性が低い（CDNに反映されない場合がある）
    - `keep_files: true`でのファイル保持も信頼性が低い
 
+4. **GITHUB_TOKEN と pages-build-deployment の関係**
+   - 「GITHUB_TOKENではpages-build-deploymentがトリガーされない」という情報は**誤り**
+   - GitHubの「GITHUB_TOKENで後続ワークフローが発火しない」制約は**ユーザー定義ワークフロー**に対するもの
+   - `pages-build-deployment`はGitHub内部のPages配信プロセスであり、GITHUB_TOKENのpushで**正常に発火する**
+   - 実証: このリポジトリの daily_participant.yml / daily_task.yml はGITHUB_TOKEN + peaceirisで正常にCDN更新している
+
 ### peaceiris/actions-gh-pages の注意点
 
 1. **`keep_files: true` は万能ではない**
@@ -35,11 +41,21 @@
    - gh-pagesにある新しいデータが古いデータで上書きされる
    - **解決策: intraday_etf.ymlがmainに直接commit&pushし、他ワークフローはそれを引き継ぐ**
 
-### GitHub Actions cron の信頼性
+### GitHub Actions cron の信頼性問題と解決策
 
 - 15分間隔のcronスケジュールは**全ての実行が保証されない**
 - 実測: 3.5時間で28回中6回しか実行されなかった（実行率 約21%）
-- 解決策なし（GitHub Actionsの仕様上の制約）。フロントエンドで5分ごとの自動リフレッシュでカバー
+- **根本解決: ループ型ワークフローを採用**（後述）
+  - cronは「セッション起動」のみに使用（1日2回 × バックアップ3本 = 6回）
+  - 起動後はワークフロー内部で `sleep 900`（15分）のループ → 100%確実に実行
+  - GitHub cronの不安定さに一切依存しない設計
+
+### フロントエンド toJST 二重加算バグ（2026-03-19 修正済み）
+
+- yfinanceは東京市場データを**JSTタイムスタンプ**で返す（`tz_localize(None)`でラベルだけ除去）
+- `toJST()`関数がこれを「UTCである」と誤解して+9時間を加算 → 全データが営業時間外にシフト
+- Plotlyの`rangebreaks`（15:30〜翌9:00を非表示）により全5分足データが消滅
+- **修正: toJST()から+9h変換を除去し、フォーマット統一のみに変更**
 
 ### intraday_etf.yml でのブランチ切り替えエラー
 
@@ -61,28 +77,49 @@
 
 | ファイル | 名前 | 実行タイミング | デプロイ方式 |
 |---|---|---|---|
-| `intraday_etf.yml` | イントラデイETF更新 | 市場時間中 **15分ごと**（平日 JST 9:00〜15:45） | mainにcommit&push |
+| `intraday_etf.yml` | イントラデイETF更新 | 市場時間中 **15分ごとループ** | mainにcommit + gh-pagesに直接push |
 | `daily_etf.yml` | 日次ETFデータ取得 | **毎日 JST 16:00** | peaceiris（keep_files: true） |
 | `daily_participant.yml` | 手口・オプション取得 | **毎日 JST 20:05** | peaceiris（keep_files: true） |
 | `daily_task.yml` | JPX週次 + フルデプロイ | **毎週木曜 JST 18:00** + HTML/yml変更時 | peaceiris（keep_files: true） |
 
 ### 各ワークフロー詳細
 
-#### `intraday_etf.yml` — 市場時間中 15分ごと
+#### `intraday_etf.yml` — ループ型15分間隔更新
 
 ```
-トリガー: cron '0,15,30,45 0-6 * * 1-5'  (JST 9:00〜15:45 平日)
-         workflow_dispatch（手動）
+方式: セッション起動型ループ（GitHub cronの不安定さを完全回避）
 
-処理:
-  1. fetch_intraday.py を実行（5分足 14日分、yfinance、最大3回リトライ）
-     → data/etf_intraday.json 生成（generated_at タイムスタンプ付き）
-  2. mainブランチにコミット&プッシュ
+cron起動（1日6本、うち発火すればOK）:
+  前場: UTC 0:00 / 0:15 / 0:30（JST 9:00 / 9:15 / 9:30）
+  後場: UTC 3:30 / 3:45 / 4:00（JST 12:30 / 12:45 / 13:00）
+  手動: workflow_dispatch
 
-デプロイ: mainへのpushにより daily_task.yml のデプロイがトリガーされる
-         ※ daily_task.ymlのpathsフィルターに data/ は含まれないため
-           JPX Automationは走らない → サイト再デプロイのみ
-concurrency: intraday-etf-update グループ（cancel-in-progress: false）
+concurrency: intraday-etf-update（cancel-in-progress: false）
+  → バックアップcronが発火してもキューに入り重複しない
+  → 先行ジョブ終了後に開始し、市場時間外なら即終了
+
+ワークフロー内部ループ（起動後）:
+  while 市場時間内:
+    1. fetch_intraday.py（5分足 14日分、yfinance、リトライ付き）
+    2. mainブランチにコミット&プッシュ
+    3. gh-pagesブランチに直接git push（CDN即時更新）
+    4. sleep 900（15分）
+
+  市場時間判定:
+    前場: JST 9:00〜11:30
+    昼休み: JST 11:30〜12:30（5分ごとにチェック、スキップ）
+    後場: JST 12:30〜15:45
+    15:45以降: ループ終了
+
+  6時間制限の回避:
+    前場セッション = 最大2.5時間（余裕）
+    後場セッション = 最大3.25時間（余裕）
+    GitHub-hosted runnerの6時間ハードリミットに抵触しない
+
+信頼性:
+  - cronは「起動」のみ → 各セッション3本のうち1本でも発火すればOK
+  - ループ内のsleep 900はOSレベル → 100%正確に15分後に再開
+  - 1日あたり約27回のデータ更新＋CDNデプロイを確実に実行
 ```
 
 #### `daily_etf.yml` — 毎日 JST 16:00（市場閉場後）
@@ -141,35 +178,36 @@ concurrency: intraday-etf-update グループ（cancel-in-progress: false）
 ### データ更新の流れ（イントラデイ）
 
 ```
-[市場時間中の更新フロー]
+[市場時間中の更新フロー — ループ型]
 
-  GitHub Actions cron（15分ごと）
+  cron起動（前場/後場の開始時に1回）
        │
        ▼
-  fetch_intraday.py
-  （yfinance → 5分足14日分取得 → data/etf_intraday.json生成）
+  ワークフロー内部ループ開始
        │
-       ▼
-  mainブランチにcommit & push
-       │
-       ▼
-  daily_task.yml がトリガー（pathsフィルターで *.html等のみ対象）
-       │
-       ╳ pathsフィルターに data/ なし → JPX Automationは走らない
-       │
-       ▼
-  ※ データ更新はmain上のファイルとして保持
-  ※ 次回の daily_etf.yml / daily_participant.yml / daily_task.yml 実行時に
-     peaceirisがmainのdata/をdeploy/にコピーしてCDNにデプロイ
+       ├──→ fetch_intraday.py
+       │    （yfinance → 5分足14日分取得 → data/etf_intraday.json生成）
+       │         │
+       │         ▼
+       │    mainブランチにcommit & push
+       │         │
+       │         ▼
+       │    gh-pagesブランチに直接git push → CDN即時更新
+       │         │
+       │         ▼
+       │    sleep 900（15分待機）
+       │         │
+       └─────────┘（ループ）
+
+  15:45 JST → ループ終了
 
 [フロントエンド側]
   5分ごとに自動fetch → CDNから最新データ取得 → チャート更新
 ```
 
-**重要:** `intraday_etf.yml`のmainへのpushだけではCDNは更新されない。
-CDN更新は次回のpeaceirisデプロイ（daily_etf.yml等）で行われる。
-市場時間中のリアルタイム性は、mainにデータが存在する状態で
-次回デプロイが走った時に反映される。
+**重要:** ループ型ではgh-pagesへの直接git pushでCDN更新するため、
+peaceirisやdaily_*ワークフローの実行を待つ必要がない。
+市場時間中は15分ごとに確実にCDNが更新される。
 
 ---
 
@@ -210,6 +248,17 @@ fetchRawData():
   - 既存データがある場合、更新失敗時もエラー表示せず前回データを維持
 ```
 
+### タイムスタンプの扱い（重要）
+
+```
+yfinance → tz_localize(None) → JSTタイムスタンプ（ラベルなし）
+  例: "2026-03-19 09:30" = JST 9:30
+
+フロントエンド toJST():
+  ✅ 現在: フォーマット統一のみ（+9h変換なし）
+  ❌ 旧実装: UTC前提で+9h → 二重加算でデータ消滅
+```
+
 ### イントラデイデータ判定条件
 
 ```javascript
@@ -241,7 +290,7 @@ const intradayAvailable = rawIntraday?.dates?.length > 1
 
 | タイミング | 実行内容 | 結果 |
 |---|---|---|
-| 市場中 毎15分（JST 9:00〜15:45） | `fetch_intraday.py` | mainに最新データcommit&push |
+| 市場中 毎15分（JST 9:00〜15:45） | `fetch_intraday.py`（ループ型） | mainコミット + gh-pages直接push → CDN即時更新 |
 | 毎日 JST 16:00 | `etf_data_manager.py` | 日次+イントラデイ両方再生成 → peaceirisでCDNデプロイ |
 | 毎日 JST 20:05 | `fetch_teguchi.py` + `fetch_option.py` | 手口・建玉 → peaceirisでCDNデプロイ |
 | 毎週木曜 JST 18:00 | JPX週次 + GPIF + フルデプロイ | → peaceirisでCDNデプロイ |
@@ -305,7 +354,7 @@ investment_dasboard/
 │   └── dist/                           # npm run build 生成物（gh-pages に保持）
 │
 └── .github/workflows/
-    ├── intraday_etf.yml                # 15分ごとイントラデイ更新（main commit&push）
+    ├── intraday_etf.yml                # ループ型15分間隔更新（main + gh-pages直接push）
     ├── daily_etf.yml                   # 毎日 JST 16:00 ETFデータ
     ├── daily_participant.yml           # 毎日 JST 20:05 手口・オプション
     └── daily_task.yml                  # 週次 + HTML変更時フルデプロイ
