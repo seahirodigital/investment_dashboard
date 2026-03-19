@@ -1140,14 +1140,16 @@
         const SemiconductorSection = ({ processedData }) => {
             const [market, setMarket] = useState('jp');
 
-            const symbols = market === 'jp' ? Object.keys(SEMICONDUCTOR_JP) : Object.keys(SEMICONDUCTOR_US);
-            const symbolNames = market === 'jp' ? SEMICONDUCTOR_JP : SEMICONDUCTOR_US;
+            const symbolMap = market === 'jp' ? SEMICONDUCTOR_JP : SEMICONDUCTOR_US;
+            const symbolKeys = Object.keys(symbolMap);
 
+            // 絶対値ランキング（TOPIX差引なし）でフィルタ — symbolで突合
             const catRanking = useMemo(() => {
                 if (!processedData) return [];
-                const src = processedData.ranking;
-                const filtered = src.filter(r => symbols.includes(r.symbol || r.name));
-                return filtered.sort((a, b) => b.performance - a.performance);
+                const src = processedData.absoluteRanking;
+                return src
+                    .filter(r => symbolKeys.includes(r.symbol))
+                    .sort((a, b) => b.performance - a.performance);
             }, [processedData, market]);
 
             const maxAbsPerf = useMemo(() => {
@@ -1164,27 +1166,27 @@
                 setHiddenTraces(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
             }, []);
 
-            // チャートデータ
+            // 表示名をシンボル(ticker)から引き当て
+            const getDisplayName = (item) => symbolMap[item.symbol] || item.name;
+
+            // チャートデータ — absoluteTimeSeries を使用（TOPIX差引なし）
             const chartTraces = useMemo(() => {
                 if (!processedData || !catRanking.length) return [];
                 return catRanking.map((item, i) => {
-                    const name = item.name || item.symbol;
-                    const displayName = symbolNames[name] || name;
+                    const displayName = getDisplayName(item);
                     return {
-                        x: processedData.timeSeries.map(d => d.date),
-                        y: processedData.timeSeries.map(d => d[name] ?? null),
+                        x: processedData.absoluteTimeSeries.map(d => d.date),
+                        y: processedData.absoluteTimeSeries.map(d => d[item.name] ?? null),
                         type: 'scatter', mode: 'lines', name: displayName,
                         line: { color: COLORS[i % COLORS.length], width: 1.5 },
-                        hovertemplate: `<b>${displayName}</b> <span style="color:#7C4DFF;font-size:10px">(${name})</span><br>%{y:.2f}%<extra></extra>`,
+                        hovertemplate: `<b>${displayName}</b> <span style="color:#7C4DFF;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
                     };
                 });
             }, [processedData, catRanking, market]);
 
             // Rangebreaks設定
             const rangebreaks = useMemo(() => {
-                if (!processedData.isIntraday) return [{ bounds: ["sat","mon"] }];
-                // 日本株: 15:30-9:00 + 11:30-12:30 を除外
-                // 米国株: NY時間（ET）外を除外 — UTC換算で20:00-13:30を除外
+                if (!processedData || !processedData.isIntraday) return [{ bounds: ["sat","mon"] }];
                 if (market === 'jp') {
                     return [
                         { bounds: ["sat","mon"] },
@@ -1194,10 +1196,10 @@
                 } else {
                     return [
                         { bounds: ["sat","mon"] },
-                        { bounds: [20, 13.5], pattern: "hour" }  // NY時間（ET）外
+                        { bounds: [20, 13.5], pattern: "hour" }
                     ];
                 }
-            }, [processedData.isIntraday, market]);
+            }, [processedData, market]);
 
             return (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
@@ -1222,7 +1224,7 @@
                                 onClick={() => setMarket('us')}
                                 className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
                                     market === 'us'
-                                        ? 'bg-blue-500 text-white shadow-sm'
+                                        ? 'bg-[#7C4DFF] text-white shadow-sm'
                                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                 }`}
                             >
@@ -1273,10 +1275,9 @@
                                 <div className="space-y-1.5">
                                     {catRanking.map((item, index) => {
                                         const isPositive = item.performance >= 0;
-                                        const name = item.name || item.symbol;
-                                        const displayName = symbolNames[name] || name;
+                                        const displayName = getDisplayName(item);
                                         return (
-                                            <div key={name} className="relative group h-8 flex items-center">
+                                            <div key={item.symbol} className="relative group h-8 flex items-center">
                                                 <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
                                                     <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
                                                     <div className="w-1/2 flex justify-end">
@@ -1313,10 +1314,9 @@
                     {!noData && (
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
                             {catRanking.map((item, i) => {
-                                const name = item.name || item.symbol;
-                                const displayName = symbolNames[name] || name;
+                                const displayName = getDisplayName(item);
                                 return (
-                                    <div key={name}
+                                    <div key={item.symbol}
                                         className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(displayName) ? 'opacity-25' : 'hover:opacity-70'}`}
                                         onClick={() => toggleTrace(displayName)}
                                     >
@@ -1674,16 +1674,24 @@
                                     ))}
                                     {/* 全セクター相対パフォーマンス + ランキング（etf.htmlから移植） */}
                                     <FullSectorChart processedData={processedData} period={period} />
-                                    {/* その他カテゴリ分類チャート */}
-                                    {CATEGORIES.filter(c => c.id !== 'scale' && c.id !== 'market').map(category => (
+                                    {/* 非鉄金属・半導体・機械・建設・資材・中小型 */}
+                                    {CATEGORIES.filter(c => c.id === 'smallcap').map(category => (
                                         <CategorySection
                                             key={category.id}
                                             category={category}
                                             processedData={processedData}
                                         />
                                     ))}
-                                    {/* 半導体銘柄カード（日米切り替えトグル付き） */}
+                                    {/* 半導体銘柄カード（日米切り替えトグル付き）— 金融・内需系の上 */}
                                     <SemiconductorSection processedData={processedData} />
+                                    {/* 残りのカテゴリ分類チャート */}
+                                    {CATEGORIES.filter(c => c.id !== 'scale' && c.id !== 'market' && c.id !== 'smallcap').map(category => (
+                                        <CategorySection
+                                            key={category.id}
+                                            category={category}
+                                            processedData={processedData}
+                                        />
+                                    ))}
                                 </div>
                             )}
                         </div>
