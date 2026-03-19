@@ -3,6 +3,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      # HTMLやCSS/JSの変更時のみデプロイ（データ更新コミットでは不要）
+      - '*.html'
+      - 'css/**'
+      - 'js/**'
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       debug_mode:
@@ -87,10 +93,16 @@ jobs:
           echo "✅ GPIF build 完了"
           ls dist/
 
+      - name: ETFデータを最新取得（デプロイ前に必ず実行）
+        run: |
+          pip install yfinance pandas pytz
+          python3 scripts/market/fetch_intraday.py || echo "⚠️ イントラデイ取得失敗（日次データで代替）"
+          python3 scripts/market/etf_data_manager.py || echo "⚠️ ETFデータ取得失敗"
+
       - name: Prepare deployment files
         run: |
           mkdir -p deploy
-          
+
           # ファイルの存在確認とコピー（ログ出力付き）
           for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html; do
             if [ -f "$file" ]; then
@@ -100,21 +112,24 @@ jobs:
               echo "⚠️ Warning: $file not found"
             fi
           done
-          
+
           # フォルダコピー
           [ -d css ] && cp -r css deploy/
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
-          # gh-pages の最新 intraday データで上書き（main ブランチの古いデータより優先）
-          # intraday_etf.yml が直接 gh-pages を更新しているため、そちらを使う
-          git fetch origin gh-pages 2>/dev/null || true
-          git show origin/gh-pages:data/etf_intraday_data.json > deploy/data/etf_intraday_data.json 2>/dev/null \
-            && echo "✅ gh-pages の最新 intraday データを使用" \
-            || echo "⚠️ intraday データ取得失敗、main ブランチのデータを使用"
 
           # GPIFの静的ビルドファイルをデプロイ用にコピー
           mkdir -p deploy/GPIF
           [ -d GPIF/dist ] && cp -r GPIF/dist deploy/GPIF/
+
+          # gh-pages の GPIF/dist を保持（ビルドが無い場合のフォールバック）
+          if [ ! -f deploy/GPIF/dist/index.html ]; then
+            git fetch origin gh-pages 2>/dev/null || true
+            git show origin/gh-pages:GPIF/dist/index.html > /dev/null 2>&1 \
+              && git archive origin/gh-pages GPIF/dist/ | tar -x -C deploy/ \
+              && echo "✅ gh-pages の GPIF/dist を保持" \
+              || echo "⚠️ GPIF/dist 取得失敗"
+          fi
           
           echo "Deploy directory content:"
           ls -laR deploy/
