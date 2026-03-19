@@ -153,7 +153,7 @@
                 { name: 'DOW先物',      type: '指数',      code: 'YM=F (CME E-mini Dow Jones Industrial Average先物)' },
                 { name: 'NASDAQ先物',    type: '指数',      code: 'NQ=F (CME NASDAQ 100先物)' },
                 { name: 'SP500先物',     type: '指数',      code: 'ES=F (CME S&P 500先物)' },
-                { name: '参考ライン',    type: '指数',      code: '日経指数(^N225) / TOPIX(1306.T) / 半導体ETF(2644.T)　— TOPIXで割り返しなし・絶対値表示' },
+                { name: '参考ライン',    type: '指数',      code: '日経指数(^N225) / TOPIX(1306.T) / 半導体ETF(2644.T) / SOX指数(^SOX)　— TOPIXで割り返しなし・絶対値表示' },
             ],
         };
 
@@ -912,6 +912,7 @@
                 { name: 'SP500先物',  color: '#dc2626', width: 1.5, dash: 'solid',  code: 'ES=F' },
                 { name: 'DOW先物',    color: '#16a34a', width: 1.5, dash: 'solid',  code: 'YM=F' },
                 { name: '半導体ETF',  color: '#d97706', width: 1.5, dash: 'dash',   code: '2644.T' },
+                { name: 'SOX指数',    color: '#a855f7', width: 1.5, dash: 'solid',  code: '^SOX' },
             ] : [];
 
             const catRanking = useMemo(() => {
