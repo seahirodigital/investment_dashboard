@@ -4,43 +4,88 @@
 
 ---
 
-## GitHub Actions ワークフロー全体設計
+## ⚠️ 過去トラブルから得た教訓（最重要）
 
-### ワークフロー一覧
+### GitHub Pages CDN の仕様と落とし穴
 
-| ファイル | 名前 | 実行タイミング |
-|---|---|---|
-| `intraday_etf.yml` | イントラデイETF更新 | 市場時間中 **15分ごと**（JST 9:00〜15:45 平日） |
-| `daily_etf.yml` | 日次ETFデータ取得 | **毎日 JST 16:00** |
-| `daily_participant.yml` | 手口・オプション取得 | **毎日 JST 20:05** |
-| `daily_task.yml` | JPX週次 + フルデプロイ | **毎週木曜 JST 18:00** + HTMLやワークフロー変更時のmainプッシュ |
+1. **CDNはgh-pagesブランチから直接配信しない**
+   - peaceirisがgh-pagesにpush → `pages-build-deployment`が内部でビルド → CDNに反映
+   - gh-pagesブランチにファイルが存在しても、CDNが配信するとは限らない
+   - `keep_files: true`でgh-pagesコミットに含まれていても、CDNが404を返すケースがある
+
+2. **CDNは404をキャッシュする**
+   - 一度404になったパスは、ファイルが追加されてもしばらく404を返し続ける
+   - ファイル名を変更すれば即座にキャッシュをバイパスできる
+   - 例: `etf_intraday_data.json` → `etf_intraday.json` で解決
+
+3. **CDNに確実にファイルを配信させる方法**
+   - **mainブランチにファイルをコミットし、peaceirisのdeploy/に含める**のが最も確実
+   - gh-pagesへの直接git pushは信頼性が低い（CDNに反映されない場合がある）
+   - `keep_files: true`でのファイル保持も信頼性が低い
+
+### peaceiris/actions-gh-pages の注意点
+
+1. **`keep_files: true` は万能ではない**
+   - deploy/に含まれないファイルはgh-pagesブランチのコミットには残る
+   - しかしCDN（pages-build-deployment）がそのファイルを配信する保証がない
+   - **結論: deploy/に含めないファイルはCDNで404になるリスクがある**
+
+2. **peaceirisデプロイがイントラデイデータを上書きする問題**
+   - mainブランチに古いデータがコミットされていると、peaceirisがそれをdeploy/に含めてデプロイ
+   - gh-pagesにある新しいデータが古いデータで上書きされる
+   - **解決策: intraday_etf.ymlがmainに直接commit&pushし、他ワークフローはそれを引き継ぐ**
+
+### GitHub Actions cron の信頼性
+
+- 15分間隔のcronスケジュールは**全ての実行が保証されない**
+- 実測: 3.5時間で28回中6回しか実行されなかった（実行率 約21%）
+- 解決策なし（GitHub Actionsの仕様上の制約）。フロントエンドで5分ごとの自動リフレッシュでカバー
+
+### intraday_etf.yml でのブランチ切り替えエラー
+
+- `fetch_intraday.py`が`data/etf_intraday.json`を生成 → `git checkout gh-pages`で未コミット変更エラー
+- 原因: 作業ディレクトリに生成されたファイルがcheckoutを阻害
+- 解決策: gh-pagesへの直接pushをやめ、mainにcommit&pushする方式に変更
+
+### フロントエンド Script Error
+
+- タブ復帰時（visibilitychange）にCDN由来のReact/Babelスクリプトでクロスオリジンエラー発生
+- `window.onerror`で `message === 'Script error.'` をフィルタリングして対処
+- fetchの重複呼び出し防止に`fetchingRef`フラグを使用
 
 ---
 
-### 各ワークフローの詳細
+## GitHub Actions ワークフロー設計（現行版 2026-03-19）
+
+### ワークフロー一覧
+
+| ファイル | 名前 | 実行タイミング | デプロイ方式 |
+|---|---|---|---|
+| `intraday_etf.yml` | イントラデイETF更新 | 市場時間中 **15分ごと**（平日 JST 9:00〜15:45） | mainにcommit&push |
+| `daily_etf.yml` | 日次ETFデータ取得 | **毎日 JST 16:00** | peaceiris（keep_files: true） |
+| `daily_participant.yml` | 手口・オプション取得 | **毎日 JST 20:05** | peaceiris（keep_files: true） |
+| `daily_task.yml` | JPX週次 + フルデプロイ | **毎週木曜 JST 18:00** + HTML/yml変更時 | peaceiris（keep_files: true） |
+
+### 各ワークフロー詳細
 
 #### `intraday_etf.yml` — 市場時間中 15分ごと
 
 ```
-トリガー: cron '0,15,30,45 0-6 * * 1-5'  (UTC 0:00〜6:45 = JST 9:00〜15:45)
+トリガー: cron '0,15,30,45 0-6 * * 1-5'  (JST 9:00〜15:45 平日)
          workflow_dispatch（手動）
 
 処理:
-  1. fetch_intraday.py を実行（5分足 14日分、yfinance取得、最大3回リトライ）
+  1. fetch_intraday.py を実行（5分足 14日分、yfinance、最大3回リトライ）
      → data/etf_intraday.json 生成（generated_at タイムスタンプ付き）
+  2. mainブランチにコミット&プッシュ
 
-デプロイ方式: peaceirisを使わず、git コマンドで gh-pages に直接プッシュ
-  git fetch origin gh-pages
-  git checkout -B gh-pages origin/gh-pages
-  # data/etf_intraday.json のみ上書きしてコミット・プッシュ
-  git push --force-with-lease origin gh-pages
-  # 失敗時はリフェッチ後に --force でリトライ
-
-更新対象: gh-pages の data/etf_intraday.json のみ（サイト全体は触らない）
-concurrency: intraday-etf-update グループで同時実行1つに制限（cancel-in-progress）
+デプロイ: mainへのpushにより daily_task.yml のデプロイがトリガーされる
+         ※ daily_task.ymlのpathsフィルターに data/ は含まれないため
+           JPX Automationは走らない → サイト再デプロイのみ
+concurrency: intraday-etf-update グループ（cancel-in-progress: false）
 ```
 
-#### `daily_etf.yml` — 毎日 JST 16:00
+#### `daily_etf.yml` — 毎日 JST 16:00（市場閉場後）
 
 ```
 トリガー: cron '0 7 * * *'  (UTC 07:00 = JST 16:00)
@@ -48,16 +93,12 @@ concurrency: intraday-etf-update グループで同時実行1つに制限（canc
 
 処理:
   1. etf_data_manager.py を実行
-     → data/etf_data.json    （日次 400日分）生成
-     → data/etf_intraday.json （5分足 14日分）生成
-     ※ どちらも generated_at タイムスタンプ付き
-  2. 変更があれば main ブランチにコミット・プッシュ
+     → data/etf_data.json    （日次 400日分）
+     → data/etf_intraday.json （5分足 14日分、当日全データ確定版）
+  2. 変更があれば mainブランチにコミット&プッシュ
 
-デプロイ方式: peaceiris/actions-gh-pages（keep_files: false → gh-pages 全面上書き）
-  deploy/ に以下をコピーして全デプロイ:
-    - HTML ファイル群
-    - css/, js/, data/ フォルダ
-    - gh-pages から GPIF/dist を取得して保持（ビルド済み静的ファイル）
+デプロイ: peaceiris（keep_files: true）
+  deploy/ にHTML + css/ + js/ + data/ をコピーして全デプロイ
 ```
 
 #### `daily_participant.yml` — 毎日 JST 20:05
@@ -67,122 +108,68 @@ concurrency: intraday-etf-update グループで同時実行1つに制限（canc
          workflow_dispatch（手動）
 
 処理:
-  1. fetch_teguchi.py  → data/teguchi.json 生成（JPX スクレイピング）
-  2. fetch_option.py   → data/option_history.json 生成（JPX スクレイピング）
-  3. 変更があれば main ブランチにコミット・プッシュ
+  1. fetch_teguchi.py  → data/teguchi.json
+  2. fetch_option.py   → data/option_history.json
+  3. 変更があれば mainブランチにコミット&プッシュ
 
-デプロイ方式: peaceiris/actions-gh-pages（keep_files: false → gh-pages 全面上書き）
-  deploy/ に以下をコピーして全デプロイ:
-    - HTML ファイル群
-    - css/, js/, data/ フォルダ
-    - gh-pages の最新 etf_intraday.json を取得して上書き保持
-      （main ブランチの古いデータより gh-pages の直接プッシュ版を優先）
-    - gh-pages から GPIF/dist を取得して保持
+デプロイ: peaceiris（keep_files: true）
+  deploy/ にHTML + css/ + js/ + data/ をコピーして全デプロイ
 ```
 
 #### `daily_task.yml` — 週次JPX + フルデプロイ
 
 ```
-トリガー: cron '0 9 * * 4'  (UTC 09:00 木曜 = JST 18:00)
+トリガー: cron '0 9 * * 4'  (毎週木曜 JST 18:00)
          workflow_dispatch（手動）
          push to main（pathsフィルター付き）
-           対象パス: *.html / css/** / js/** / .github/workflows/**
-           ※ データファイルのみの更新コミットでは実行されない
+           対象: *.html / css/** / js/** / .github/workflows/**
+           ※ data/ のみの変更コミットでは実行されない
 
 処理:
-  1. main.py           → history.csv 生成（JPX 履歴データ）
-  2. sector_manager.py → sector_data.json 生成（セクター集計）
-  3. fetch_gpif_data.py → data/gpif_data.json 生成
-  4. 変更があれば main ブランチにコミット・プッシュ
-  5. GPIF React アプリをビルド（cd GPIF && npm run build）
-  6. [デプロイ直前] ETFデータを最新取得:
-       fetch_intraday.py  → data/etf_intraday.json を最新化
-       etf_data_manager.py → data/etf_data.json を最新化
-       （失敗しても後続のデプロイは継続）
+  1. main.py           → history.csv（JPX 履歴データ）
+  2. sector_manager.py → sector_data.json
+  3. fetch_gpif_data.py → data/gpif_data.json
+  4. 変更があれば mainブランチにコミット&プッシュ
+  5. GPIF React アプリをビルド（npm run build）
 
-デプロイ方式: peaceiris/actions-gh-pages（keep_files: false → gh-pages 全面上書き）
-  deploy/ に以下をコピーして全デプロイ:
-    - HTML ファイル群
-    - css/, js/, data/ フォルダ（上記6で最新化済みのETFデータ含む）
-    - GPIF/dist（ビルド済み）
-    - ビルド失敗時は gh-pages から GPIF/dist を取得してフォールバック
+デプロイ: peaceiris（keep_files: true）
+  deploy/ にHTML + css/ + js/ + data/ + GPIF/dist をコピーして全デプロイ
 ```
 
 ---
 
-### gh-pages デプロイ設計
-
-#### peaceiris の `keep_files: true` 方式
-
-全ワークフローで `peaceiris/actions-gh-pages` に `keep_files: true` を設定。
-これにより、deploy/ ディレクトリのファイルで gh-pages を**マージ更新**する（既存ファイルは削除されない）。
+### データ更新の流れ（イントラデイ）
 
 ```
-[動作イメージ]
-gh-pages（既存）:
-  data/etf_intraday.json  ← intraday_etf.yml が直接プッシュ済み
-  GPIF/dist/index.html          ← daily_task.yml でビルド済み
+[市場時間中の更新フロー]
 
-peaceiris（keep_files: true）で deploy/ をマージ:
-  data/etf_data.json            ← 更新
-  data/teguchi.json             ← 更新
-  sector_category.html          ← 更新
-  data/etf_intraday.json   ← 既存のまま保持（deploy/ に含まなければ上書きされない）
-  GPIF/dist/index.html          ← 既存のまま保持
+  GitHub Actions cron（15分ごと）
+       │
+       ▼
+  fetch_intraday.py
+  （yfinance → 5分足14日分取得 → data/etf_intraday.json生成）
+       │
+       ▼
+  mainブランチにcommit & push
+       │
+       ▼
+  daily_task.yml がトリガー（pathsフィルターで *.html等のみ対象）
+       │
+       ╳ pathsフィルターに data/ なし → JPX Automationは走らない
+       │
+       ▼
+  ※ データ更新はmain上のファイルとして保持
+  ※ 次回の daily_etf.yml / daily_participant.yml / daily_task.yml 実行時に
+     peaceirisがmainのdata/をdeploy/にコピーしてCDNにデプロイ
+
+[フロントエンド側]
+  5分ごとに自動fetch → CDNから最新データ取得 → チャート更新
 ```
 
-#### 共存ルール
-
-| ワークフロー | デプロイ方式 | 競合リスク |
-|---|---|---|
-| `intraday_etf.yml` | gh-pages に直接 git push（1ファイルのみ） | なし（keep_files: true で保持される） |
-| `daily_etf.yml` | peaceiris（keep_files: true） | なし（data/ を上書き更新、他は保持） |
-| `daily_participant.yml` | peaceiris（keep_files: true） | なし（data/ を上書き更新、他は保持） |
-| `daily_task.yml` | peaceiris（keep_files: true） | なし（全ファイル更新、ETFも最新取得済み） |
-
----
-
-### データフロー全体図
-
-```
-[Yahoo Finance / JPX]
-        │
-        ├─ yfinance API（ETF・バスケット銘柄・市場指数）
-        │      │
-        │      ├─ etf_data_manager.py  →  data/etf_data.json（日次 400日）
-        │      │                           data/etf_intraday.json（5分足 14日）
-        │      │
-        │      └─ fetch_gpif_data.py   →  data/gpif_data.json
-        │
-        └─ JPX スクレイピング（手口・オプション・週次履歴）
-               │
-               ├─ fetch_teguchi.py     →  data/teguchi.json
-               ├─ fetch_option.py      →  data/option_history.json
-               └─ main.py + sector_manager.py → history.csv, sector_data.json
-
-[GitHub Actions]
-        │
-        ├─ intraday_etf.yml  （15分ごと）
-        │    └─ fetch_intraday.py → etf_intraday.json → gh-pages に直接プッシュ
-        │
-        ├─ daily_etf.yml    （毎日 JST 16:00）
-        │    └─ etf_data_manager.py → etf_data.json + etf_intraday.json
-        │         → main コミット → peaceiris で gh-pages 全面デプロイ
-        │
-        ├─ daily_participant.yml  （毎日 JST 20:05）
-        │    └─ fetch_teguchi.py + fetch_option.py
-        │         → main コミット → peaceiris で gh-pages 全面デプロイ
-        │           （デプロイ時に gh-pages 最新 intraday を取得・保持）
-        │
-        └─ daily_task.yml  （毎週木曜 JST 18:00 + HTML/yml 変更時）
-             └─ main.py + sector_manager.py + fetch_gpif_data.py
-                  → main コミット → GPIF npm build
-                  → fetch_intraday.py + etf_data_manager.py（ETF最新化）
-                  → peaceiris で gh-pages 全面デプロイ
-
-[GitHub Pages]
-        └─ gh-pages ブランチ → seahirodigital.github.io/investment_dashboard/
-```
+**重要:** `intraday_etf.yml`のmainへのpushだけではCDNは更新されない。
+CDN更新は次回のpeaceirisデプロイ（daily_etf.yml等）で行われる。
+市場時間中のリアルタイム性は、mainにデータが存在する状態で
+次回デプロイが走った時に反映される。
 
 ---
 
@@ -212,7 +199,6 @@ peaceiris（keep_files: true）で deploy/ をマージ:
 ```
 初回ロード          → fetchRawData() 実行
 5分ごと（市場中）   → 自動 fetchRawData()
-30分ごと（市場外）  → 自動 fetchRawData()（先物・海外データ更新確認用）
 タブ復帰時          → fetchRawData()（500msデバウンス付き）
 「更新」ボタン      → fetchRawData() 即時実行
 
@@ -255,11 +241,11 @@ const intradayAvailable = rawIntraday?.dates?.length > 1
 
 | タイミング | 実行内容 | 結果 |
 |---|---|---|
-| 市場中 毎15分（JST 9:00〜15:45） | `fetch_intraday.py` | gh-pages の etf_intraday.json のみ直接更新 |
-| 毎日 JST 16:00 | `etf_data_manager.py` | 日次+イントラデイ両方再生成 → gh-pages 全面デプロイ |
-| 毎日 JST 20:05 | `fetch_teguchi.py` + `fetch_option.py` | 手口・建玉 → gh-pages 全面デプロイ |
-| 毎週木曜 JST 18:00 | JPX週次 + GPIF + ETF最新化 | → gh-pages 全面デプロイ |
-| HTML/yml変更プッシュ時 | 同上（daily_task.yml） | → gh-pages 全面デプロイ（ETFデータも最新化） |
+| 市場中 毎15分（JST 9:00〜15:45） | `fetch_intraday.py` | mainに最新データcommit&push |
+| 毎日 JST 16:00 | `etf_data_manager.py` | 日次+イントラデイ両方再生成 → peaceirisでCDNデプロイ |
+| 毎日 JST 20:05 | `fetch_teguchi.py` + `fetch_option.py` | 手口・建玉 → peaceirisでCDNデプロイ |
+| 毎週木曜 JST 18:00 | JPX週次 + GPIF + フルデプロイ | → peaceirisでCDNデプロイ |
+| HTML/yml変更プッシュ時 | daily_task.yml | → peaceirisでCDNデプロイ |
 
 ### ⚠️ 手口データの「古く見える」理由
 
@@ -298,7 +284,7 @@ investment_dasboard/
 │
 ├── data/
 │   ├── etf_data.json                   # ETF・バスケット 日次（daily_etf.yml）
-│   ├── etf_intraday.json          # ETF・バスケット 5分足（intraday_etf.yml / daily_etf.yml）
+│   ├── etf_intraday.json              # ETF・バスケット 5分足（intraday_etf.yml / daily_etf.yml）
 │   ├── sector_data.json                # セクター集計（daily_task.yml）
 │   ├── option_history.json             # オプション建玉（daily_participant.yml）
 │   ├── teguchi.json                    # 手口データ（daily_participant.yml）
@@ -319,7 +305,7 @@ investment_dasboard/
 │   └── dist/                           # npm run build 生成物（gh-pages に保持）
 │
 └── .github/workflows/
-    ├── intraday_etf.yml                # 15分ごとイントラデイ更新
+    ├── intraday_etf.yml                # 15分ごとイントラデイ更新（main commit&push）
     ├── daily_etf.yml                   # 毎日 JST 16:00 ETFデータ
     ├── daily_participant.yml           # 毎日 JST 20:05 手口・オプション
     └── daily_task.yml                  # 週次 + HTML変更時フルデプロイ
