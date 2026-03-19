@@ -67,6 +67,9 @@ jobs:
           [ -d css ] && cp -r css deploy/
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
+
+          # イントラデイデータは intraday_etf.yml が専任管理（peaceirisで上書きしない）
+          rm -f deploy/data/etf_intraday_data.json
           # keep_files: true なので gh-pages の既存ファイル（GPIF/dist, etf_intraday_data.json等）は自動保持
 
           echo "Deploy directory content:"

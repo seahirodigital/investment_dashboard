@@ -7,10 +7,11 @@ on:
     - cron: '0,15,30,45 0-6 * * 1-5'
   workflow_dispatch:
 
-# 同時実行を1つに制限（前の実行をキャンセルして常に最新データを取得）
+# 同時実行を1つに制限（キューに溜まった場合は待機して順次実行）
+# cancel-in-progress: false にすることでスケジュール遅延時の取りこぼしを防ぐ
 concurrency:
   group: intraday-etf-update
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
