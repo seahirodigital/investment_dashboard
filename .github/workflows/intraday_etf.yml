@@ -8,15 +8,12 @@ on:
   workflow_dispatch:
 
 # 同時実行を1つに制限（キューに溜まった場合は待機して順次実行）
-# cancel-in-progress: false にすることでスケジュール遅延時の取りこぼしを防ぐ
 concurrency:
   group: intraday-etf-update
   cancel-in-progress: false
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   update_intraday:
@@ -45,16 +42,15 @@ jobs:
         run: |
           python3 scripts/market/fetch_intraday.py
 
-      - name: デプロイ用ディレクトリ準備（イントラデイデータのみ）
+      - name: mainブランチにコミット&プッシュ
         run: |
-          mkdir -p deploy/data
-          cp data/etf_intraday.json deploy/data/etf_intraday.json
-          echo "✅ deploy/data/etf_intraday.json 準備完了"
-          ls -la deploy/data/
-
-      - name: peaceiris で gh-pages にデプロイ
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy
-          keep_files: true
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Actions [intraday]"
+          git add data/etf_intraday.json
+          if ! git diff --staged --quiet; then
+            git commit -m "Intraday update: $(date +'%Y-%m-%d %H:%M UTC')"
+            git push origin main
+            echo "✅ mainブランチ更新完了"
+          else
+            echo "変更なし、スキップ"
+          fi

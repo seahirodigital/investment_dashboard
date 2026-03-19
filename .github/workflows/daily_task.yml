@@ -112,11 +112,6 @@ jobs:
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
 
-          # イントラデイデータ: gh-pagesから最新を取得してdeploy/に含める
-          # （mainブランチには含まれないため、gh-pagesから直接取得）
-          git fetch origin gh-pages 2>/dev/null || true
-          git show origin/gh-pages:data/etf_intraday.json > deploy/data/etf_intraday.json 2>/dev/null || echo "⚠️ gh-pagesにイントラデイデータなし"
-
           # GPIFの静的ビルドファイルをデプロイ用にコピー
           mkdir -p deploy/GPIF
           [ -d GPIF/dist ] && cp -r GPIF/dist deploy/GPIF/

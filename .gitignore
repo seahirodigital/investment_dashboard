@@ -8,6 +8,3 @@ history.csv
 trend.png
 firebase-key.json
 *.json.bak
-
-# イントラデイデータはgh-pagesのみ管理（mainに含めるとpeaceirisが古いデータで上書きする）
-data/etf_intraday.json

@@ -68,9 +68,6 @@ jobs:
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
 
-          # イントラデイデータ: gh-pagesから最新を取得してdeploy/に含める
-          git fetch origin gh-pages 2>/dev/null || true
-          git show origin/gh-pages:data/etf_intraday.json > deploy/data/etf_intraday.json 2>/dev/null || echo "⚠️ gh-pagesにイントラデイデータなし"
           # keep_files: true なので gh-pages の既存ファイル（GPIF/dist等）は自動保持
 
           echo "Deploy directory content:"
