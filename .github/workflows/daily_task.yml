@@ -85,11 +85,6 @@ jobs:
           git commit -m "Update JPX & Sector data: $(date)"
           git push origin HEAD
       
-      - name: ETFイントラデイデータを最新取得
-        run: |
-          pip install yfinance pandas pytz
-          python3 scripts/market/fetch_intraday.py || echo "⚠️ イントラデイ取得失敗（既存データで続行）"
-
       - name: GPIF React アプリのビルド
         run: |
           cd GPIF
@@ -116,6 +111,10 @@ jobs:
           [ -d css ] && cp -r css deploy/
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
+
+          # イントラデイデータはintraday_etf.ymlが専任管理
+          # keep_files:trueにより、gh-pagesの既存データが自動保持される
+          rm -f deploy/data/etf_intraday_data.json
 
           # GPIFの静的ビルドファイルをデプロイ用にコピー
           mkdir -p deploy/GPIF

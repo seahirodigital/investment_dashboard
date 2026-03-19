@@ -68,6 +68,8 @@ jobs:
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
 
+          # イントラデイデータはintraday_etf.ymlが専任管理
+          rm -f deploy/data/etf_intraday_data.json
           # keep_files: true なので gh-pages の既存ファイル（GPIF/dist等）は自動保持
 
           echo "Deploy directory content:"
