@@ -1214,6 +1214,15 @@
                                 rankingMap[sym] = { symbol: sym, name, performance: ret };
                             }
                         });
+                        // SOX指数の参考ラインも追加
+                        const soxPrices = prices['^SOX'];
+                        if (soxPrices) {
+                            const soxStart = soxPrices[startIdx];
+                            const soxCurrent = soxPrices[i];
+                            if (soxStart && soxCurrent && soxStart !== 0) {
+                                point['SOX指数'] = ((soxCurrent / soxStart) - 1) * 100;
+                            }
+                        }
                         timeSeries.push(point);
                     });
 
@@ -1252,6 +1261,15 @@
                                 rankingMap[sym] = { symbol: sym, name, performance: ret };
                             }
                         });
+                        // SOX指数の参考ラインも追加
+                        const soxPrices = prices['^SOX'];
+                        if (soxPrices) {
+                            const soxStart = soxPrices[startIndex];
+                            const soxCurrent = soxPrices[i];
+                            if (soxStart && soxCurrent && soxStart !== 0) {
+                                point['SOX指数'] = ((soxCurrent / soxStart) - 1) * 100;
+                            }
+                        }
                         timeSeries.push(point);
                     }
                     const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
@@ -1285,7 +1303,7 @@
             // チャートデータ
             const chartTraces = useMemo(() => {
                 if (!catRanking.length || !activeTimeSeries.length) return [];
-                return catRanking.map((item, i) => {
+                const traces = catRanking.map((item, i) => {
                     const displayName = getDisplayName(item);
                     return {
                         x: activeTimeSeries.map(d => d.date),
@@ -1295,6 +1313,17 @@
                         hovertemplate: `<b>${displayName}</b> <span style="color:#7C4DFF;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
                     };
                 });
+                // 米国株モード時: SOX指数を基準ラインとして追加（黒点線）
+                if (market === 'us' && activeTimeSeries.some(d => 'SOX指数' in d)) {
+                    traces.push({
+                        x: activeTimeSeries.map(d => d.date),
+                        y: activeTimeSeries.map(d => d['SOX指数'] ?? null),
+                        type: 'scatter', mode: 'lines', name: 'SOX指数',
+                        line: { color: '#000000', width: 1.5, dash: 'dot' },
+                        hovertemplate: '<b>SOX指数</b><br>%{y:.2f}%<extra></extra>',
+                    });
+                }
+                return traces;
             }, [activeTimeSeries, catRanking, market]);
 
             // Rangebreaks設定
@@ -1320,7 +1349,7 @@
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-[13px] font-bold text-[#7C4DFF] flex items-center gap-2">
                             <Icon name="PieChart" size={14} />
-                            半導体銘柄
+                            半導体銘柄（絶対値）
                         </h3>
                         <div className="flex items-center gap-1">
                             <button
@@ -1331,7 +1360,7 @@
                                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                 }`}
                             >
-                                🇯🇵 日本株
+                                JP
                             </button>
                             <button
                                 onClick={() => setMarket('us')}
@@ -1341,7 +1370,7 @@
                                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                 }`}
                             >
-                                🇺🇸 米国株
+                                US
                             </button>
                         </div>
                     </div>
