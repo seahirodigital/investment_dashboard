@@ -67,18 +67,7 @@ jobs:
           [ -d css ] && cp -r css deploy/
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
-          # gh-pages の最新 intraday データで上書き（main ブランチの古いデータより優先）
-          # intraday_etf.yml が直接 gh-pages を更新しているため、そちらを使う
-          git fetch origin gh-pages 2>/dev/null || true
-          git show origin/gh-pages:data/etf_intraday_data.json > deploy/data/etf_intraday_data.json 2>/dev/null \
-            && echo "✅ gh-pages の最新 intraday データを使用" \
-            || echo "⚠️ intraday データ取得失敗、main ブランチのデータを使用"
-          # gh-pages の GPIF/dist を保持（keep_files:false で消えないよう）
-          mkdir -p deploy/GPIF
-          git show origin/gh-pages:GPIF/dist/index.html > /dev/null 2>&1 \
-            && git archive origin/gh-pages GPIF/dist/ | tar -x -C deploy/ \
-            && echo "✅ gh-pages の GPIF/dist を保持" \
-            || echo "⚠️ GPIF/dist 取得失敗"
+          # keep_files: true なので gh-pages の既存ファイル（GPIF/dist, etf_intraday_data.json等）は自動保持
 
           echo "Deploy directory content:"
           ls -laR deploy/
@@ -88,4 +77,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./deploy
-          keep_files: false
+          keep_files: true
