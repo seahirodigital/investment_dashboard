@@ -84,6 +84,40 @@ SEMICONDUCTOR_US = {
   'ORCL':   'オラクル',
 }
 
+# ── 米国セクターETF（SPDRセレクト・セクター等）─────────────────────────────
+US_SECTORS = {
+  'XLK':  '情報技術',
+  'XLF':  '金融',
+  'XLC':  '通信サービス',
+  'XLV':  'ヘルスケア',
+  'XLI':  '資本財',
+  'XLB':  '素材',
+  'XLU':  '公共事業',
+  'XLE':  'エネルギー',
+  'XLP':  '生活必需品',
+  'XLRE': '不動産',
+  'XLY':  '一般消費財',
+  'XSD':  '半導体',
+  'XSW':  'ソフトウェア',
+  # 'XWEB': 'インターネット',  # 上場廃止（yfinance取得不可）
+  # 'XTH':  'ハードウェア',    # 上場廃止（yfinance取得不可）
+  'XBI':  'バイオテクノロジー',
+  'XPH':  '製薬',
+  'XHE':  '医療機器',
+  'XHS':  '医療サービス',
+  'XME':  '金属・採掘',
+  'XRT':  '小売',
+  'XHB':  '住宅建設',
+  'XTN':  '輸送',
+  'XTL':  '通信機器',
+  'XAR':  '防衛',
+  'KBE':  '銀行',
+  'KRE':  '地方銀行',
+  'XOP':  '石油探索・生産',
+  'XES':  'エネルギー設備',
+  'PAVE': 'インフラ',
+}
+
 # ── バスケットセクター（時価総額上位銘柄で構成）─────────────────────────
 # 同一ETFコードに複数業種が混在しているため、代表銘柄の等加重平均で分離
 BASKET_SECTORS = {
@@ -360,6 +394,7 @@ ALL_SYMBOLS = list(set(
     + list(SECTORS.keys())
     + list(SEMICONDUCTOR_JP.keys())
     + list(SEMICONDUCTOR_US.keys())
+    + list(US_SECTORS.keys())
     + ALL_BASKET_SYMBOLS
 ))
 FETCH_DAYS = 400
@@ -374,6 +409,7 @@ def fetch_data(period="400d", interval="1d"):
         "sectors": sectors_def,
         "semiconductor_jp": SEMICONDUCTOR_JP,
         "semiconductor_us": SEMICONDUCTOR_US,
+        "us_sectors": US_SECTORS,
         "dates": [],
         "prices": {}
     }
@@ -405,7 +441,7 @@ def fetch_data(period="400d", interval="1d"):
         df = df[df[BENCHMARK].notna()]
 
     # ── ETFセクター・半導体銘柄価格の保存──
-    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys())
+    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys())
     for symbol in etf_symbols:
         if symbol in df.columns:
             output["prices"][symbol] = [
