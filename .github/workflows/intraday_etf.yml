@@ -53,6 +53,10 @@ jobs:
           # 生成済みファイルを一時保存
           cp data/etf_intraday_data.json /tmp/etf_intraday_data.json
 
+          # 作業ディレクトリをクリーンにしてからブランチ切り替え
+          git checkout -- .
+          git clean -fd data/
+
           # gh-pages ブランチを取得して切り替え
           git fetch origin gh-pages
           git checkout -B gh-pages origin/gh-pages
