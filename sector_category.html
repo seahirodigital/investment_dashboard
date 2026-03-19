@@ -46,9 +46,15 @@
 
     <script>
         window.onerror = function(message, source, lineno, colno, error) {
+            // クロスオリジンスクリプト(CDN React/Babel等)のエラーは無視
+            if (message === 'Script error.' || (!source && lineno === 0)) return true;
+            // fetch失敗等のネットワークエラーも無視（Reactで処理済み）
+            if (typeof message === 'string' && (message.includes('fetch') || message.includes('Failed to fetch'))) return true;
             const el = document.getElementById('global-error');
             el.style.display = 'block';
             el.innerHTML = `<strong>システムエラー:</strong><br>${message}<br><small class="text-xs opacity-75">${source}:${lineno}</small>`;
+            // 10秒後に自動非表示
+            setTimeout(() => { el.style.display = 'none'; }, 10000);
         };
     </script>
 
@@ -1099,9 +1105,13 @@
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [lastFetchTime, setLastFetchTime] = useState(null);
+            const fetchingRef = useRef(false);
 
-            // データ取得（useCallbackで安定参照）— Cache-Control: no-cache でCDNキャッシュ回避
+            // データ取得（useCallbackで安定参照）— 重複呼び出し防止 + Cache-Control: no-cache
             const fetchRawData = useCallback(async () => {
+                // 既にフェッチ中なら無視（タブ切り替え連打対策）
+                if (fetchingRef.current) return;
+                fetchingRef.current = true;
                 setLoading(true);
                 setError(null);
                 try {
@@ -1125,39 +1135,65 @@
                     setRawDaily(jsonDaily);
 
                     if (resIntraday && resIntraday.ok) {
-                        const jsonIntraday = await resIntraday.json();
-                        setRawIntraday(jsonIntraday);
+                        try {
+                            const jsonIntraday = await resIntraday.json();
+                            if (jsonIntraday.dates && jsonIntraday.dates.length > 0) {
+                                setRawIntraday(jsonIntraday);
+                            }
+                        } catch (e) {
+                            // イントラデイJSON解析失敗は無視（日次データで表示継続）
+                            console.warn('イントラデイデータ解析エラー:', e);
+                        }
                     }
                     setLastFetchTime(new Date());
                 } catch (err) {
-                    setError(err.message);
+                    // 既にデータがあればエラー表示しない（更新失敗時は前回データを維持）
+                    if (!rawDaily) setError(err.message);
+                    else console.warn('データ更新失敗（前回データを維持）:', err.message);
                 } finally {
                     setLoading(false);
+                    fetchingRef.current = false;
                 }
             }, []);
 
             // 初回取得
             useEffect(() => { fetchRawData(); }, [fetchRawData]);
 
-            // 自動更新: 前場(9:00-11:30) / 後場(12:30-15:30) の間、5分毎に再取得
-            // 市場時間外でも30分毎にチェック（先物・海外データ用）
+            // 自動更新: 市場時間中は5分毎、時間外は30分毎
             useEffect(() => {
-                const interval = setInterval(() => {
+                let timerId = null;
+                const scheduleNext = () => {
                     const jst = new Date(Date.now() + 9 * 3600 * 1000);
                     const t = jst.getUTCHours() * 60 + jst.getUTCMinutes();
+                    // 前場 8:55-11:35 / 後場 12:25-15:35（マージン含む）
                     const inSession = (t >= 535 && t <= 695) || (t >= 745 && t <= 935);
-                    if (inSession) fetchRawData();
-                }, 5 * 60 * 1000);  // 5分ごと（GitHub Actions 15分更新の間を確実にキャッチ）
-                return () => clearInterval(interval);
+                    const intervalMs = inSession ? 5 * 60 * 1000 : 30 * 60 * 1000;
+                    timerId = setTimeout(() => {
+                        fetchRawData().catch(() => {});
+                        scheduleNext();
+                    }, intervalMs);
+                };
+                scheduleNext();
+                return () => clearTimeout(timerId);
             }, [fetchRawData]);
 
-            // ページ復帰時（タブ切り替え・スリープ復帰）に即座にデータ再取得
+            // ページ復帰時（タブ切り替え・スリープ復帰）にデータ再取得（デバウンス付き）
             useEffect(() => {
+                let debounceTimer = null;
                 const onVisible = () => {
-                    if (document.visibilityState === 'visible') fetchRawData();
+                    if (document.visibilityState === 'visible') {
+                        // 連続切り替え防止: 500ms デバウンス
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(() => {
+                            fetchRawData().catch(() => {}); // エラーは state で処理済み
+                        }, 500);
+                    }
                 };
                 document.addEventListener('visibilitychange', onVisible);
-                return () => document.removeEventListener('visibilitychange', onVisible);
+                return () => {
+                    clearTimeout(debounceTimer);
+                    document.removeEventListener('visibilitychange', onVisible);
+                };
             }, [fetchRawData]);
 
             // データ加工
