@@ -2,7 +2,7 @@ import yfinance as yf
 import pandas as pd
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 BENCHMARK = '1306.T'
 
@@ -419,18 +419,29 @@ def fetch_data(period="400d", interval="1d"):
 def main():
     os.makedirs('data', exist_ok=True)
 
+    jst = timezone(timedelta(hours=9))
+    now_jst = datetime.now(jst)
+    now_utc = datetime.now(timezone.utc)
+    ts_utc = now_utc.strftime('%Y-%m-%dT%H:%M:%SZ')
+    ts_jst = now_jst.strftime('%Y-%m-%d %H:%M JST')
+
     # 日次データ（400日）
     data_daily = fetch_data(period="400d", interval="1d")
+    data_daily['generated_at'] = ts_utc
+    data_daily['generated_at_jst'] = ts_jst
     with open('data/etf_data.json', 'w', encoding='utf-8') as f:
         json.dump(data_daily, f, ensure_ascii=False)
 
     # イントラデイ 5分足（14日）
     data_intraday = fetch_data(period="14d", interval="5m")
+    data_intraday['generated_at'] = ts_utc
+    data_intraday['generated_at_jst'] = ts_jst
     with open('data/etf_intraday_data.json', 'w', encoding='utf-8') as f:
         json.dump(data_intraday, f, ensure_ascii=False)
 
     print(f"Done: {len(data_daily['dates'])} days daily, {len(data_intraday['dates'])} ticks intraday.")
     print(f"Total sectors in output: {len(data_daily['sectors'])} (ETF:{len(SECTORS)}, basket:{len(BASKET_SECTORS)})")
+    print(f"Generated at: {ts_jst}")
 
 
 if __name__ == "__main__":

@@ -1098,15 +1098,18 @@
             const [rawIntraday, setRawIntraday] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
+            const [lastFetchTime, setLastFetchTime] = useState(null);
 
-            // データ取得（useCallbackで安定参照）
+            // データ取得（useCallbackで安定参照）— Cache-Control: no-cache でCDNキャッシュ回避
             const fetchRawData = useCallback(async () => {
                 setLoading(true);
                 setError(null);
                 try {
+                    const headers = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
+                    const ts = Date.now();
                     const [resDaily, resIntraday] = await Promise.all([
-                        fetch(`./data/etf_data.json?t=${new Date().getTime()}`),
-                        fetch(`./data/etf_intraday_data.json?t=${new Date().getTime()}`).catch(() => null)
+                        fetch(`./data/etf_data.json?t=${ts}`, { headers, cache: 'no-store' }),
+                        fetch(`./data/etf_intraday_data.json?t=${ts}`, { headers, cache: 'no-store' }).catch(() => null)
                     ]);
 
                     if (!resDaily.ok) {
@@ -1125,6 +1128,7 @@
                         const jsonIntraday = await resIntraday.json();
                         setRawIntraday(jsonIntraday);
                     }
+                    setLastFetchTime(new Date());
                 } catch (err) {
                     setError(err.message);
                 } finally {
@@ -1135,21 +1139,36 @@
             // 初回取得
             useEffect(() => { fetchRawData(); }, [fetchRawData]);
 
-            // 自動更新: 前場(9:00-11:30) / 後場(12:30-15:30) の間、15分毎に再取得
+            // 自動更新: 前場(9:00-11:30) / 後場(12:30-15:30) の間、5分毎に再取得
+            // 市場時間外でも30分毎にチェック（先物・海外データ用）
             useEffect(() => {
                 const interval = setInterval(() => {
                     const jst = new Date(Date.now() + 9 * 3600 * 1000);
                     const t = jst.getUTCHours() * 60 + jst.getUTCMinutes();
-                    const inSession = (t >= 540 && t <= 690) || (t >= 750 && t <= 930);
+                    const inSession = (t >= 535 && t <= 695) || (t >= 745 && t <= 935);
                     if (inSession) fetchRawData();
-                }, 15 * 60 * 1000);
+                }, 5 * 60 * 1000);  // 5分ごと（GitHub Actions 15分更新の間を確実にキャッチ）
                 return () => clearInterval(interval);
             }, [fetchRawData]);
 
-            // データ加工（etf.htmlと同一）
+            // ページ復帰時（タブ切り替え・スリープ復帰）に即座にデータ再取得
+            useEffect(() => {
+                const onVisible = () => {
+                    if (document.visibilityState === 'visible') fetchRawData();
+                };
+                document.addEventListener('visibilitychange', onVisible);
+                return () => document.removeEventListener('visibilitychange', onVisible);
+            }, [fetchRawData]);
+
+            // データ加工
             const processedData = useMemo(() => {
-                const isIntraday = ['1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', '10d', '14d'].includes(period);
-                const rawData = (isIntraday && rawIntraday) ? rawIntraday : rawDaily;
+                const wantIntraday = ['1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', '10d', '14d'].includes(period);
+                // イントラデイデータが利用可能かチェック（dates に時刻が含まれるか）
+                const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
+                    && rawIntraday.dates[0].includes(' ');
+                const isIntraday = wantIntraday && intradayAvailable;
+                // フォールバック: イントラデイ不可なら日次データを使用（期間は直近N営業日に変換）
+                const rawData = isIntraday ? rawIntraday : rawDaily;
                 if (!rawData) return null;
 
                 const { dates, prices, benchmark, sectors } = rawData;
@@ -1162,6 +1181,11 @@
                     const targetDateStr = calendarDates[Math.max(0, calendarDates.length - daysAgo)];
                     startIndex = dates.findIndex(d => d.startsWith(targetDateStr));
                     if (startIndex === -1) startIndex = 0;
+                } else if (wantIntraday && !intradayAvailable) {
+                    // イントラデイ期間が要求されたが日次データにフォールバック
+                    // N日分の日次データを表示（最低2ポイント確保）
+                    const daysAgo = parseInt(period.replace('d', '')) || 1;
+                    startIndex = Math.max(0, L - Math.max(daysAgo + 1, 3));
                 } else {
                     if (period.endsWith('d')) {
                         const days = parseInt(period.replace('d', ''), 10);
@@ -1291,12 +1315,36 @@
                                     <h1 className="text-xs font-bold text-[#7C4DFF]">セクター分類分析</h1>
                                     <a href="https://docs.google.com/spreadsheets/d/1ZT4RgT3KQUE-MXdLGHLliY0gF9EDcVEc6Ju4jsoORuc/edit?gid=1478282922#gid=1478282922" target="_blank" rel="noopener noreferrer" className="text-slate-400 text-xs font-medium ml-2 hover:text-[#7C4DFF] underline underline-offset-2">カテゴリ別TOPIX相対パフォーマンス</a>
                                 </div>
-                                <div className="flex items-center gap-4 text-xs mt-3 md:mt-0">
+                                <div className="flex items-center gap-4 text-xs mt-3 md:mt-0 flex-wrap">
                                     {processedData && (
                                         <span className="text-slate-400 font-mono hidden sm:block">
                                             {processedData.startDate} 〜 {processedData.endDate}
                                         </span>
                                     )}
+                                    {/* データ鮮度インジケーター */}
+                                    {(() => {
+                                        const genAt = (rawIntraday || rawDaily)?.generated_at_jst;
+                                        const isIntra = !!rawIntraday?.generated_at;
+                                        const now = new Date();
+                                        const jstNow = new Date(now.getTime() + 9 * 3600 * 1000);
+                                        const tMin = jstNow.getUTCHours() * 60 + jstNow.getUTCMinutes();
+                                        const inSession = (tMin >= 535 && tMin <= 695) || (tMin >= 745 && tMin <= 935);
+                                        // データ生成からの経過分数
+                                        let staleMin = null;
+                                        const genUtc = (rawIntraday || rawDaily)?.generated_at;
+                                        if (genUtc) {
+                                            staleMin = Math.round((now.getTime() - new Date(genUtc).getTime()) / 60000);
+                                        }
+                                        const isStale = inSession && staleMin !== null && staleMin > 20;
+                                        return (
+                                            <span className={`font-mono hidden sm:flex items-center gap-1 ${isStale ? 'text-amber-500' : 'text-slate-400'}`}>
+                                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${isStale ? 'bg-amber-400 animate-pulse' : (inSession ? 'bg-emerald-400' : 'bg-slate-300')}`}></span>
+                                                {genAt ? `生成: ${genAt}` : ''}
+                                                {staleMin !== null ? ` (${staleMin}分前)` : ''}
+                                                {!isIntra && ' [日次のみ]'}
+                                            </span>
+                                        );
+                                    })()}
                                     <div className="flex items-center gap-2">
                                         <span className="text-slate-500 shrink-0">期間:</span>
                                         <select
@@ -1325,6 +1373,14 @@
                             {loading && !processedData && (
                                 <div className="flex justify-center items-center h-64">
                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7C4DFF]"></div>
+                                </div>
+                            )}
+
+                            {/* イントラデイデータ不可時の通知 */}
+                            {!loading && processedData && ['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d'].includes(period)
+                                && !(rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1 && rawIntraday.dates[0].includes(' ')) && (
+                                <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl p-3 text-xs">
+                                    5分足データが未取得のため、日次データで表示中です。GitHub Actionsのイントラデイ更新完了後、自動的に切り替わります。
                                 </div>
                             )}
 
