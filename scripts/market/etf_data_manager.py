@@ -366,10 +366,14 @@ FETCH_DAYS = 400
 
 
 def fetch_data(period="400d", interval="1d"):
-    # sectors 定義（ETF + 半導体銘柄）
+    # sectors 定義（ETF + 半導体銘柄）既存SECTORSキーは上書きしない
     sectors_def = dict(SECTORS)
-    sectors_def.update(SEMICONDUCTOR_JP)
-    sectors_def.update(SEMICONDUCTOR_US)
+    for k, v in SEMICONDUCTOR_JP.items():
+        if k not in sectors_def:
+            sectors_def[k] = v
+    for k, v in SEMICONDUCTOR_US.items():
+        if k not in sectors_def:
+            sectors_def[k] = v
 
     output = {
         "benchmark": BENCHMARK,
