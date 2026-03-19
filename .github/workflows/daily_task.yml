@@ -112,9 +112,10 @@ jobs:
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
 
-          # イントラデイデータはintraday_etf.ymlが専任管理
-          # keep_files:trueにより、gh-pagesの既存データが自動保持される
-          rm -f deploy/data/etf_intraday_data.json
+          # イントラデイデータ: gh-pagesから最新を取得してdeploy/に含める
+          # （mainブランチには含まれないため、gh-pagesから直接取得）
+          git fetch origin gh-pages 2>/dev/null || true
+          git show origin/gh-pages:data/etf_intraday_data.json > deploy/data/etf_intraday_data.json 2>/dev/null || echo "⚠️ gh-pagesにイントラデイデータなし"
 
           # GPIFの静的ビルドファイルをデプロイ用にコピー
           mkdir -p deploy/GPIF
