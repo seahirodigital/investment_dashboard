@@ -318,13 +318,125 @@
         };
 
         // 全セクター相対パフォーマンス + ランキング（etf.html から移植）
-        const FullSectorChart = ({ processedData, period }) => {
+        const FullSectorChart = ({ processedData, period, rawIntraday, rawDaily }) => {
+            const [market, setMarket] = useState('jp');
+
+            // === JP モード: 既存の processedData を使用 ===
             const filteredRanking = useMemo(() => {
-                if (!processedData) return [];
+                if (market !== 'jp' || !processedData) return [];
                 return processedData.ranking.filter(r => !FULL_RANKING_HIDDEN.has(r.symbol));
-            }, [processedData]);
+            }, [processedData, market]);
+
+            // === US モード: rawデータからUTCベースで独立計算 ===
+            const usData = useMemo(() => {
+                if (market !== 'us') return null;
+                const wantIntraday = ['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d'].includes(period);
+                const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
+                    && rawIntraday.dates[0].includes(' ');
+                const isIntraday = wantIntraday && intradayAvailable;
+                const rawData = isIntraday ? rawIntraday : rawDaily;
+                if (!rawData) return null;
+
+                const { dates, prices } = rawData;
+                const usSymbols = Object.keys(US_SECTORS);
+
+                if (isIntraday) {
+                    // UTC時刻のまま処理（米国取引時間: UTC 13:00-20:00）
+                    const usTradingIndices = [];
+                    dates.forEach((d, i) => {
+                        const parts = d.split(' ');
+                        if (parts.length < 2) return;
+                        const hour = parseInt(parts[1].split(':')[0], 10);
+                        if (hour >= 13 && hour < 21) usTradingIndices.push(i);
+                    });
+                    if (usTradingIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+
+                    const sessionDates = [...new Set(usTradingIndices.map(i => dates[i].split(' ')[0]))];
+                    const daysAgo = parseInt(period.replace('d', '')) || 1;
+                    const targetDateStr = sessionDates[Math.max(0, sessionDates.length - daysAgo)];
+                    const filteredIndices = usTradingIndices.filter(i => dates[i] >= targetDateStr);
+                    if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+
+                    const startIdx = filteredIndices[0];
+                    const timeSeries = [];
+                    const rankingMap = {};
+
+                    filteredIndices.forEach(i => {
+                        const point = { date: dates[i] };
+                        usSymbols.forEach(sym => {
+                            const name = US_SECTORS[sym];
+                            const sPrices = prices[sym];
+                            if (!sPrices) return;
+                            const sStart = sPrices[startIdx];
+                            const sCurrent = sPrices[i];
+                            if (sStart && sCurrent && sStart !== 0) {
+                                const ret = ((sCurrent / sStart) - 1) * 100;
+                                point[name] = ret;
+                                rankingMap[sym] = { symbol: sym, name, performance: ret };
+                            }
+                        });
+                        timeSeries.push(point);
+                    });
+                    const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
+                    return { ranking, timeSeries, isIntraday: true };
+                } else {
+                    // 日次データ
+                    const L = dates.length;
+                    let startIndex = 0;
+                    if (period.endsWith('d')) {
+                        const days = parseInt(period.replace('d', ''), 10);
+                        startIndex = Math.max(0, L - Math.max(days + 1, 3));
+                    } else {
+                        const daysAgo = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 }[period] || 30;
+                        const latest = new Date(dates[L - 1]);
+                        const target = new Date(latest.getTime() - daysAgo * 86400000).getTime();
+                        for (let i = L - 1; i >= 0; i--) {
+                            if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
+                        }
+                    }
+                    const timeSeries = [];
+                    const rankingMap = {};
+                    for (let i = startIndex; i < L; i++) {
+                        const point = { date: dates[i] };
+                        usSymbols.forEach(sym => {
+                            const name = US_SECTORS[sym];
+                            const sPrices = prices[sym];
+                            if (!sPrices) return;
+                            const sStart = sPrices[startIndex];
+                            const sCurrent = sPrices[i];
+                            if (sStart && sCurrent && sStart !== 0) {
+                                const ret = ((sCurrent / sStart) - 1) * 100;
+                                point[name] = ret;
+                                rankingMap[sym] = { symbol: sym, name, performance: ret };
+                            }
+                        });
+                        timeSeries.push(point);
+                    }
+                    const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
+                    return { ranking, timeSeries, isIntraday: false };
+                }
+            }, [rawIntraday, rawDaily, period, market]);
+
+            // 統合: JP/US共通のランキング・時系列
+            const activeRanking = market === 'jp' ? filteredRanking : (usData ? usData.ranking : []);
+            const activeTimeSeries = market === 'jp'
+                ? (processedData ? processedData.timeSeries : [])
+                : (usData ? usData.timeSeries : []);
+            const activeIsIntraday = market === 'jp'
+                ? (processedData ? processedData.isIntraday : false)
+                : (usData ? usData.isIntraday : false);
 
             const [visibleSectors, setVisibleSectors] = useState(FULL_RANKING_DEFAULT_VISIBLE);
+
+            // マーケット切替時にvisibleをリセット
+            useEffect(() => {
+                if (market === 'us' && usData && usData.ranking.length > 0) {
+                    const top7 = usData.ranking.slice(0, 7).map(r => r.name);
+                    setVisibleSectors(new Set(top7));
+                } else if (market === 'jp') {
+                    setVisibleSectors(FULL_RANKING_DEFAULT_VISIBLE);
+                }
+            }, [market, usData]);
 
             const toggleSector = useCallback((name) => {
                 setVisibleSectors(prev => {
@@ -335,65 +447,124 @@
             }, []);
 
             const showTop7 = useCallback(() => {
-                if (!filteredRanking.length) return;
-                const top7 = filteredRanking.slice(0, 7).map(r => r.name);
-                setVisibleSectors(new Set([...top7, NIKKEI_NAME]));
-            }, [filteredRanking]);
+                if (!activeRanking.length) return;
+                const top7 = activeRanking.slice(0, 7).map(r => r.name);
+                setVisibleSectors(new Set(market === 'jp' ? [...top7, NIKKEI_NAME] : top7));
+            }, [activeRanking, market]);
 
             const showBottom7 = useCallback(() => {
-                if (!filteredRanking.length) return;
-                const n = filteredRanking.length;
-                const bottom7 = filteredRanking.slice(Math.max(0, n - 7)).map(r => r.name);
-                setVisibleSectors(new Set([...bottom7, NIKKEI_NAME]));
-            }, [filteredRanking]);
+                if (!activeRanking.length) return;
+                const n = activeRanking.length;
+                const bottom7 = activeRanking.slice(Math.max(0, n - 7)).map(r => r.name);
+                setVisibleSectors(new Set(market === 'jp' ? [...bottom7, NIKKEI_NAME] : bottom7));
+            }, [activeRanking, market]);
 
             const maxAbsPerf = useMemo(() => {
-                if (!filteredRanking.length) return 1;
-                const max = Math.max(...filteredRanking.map(r => Math.abs(r.performance)));
+                if (!activeRanking.length) return 1;
+                const max = Math.max(...activeRanking.map(r => Math.abs(r.performance)));
                 return max === 0 ? 1 : max;
-            }, [filteredRanking]);
+            }, [activeRanking]);
 
             const copySummary = useCallback(() => {
-                if (!filteredRanking.length || !processedData) return;
-                const top3 = filteredRanking.slice(0, 3);
-                const worst = filteredRanking[filteredRanking.length - 1];
-                const text = `【セクター資金流入分析サマリー】\n基準日: ${processedData.endDate}（期間: ${period}）\n\n🚀 アウトパフォーム・トップ（資金流入中）\n1位: ${top3[0]?.name} (+${top3[0]?.performance.toFixed(2)}%)\n2位: ${top3[1]?.name} (+${top3[1]?.performance.toFixed(2)}%)\n3位: ${top3[2]?.name} (+${top3[2]?.performance.toFixed(2)}%)\n\n📉 アンダーパフォーム・ワースト（資金流出中）\n・${worst?.name} (${worst?.performance.toFixed(2)}%)\n\n※TOPIX(1306.T)を基準とした相対騰落率を算出。`;
+                if (!activeRanking.length) return;
+                const top3 = activeRanking.slice(0, 3);
+                const worst = activeRanking[activeRanking.length - 1];
+                const label = market === 'jp' ? '全セクター / vs TOPIX' : '米国セクターETF（絶対値）';
+                const note = market === 'jp' ? '※TOPIX(1306.T)を基準とした相対騰落率を算出。' : '※各セクターETFの絶対騰落率を算出。';
+                const text = `【セクター資金流入分析サマリー - ${label}】\n期間: ${period}\n\n🚀 トップ3\n1位: ${top3[0]?.name} (+${top3[0]?.performance.toFixed(2)}%)\n2位: ${top3[1]?.name} (+${top3[1]?.performance.toFixed(2)}%)\n3位: ${top3[2]?.name} (+${top3[2]?.performance.toFixed(2)}%)\n\n📉 ワースト\n・${worst?.name} (${worst?.performance.toFixed(2)}%)\n\n${note}`;
                 navigator.clipboard.writeText(text).then(() => alert('サマリーをクリップボードにコピーしました。'));
-            }, [filteredRanking, processedData, period]);
+            }, [activeRanking, period, market]);
+
+            // US用: ticker→日本語名の逆引き
+            const getDisplayName = (item) => {
+                if (market === 'us') return US_SECTORS[item.symbol] || item.name;
+                return item.name;
+            };
 
             const chartTraces = useMemo(() => {
-                if (!processedData) return [];
-                return filteredRanking.map((item, i) => {
-                    const sym = processedData.nameToSymbol?.[item.name] || '';
-                    const isNikkei = item.name === NIKKEI_NAME;
-                    const isETF = sym.endsWith('.T') || sym.startsWith('^') || sym.includes('=');
-                    return {
-                        x: processedData.timeSeries.map(d => d.date),
-                        y: processedData.timeSeries.map(d => d[item.name] ?? null),
-                        type: 'scatter', mode: 'lines', name: item.name,
-                        visible: visibleSectors.has(item.name),
-                        line: {
-                            color: isNikkei ? NIKKEI_COLOR : COLORS[i % COLORS.length],
-                            width: 2,
-                            dash: isNikkei ? 'dot' : 'solid',
-                        },
-                        hovertemplate: (isETF && sym)
-                            ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${sym})</span><br>%{y:.2f}%<extra></extra>`
-                            : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
-                    };
+                if (!activeRanking.length || !activeTimeSeries.length) return [];
+                if (market === 'jp') {
+                    return activeRanking.map((item, i) => {
+                        const sym = processedData?.nameToSymbol?.[item.name] || '';
+                        const isNikkei = item.name === NIKKEI_NAME;
+                        const isETF = sym.endsWith('.T') || sym.startsWith('^') || sym.includes('=');
+                        return {
+                            x: activeTimeSeries.map(d => d.date),
+                            y: activeTimeSeries.map(d => d[item.name] ?? null),
+                            type: 'scatter', mode: 'lines', name: item.name,
+                            visible: visibleSectors.has(item.name),
+                            line: {
+                                color: isNikkei ? NIKKEI_COLOR : COLORS[i % COLORS.length],
+                                width: 2,
+                                dash: isNikkei ? 'dot' : 'solid',
+                            },
+                            hovertemplate: (isETF && sym)
+                                ? `<b>%{fullData.name}</b> <span style="color:#7C4DFF;font-size:10px">(${sym})</span><br>%{y:.2f}%<extra></extra>`
+                                : '<b>%{fullData.name}</b><br>%{y:.2f}%<extra></extra>',
+                        };
+                    });
+                } else {
+                    return activeRanking.map((item, i) => {
+                        const displayName = getDisplayName(item);
+                        return {
+                            x: activeTimeSeries.map(d => d.date),
+                            y: activeTimeSeries.map(d => d[item.name] ?? null),
+                            type: 'scatter', mode: 'lines', name: displayName,
+                            visible: visibleSectors.has(item.name),
+                            line: { color: COLORS[i % COLORS.length], width: 2 },
+                            hovertemplate: `<b>${displayName}</b> <span style="color:#7C4DFF;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
+                        };
+                    });
+                }
+            }, [activeRanking, activeTimeSeries, visibleSectors, market, processedData]);
 
-                });
-            }, [filteredRanking, processedData, visibleSectors]);
+            // Rangebreaks
+            const rangebreaks = useMemo(() => {
+                if (!activeIsIntraday) return [{ bounds: ["sat","mon"] }];
+                if (market === 'jp') {
+                    return [
+                        { bounds: ["sat","mon"] },
+                        { bounds: [15.5, 9], pattern: "hour" },
+                        { bounds: [11.5, 12.5], pattern: "hour" }
+                    ];
+                } else {
+                    return [
+                        { bounds: ["sat","mon"] },
+                        { bounds: [20, 13.5], pattern: "hour" }
+                    ];
+                }
+            }, [activeIsIntraday, market]);
 
-            if (!processedData || !filteredRanking.length) return null;
+            if (!processedData && market === 'jp') return null;
+            if (market === 'jp' && !filteredRanking.length) return null;
+
+            const titleLabel = market === 'jp'
+                ? '相対パフォーマンス推移（全セクター / vs TOPIX）'
+                : '米国セクター パフォーマンス推移（絶対値）';
 
             return (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
                     <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex items-center gap-2">
                         <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
-                        相対パフォーマンス推移（全セクター / vs TOPIX）
-                        <FullSectorLegend />
+                        {titleLabel}
+                        {market === 'jp' && <FullSectorLegend />}
                         <div className="flex gap-1.5 ml-auto">
+                            <button
+                                onClick={() => setMarket('jp')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                    market === 'jp'
+                                        ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                            >JP</button>
+                            <button
+                                onClick={() => setMarket('us')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                    market === 'us'
+                                        ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                            >US</button>
                             <button onClick={showTop7} className="text-xs px-3 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▲ 上位7</button>
                             <button onClick={showBottom7} className="text-xs px-3 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▼ 下位7</button>
                         </div>
@@ -411,11 +582,7 @@
                                         xaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
-                                            rangebreaks: processedData.isIntraday ? [
-                                                { bounds: ["sat","mon"] },
-                                                { bounds: [15.5,9], pattern:"hour" },
-                                                { bounds: [11.5,12.5], pattern:"hour" }
-                                            ] : [{ bounds: ["sat","mon"] }],
+                                            rangebreaks: rangebreaks,
                                         },
                                         yaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
@@ -434,23 +601,27 @@
                             </div>
                             {/* 凡例 */}
                             <div className="flex flex-wrap gap-x-2 gap-y-0.5 justify-start mt-2 pt-2 border-t border-slate-100">
-                                {filteredRanking.map((item, i) => (
-                                    <div key={item.name}
-                                        className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${visibleSectors.has(item.name) ? 'hover:opacity-70' : 'opacity-25'}`}
-                                        onClick={() => toggleSector(item.name)}
-                                    >
-                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.name === NIKKEI_NAME ? NIKKEI_COLOR : COLORS[i % COLORS.length] }} />
-                                        <span className="text-[9px] text-slate-600">{item.name}</span>
-                                    </div>
-                                ))}
+                                {activeRanking.map((item, i) => {
+                                    const displayName = market === 'us' ? getDisplayName(item) : item.name;
+                                    return (
+                                        <div key={item.symbol || item.name}
+                                            className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${visibleSectors.has(market === 'us' ? item.name : item.name) ? 'hover:opacity-70' : 'opacity-25'}`}
+                                            onClick={() => toggleSector(item.name)}
+                                        >
+                                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: (market === 'jp' && item.name === NIKKEI_NAME) ? NIKKEI_COLOR : COLORS[i % COLORS.length] }} />
+                                            <span className="text-[9px] text-slate-600">{displayName}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
                         {/* 右列：セクターランキング */}
                         <div className="w-[42%] h-full flex flex-col">
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1 min-h-0">
-                                {filteredRanking.map((item, index) => {
+                                {activeRanking.map((item, index) => {
                                     const isPositive = item.performance >= 0;
+                                    const displayName = market === 'us' ? getDisplayName(item) : item.name;
                                     return (
                                         <div key={item.symbol} className="relative group h-8 flex items-center">
                                             <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
@@ -470,8 +641,8 @@
                                             </div>
                                             <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
                                                 <div className="flex items-center gap-1">
-                                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.name === NIKKEI_NAME ? NIKKEI_COLOR : COLORS[index % COLORS.length] }} />
-                                                    <span className="font-bold truncate max-w-[90px] text-slate-700 text-[11px]" title={item.name}>{item.name}</span>
+                                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: (market === 'jp' && item.name === NIKKEI_NAME) ? NIKKEI_COLOR : COLORS[index % COLORS.length] }} />
+                                                    <span className="font-bold truncate max-w-[90px] text-slate-700 text-[11px]" title={displayName}>{displayName}</span>
                                                 </div>
                                                 <span className={cn("font-mono font-bold text-[11px]", isPositive ? "text-emerald-600" : "text-rose-600")}>
                                                     {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
@@ -857,6 +1028,40 @@
             'AVGO':   'ブロードコム',
             'AMD':    'AMD',
             'ORCL':   'オラクル',
+        };
+
+        // 米国セクターETF（SPDRセレクト・セクター等）
+        const US_SECTORS = {
+            'XLK':  '情報技術',
+            'XLF':  '金融',
+            'XLC':  '通信サービス',
+            'XLV':  'ヘルスケア',
+            'XLI':  '資本財',
+            'XLB':  '素材',
+            'XLU':  '公共事業',
+            'XLE':  'エネルギー',
+            'XLP':  '生活必需品',
+            'XLRE': '不動産',
+            'XLY':  '一般消費財',
+            'XSD':  '半導体',
+            'XSW':  'ソフトウェア',
+            // 'XWEB': 'インターネット',  // 上場廃止
+            // 'XTH':  'ハードウェア',    // 上場廃止
+            'XBI':  'バイオテクノロジー',
+            'XPH':  '製薬',
+            'XHE':  '医療機器',
+            'XHS':  '医療サービス',
+            'XME':  '金属・採掘',
+            'XRT':  '小売',
+            'XHB':  '住宅建設',
+            'XTN':  '輸送',
+            'XTL':  '通信機器',
+            'XAR':  '防衛',
+            'KBE':  '銀行',
+            'KRE':  '地方銀行',
+            'XOP':  '石油探索・生産',
+            'XES':  'エネルギー設備',
+            'PAVE': 'インフラ',
         };
 
         // 7分類とその対応セクター名（etf_data_manager.pyの出力キーに完全対応）
@@ -1866,7 +2071,7 @@
                                         />
                                     ))}
                                     {/* 全セクター相対パフォーマンス + ランキング（etf.htmlから移植） */}
-                                    <FullSectorChart processedData={processedData} period={period} />
+                                    <FullSectorChart processedData={processedData} period={period} rawIntraday={rawIntraday} rawDaily={rawDaily} />
                                     {/* 非鉄金属・半導体・機械・建設・資材・中小型 */}
                                     {CATEGORIES.filter(c => c.id === 'smallcap').map(category => (
                                         <CategorySection
