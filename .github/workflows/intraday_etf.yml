@@ -102,8 +102,8 @@ jobs:
             # === mainブランチにコミット&プッシュ ===
             git add data/etf_intraday.json
             if ! git diff --staged --quiet; then
-              git pull --rebase origin main || git rebase --abort || true
               git commit -m "Intraday update: $(date +'%Y-%m-%d %H:%M UTC')"
+              git pull --rebase origin main || { git rebase --abort 2>/dev/null; true; }
               if git push origin main; then
                 echo "✅ mainブランチ更新完了"
               else

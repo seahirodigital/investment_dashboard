@@ -1248,14 +1248,13 @@
                 const endIndex = L - 1;
                 const bPrices = prices[benchmark];
 
-                // yfinanceはJSTタイムスタンプを出力済み（tz_localize(None)でラベルだけ除去）
-                // +9h変換は不要。フォーマットを統一して返すだけ
-                const toJST = (jstStr) => {
-                    const s = jstStr.trim();
-                    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(s)) return s;
-                    const d = new Date(s.replace(' ', 'T'));
+                // yfinanceはUTCタイムスタンプを出力（tz_localize(None)でラベル除去）
+                // 表示用にJSTへ+9h変換が必要
+                const toJST = (utcStr) => {
+                    const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
+                    const j = new Date(d.getTime() + 9 * 3600 * 1000);
                     const p = n => String(n).padStart(2, '0');
-                    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+                    return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
                 };
 
                 const timeSeries = [];
