@@ -7,13 +7,15 @@ on:
     - cron: '0,15,30,45 0-6 * * 1-5'
   workflow_dispatch:
 
-# 同時実行を1つに制限（キューに溜まった場合は待機して順次実行）
+# 同時実行を1つに制限
 concurrency:
   group: intraday-etf-update
   cancel-in-progress: false
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   update_intraday:
@@ -54,3 +56,28 @@ jobs:
           else
             echo "変更なし、スキップ"
           fi
+
+      - name: デプロイ用ディレクトリ準備
+        run: |
+          mkdir -p deploy/data
+          # mainの最新データ（今回コミットしたものを含む）をdeploy/に配置
+          cp data/etf_intraday.json deploy/data/etf_intraday.json
+          # 他のデータファイルもdeploy/に含める（CDNから消えないように）
+          for f in data/*.json; do
+            cp "$f" "deploy/data/$(basename $f)"
+          done
+          # HTMLファイルもコピー
+          for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html; do
+            [ -f "$file" ] && cp "$file" deploy/
+          done
+          [ -d css ] && cp -r css deploy/
+          [ -d js ] && cp -r js deploy/
+          echo "✅ deploy/ 準備完了"
+          ls deploy/data/
+
+      - name: peaceiris で gh-pages にデプロイ → CDN更新
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy
+          keep_files: true
