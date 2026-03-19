@@ -1,25 +1,29 @@
-name: Intraday ETF Update (市場時間中 15分ごと)
+name: Intraday ETF Update (市場時間中 15分ごとループ)
 
 on:
   schedule:
-    # UTC 0:00-6:45 = JST 9:00-15:45（平日のみ）
-    # 前場(9:00-11:30) / 後場(12:30-15:30) をカバー
-    - cron: '0,15,30,45 0-6 * * 1-5'
+    # 前場起動（JST 9:00 = UTC 0:00）+ バックアップ2回
+    - cron: '0 0 * * 1-5'
+    - cron: '15 0 * * 1-5'
+    - cron: '30 0 * * 1-5'
+    # 後場起動（JST 12:30 = UTC 3:30）+ バックアップ2回
+    - cron: '30 3 * * 1-5'
+    - cron: '45 3 * * 1-5'
+    - cron: '0 4 * * 1-5'
   workflow_dispatch:
 
-# 同時実行を1つに制限
+# 同時実行を1つに制限（バックアップcronが発火しても重複しない）
 concurrency:
   group: intraday-etf-update
   cancel-in-progress: false
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   update_intraday:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v4
@@ -37,47 +41,116 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-intraday-
 
-      - name: 最小限の依存パッケージをインストール（高速化）
+      - name: 最小限の依存パッケージをインストール
         run: pip install yfinance pandas pytz
 
-      - name: イントラデイデータ取得（5分足 14日分）
+      - name: gh-pagesブランチの準備
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 scripts/market/fetch_intraday.py
+          git clone --branch gh-pages --single-branch --depth 1 \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages
+          cd /tmp/gh-pages
+          git config user.email "action@github.com"
+          git config user.name "GitHub Actions [intraday]"
 
-      - name: mainブランチにコミット&プッシュ
+      - name: 市場時間中ループ（15分間隔でデータ取得→コミット→CDNデプロイ）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Actions [intraday]"
-          git add data/etf_intraday.json
-          if ! git diff --staged --quiet; then
-            git commit -m "Intraday update: $(date +'%Y-%m-%d %H:%M UTC')"
-            git push origin main
-            echo "✅ mainブランチ更新完了"
-          else
-            echo "変更なし、スキップ"
-          fi
 
-      - name: デプロイ用ディレクトリ準備
-        run: |
-          mkdir -p deploy/data
-          # mainの最新データ（今回コミットしたものを含む）をdeploy/に配置
-          cp data/etf_intraday.json deploy/data/etf_intraday.json
-          # 他のデータファイルもdeploy/に含める（CDNから消えないように）
-          for f in data/*.json; do
-            cp "$f" "deploy/data/$(basename $f)"
-          done
-          # HTMLファイルもコピー
-          for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html; do
-            [ -f "$file" ] && cp "$file" deploy/
-          done
-          [ -d css ] && cp -r css deploy/
-          [ -d js ] && cp -r js deploy/
-          echo "✅ deploy/ 準備完了"
-          ls deploy/data/
+          while true; do
+            JST_HOUR=$(TZ=Asia/Tokyo date +%H)
+            JST_MIN=$(TZ=Asia/Tokyo date +%M)
+            TOTAL_MIN=$((10#$JST_HOUR * 60 + 10#$JST_MIN))
 
-      - name: peaceiris で gh-pages にデプロイ → CDN更新
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy
-          keep_files: true
+            echo "=========================================="
+            echo "🕐 $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST') (${TOTAL_MIN}分)"
+            echo "=========================================="
+
+            # 15:45 JST 以降 → 終了
+            if [ $TOTAL_MIN -ge 945 ]; then
+              echo "✅ 市場終了（15:45 JST以降）。ワークフロー終了。"
+              break
+            fi
+
+            # 9:00 JST 以前 → 待機
+            if [ $TOTAL_MIN -lt 540 ]; then
+              WAIT=$(( (540 - TOTAL_MIN) * 60 ))
+              echo "⏳ 市場開始前。${WAIT}秒待機..."
+              sleep $WAIT
+              continue
+            fi
+
+            # 昼休み 11:30-12:30 → 次のチェックまで5分待機
+            if [ $TOTAL_MIN -ge 690 ] && [ $TOTAL_MIN -lt 750 ]; then
+              echo "🍱 昼休み中。5分後に再チェック..."
+              sleep 300
+              continue
+            fi
+
+            # === データ取得 ===
+            echo "📊 データ取得中..."
+            if ! python3 scripts/market/fetch_intraday.py; then
+              echo "⚠️ データ取得失敗。15分後に再試行。"
+              sleep 900
+              continue
+            fi
+
+            # === mainブランチにコミット&プッシュ ===
+            git add data/etf_intraday.json
+            if ! git diff --staged --quiet; then
+              git pull --rebase origin main || git rebase --abort || true
+              git commit -m "Intraday update: $(date +'%Y-%m-%d %H:%M UTC')"
+              if git push origin main; then
+                echo "✅ mainブランチ更新完了"
+              else
+                echo "⚠️ mainプッシュ失敗（次サイクルで再試行）"
+              fi
+            else
+              echo "📋 データ変更なし"
+            fi
+
+            # === gh-pagesにデプロイ（CDN更新） ===
+            echo "🚀 CDNデプロイ中..."
+
+            cd /tmp/gh-pages
+            git pull origin gh-pages --rebase || true
+
+            # データファイルをコピー
+            cd ${GITHUB_WORKSPACE}
+            mkdir -p /tmp/gh-pages/data
+            for f in data/*.json; do
+              cp "$f" "/tmp/gh-pages/data/$(basename "$f")"
+            done
+
+            # HTMLファイルをコピー
+            for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html; do
+              [ -f "$file" ] && cp "$file" /tmp/gh-pages/
+            done
+            [ -d css ] && cp -r css /tmp/gh-pages/
+            [ -d js ] && cp -r js /tmp/gh-pages/
+
+            cd /tmp/gh-pages
+            git add -A
+            if ! git diff --staged --quiet; then
+              git commit -m "Intraday CDN update: $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M JST')"
+              if git push origin gh-pages; then
+                echo "✅ CDNデプロイ完了"
+              else
+                echo "⚠️ gh-pagesプッシュ失敗（次サイクルで再試行）"
+              fi
+            else
+              echo "📋 CDN変更なし"
+            fi
+
+            cd ${GITHUB_WORKSPACE}
+
+            # === 15分待機 ===
+            echo "⏰ 次の更新まで15分待機..."
+            sleep 900
+          done
+
+          echo "🏁 ワークフロー正常終了"
