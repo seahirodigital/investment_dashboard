@@ -556,7 +556,7 @@
                         { code: 'ES=F', name: 'SP500先物' },
                     ];
                     filteredIndices.forEach(i => {
-                        const point = { date: dates[i] };
+                        const point = { date: toJST(dates[i]) };
                         usSymbols.forEach(sym => {
                             const name = US_SECTORS[sym];
                             const sPrices = prices[sym];
@@ -773,7 +773,7 @@
                 } else {
                     return [
                         { bounds: ["sat","mon"] },
-                        { bounds: [20, 13.5], pattern: "hour" }
+                        { bounds: [5, 22], pattern: "hour" }
                     ];
                 }
             }, [activeIsIntraday, market]);
@@ -1222,6 +1222,14 @@
             { value: '6mo', label: '6ヶ月' },
             { value: '1y', label: '1年' },
         ];
+
+        // UTC→JST変換（グローバルユーティリティ）
+        const toJST = (utcStr) => {
+            const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
+            const j = new Date(d.getTime() + 9 * 3600 * 1000);
+            const p = n => String(n).padStart(2, '0');
+            return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+        };
 
         const COLORS = [
             '#2563eb', '#db2777', '#d97706', '#059669', '#7c3aed', '#dc2626', '#0891b2',
@@ -1694,7 +1702,7 @@
                     const rankingMap = {};
 
                     filteredIndices.forEach(i => {
-                        const point = { date: dates[i] };
+                        const point = { date: toJST(dates[i]) };
                         usSymbols.forEach(sym => {
                             const name = SEMICONDUCTOR_US[sym];
                             const sPrices = prices[sym];
@@ -1831,7 +1839,7 @@
                 } else {
                     return [
                         { bounds: ["sat","mon"] },
-                        { bounds: [20, 13.5], pattern: "hour" }
+                        { bounds: [5, 22], pattern: "hour" }
                     ];
                 }
             }, [isIntraday, market]);
