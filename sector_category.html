@@ -556,8 +556,15 @@
                         { code: '^GSPC', name: 'S&P500' },
                         { code: '^DJI', name: 'NYダウ' },
                     ];
+                    // categoryモード用: 短いJSTラベル（例: "3/20 22:00"）
+                    const toJSTShort = (utcStr) => {
+                        const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
+                        const j = new Date(d.getTime() + 9 * 3600 * 1000);
+                        const p = n => String(n).padStart(2, '0');
+                        return `${j.getUTCMonth()+1}/${j.getUTCDate()} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+                    };
                     filteredIndices.forEach(i => {
-                        const point = { date: toJST(dates[i]) };
+                        const point = { date: toJSTShort(dates[i]) };
                         usSymbols.forEach(sym => {
                             const name = US_SECTORS[sym];
                             const sPrices = prices[sym];
@@ -769,6 +776,10 @@
             }, [activeRanking, activeTimeSeries, visibleSectors, market, processedData]);
 
             // Rangebreaks
+            // US市場イントラデイ: JST変換で金曜深夜→土曜早朝になるため、
+            // ["sat","mon"]のrangebreakだと土曜0:00-5:00(金曜US後半)が非表示になる。
+            // → US intradayはcategoryモードを使い、rangebreaks不要にする。
+            const isUSIntraday = market === 'us' && activeIsIntraday;
             const rangebreaks = useMemo(() => {
                 if (!activeIsIntraday) return [{ bounds: ["sat","mon"] }];
                 if (market === 'jp') {
@@ -778,10 +789,8 @@
                         { bounds: [11.5, 12.5], pattern: "hour" }
                     ];
                 } else {
-                    return [
-                        { bounds: ["sat","mon"] },
-                        { bounds: [5, 22], pattern: "hour" }
-                    ];
+                    // US intraday: categoryモードなのでrangebreaks不要
+                    return [];
                 }
             }, [activeIsIntraday, market]);
 
@@ -836,6 +845,8 @@
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
                                             rangebreaks: rangebreaks,
+                                            // US intraday: categoryモードで日付またぎの週末非表示問題を回避
+                                            ...(isUSIntraday ? { type: 'category', nticks: 12, tickangle: -30 } : {}),
                                         },
                                         yaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
