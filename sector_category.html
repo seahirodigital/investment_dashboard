@@ -121,8 +121,8 @@
                 const el = ref.current;
                 if (!el) return;
                 const onScroll = () => {
-                    const sw = el.scrollWidth - el.clientWidth;
-                    setPage(sw > 0 && el.scrollLeft > sw * 0.4 ? 1 : 0);
+                    const cardW = el.clientWidth * 0.85;
+                    setPage(el.scrollLeft > cardW * 0.5 ? 1 : 0);
                 };
                 el.addEventListener('scroll', onScroll, { passive: true });
                 return () => el.removeEventListener('scroll', onScroll);
@@ -134,7 +134,7 @@
                         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                     >
                         {React.Children.map(children, (child) => (
-                            <div className="min-w-[88%] shrink-0 snap-start md:contents"
+                            <div className="w-[85%] max-w-[85%] shrink-0 snap-start overflow-hidden rounded-lg border border-slate-100 md:contents"
                                 style={{ touchAction: 'pan-x' }}
                             >
                                 {child}
