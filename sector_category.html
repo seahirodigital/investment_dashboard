@@ -2134,6 +2134,34 @@
                     return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
                 };
 
+                // ── 先物シンボルの前日US終値起点を算出 ──
+                // 先物（NQ=F, ES=F, YM=F）は24時間取引のため、
+                // JP市場開場(UTC 0:00)時点で既に変動している。
+                // 他ツールと一致させるため、startIndex前日のUS市場終了時刻
+                // (UTC 20:00台 = JST 翌5:00台) の価格を起点とする。
+                const FUTURES_SYMBOLS = ['NQ=F', 'ES=F', 'YM=F'];
+                const futuresBasePrice = {};
+                if (isIntraday && startIndex > 0) {
+                    FUTURES_SYMBOLS.forEach(sym => {
+                        const sPrices = prices[sym];
+                        if (!sPrices) return;
+                        // startIndex直前のUS市場終了時(UTC 19:00-21:00)のデータを探す
+                        let baseIdx = -1;
+                        for (let j = startIndex - 1; j >= 0; j--) {
+                            const parts = dates[j].split(' ');
+                            if (parts.length < 2) continue;
+                            const hour = parseInt(parts[1].split(':')[0], 10);
+                            // US市場最終時間帯（UTC 19:00-20:59）
+                            if (hour >= 19 && hour <= 20) {
+                                if (sPrices[j] != null) { baseIdx = j; break; }
+                            }
+                        }
+                        if (baseIdx >= 0 && sPrices[baseIdx]) {
+                            futuresBasePrice[sym] = sPrices[baseIdx];
+                        }
+                    });
+                }
+
                 const timeSeries = [];
                 const absoluteTimeSeries = [];
 
@@ -2165,7 +2193,13 @@
                         if (sStart && sCurrent) {
                             const sReturn = (sCurrent / sStart) - 1;
                             point[name] = (sReturn - bReturn) * 100;  // 相対
-                            absPoint[name] = sReturn * 100;             // 絶対
+
+                            // 先物は前日US終値を起点とした絶対値リターン
+                            if (futuresBasePrice[symbol]) {
+                                absPoint[name] = ((sCurrent / futuresBasePrice[symbol]) - 1) * 100;
+                            } else {
+                                absPoint[name] = sReturn * 100;         // 絶対
+                            }
                         } else {
                             point[name] = 0;
                             absPoint[name] = 0;
