@@ -99,23 +99,47 @@
         };
 
         // スマホ横スワイプ対応コンテナ（ドットインジケーター付き）
+        // モバイル判定フック
+        const useIsMobile = () => {
+            const [m, setM] = useState(window.innerWidth < 768);
+            useEffect(() => {
+                const h = () => setM(window.innerWidth < 768);
+                window.addEventListener('resize', h);
+                return () => window.removeEventListener('resize', h);
+            }, []);
+            return m;
+        };
+        const isMobileGlobal = window.innerWidth < 768;
+
+        // スマホ横スワイプ対応コンテナ（ドットインジケーター付き）
+        // モバイル: 88%幅カード + snap scroll + ピーク表示
+        // デスクトップ: ラッパーは display:contents で透過、子が直接flex配置
         const SwipeContainer = ({ children, className = '' }) => {
             const ref = useRef(null);
             const [page, setPage] = useState(0);
             useEffect(() => {
                 const el = ref.current;
                 if (!el) return;
-                const onScroll = () => setPage(Math.round(el.scrollLeft / el.clientWidth));
+                const onScroll = () => {
+                    const sw = el.scrollWidth - el.clientWidth;
+                    setPage(sw > 0 && el.scrollLeft > sw * 0.4 ? 1 : 0);
+                };
                 el.addEventListener('scroll', onScroll, { passive: true });
                 return () => el.removeEventListener('scroll', onScroll);
             }, []);
             return (
                 <div>
                     <div ref={ref}
-                        className={`flex flex-row gap-0 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide ${className}`}
-                        style={{ WebkitOverflowScrolling: 'touch' }}
+                        className={`flex flex-row gap-3 md:gap-4 overflow-x-scroll md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide ${className}`}
+                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                     >
-                        {children}
+                        {React.Children.map(children, (child) => (
+                            <div className="min-w-[88%] shrink-0 snap-start md:contents"
+                                style={{ touchAction: 'pan-x' }}
+                            >
+                                {child}
+                            </div>
+                        ))}
                     </div>
                     <div className="flex justify-center gap-2 mt-2 md:hidden">
                         <div className={`w-2 h-2 rounded-full transition-colors ${page === 0 ? 'bg-[#7C4DFF]' : 'bg-slate-300'}`} />
@@ -865,14 +889,14 @@
                     </h3>
                     <SwipeContainer className="h-[400px] md:h-[520px]">
                         {/* 左列：チャート + 凡例 */}
-                        <div className="min-w-full md:min-w-0 md:w-[58%] h-full flex flex-col snap-start shrink-0">
+                        <div className="md:w-[58%] h-full flex flex-col">
                             <div className="flex-1 min-h-0 relative z-10">
                                 <Plot
                                     data={chartTraces}
                                     layout={{
                                         autosize: true,
                                         margin: { t: 5, r: 5, l: 40, b: 35 },
-                                        dragmode: 'pan',
+                                        dragmode: isMobileGlobal ? false : 'pan',
                                         xaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
@@ -890,7 +914,7 @@
                                         showlegend: false,
                                         hovermode: 'closest',
                                     }}
-                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
+                                    config={{ responsive: true, scrollZoom: !isMobileGlobal, displayModeBar: false, staticPlot: isMobileGlobal }}
                                     style={{ width: '100%', height: '100%' }}
                                     useResizeHandler={true}
                                 />
@@ -913,7 +937,7 @@
                         </div>
 
                         {/* 右列：セクターランキング */}
-                        <div className="min-w-full md:min-w-0 md:w-[42%] h-full flex flex-col snap-start shrink-0">
+                        <div className="md:w-[42%] h-full flex flex-col">
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1 min-h-0">
                                 {activeRanking.map((item, index) => {
                                     const isPositive = item.performance >= 0;
@@ -1147,7 +1171,7 @@
                     </h3>
                     <SwipeContainer className="h-[280px]">
                         {/* 左：チャート */}
-                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
+                        <div className="md:w-1/2 h-full relative z-10">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
@@ -1156,7 +1180,7 @@
                                     layout={{
                                         autosize: true,
                                         margin: { t: 5, r: 5, l: 35, b: 10 },
-                                        dragmode: 'pan',
+                                        dragmode: isMobileGlobal ? false : 'pan',
                                         xaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
@@ -1175,14 +1199,14 @@
                                         paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
                                         showlegend: false, hovermode: 'closest',
                                     }}
-                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
+                                    config={{ responsive: true, scrollZoom: !isMobileGlobal, displayModeBar: false, staticPlot: isMobileGlobal }}
                                     style={{ width: '100%', height: '100%' }}
                                     useResizeHandler={true}
                                 />
                             )}
                         </div>
                         {/* 右：ランキング */}
-                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0 snap-start shrink-0">
+                        <div className="md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
@@ -1521,7 +1545,7 @@
                     </h3>
                     <SwipeContainer className="h-[280px]">
                         {/* 左列：チャート */}
-                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
+                        <div className="md:w-1/2 h-full relative z-10">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">
                                     データなし（未対応ETF）
@@ -1532,7 +1556,7 @@
                                     layout={{
                                         autosize: true,
                                         margin: { t: 5, r: 5, l: 35, b: 10 },
-                                        dragmode: 'pan',
+                                        dragmode: isMobileGlobal ? false : 'pan',
                                         xaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
@@ -1552,7 +1576,7 @@
                                         showlegend: false,
                                         hovermode: 'closest',
                                     }}
-                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
+                                    config={{ responsive: true, scrollZoom: !isMobileGlobal, displayModeBar: false, staticPlot: isMobileGlobal }}
                                     style={{ width: '100%', height: '100%' }}
                                     useResizeHandler={true}
                                 />
@@ -1560,7 +1584,7 @@
                         </div>
 
                         {/* 右列：ランキング */}
-                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0 snap-start shrink-0">
+                        <div className="md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">
                                     データなし
@@ -1930,7 +1954,7 @@
                     {/* チャート + ランキング */}
                     <SwipeContainer className="h-[280px]">
                         {/* 左：チャート */}
-                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
+                        <div className="md:w-1/2 h-full relative z-10">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
@@ -1939,7 +1963,7 @@
                                     layout={{
                                         autosize: true,
                                         margin: { t: 5, r: 5, l: 35, b: 10 },
-                                        dragmode: 'pan',
+                                        dragmode: isMobileGlobal ? false : 'pan',
                                         xaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
@@ -1954,7 +1978,7 @@
                                         paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
                                         showlegend: false, hovermode: 'closest',
                                     }}
-                                    config={{ responsive: true, scrollZoom: true, displayModeBar: false }}
+                                    config={{ responsive: true, scrollZoom: !isMobileGlobal, displayModeBar: false, staticPlot: isMobileGlobal }}
                                     style={{ width: '100%', height: '100%' }}
                                     useResizeHandler={true}
                                 />
@@ -1962,7 +1986,7 @@
                         </div>
 
                         {/* 右：ランキング */}
-                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0 snap-start shrink-0">
+                        <div className="md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
