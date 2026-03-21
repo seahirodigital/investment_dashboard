@@ -44,6 +44,12 @@ SECTORS = {
   'NQ=F':   'NASDAQ先物',                 # NASDAQ 100先物（CME）
   'ES=F':   'SP500先物',                  # S&P 500先物（CME）
   'YM=F':   'DOW先物',                   # Dow Jones Industrial Average先物（CME）
+
+  # ── グローバル指数（規模別チャート絶対値基準用）────────────────────────
+  # 先物は契約ロールで日次終値がずれるため、指数を前日終値基準として使用
+  '^NDX':   'NASDAQ100',                  # NASDAQ-100 Index
+  '^GSPC':  'S&P500',                     # S&P 500 Index
+  '^DJI':   'NYダウ',                     # Dow Jones Industrial Average
 }
 
 # ── 半導体銘柄（日本・米国、個別株式）─────────────────────────────────────

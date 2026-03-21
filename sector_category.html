@@ -150,9 +150,9 @@
                 { name: 'TOPIX Core30',  type: 'ETF',      code: '1311.T (NEXT FUNDS TOPIX Core 30)' },
                 { name: 'JPX400',        type: 'ETF',      code: '1591.T (NEXT FUNDS JPX日経インデックス400)' },
                 { name: 'グロース250',   type: 'ETF',      code: '2516.T (東証グロース市場250指数ETF)' },
-                { name: 'DOW先物',      type: '指数',      code: 'YM=F (CME E-mini Dow Jones Industrial Average先物)' },
-                { name: 'NASDAQ先物',    type: '指数',      code: 'NQ=F (CME NASDAQ 100先物)' },
-                { name: 'SP500先物',     type: '指数',      code: 'ES=F (CME S&P 500先物)' },
+                { name: 'NYダウ',       type: '指数',      code: '^DJI (Dow Jones Industrial Average)' },
+                { name: 'NASDAQ100',    type: '指数',      code: '^NDX (NASDAQ-100 Index)' },
+                { name: 'S&P500',       type: '指数',      code: '^GSPC (S&P 500 Index)' },
                 { name: '参考ライン',    type: '指数',      code: '日経指数(^N225) / TOPIX(1306.T) / 半導体ETF(2644.T) / SOX指数(^SOX)　— TOPIXで割り返しなし・絶対値表示' },
             ],
         };
@@ -990,7 +990,7 @@
                                     </p>
                                     {categoryId === 'scale' && (
                                         <p className="text-xs text-amber-600 mt-1 font-semibold">
-                                            ⚠️ このチャートは例外です：TOPIXで割り返しを行わず、期間開始時点を基準（0%）とした絶対値リターンを表示します。参考ライン（日経指数・TOPIX・NASDAQ先物・SP500先物・半導体ETF）も同様に絶対値表示です。
+                                            ⚠️ このチャートは例外です：TOPIXで割り返しを行わず、期間開始時点を基準（0%）とした絶対値リターンを表示します。参考ライン（日経指数・TOPIX・NASDAQ100・S&amp;P500・NYダウ・半導体ETF）も同様に絶対値表示です。
                                         </p>
                                     )}
                                 </div>
@@ -1005,7 +1005,7 @@
         // 除外: TOPIX規模系・市場指標・旧コード・複合ETF（バスケットで代替済み）
         const EXCLUDE_FROM_SECTOR_RANKING = new Set([
             'TOPIX Core30','JPX400','グロース250',
-            'NASDAQ先物','SP500先物',
+            'NASDAQ先物','SP500先物','NASDAQ100','S&P500','NYダウ',
             '日経指数','日経225ETF','米国債10年','GX日本成長',
             '銀行','半導体',
             '食品','素材・化学','自動車・輸送機',
@@ -1014,7 +1014,7 @@
         // FullSectorChart 用：全体チャートから除外するシンボルキー
         const FULL_RANKING_HIDDEN = new Set([
             '1311.T', '1591.T', '2516.T',
-            'NQ=F', 'ES=F', 'YM=F',
+            'NQ=F', 'ES=F', 'YM=F', '^NDX', '^GSPC', '^DJI',
             '1618.T', '200A.T', '^TNX',
             '機械', '1623.T', '1632.T', '1631.T', '213A.T',
         ]);
@@ -1358,9 +1358,9 @@
             const ABS_REF_LINES = isAbsolute ? [
                 { name: 'TOPIX',      color: '#94a3b8', width: 1.5, dash: 'solid',  code: '1306.T' },
                 { name: '日経指数',   color: '#1e293b', width: 2,   dash: 'dot',    code: '^N225' },
-                { name: 'NASDAQ先物', color: '#2563eb', width: 1.5, dash: 'solid',  code: 'NQ=F' },
-                { name: 'SP500先物',  color: '#dc2626', width: 1.5, dash: 'solid',  code: 'ES=F' },
-                { name: 'DOW先物',    color: '#16a34a', width: 1.5, dash: 'solid',  code: 'YM=F' },
+                { name: 'NASDAQ100',  color: '#2563eb', width: 1.5, dash: 'solid',  code: '^NDX' },
+                { name: 'S&P500',     color: '#dc2626', width: 1.5, dash: 'solid',  code: '^GSPC' },
+                { name: 'NYダウ',     color: '#16a34a', width: 1.5, dash: 'solid',  code: '^DJI' },
                 { name: '半導体ETF',  color: '#d97706', width: 1.5, dash: 'dash',   code: '2644.T' },
                 { name: 'SOX指数',    color: '#a855f7', width: 1.5, dash: 'solid',  code: '^SOX' },
             ] : [];
@@ -2134,34 +2134,6 @@
                     return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
                 };
 
-                // ── 先物シンボルの前日US終値起点を算出 ──
-                // 先物（NQ=F, ES=F, YM=F）は24時間取引のため、
-                // JP市場開場(UTC 0:00)時点で既に変動している。
-                // 他ツールと一致させるため、startIndex前日のUS市場終了時刻
-                // (UTC 20:00台 = JST 翌5:00台) の価格を起点とする。
-                const FUTURES_SYMBOLS = ['NQ=F', 'ES=F', 'YM=F'];
-                const futuresBasePrice = {};
-                if (isIntraday && startIndex > 0) {
-                    FUTURES_SYMBOLS.forEach(sym => {
-                        const sPrices = prices[sym];
-                        if (!sPrices) return;
-                        // startIndex直前のUS市場終了時(UTC 19:00-21:00)のデータを探す
-                        let baseIdx = -1;
-                        for (let j = startIndex - 1; j >= 0; j--) {
-                            const parts = dates[j].split(' ');
-                            if (parts.length < 2) continue;
-                            const hour = parseInt(parts[1].split(':')[0], 10);
-                            // US市場最終時間帯（UTC 19:00-20:59）
-                            if (hour >= 19 && hour <= 20) {
-                                if (sPrices[j] != null) { baseIdx = j; break; }
-                            }
-                        }
-                        if (baseIdx >= 0 && sPrices[baseIdx]) {
-                            futuresBasePrice[sym] = sPrices[baseIdx];
-                        }
-                    });
-                }
-
                 const timeSeries = [];
                 const absoluteTimeSeries = [];
 
@@ -2193,13 +2165,7 @@
                         if (sStart && sCurrent) {
                             const sReturn = (sCurrent / sStart) - 1;
                             point[name] = (sReturn - bReturn) * 100;  // 相対
-
-                            // 先物は前日US終値を起点とした絶対値リターン
-                            if (futuresBasePrice[symbol]) {
-                                absPoint[name] = ((sCurrent / futuresBasePrice[symbol]) - 1) * 100;
-                            } else {
-                                absPoint[name] = sReturn * 100;         // 絶対
-                            }
+                            absPoint[name] = sReturn * 100;             // 絶対
                         } else {
                             point[name] = 0;
                             absPoint[name] = 0;
