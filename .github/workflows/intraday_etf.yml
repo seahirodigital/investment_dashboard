@@ -1,7 +1,8 @@
-name: Intraday ETF Update (市場時間中 15分ごとループ)
+name: Intraday ETF Update (JP/US市場時間中 15分ごとループ)
 
 on:
   schedule:
+    # ── JP市場（東証）────────────────────────────────────────
     # 前場起動（JST 9:00 = UTC 0:00）+ バックアップ2回
     - cron: '0 0 * * 1-5'
     - cron: '15 0 * * 1-5'
@@ -10,6 +11,14 @@ on:
     - cron: '30 3 * * 1-5'
     - cron: '45 3 * * 1-5'
     - cron: '0 4 * * 1-5'
+    # ── US市場（NYSE/NASDAQ）──────────────────────────────────
+    # US市場起動（EDT 9:30 = UTC 13:30 = JST 22:30）+ バックアップ2回
+    - cron: '30 13 * * 1-5'
+    - cron: '45 13 * * 1-5'
+    - cron: '0 14 * * 1-5'
+    # US後半起動（UTC 17:00 = JST 翌2:00）+ バックアップ（6時間制限対策）
+    - cron: '0 17 * * 1-5'
+    - cron: '15 17 * * 1-5'
   workflow_dispatch:
 
 # 同時実行を1つに制限（バックアップcronが発火しても重複しない）
@@ -23,7 +32,7 @@ permissions:
 jobs:
   update_intraday:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 480
     steps:
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v4
@@ -54,7 +63,7 @@ jobs:
           git config user.email "action@github.com"
           git config user.name "GitHub Actions [intraday]"
 
-      - name: 市場時間中ループ（15分間隔でデータ取得→コミット→CDNデプロイ）
+      - name: 市場時間中ループ（JP/US 15分間隔でデータ取得→コミット→CDNデプロイ）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -70,26 +79,37 @@ jobs:
             echo "🕐 $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST') (${TOTAL_MIN}分)"
             echo "=========================================="
 
-            # 15:45 JST 以降 → 終了
-            if [ $TOTAL_MIN -ge 945 ]; then
-              echo "✅ 市場終了（15:45 JST以降）。ワークフロー終了。"
+            # ── セッション判定 ──
+            # JP市場: 9:00-15:45 JST (540-945分)
+            # US市場: 22:00-翌05:30 JST (1320分-翌330分、日付またぎ)
+            IN_SESSION=false
+            SESSION_NAME=""
+
+            # JP市場チェック
+            if [ $TOTAL_MIN -ge 540 ] && [ $TOTAL_MIN -lt 945 ]; then
+              # JP昼休み 11:30-12:30 → 5分待機
+              if [ $TOTAL_MIN -ge 690 ] && [ $TOTAL_MIN -lt 750 ]; then
+                echo "🍱 JP昼休み中。5分後に再チェック..."
+                sleep 300
+                continue
+              fi
+              IN_SESSION=true
+              SESSION_NAME="JP"
+            fi
+
+            # US市場チェック（22:00 JST = 1320分 〜 翌05:30 JST = 330分）
+            if [ $TOTAL_MIN -ge 1320 ] || [ $TOTAL_MIN -lt 330 ]; then
+              IN_SESSION=true
+              SESSION_NAME="US"
+            fi
+
+            # セッション外 → 終了
+            if [ "$IN_SESSION" = "false" ]; then
+              echo "✅ 市場時間外（${SESSION_NAME:-JP/US間}）。ワークフロー終了。"
               break
             fi
 
-            # 9:00 JST 以前 → 待機
-            if [ $TOTAL_MIN -lt 540 ]; then
-              WAIT=$(( (540 - TOTAL_MIN) * 60 ))
-              echo "⏳ 市場開始前。${WAIT}秒待機..."
-              sleep $WAIT
-              continue
-            fi
-
-            # 昼休み 11:30-12:30 → 次のチェックまで5分待機
-            if [ $TOTAL_MIN -ge 690 ] && [ $TOTAL_MIN -lt 750 ]; then
-              echo "🍱 昼休み中。5分後に再チェック..."
-              sleep 300
-              continue
-            fi
+            echo "📈 ${SESSION_NAME}市場セッション中"
 
             # === データ取得 ===
             echo "📊 データ取得中..."
