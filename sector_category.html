@@ -390,7 +390,7 @@
                                     </table>
                                 </div>
                                 <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
-                                    <p className="text-xs text-slate-400">SPDR Select Sector / Industry ETFs　—　TOPIXで割り返しなし・絶対値表示 / 基準線: NASDAQ先物(NQ=F)・SP500先物(ES=F)　／　背景クリックで閉じる</p>
+                                    <p className="text-xs text-slate-400">SPDR Select Sector / Industry ETFs　—　TOPIXで割り返しなし・絶対値表示 / 基準線: NASDAQ100(^NDX)・S&amp;P500(^GSPC)・NYダウ(^DJI)　／　背景クリックで閉じる</p>
                                 </div>
                             </div>
                         </div>
@@ -550,10 +550,11 @@
                     const timeSeries = [];
                     const rankingMap = {};
 
-                    // 基準ライン用シンボル（NASDAQ/SP500先物）
+                    // 基準ライン用シンボル（米国主要指数）
                     const refSymbols = [
-                        { code: 'NQ=F', name: 'NASDAQ先物' },
-                        { code: 'ES=F', name: 'SP500先物' },
+                        { code: '^NDX', name: 'NASDAQ100' },
+                        { code: '^GSPC', name: 'S&P500' },
+                        { code: '^DJI', name: 'NYダウ' },
                     ];
                     filteredIndices.forEach(i => {
                         const point = { date: toJST(dates[i]) };
@@ -575,7 +576,9 @@
                             const rStart = rPrices[startIdx];
                             const rCurrent = rPrices[i];
                             if (rStart && rCurrent && rStart !== 0) {
-                                point[ref.name] = ((rCurrent / rStart) - 1) * 100;
+                                const ret = ((rCurrent / rStart) - 1) * 100;
+                                point[ref.name] = ret;
+                                rankingMap[ref.code] = { symbol: ref.code, name: ref.name, performance: ret };
                             }
                         });
                         timeSeries.push(point);
@@ -598,8 +601,9 @@
                         }
                     }
                     const refSymbolsD = [
-                        { code: 'NQ=F', name: 'NASDAQ先物' },
-                        { code: 'ES=F', name: 'SP500先物' },
+                        { code: '^NDX', name: 'NASDAQ100' },
+                        { code: '^GSPC', name: 'S&P500' },
+                        { code: '^DJI', name: 'NYダウ' },
                     ];
                     const timeSeries = [];
                     const rankingMap = {};
@@ -623,7 +627,9 @@
                             const rStart = rPrices[startIndex];
                             const rCurrent = rPrices[i];
                             if (rStart && rCurrent && rStart !== 0) {
-                                point[ref.name] = ((rCurrent / rStart) - 1) * 100;
+                                const ret = ((rCurrent / rStart) - 1) * 100;
+                                point[ref.name] = ret;
+                                rankingMap[ref.code] = { symbol: ref.code, name: ref.name, performance: ret };
                             }
                         });
                         timeSeries.push(point);
@@ -740,10 +746,11 @@
                             hovertemplate: `<b>${chartName}</b> <span style="color:white;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
                         });
                     });
-                    // NASDAQ/SP500 基準ライン追加
+                    // 米国主要指数 基準ライン追加
                     const refLines = [
-                        { key: 'NASDAQ先物', code: 'NQ=F', color: '#2563eb', dash: 'dot' },
-                        { key: 'SP500先物', code: 'ES=F', color: '#dc2626', dash: 'dashdot' },
+                        { key: 'NASDAQ100', code: '^NDX', color: '#2563eb', dash: 'dot' },
+                        { key: 'S&P500', code: '^GSPC', color: '#dc2626', dash: 'dashdot' },
+                        { key: 'NYダウ', code: '^DJI', color: '#16a34a', dash: 'longdash' },
                     ];
                     refLines.forEach(ref => {
                         if (activeTimeSeries.some(d => d[ref.key] !== undefined)) {
