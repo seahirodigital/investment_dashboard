@@ -36,6 +36,9 @@
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        /* モバイルスワイプ用: スクロールバー非表示 */
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
         /* ヘッダー統一スタイル (header-hp) */
         .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
     </style>
@@ -803,11 +806,14 @@
 
             return (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                    <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex items-center gap-2">
-                        <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
-                        {titleLabel}
-                        {market === 'jp' ? <FullSectorLegend /> : <USSectorLegend />}
-                        <div className="flex items-center gap-1.5 ml-auto">
+                    {/* タイトル行（モバイル: 2行分離） */}
+                    <div className="mb-3">
+                        <h3 className="text-[13px] font-bold text-[#7C4DFF] flex items-center gap-2">
+                            <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
+                            {titleLabel}
+                        </h3>
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            {market === 'jp' ? <FullSectorLegend /> : <USSectorLegend />}
                             <span className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors" onClick={copySummary} title="サマリーをコピー">
                                 <Icon name="Copy" size={14} />
                             </span>
@@ -827,19 +833,19 @@
                                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                 }`}
                             >US</button>
-                            <button onClick={showTop7} className="text-xs px-3 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▲ 上位7</button>
-                            <button onClick={showBottom7} className="text-xs px-3 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▼ 下位7</button>
+                            <button onClick={showTop7} className="text-xs px-2 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▲ 上7</button>
+                            <button onClick={showBottom7} className="text-xs px-2 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▼ 下7</button>
                         </div>
-                    </h3>
-                    <div className="flex gap-4 h-[440px]">
+                    </div>
+                    <div className="flex flex-row md:flex-row gap-4 h-auto md:h-[520px] overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide">
                         {/* 左列：チャート + 凡例 */}
-                        <div className="w-[58%] h-full flex flex-col">
+                        <div className="w-full md:w-[58%] h-[400px] md:h-full flex flex-col snap-start shrink-0">
                             <div className="flex-1 min-h-0 relative z-10">
                                 <Plot
                                     data={chartTraces}
                                     layout={{
                                         autosize: true,
-                                        margin: { t: 5, r: 5, l: 40, b: 10 },
+                                        margin: { t: 5, r: 5, l: 40, b: 35 },
                                         dragmode: 'pan',
                                         xaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
@@ -881,7 +887,7 @@
                         </div>
 
                         {/* 右列：セクターランキング */}
-                        <div className="w-[42%] h-full flex flex-col">
+                        <div className="w-full md:w-[42%] h-[400px] md:h-full flex flex-col snap-start shrink-0">
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1 min-h-0">
                                 {activeRanking.map((item, index) => {
                                     const isPositive = item.performance >= 0;
@@ -1113,9 +1119,9 @@
                         <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
                         {title}
                     </h3>
-                    <div className="flex gap-4 h-[280px]">
+                    <div className="flex flex-row gap-4 h-[280px] overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide">
                         {/* 左：チャート */}
-                        <div className="w-1/2 h-full relative z-10">
+                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
@@ -1150,7 +1156,7 @@
                             )}
                         </div>
                         {/* 右：ランキング */}
-                        <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0 snap-start shrink-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
@@ -1487,9 +1493,9 @@
                         {category.label}
                         <InfoTooltip categoryId={category.id} />
                     </h3>
-                    <div className="flex gap-4 h-[280px]">
+                    <div className="flex flex-row gap-4 h-[280px] overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide">
                         {/* 左列：チャート */}
-                        <div className="w-1/2 h-full relative z-10">
+                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">
                                     データなし（未対応ETF）
@@ -1528,7 +1534,7 @@
                         </div>
 
                         {/* 右列：ランキング */}
-                        <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0 snap-start shrink-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">
                                     データなし
@@ -1896,9 +1902,9 @@
                     </div>
 
                     {/* チャート + ランキング */}
-                    <div className="flex gap-4 h-[280px]">
+                    <div className="flex flex-row gap-4 h-[280px] overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide">
                         {/* 左：チャート */}
-                        <div className="w-1/2 h-full relative z-10">
+                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
@@ -1930,7 +1936,7 @@
                         </div>
 
                         {/* 右：ランキング */}
-                        <div className="w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                        <div className="min-w-full md:min-w-0 md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0 snap-start shrink-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
