@@ -98,6 +98,33 @@
             return <span className={className}>{icons[name] || null}</span>;
         };
 
+        // スマホ横スワイプ対応コンテナ（ドットインジケーター付き）
+        const SwipeContainer = ({ children, className = '' }) => {
+            const ref = useRef(null);
+            const [page, setPage] = useState(0);
+            useEffect(() => {
+                const el = ref.current;
+                if (!el) return;
+                const onScroll = () => setPage(Math.round(el.scrollLeft / el.clientWidth));
+                el.addEventListener('scroll', onScroll, { passive: true });
+                return () => el.removeEventListener('scroll', onScroll);
+            }, []);
+            return (
+                <div>
+                    <div ref={ref}
+                        className={`flex flex-row gap-0 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide ${className}`}
+                        style={{ WebkitOverflowScrolling: 'touch' }}
+                    >
+                        {children}
+                    </div>
+                    <div className="flex justify-center gap-2 mt-2 md:hidden">
+                        <div className={`w-2 h-2 rounded-full transition-colors ${page === 0 ? 'bg-[#7C4DFF]' : 'bg-slate-300'}`} />
+                        <div className={`w-2 h-2 rounded-full transition-colors ${page === 1 ? 'bg-[#7C4DFF]' : 'bg-slate-300'}`} />
+                    </div>
+                </div>
+            );
+        };
+
         // カテゴリ詳細情報（ツールチップ用）
         const CATEGORY_DETAILS = {
             finance: [
@@ -806,14 +833,13 @@
 
             return (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                    {/* タイトル行（モバイル: 2行分離） */}
-                    <div className="mb-3">
-                        <h3 className="text-[13px] font-bold text-[#7C4DFF] flex items-center gap-2">
+                    <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex flex-wrap md:flex-nowrap items-center gap-2">
+                        <span className="flex items-center gap-2 w-full md:w-auto">
                             <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
                             {titleLabel}
-                        </h3>
-                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            {market === 'jp' ? <FullSectorLegend /> : <USSectorLegend />}
+                        </span>
+                        {market === 'jp' ? <FullSectorLegend /> : <USSectorLegend />}
+                        <div className="flex items-center gap-1.5 ml-auto">
                             <span className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors" onClick={copySummary} title="サマリーをコピー">
                                 <Icon name="Copy" size={14} />
                             </span>
@@ -836,10 +862,10 @@
                             <button onClick={showTop7} className="text-xs px-2 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▲ 上7</button>
                             <button onClick={showBottom7} className="text-xs px-2 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▼ 下7</button>
                         </div>
-                    </div>
-                    <div className="flex flex-row md:flex-row gap-4 h-auto md:h-[520px] overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide">
+                    </h3>
+                    <SwipeContainer className="h-[400px] md:h-[520px]">
                         {/* 左列：チャート + 凡例 */}
-                        <div className="w-full md:w-[58%] h-[400px] md:h-full flex flex-col snap-start shrink-0">
+                        <div className="min-w-full md:min-w-0 md:w-[58%] h-full flex flex-col snap-start shrink-0">
                             <div className="flex-1 min-h-0 relative z-10">
                                 <Plot
                                     data={chartTraces}
@@ -887,7 +913,7 @@
                         </div>
 
                         {/* 右列：セクターランキング */}
-                        <div className="w-full md:w-[42%] h-[400px] md:h-full flex flex-col snap-start shrink-0">
+                        <div className="min-w-full md:min-w-0 md:w-[42%] h-full flex flex-col snap-start shrink-0">
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1 min-h-0">
                                 {activeRanking.map((item, index) => {
                                     const isPositive = item.performance >= 0;
@@ -923,7 +949,7 @@
                                 })}
                             </div>
                         </div>
-                    </div>
+                    </SwipeContainer>
                 </div>
             );
         };
@@ -1119,7 +1145,7 @@
                         <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
                         {title}
                     </h3>
-                    <div className="flex flex-row gap-4 h-[280px] overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide">
+                    <SwipeContainer className="h-[280px]">
                         {/* 左：チャート */}
                         <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
                             {noData ? (
@@ -1197,7 +1223,7 @@
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </SwipeContainer>
                     {/* カスタム凡例（色丸・クリックで表示/非表示） */}
                     {!noData && (
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
@@ -1493,7 +1519,7 @@
                         {category.label}
                         <InfoTooltip categoryId={category.id} />
                     </h3>
-                    <div className="flex flex-row gap-4 h-[280px] overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide">
+                    <SwipeContainer className="h-[280px]">
                         {/* 左列：チャート */}
                         <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
                             {noData ? (
@@ -1578,7 +1604,7 @@
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </SwipeContainer>
                     {/* カスタム凡例（色丸・クリックで表示/非表示） */}
                     {!noData && (
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
@@ -1902,7 +1928,7 @@
                     </div>
 
                     {/* チャート + ランキング */}
-                    <div className="flex flex-row gap-4 h-[280px] overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide">
+                    <SwipeContainer className="h-[280px]">
                         {/* 左：チャート */}
                         <div className="min-w-full md:min-w-0 md:w-1/2 h-full relative z-10 snap-start shrink-0">
                             {noData ? (
@@ -1976,7 +2002,7 @@
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </SwipeContainer>
 
                     {/* 凡例 */}
                     {!noData && (
