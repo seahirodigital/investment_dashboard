@@ -2258,6 +2258,18 @@
                         }
                     });
 
+                    // US主要指数のパフォーマンスも絶対値として計算（ランキング表示用）
+                    const US_REF_SYMBOLS = { '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数' };
+                    Object.entries(US_REF_SYMBOLS).forEach(([sym, name]) => {
+                        const rPrices = prices[sym];
+                        if (!rPrices) return;
+                        const rStart = rPrices[baseIndex];
+                        const rCurrent = rPrices[i];
+                        if (rStart && rCurrent && rStart !== 0) {
+                            absPoint[name] = ((rCurrent / rStart) - 1) * 100;
+                        }
+                    });
+
                     timeSeries.push(point);
                     absoluteTimeSeries.push(absPoint);
                 }
@@ -2282,6 +2294,13 @@
                         const name = sectors[symbol];
                         if (latest[name] !== undefined) {
                             absoluteRanking.push({ symbol, name, performance: latest[name] });
+                        }
+                    });
+                    // US主要指数もランキングに追加
+                    const US_REF_SYMBOLS = { '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数' };
+                    Object.entries(US_REF_SYMBOLS).forEach(([sym, name]) => {
+                        if (latest[name] !== undefined) {
+                            absoluteRanking.push({ symbol: sym, name, performance: latest[name] });
                         }
                     });
                     absoluteRanking.sort((a, b) => b.performance - a.performance);
