@@ -601,6 +601,8 @@
                     if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
 
                     const startIdx = filteredIndices[0];
+                    // 前日終値基準: セッション開始の1つ前のデータ点（ffillで前日終値が入っている）
+                    const baseIdx = startIdx > 0 ? startIdx - 1 : startIdx;
                     const timeSeries = [];
                     const rankingMap = {};
 
@@ -623,7 +625,7 @@
                             const name = US_SECTORS[sym];
                             const sPrices = prices[sym];
                             if (!sPrices) return;
-                            const sStart = sPrices[startIdx];
+                            const sStart = sPrices[baseIdx];
                             const sCurrent = sPrices[i];
                             if (sStart && sCurrent && sStart !== 0) {
                                 const ret = ((sCurrent / sStart) - 1) * 100;
@@ -634,7 +636,7 @@
                         refSymbols.forEach(ref => {
                             const rPrices = prices[ref.code];
                             if (!rPrices) return;
-                            const rStart = rPrices[startIdx];
+                            const rStart = rPrices[baseIdx];
                             const rCurrent = rPrices[i];
                             if (rStart && rCurrent && rStart !== 0) {
                                 const ret = ((rCurrent / rStart) - 1) * 100;
@@ -1708,6 +1710,9 @@
                     }
                 }
 
+                // 基準価格: イントラデイは前日終値（startIndex - 1）、日次は期間開始日
+                const baseIndex = (isIntraday && startIndex > 0) ? startIndex - 1 : startIndex;
+
                 const timeSeries = [];
                 const rankingMap = {};
                 for (let i = startIndex; i < L; i++) {
@@ -1717,7 +1722,7 @@
                         const name = SEMICONDUCTOR_JP[sym];
                         const sPrices = prices[sym];
                         if (!sPrices) return;
-                        const sStart = sPrices[startIndex];
+                        const sStart = sPrices[baseIndex];
                         const sCurrent = sPrices[i];
                         if (sStart && sCurrent && sStart !== 0) {
                             const ret = ((sCurrent / sStart) - 1) * 100;
@@ -1770,6 +1775,8 @@
                     if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
 
                     const startIdx = filteredIndices[0];
+                    // 前日終値基準
+                    const baseIdx = startIdx > 0 ? startIdx - 1 : startIdx;
 
                     // 時系列計算（UTCタイムスタンプをそのまま使用）
                     const timeSeries = [];
@@ -1781,7 +1788,7 @@
                             const name = SEMICONDUCTOR_US[sym];
                             const sPrices = prices[sym];
                             if (!sPrices) return;
-                            const sStart = sPrices[startIdx];
+                            const sStart = sPrices[baseIdx];
                             const sCurrent = sPrices[i];
                             if (sStart && sCurrent && sStart !== 0) {
                                 const ret = ((sCurrent / sStart) - 1) * 100;
@@ -1792,7 +1799,7 @@
                         // SOX指数の参考ラインも追加
                         const soxPrices = prices['^SOX'];
                         if (soxPrices) {
-                            const soxStart = soxPrices[startIdx];
+                            const soxStart = soxPrices[baseIdx];
                             const soxCurrent = soxPrices[i];
                             if (soxStart && soxCurrent && soxStart !== 0) {
                                 point['SOX指数'] = ((soxCurrent / soxStart) - 1) * 100;
@@ -2199,6 +2206,11 @@
                 const endIndex = L - 1;
                 const bPrices = prices[benchmark];
 
+                // 基準価格のインデックス:
+                // イントラデイ: 前日終値（startIndex - 1）を基準にする（金融標準）
+                // 日次: 期間開始日を基準にする
+                const baseIndex = (isIntraday && startIndex > 0) ? startIndex - 1 : startIndex;
+
                 // yfinanceはUTCタイムスタンプを出力（tz_localize(None)でラベル除去）
                 // 表示用にJSTへ+9h変換が必要
                 const toJST = (utcStr) => {
@@ -2213,7 +2225,7 @@
 
                 for (let i = startIndex; i <= endIndex; i++) {
                     const date = isIntraday ? toJST(dates[i]) : dates[i];
-                    const bStart = bPrices[startIndex];
+                    const bStart = bPrices[baseIndex];
                     const bCurrent = bPrices[i];
 
                     if (!bStart || !bCurrent) continue;
@@ -2233,7 +2245,7 @@
                         const sPrices = prices[symbol];
                         if (!sPrices) return;
 
-                        const sStart = sPrices[startIndex];
+                        const sStart = sPrices[baseIndex];
                         const sCurrent = sPrices[i];
 
                         if (sStart && sCurrent) {
