@@ -1081,7 +1081,7 @@
         // 除外: TOPIX規模系・市場指標・旧コード・複合ETF（バスケットで代替済み）
         const EXCLUDE_FROM_SECTOR_RANKING = new Set([
             'TOPIX Core30','JPX400','グロース250',
-            'NASDAQ先物','SP500先物','NASDAQ100','S&P500','NYダウ',
+            'NQmain(2606)','ESmain(2606)','YMmain(2606)','NASDAQ100','S&P500','NYダウ',
             '日経指数','日経225ETF','米国債10年','GX日本成長',
             '銀行','半導体',
             '食品','素材・化学','自動車・輸送機',
@@ -1090,7 +1090,7 @@
         // FullSectorChart 用：全体チャートから除外するシンボルキー
         const FULL_RANKING_HIDDEN = new Set([
             '1311.T', '1591.T', '2516.T',
-            'NQ=F', 'ES=F', 'YM=F', '^NDX', '^GSPC', '^DJI',
+            'NQM26.CME', 'ESM26.CME', 'YMM26.CBT', '^NDX', '^GSPC', '^DJI',
             '1618.T', '200A.T', '^TNX',
             '機械', '1623.T', '1632.T', '1631.T', '213A.T',
         ]);
@@ -1434,6 +1434,9 @@
             const ABS_REF_LINES = isAbsolute ? [
                 { name: 'TOPIX',      color: '#94a3b8', width: 1.5, dash: 'solid',  code: '1306.T' },
                 { name: '日経指数',   color: '#1e293b', width: 2,   dash: 'dot',    code: '^N225' },
+                { name: 'NQmain(2606)',  color: '#1d4ed8', width: 1.5, dash: 'dash', code: 'NQM26.CME' },
+                { name: 'ESmain(2606)',  color: '#b91c1c', width: 1.5, dash: 'dash', code: 'ESM26.CME' },
+                { name: 'YMmain(2606)',  color: '#15803d', width: 1.5, dash: 'dash', code: 'YMM26.CBT' },
                 { name: 'NASDAQ100',  color: '#2563eb', width: 1.5, dash: 'solid',  code: '^NDX' },
                 { name: 'S&P500',     color: '#dc2626', width: 1.5, dash: 'solid',  code: '^GSPC' },
                 { name: 'NYダウ',     color: '#16a34a', width: 1.5, dash: 'solid',  code: '^DJI' },
@@ -2259,7 +2262,10 @@
                     });
 
                     // US主要指数のパフォーマンスも絶対値として計算（ランキング表示用）
-                    const US_REF_SYMBOLS = { '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数' };
+                    const US_REF_SYMBOLS = {
+                        '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数',
+                        'NQM26.CME': 'NQmain(2606)', 'ESM26.CME': 'ESmain(2606)', 'YMM26.CBT': 'YMmain(2606)',
+                    };
                     Object.entries(US_REF_SYMBOLS).forEach(([sym, name]) => {
                         const rPrices = prices[sym];
                         if (!rPrices) return;
@@ -2297,7 +2303,10 @@
                         }
                     });
                     // US主要指数もランキングに追加
-                    const US_REF_SYMBOLS = { '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数' };
+                    const US_REF_SYMBOLS = {
+                        '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数',
+                        'NQM26.CME': 'NQmain(2606)', 'ESM26.CME': 'ESmain(2606)', 'YMM26.CBT': 'YMmain(2606)',
+                    };
                     Object.entries(US_REF_SYMBOLS).forEach(([sym, name]) => {
                         if (latest[name] !== undefined) {
                             absoluteRanking.push({ symbol: sym, name, performance: latest[name] });
