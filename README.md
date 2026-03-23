@@ -201,13 +201,147 @@ concurrency: cancel-in-progress: false
 
 ---
 
-## セクター分類分析 (`sector_category.html`) 仕様
+## セクター分類分析 (`sector_category.html`) 仕様（2026-03-23 最新版）
 
 ### ページ概要
 
 全セクターを7カテゴリに分類し、**左：パフォーマンスチャート / 右：ランキング** の2カラム構成で表示。
 市場時間中（前場 9:00〜11:30、後場 12:30〜15:30）は **5分ごとにブラウザ側でデータ取得・自動更新**する。
 タブ復帰時にも即時更新（デバウンス500ms付き）。
+
+---
+
+### チャート構成と表示コンポーネント一覧
+
+| コンポーネント | 表示内容 | JP/US切替 | チャート種別 | ランキング |
+|---|---|---|---|---|
+| **FullSectorChart** | 全セクター相対パフォーマンス (vs TOPIX) | JP/US切替あり | Plotly折れ線 | 横にTOP7/BOTTOM7 |
+| **CategorySection ×7** | カテゴリ別チャート＋ランキング | JPのみ（US指数は参照線） | Plotly折れ線 | 横にランキングバー |
+| **SemiconductorSection** | 半導体個別株パフォーマンス | JP/US切替あり | Plotly折れ線 | 横にランキングバー |
+
+---
+
+### パフォーマンス計算基準（重要）
+
+```
+イントラデイ（1d〜14d）: 前日終値基準（baseIndex = startIndex - 1）
+  → 金融標準に準拠。ffillされたデータの前日最終ティックが前日終値となる
+  → 例: 日経 -3.96% は前日終値からの変動（当日寄付からではない）
+
+日次（1mo〜1y）: 期間開始日基準（baseIndex = startIndex）
+  → 選択した期間の初日を100%として変動率を計算
+```
+
+**対象箇所（全て統一済み）:**
+- JP市場 processedData（全セクター・全カテゴリ共通）
+- US市場 usData（FullSectorChart用）
+- SemiconductorSection JP/US（独自計算）
+- SOX指数参照ライン
+
+---
+
+### 規模別指数（絶対値）カード — チャート＋ランキング仕様
+
+**チャート表示ライン:**
+
+| ライン | シンボル | 線種 | 色 | 備考 |
+|---|---|---|---|---|
+| TOPIX | 1306.T | 実線 | グレー | ベンチマーク |
+| 日経指数 | ^N225 | 点線 | 黒 | JP主要指数 |
+| NQmain(2606) | NQM26.CME | **破線** | 濃い青 | NASDAQ100先物 2026年6月限 |
+| ESmain(2606) | ESM26.CME | **破線** | 濃い赤 | S&P500先物 2026年6月限 |
+| YMmain(2606) | YMM26.CBT | **破線** | 濃い緑 | Dow Jones先物 2026年6月限 |
+| NASDAQ100 | ^NDX | 実線 | 青 | 現物指数（前日終値ベース） |
+| S&P500 | ^GSPC | 実線 | 赤 | 現物指数（前日終値ベース） |
+| NYダウ | ^DJI | 実線 | 緑 | 現物指数（前日終値ベース） |
+| 半導体ETF | 2644.T | 破線 | 橙 | GX半導体ETF |
+| SOX指数 | ^SOX | 実線 | 紫 | フィラデルフィア半導体指数 |
+| TOPIX Core30 | 1311.T | - | - | ランキングのみ |
+| JPX400 | 1591.T | - | - | ランキングのみ |
+| グロース250 | 2516.T | - | - | ランキングのみ |
+
+**先物 vs 指数の使い分け:**
+- **先物（破線）**: JP市場時間中もリアルタイムで変動するため、日経等との日中比較に有用
+- **指数（実線）**: 前日の米国市場の確定結果。契約ロールの影響なし
+- 両方表示することで「米国の前日結果」と「今の先物の動き」を同時に把握可能
+
+**ランキング:** チャートの全ライン + TOPIX Core30/JPX400/グロース250 を含む全銘柄をパフォーマンス順で表示
+
+---
+
+### 先物シンボルの限月管理（運用上の注意）
+
+```
+現在: 2026年6月限（M = June）
+  NQM26.CME  /  ESM26.CME  /  YMM26.CBT
+
+次回更新: 2026年9月限（U = September）に切替時
+  NQU26.CME  /  ESU26.CME  /  YMU26.CBT
+
+変更箇所:
+  1. scripts/market/etf_data_manager.py — SECTORS dict のシンボルと名前
+  2. sector_category.html — EXCLUDE_FROM_SECTOR_RANKING, FULL_RANKING_HIDDEN,
+     ABS_REF_LINES, US_REF_SYMBOLS（2箇所）の全シンボル・名前
+
+CME先物限月コード: F=1月, G=2月, H=3月, J=4月, K=5月, M=6月,
+                   N=7月, Q=8月, U=9月, V=10月, X=11月, Z=12月
+```
+
+---
+
+### JP市場チャート仕様
+
+**データソース:** `etf_intraday.json`（5分足14日分）/ `etf_data.json`（日次）
+**X軸:** UTC → JST変換（toJST関数で+9h）、datetimeモード
+**rangebreaks:** 土日非表示 `[{ bounds: ["sat", "mon"] }]`、昼休み非表示 `[{ bounds: [2.5, 3.5] }]`（UTC）
+
+**全セクターチャート（FullSectorChart）:**
+- 相対パフォーマンス = (セクター変動率 - TOPIX変動率) × 100
+- TOPIXを0%基準線として各セクターの超過リターンを表示
+
+**カテゴリ別チャート（CategorySection ×7）:**
+- 相対モード: 上記と同じTOPIX割り返し
+- 絶対値モード（規模別指数のみ）: TOPIX割り返しなし、各銘柄の純変動率を表示
+
+---
+
+### US市場チャート仕様
+
+**データソース:** 同じ `etf_intraday.json` / `etf_data.json`（US銘柄も含む）
+**X軸:** **categoryモード**（datetimeモードではない）
+  - 理由: JST変換で金曜深夜→土曜早朝になり、datetimeモードの `["sat","mon"]` rangebreakで非表示になる問題を回避
+  - ラベル: toJSTShort関数で `"3/20 22:00"` 形式
+
+**US取引時間フィルタ:** UTC 13〜20時のデータのみ抽出（ET 9:00〜16:00）
+**表示時間帯（JST）:** 22:00〜翌05:00（金曜の米国セッションは土曜早朝まで表示）
+
+**FullSectorChart US:**
+- US_SECTORS（XLK, XLF, XLE等 15セクターETF）の絶対パフォーマンス
+- 参照線: NASDAQ100, S&P500, NYダウ
+
+**SemiconductorSection US:**
+- SEMICONDUCTOR_US（NVDA, AMD, AVGO等）の個別株パフォーマンス
+- 参照線: SOX指数（^SOX）
+
+---
+
+### モバイルレイアウト仕様
+
+**スワイプUI（SwipeContainer）:**
+- 各カードは `w-[85%] max-w-[85%]` で幅を固定、CSS scroll-snap で横スワイプ
+- ドットインジケーター（2つ）でページ位置を表示
+- デスクトップでは `md:contents` で透過（通常の2カラム表示）
+
+**Plotlyタッチ対応:**
+- モバイル（`window.innerWidth < 768`）で `staticPlot: true` を適用
+- `dragmode: false`、`touch-action: pan-x` でブラウザの横スワイプを優先
+- これによりPlotlyがタッチイベントを横取りせず、カード間スワイプが機能
+
+**ヘッダー:**
+- モバイル: 2行に折り返し（`flex-wrap`）。ボタンテキスト短縮（「▲ 上7」「▼ 下7」）
+- デスクトップ: 1行（`md:flex-nowrap`）。ボタンは右端配置
+
+---
 
 ### フロントエンドのデータ取得ロジック
 
