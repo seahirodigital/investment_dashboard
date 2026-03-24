@@ -407,7 +407,18 @@
                                                     });
                                                 })()}
                                             </Bar>
-                                            <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
+                                            <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" radius={[2,2,0,0]} hide={hiddenKeys.has('karauri')}>
+                                                {(() => {
+                                                    let maxIdx = 0;
+                                                    for (let i = 1; i < chartAll.length; i++) {
+                                                        if (chartAll[i].total > chartAll[maxIdx].total) maxIdx = i;
+                                                    }
+                                                    return chartAll.map((entry, index) => {
+                                                        const isMax = index === maxIdx;
+                                                        return <Cell key={`cell-karauri-${index}`} fill={isMax ? COLORS.total : COLORS.short} opacity={isMax ? 0.35 : 0.75} />;
+                                                    });
+                                                })()}
+                                            </Bar>
                                             {/* 色逆転：現物売りを totalBar (グレー) で表現 */}
                                             <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('genbutsu_uri')}>
                                                 {(() => {
@@ -417,7 +428,7 @@
                                                     }
                                                     return chartAll.map((entry, index) => {
                                                         const isMax = index === maxIdx || index === chartAll.length - 1;
-                                                        return <Cell key={`cell-genbutsu-${index}`} fill={isMax ? COLORS.total : COLORS.totalBar} />;
+                                                        return <Cell key={`cell-genbutsu-${index}`} fill={isMax ? COLORS.total : COLORS.totalBar} opacity={(index === maxIdx) ? 0.35 : 0.75} />;
                                                     });
                                                 })()}
                                             </Bar>
