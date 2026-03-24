@@ -646,6 +646,34 @@
                         });
                         timeSeries.push(point);
                     });
+                    // ── 終値補正: 日次データがイントラデイより新しければランキングを終値ベースに上書き ──
+                    if (rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
+                        rawIntraday && rawIntraday.generated_at) {
+                        const dailyGenAt = new Date(rawDaily.generated_at);
+                        const intradayGenAt = new Date(rawIntraday.generated_at);
+                        if (dailyGenAt > intradayGenAt) {
+                            const lastSessionDate = sessionDates[sessionDates.length - 1];
+                            const dailyDates = rawDaily.dates;
+                            let dailyEndIdx = -1;
+                            for (let di = dailyDates.length - 1; di >= 0; di--) {
+                                if (dailyDates[di] <= lastSessionDate) { dailyEndIdx = di; break; }
+                            }
+                            if (dailyEndIdx >= 0) {
+                                const dailyBaseIdx = Math.max(0, dailyEndIdx - daysAgo);
+                                const overrideWithClose = (sym) => {
+                                    const sPrices = rawDaily.prices[sym];
+                                    if (!sPrices) return;
+                                    const sStart = sPrices[dailyBaseIdx];
+                                    const sCurrent = sPrices[dailyEndIdx];
+                                    if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
+                                        rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
+                                    }
+                                };
+                                usSymbols.forEach(sym => overrideWithClose(sym));
+                                refSymbols.forEach(ref => overrideWithClose(ref.code));
+                            }
+                        }
+                    }
                     const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
                     return { ranking, timeSeries, isIntraday: true };
                 } else {
@@ -2338,6 +2366,57 @@
                         }
                     });
                     absoluteRanking.sort((a, b) => b.performance - a.performance);
+                }
+
+                // ── 終値補正: 日次データがイントラデイより新しければランキング値を終値ベースに上書き ──
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
+                    rawIntraday && rawIntraday.generated_at) {
+                    const dailyGenAt = new Date(rawDaily.generated_at);
+                    const intradayGenAt = new Date(rawIntraday.generated_at);
+                    if (dailyGenAt > intradayGenAt) {
+                        const lastIntradayDate = dates[endIndex].split(' ')[0];
+                        const dailyDates = rawDaily.dates;
+                        let dailyEndIdx = -1;
+                        for (let di = dailyDates.length - 1; di >= 0; di--) {
+                            if (dailyDates[di] <= lastIntradayDate) { dailyEndIdx = di; break; }
+                        }
+                        if (dailyEndIdx >= 0) {
+                            const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
+                            const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
+
+                            // 絶対値ランキングの終値補正
+                            absoluteRanking.forEach(entry => {
+                                const sPrices = rawDaily.prices[entry.symbol];
+                                if (!sPrices) return;
+                                const sStart = sPrices[dailyBaseIdx];
+                                const sCurrent = sPrices[dailyEndIdx];
+                                if (sStart && sCurrent && sStart !== 0) {
+                                    entry.performance = ((sCurrent / sStart) - 1) * 100;
+                                }
+                            });
+                            absoluteRanking.sort((a, b) => b.performance - a.performance);
+
+                            // 相対ランキング（TOPIX基準）の終値補正
+                            const bPricesDaily = rawDaily.prices[benchmark];
+                            if (bPricesDaily) {
+                                const bStartD = bPricesDaily[dailyBaseIdx];
+                                const bCurrentD = bPricesDaily[dailyEndIdx];
+                                if (bStartD && bCurrentD && bStartD !== 0) {
+                                    const bReturnD = (bCurrentD / bStartD) - 1;
+                                    ranking.forEach(entry => {
+                                        const sPrices = rawDaily.prices[entry.symbol];
+                                        if (!sPrices) return;
+                                        const sStart = sPrices[dailyBaseIdx];
+                                        const sCurrent = sPrices[dailyEndIdx];
+                                        if (sStart && sCurrent && sStart !== 0) {
+                                            entry.performance = ((sCurrent / sStart) - 1 - bReturnD) * 100;
+                                        }
+                                    });
+                                    ranking.sort((a, b) => b.performance - a.performance);
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // セクター名→シンボルの逆引きマップ（ランキングのホバー・バッジ表示用）
