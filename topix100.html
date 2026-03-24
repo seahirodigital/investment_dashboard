@@ -361,8 +361,9 @@
 
             const noData = catRanking.length === 0;
 
-            // フィルタモード: 'all' | 'top10' | 'worst10' | 'top10worst10'
-            const [filterMode, setFilterMode] = useState('top10worst10');
+            // チャート表示モード: 'all' | 'top10' | 'worst10' | 'top10worst10'
+            // デフォルトALL（ランキング全銘柄通常表示）、チャートはTOP10+WORST10をデフォルト表示
+            const [filterMode, setFilterMode] = useState('all');
             const [hiddenTraces, setHiddenTraces] = useState(new Set());
 
             // フィルタモード変更時にhiddenTracesをリセット
@@ -375,19 +376,14 @@
                 if (!catRanking.length) return [];
                 if (filterMode === 'top10') return catRanking.slice(0, 10);
                 if (filterMode === 'worst10') return catRanking.slice(-10);
-                if (filterMode === 'top10worst10') {
-                    const top = catRanking.slice(0, 10);
-                    const worst = catRanking.slice(-10);
-                    const seen = new Set(top.map(r => r.symbol));
-                    const combined = [...top];
-                    worst.forEach(r => { if (!seen.has(r.symbol)) combined.push(r); });
-                    return combined;
-                }
-                return catRanking;
+                // 'all' と 'top10worst10' はどちらもTOP10+WORST10をチャートに表示
+                const top = catRanking.slice(0, 10);
+                const worst = catRanking.slice(-10);
+                const seen = new Set(top.map(r => r.symbol));
+                const combined = [...top];
+                worst.forEach(r => { if (!seen.has(r.symbol)) combined.push(r); });
+                return combined;
             }, [catRanking, filterMode]);
-
-            // チャートに表示中の銘柄セット（ランキングのハイライト用）
-            const chartSymbols = useMemo(() => new Set(displayRanking.map(r => r.symbol)), [displayRanking]);
 
             // ランキングスクロールコンテナのref
             const rankingRef = useRef(null);
@@ -396,7 +392,6 @@
             useEffect(() => {
                 if (!rankingRef.current || !catRanking.length) return;
                 if (filterMode === 'worst10') {
-                    // 少し遅延してDOMレンダリング完了後にスクロール
                     requestAnimationFrame(() => {
                         rankingRef.current.scrollTop = rankingRef.current.scrollHeight;
                     });
@@ -545,11 +540,8 @@
                                         const isPositive = item.performance >= 0;
                                         const displayName = getDisplayName(item);
                                         const globalRank = index + 1;
-                                        // チャートに表示中かどうか
-                                        const isOnChart = chartSymbols.has(item.symbol);
-                                        const chartIndex = displayRanking.indexOf(item);
                                         return (
-                                            <div key={item.symbol} className={`relative group h-8 flex items-center transition-opacity ${isOnChart ? '' : 'opacity-40'}`}>
+                                            <div key={item.symbol} className="relative group h-8 flex items-center">
                                                 <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
                                                     <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
                                                     <div className="w-1/2 flex justify-end">
@@ -568,10 +560,10 @@
                                                 <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-[9px] text-slate-400 font-mono w-4 text-right">{globalRank}</span>
-                                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: chartIndex >= 0 ? COLORS[chartIndex % COLORS.length] : '#cbd5e1' }} />
-                                                        <span className={`font-bold truncate max-w-[100px] ${isOnChart ? '' : 'text-slate-400'}`}>{displayName}</span>
+                                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                        <span className="font-bold truncate max-w-[100px]">{displayName}</span>
                                                     </div>
-                                                    <span className={`font-mono font-bold ${isOnChart ? (isPositive ? 'text-emerald-600' : 'text-rose-600') : 'text-slate-400'}`}>
+                                                    <span className={`font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                         {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
                                                     </span>
                                                 </div>
