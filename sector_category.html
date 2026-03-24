@@ -1763,6 +1763,33 @@
                     });
                     timeSeries.push(point);
                 }
+                // ── 終値補正（半導体JP）: 日次データがイントラデイより新しければランキングを終値ベースに上書き ──
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
+                    rawIntraday && rawIntraday.generated_at) {
+                    const dailyGenAt = new Date(rawDaily.generated_at);
+                    const intradayGenAt = new Date(rawIntraday.generated_at);
+                    if (dailyGenAt > intradayGenAt) {
+                        const lastDate = dates[L - 1].split(' ')[0];
+                        const dailyDates = rawDaily.dates;
+                        let dailyEndIdx = -1;
+                        for (let di = dailyDates.length - 1; di >= 0; di--) {
+                            if (dailyDates[di] <= lastDate) { dailyEndIdx = di; break; }
+                        }
+                        if (dailyEndIdx >= 0) {
+                            const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
+                            const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
+                            jpSymbols.forEach(sym => {
+                                const sPrices = rawDaily.prices[sym];
+                                if (!sPrices) return;
+                                const sStart = sPrices[dailyBaseIdx];
+                                const sCurrent = sPrices[dailyEndIdx];
+                                if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
+                                    rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
+                                }
+                            });
+                        }
+                    }
+                }
                 const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
                 return { ranking, timeSeries, isIntraday };
             }, [rawIntraday, rawDaily, period, market]);
@@ -1839,6 +1866,33 @@
                         timeSeries.push(point);
                     });
 
+                    // ── 終値補正（半導体US）: 日次データがイントラデイより新しければランキングを終値ベースに上書き ──
+                    if (rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
+                        rawIntraday && rawIntraday.generated_at) {
+                        const dailyGenAt = new Date(rawDaily.generated_at);
+                        const intradayGenAt = new Date(rawIntraday.generated_at);
+                        if (dailyGenAt > intradayGenAt) {
+                            const lastSessionDate = sessionDates[sessionDates.length - 1];
+                            const dailyDates = rawDaily.dates;
+                            let dailyEndIdx = -1;
+                            for (let di = dailyDates.length - 1; di >= 0; di--) {
+                                if (dailyDates[di] <= lastSessionDate) { dailyEndIdx = di; break; }
+                            }
+                            if (dailyEndIdx >= 0) {
+                                const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
+                                const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
+                                usSymbols.forEach(sym => {
+                                    const sPrices = rawDaily.prices[sym];
+                                    if (!sPrices) return;
+                                    const sStart = sPrices[dailyBaseIdx];
+                                    const sCurrent = sPrices[dailyEndIdx];
+                                    if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
+                                        rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
+                                    }
+                                });
+                            }
+                        }
+                    }
                     const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
                     return { ranking, timeSeries, isIntraday: true };
 
