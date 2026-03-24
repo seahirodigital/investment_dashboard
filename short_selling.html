@@ -205,6 +205,15 @@
             // Brush デフォルト: 直近20日表示
             const defaultBrushStart = useMemo(() => Math.max(0, chartAll.length - 20), [chartAll]);
 
+            // 最大売買代金のインデックス（Cell着色に使用）
+            const maxTotalIdx = useMemo(() => {
+                let mx = 0;
+                for (let i = 1; i < chartAll.length; i++) {
+                    if (chartAll[i].total > chartAll[mx].total) mx = i;
+                }
+                return mx;
+            }, [chartAll]);
+
             const stats = useMemo(() => {
                 if(!chartAll.length) return null;
                 const ts = chartAll.map(d=>d.total), ks = chartAll.map(d=>d.karauri), rs = chartAll.map(d=>d.karauri_ratio);
@@ -395,19 +404,14 @@
                                             <Legend content={<CustomLegend toggle={1} />} wrapperStyle={{paddingTop:'5px'}} />
                                             
                                             <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} hide={hiddenKeys.has('total')}>
-                                                {(() => {
-                                                    // 最大売買代金のインデックスを直接計算
-                                                    let maxIdx = 0;
-                                                    for (let i = 1; i < chartAll.length; i++) {
-                                                        if (chartAll[i].total > chartAll[maxIdx].total) maxIdx = i;
-                                                    }
-                                                    console.log('[DEBUG] maxIdx=', maxIdx, 'date=', chartAll[maxIdx]?.fullDate, 'total=', chartAll[maxIdx]?.total, 'chartAll.length=', chartAll.length);
-                                                    return chartAll.map((entry, index) => {
-                                                        const isMax = index === maxIdx;
-                                                        if (isMax) console.log('[DEBUG] Cell isMax TRUE at index=', index, 'fill=', COLORS.total);
-                                                        return <Cell key={`cell-total-${index}`} fill={isMax ? COLORS.total : COLORS.sell} opacity={isMax ? 1 : 0.5} />;
-                                                    });
-                                                })()}
+                                                {chartAll.map((_, i) => (
+                                                    <Cell key={`ct-${i}`}
+                                                        fill={i === maxTotalIdx ? '#7C4DFF' : '#a78bfa'}
+                                                        fillOpacity={i === maxTotalIdx ? 1 : 0.5}
+                                                        stroke={i === maxTotalIdx ? '#5B21B6' : 'none'}
+                                                        strokeWidth={i === maxTotalIdx ? 2 : 0}
+                                                    />
+                                                ))}
                                             </Bar>
                                             <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
                                             {/* 色逆転：現物売りを totalBar (グレー) で表現 */}
