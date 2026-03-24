@@ -202,8 +202,8 @@
                 }));
             }, [sig]);
 
-            // Brush デフォルト: 直近30日表示
-            const defaultBrushStart = useMemo(() => Math.max(0, chartAll.length - 30), [chartAll]);
+            // Brush デフォルト: 直近20日表示
+            const defaultBrushStart = useMemo(() => Math.max(0, chartAll.length - 20), [chartAll]);
 
             const stats = useMemo(() => {
                 if(!chartAll.length) return null;
@@ -374,7 +374,7 @@
                             {chartAll.length > 0 && (
                                 <div className="w-full">
                                     <ResponsiveContainer width="100%" height={420}>
-                                        <ComposedChart data={chartAll} margin={{top:15,right:40,left:0,bottom:0}}>
+                                        <ComposedChart data={chartAll} margin={{top:15,right:25,left:-15,bottom:0}}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                             <XAxis dataKey="date" tick={{fontSize:9,fill:'#94a3b8'}} tickMargin={8} />
                                             <YAxis yAxisId="left" tick={{fontSize:9,fill:'#94a3b8'}} width={40} axisLine={false} tickLine={false} />
@@ -388,14 +388,20 @@
                                                     <p><span className="inline-block w-2 h-2 rounded bg-rose-500 mr-1"></span>空売合計(b+c): {(d?.karauri||0).toFixed(2)}兆</p>
                                                     <p><span className="inline-block w-2 h-2 rounded bg-slate-400 mr-1"></span>現物売り(a): {(d?.genbutsu_uri||0).toFixed(2)}兆</p>
                                                     <p className="mt-1 font-bold"><span className="inline-block w-2 h-2 rounded bg-slate-600 mr-1"></span>空売り比率: {pct(d?.karauri_ratio)}%</p>
-                                                    {d?.fullDate === stats.latestPkFullDate && <p className="text-pink-500 font-bold mt-0.5">★ 直近ピーク基準</p>}
-                                                    {d?.fullDate === stats.mx_t_d && <p className="text-pink-500 font-bold mt-0.5">★ 最大売買代金基準</p>}
                                                     <p className="text-slate-400 mt-1 border-t pt-1">20日MA(代金): {(d?.ma_total||0).toFixed(2)}兆</p>
                                                 </div>;
                                             }} cursor={{fill:'rgba(241, 245, 249, 0.4)'}} />
                                             <Legend content={<CustomLegend toggle={1} />} wrapperStyle={{paddingTop:'5px'}} />
                                             
-                                            <Bar yAxisId="left" dataKey="total" name="売買代金(d)" fill={COLORS.sell} radius={[2,2,0,0]} opacity={0.6} hide={hiddenKeys.has('total')} />
+                                            <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} opacity={0.6} hide={hiddenKeys.has('total')}>
+                                                {chartAll.map((entry, index) => {
+                                                    let c = COLORS.sell;
+                                                    if (entry.fullDate === stats.mx_t_d) {
+                                                        c = COLORS.total;
+                                                    }
+                                                    return <Cell key={`cell-total-${index}`} fill={c} />;
+                                                })}
+                                            </Bar>
                                             <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
                                             {/* 色逆転：現物売りを totalBar (グレー) で表現 */}
                                             <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('genbutsu_uri')}>
@@ -408,33 +414,8 @@
                                                 })}
                                             </Bar>
                                             
-                                            <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} isAnimationActive={false} dot={(props)=>{
-                                                const {cx,cy,payload}=props; 
-                                                if (payload.fullDate === stats.latestPkFullDate) {
-                                                    return (
-                                                        <g key={`pk-${payload.fullDate}`}>
-                                                            <circle cx={cx} cy={cy} r={5} fill={COLORS.peakDot} stroke="#fff" strokeWidth={1.5} />
-                                                            <text x={cx} y={cy-12} textAnchor="middle" fontSize="9" fill={COLORS.peakDot} fontWeight="bold">Peak!</text>
-                                                        </g>
-                                                    );
-                                                }
-                                                return null;
-                                            }} hide={hiddenKeys.has('karauri_ratio')} />
+                                            <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} dot={false} isAnimationActive={false} hide={hiddenKeys.has('karauri_ratio')} />
                                             
-                                            {/* 最大売買代金の点灯用、見えない Line */}
-                                            <Line yAxisId="left" type="monotone" dataKey="total" stroke="none" activeDot={false} isAnimationActive={false} dot={(props)=>{
-                                                const {cx,cy,payload}=props; 
-                                                if (payload.fullDate === stats.mx_t_d) {
-                                                    return (
-                                                        <g key={`mx-${payload.fullDate}`}>
-                                                            <circle cx={cx} cy={cy} r={5} fill={COLORS.peakDot} stroke="#fff" strokeWidth={1.5} />
-                                                            <text x={cx} y={cy-12} textAnchor="middle" fontSize="9" fill={COLORS.peakDot} fontWeight="bold">Peak!</text>
-                                                        </g>
-                                                    );
-                                                }
-                                                return null;
-                                            }} hide={hiddenKeys.has('total')} />
-
                                             <Line yAxisId="left" type="monotone" dataKey="ma_total" name="20日MA(代金)" stroke={COLORS.ma} strokeWidth={1.5} strokeDasharray="3 3" dot={false} hide={hiddenKeys.has('ma_total')} />
                                             <Brush dataKey="date" height={16} stroke={COLORS.ma} fill="#f8fafc" startIndex={defaultBrushStart} endIndex={chartAll.length - 1} tickFormatter={()=>""} />
                                         </ComposedChart>
@@ -456,7 +437,7 @@
                             {chartAll.length > 0 && (
                                 <div className="w-full">
                                     <ResponsiveContainer width="100%" height={420}>
-                                        <ComposedChart data={chartAll} margin={{top:10,right:40,left:0,bottom:0}} barCategoryGap="45%">
+                                        <ComposedChart data={chartAll} margin={{top:15,right:25,left:-15,bottom:0}}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                             <XAxis dataKey="date" tick={{fontSize:9,fill:'#94a3b8'}} tickMargin={8} />
                                             <YAxis yAxisId="left" tick={{fontSize:9,fill:'#94a3b8'}} width={40} axisLine={false} tickLine={false} />
@@ -469,24 +450,12 @@
                                                     <p><span className="inline-block w-2 h-2 rounded bg-rose-500 mr-1"></span>機関(b): {(d?.karauri_kiseiari||0).toFixed(2)} 兆</p>
                                                     <p><span className="inline-block w-2 h-2 rounded bg-rose-300 mr-1"></span>規制なし(c): {(d?.karauri_free||0).toFixed(2)} 兆</p>
                                                     <p className="mt-1 font-bold"><span className="inline-block w-2 h-2 rounded bg-slate-600 mr-1"></span>空売り比率: {pct(d?.karauri_ratio)}%</p>
-                                                    {d?.fullDate === stats.latestPkFullDate && <p className="text-pink-500 font-bold mt-0.5">★ 直近ピーク基準</p>}
                                                 </div>;
                                             }} cursor={{fill:'rgba(241, 245, 249, 0.4)'}} />
                                             <Legend content={<CustomLegend toggle={2} />} wrapperStyle={{paddingTop:'5px'}} />
                                             <Bar yAxisId="left" dataKey="karauri_kiseiari" name="機関空売り(b)" stackId="short" fill={COLORS.kikan} opacity={0.8} hide={hiddenKeys2.has('karauri_kiseiari')} />
                                             <Bar yAxisId="left" dataKey="karauri_free" name="規制なし(c)" stackId="short" fill={COLORS.free} radius={[2,2,0,0]} opacity={0.8} hide={hiddenKeys2.has('karauri_free')} />
-                                            <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} isAnimationActive={false} dot={(props)=>{
-                                                const {cx,cy,payload}=props; 
-                                                if (payload.fullDate === stats.latestPkFullDate) {
-                                                    return (
-                                                        <g key={`pk-${payload.fullDate}`}>
-                                                            <circle cx={cx} cy={cy} r={5} fill={COLORS.peakDot} stroke="#fff" strokeWidth={1.5} />
-                                                            <text x={cx} y={cy-12} textAnchor="middle" fontSize="9" fill={COLORS.peakDot} fontWeight="bold">Peak!</text>
-                                                        </g>
-                                                    );
-                                                }
-                                                return null;
-                                            }} hide={hiddenKeys2.has('karauri_ratio')} />
+                                            <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} isAnimationActive={false} dot={false} hide={hiddenKeys2.has('karauri_ratio')} />
                                             <Line yAxisId="right" type="monotone" dataKey="ma_ratio" name="比率20日MA" stroke={COLORS.ma} strokeWidth={1} strokeDasharray="5 5" dot={false} hide={hiddenKeys2.has('ma_ratio')} />
                                             <Brush dataKey="date" height={16} stroke={COLORS.ma} fill="#f8fafc" startIndex={defaultBrushStart} endIndex={chartAll.length - 1} tickFormatter={()=>""} />
                                         </ComposedChart>
