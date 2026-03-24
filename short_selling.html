@@ -395,26 +395,31 @@
                                             <Legend content={<CustomLegend toggle={1} />} wrapperStyle={{paddingTop:'5px'}} />
                                             
                                             <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} hide={hiddenKeys.has('total')}>
-                                                {chartAll.map((entry, index) => {
-                                                    let c = COLORS.sell;
-                                                    let o = 0.5;
-                                                    if (entry.fullDate === stats.mx_t_d) {
-                                                        c = COLORS.total;
-                                                        o = 1; /* 濃い紫を強調するため不透明度を 1 に */
+                                                {(() => {
+                                                    // 最大売買代金のインデックスを直接計算（文字列比較の不一致を回避）
+                                                    let maxIdx = 0;
+                                                    for (let i = 1; i < chartAll.length; i++) {
+                                                        if (chartAll[i].total > chartAll[maxIdx].total) maxIdx = i;
                                                     }
-                                                    return <Cell key={`cell-total-${index}`} fill={c} opacity={o} />;
-                                                })}
+                                                    return chartAll.map((entry, index) => {
+                                                        const isMax = index === maxIdx;
+                                                        return <Cell key={`cell-total-${index}`} fill={isMax ? COLORS.total : COLORS.sell} opacity={isMax ? 1 : 0.5} />;
+                                                    });
+                                                })()}
                                             </Bar>
                                             <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
                                             {/* 色逆転：現物売りを totalBar (グレー) で表現 */}
                                             <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('genbutsu_uri')}>
-                                                {chartAll.map((entry, index) => {
-                                                    let c = COLORS.totalBar;
-                                                    if (entry.fullDate === stats.mx_t_d || index === chartAll.length - 1) {
-                                                        c = COLORS.total;
+                                                {(() => {
+                                                    let maxIdx = 0;
+                                                    for (let i = 1; i < chartAll.length; i++) {
+                                                        if (chartAll[i].total > chartAll[maxIdx].total) maxIdx = i;
                                                     }
-                                                    return <Cell key={`cell-genbutsu-${index}`} fill={c} />;
-                                                })}
+                                                    return chartAll.map((entry, index) => {
+                                                        const isMax = index === maxIdx || index === chartAll.length - 1;
+                                                        return <Cell key={`cell-genbutsu-${index}`} fill={isMax ? COLORS.total : COLORS.totalBar} />;
+                                                    });
+                                                })()}
                                             </Bar>
                                             
                                             <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} dot={false} isAnimationActive={false} hide={hiddenKeys.has('karauri_ratio')} />
