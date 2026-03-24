@@ -393,13 +393,15 @@
                                             }} cursor={{fill:'rgba(241, 245, 249, 0.4)'}} />
                                             <Legend content={<CustomLegend toggle={1} />} wrapperStyle={{paddingTop:'5px'}} />
                                             
-                                            <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} opacity={0.6} hide={hiddenKeys.has('total')}>
+                                            <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} hide={hiddenKeys.has('total')}>
                                                 {chartAll.map((entry, index) => {
                                                     let c = COLORS.sell;
+                                                    let o = 0.5;
                                                     if (entry.fullDate === stats.mx_t_d) {
                                                         c = COLORS.total;
+                                                        o = 1; /* 濃い紫を強調するため不透明度を 1 に */
                                                     }
-                                                    return <Cell key={`cell-total-${index}`} fill={c} />;
+                                                    return <Cell key={`cell-total-${index}`} fill={c} opacity={o} />;
                                                 })}
                                             </Bar>
                                             <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
@@ -455,7 +457,18 @@
                                             <Legend content={<CustomLegend toggle={2} />} wrapperStyle={{paddingTop:'5px'}} />
                                             <Bar yAxisId="left" dataKey="karauri_kiseiari" name="機関空売り(b)" stackId="short" fill={COLORS.kikan} opacity={0.8} hide={hiddenKeys2.has('karauri_kiseiari')} />
                                             <Bar yAxisId="left" dataKey="karauri_free" name="規制なし(c)" stackId="short" fill={COLORS.free} radius={[2,2,0,0]} opacity={0.8} hide={hiddenKeys2.has('karauri_free')} />
-                                            <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} isAnimationActive={false} dot={false} hide={hiddenKeys2.has('karauri_ratio')} />
+                                            <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} isAnimationActive={false} dot={(props)=>{
+                                                const {cx,cy,payload}=props; 
+                                                if (payload.fullDate === stats.latestPkFullDate) {
+                                                    return (
+                                                        <g key={`pk-${payload.fullDate}`}>
+                                                            <circle cx={cx} cy={cy} r={5} fill={COLORS.peakDot} stroke="#fff" strokeWidth={1.5} />
+                                                            <text x={cx} y={cy-12} textAnchor="middle" fontSize="9" fill={COLORS.peakDot} fontWeight="bold">Peak!</text>
+                                                        </g>
+                                                    );
+                                                }
+                                                return null;
+                                            }} hide={hiddenKeys2.has('karauri_ratio')} />
                                             <Line yAxisId="right" type="monotone" dataKey="ma_ratio" name="比率20日MA" stroke={COLORS.ma} strokeWidth={1} strokeDasharray="5 5" dot={false} hide={hiddenKeys2.has('ma_ratio')} />
                                             <Brush dataKey="date" height={16} stroke={COLORS.ma} fill="#f8fafc" startIndex={defaultBrushStart} endIndex={chartAll.length - 1} tickFormatter={()=>""} />
                                         </ComposedChart>
