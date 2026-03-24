@@ -147,19 +147,17 @@ def extract_data_from_pdf(pdf_url):
             if any(v is None for v in [a_val, b_val, c_val, d_val]):
                 raise ValueError(f"数値抽出失敗: a={a_val}, b={b_val}, c={c_val}, d={d_val}")
 
-            # 計算（百万円単位）
-            genbutsu_uri = a_val          # 現物売り = (a)
-            karauri = b_val               # 空売り = (b) 価格規制あり
-            genbutsu_kai = d_val - b_val  # 現物買い = (d) - (b)
-            net_kai = genbutsu_kai - genbutsu_uri  # ネット買い
+            # ファクトのみ算出（百万円単位）
+            karauri_total = b_val + c_val  # 空売り合計 = (b)+(c)
+            karauri_ratio = round(karauri_total / d_val, 4) if d_val else 0
 
             return {
-                'genbutsu_uri': genbutsu_uri,   # 現物売り（百万円）
-                'karauri': karauri,             # 空売り（百万円）
-                'genbutsu_kai': genbutsu_kai,   # 現物買い（百万円）
-                'net_kai': net_kai,             # ネット買い（百万円）
-                'total': d_val,                 # 合計（百万円）
-                'karauri_free': c_val,          # 空売り規制なし（百万円）
+                'genbutsu_uri': a_val,              # 現物売り（百万円）= (a)
+                'karauri': karauri_total,            # 空売り合計（百万円）= (b)+(c)
+                'karauri_kiseiari': b_val,           # 機関空売り（百万円）= (b) 価格規制あり
+                'karauri_free': c_val,               # 空売り規制なし（百万円）= (c)
+                'total': d_val,                      # 売買代金（百万円）= (d)
+                'karauri_ratio': karauri_ratio,      # 空売り比率 = (b+c)/d
             }
 
     except Exception as e:
@@ -224,7 +222,7 @@ def fetch_all_data(pages_to_fetch=None):
                 record = {'date': date_str, **result}
                 new_records.append(record)
                 existing_dates.add(date_str)
-                print(f"OK 現物買:{result['genbutsu_kai']/1000000:.2f}兆 ネット買:{result['net_kai']/1000000:.2f}兆")
+                print(f"OK 売買代金:{result['total']/1000000:.2f}兆 空売り比率:{result['karauri_ratio']*100:.1f}%")
             else:
                 print("NG 失敗")
 
