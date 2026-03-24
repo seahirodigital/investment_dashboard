@@ -405,15 +405,18 @@
                                                     return <Cell key={`cell-total-${index}`} fill={c} opacity={o} />;
                                                 })}
                                             </Bar>
-                                            <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
-                                            {/* 色逆転：現物売りを totalBar (グレー) で表現 */}
-                                            <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('genbutsu_uri')}>
+                                            <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" radius={[2,2,0,0]} hide={hiddenKeys.has('karauri')}>
                                                 {chartAll.map((entry, index) => {
-                                                    let c = COLORS.totalBar;
-                                                    if (entry.fullDate === stats.mx_t_d || index === chartAll.length - 1) {
-                                                        c = COLORS.total;
-                                                    }
-                                                    return <Cell key={`cell-genbutsu-${index}`} fill={c} />;
+                                                    const isMax = entry.fullDate === stats.mx_t_d;
+                                                    return <Cell key={`cell-karauri-${index}`} fill={isMax ? COLORS.total : COLORS.short} opacity={isMax ? 1 : 0.75} />;
+                                                })}
+                                            </Bar>
+                                            {/* 色逆転：現物売りを totalBar (グレー) で表現、最大日は濃紫強調 */}
+                                            <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" radius={[2,2,0,0]} hide={hiddenKeys.has('genbutsu_uri')}>
+                                                {chartAll.map((entry, index) => {
+                                                    const isMax = entry.fullDate === stats.mx_t_d;
+                                                    const c = isMax ? COLORS.total : (index === chartAll.length - 1 ? COLORS.total : COLORS.totalBar);
+                                                    return <Cell key={`cell-genbutsu-${index}`} fill={c} opacity={isMax ? 1 : 0.75} />;
                                                 })}
                                             </Bar>
                                             
