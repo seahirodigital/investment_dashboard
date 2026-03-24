@@ -210,7 +210,8 @@
                 const ts = chartAll.map(d=>d.total), ks = chartAll.map(d=>d.karauri), rs = chartAll.map(d=>d.karauri_ratio);
                 const avg_t = ts.reduce((a,b)=>a+b,0)/ts.length;
                 const mx_t = Math.max(...ts), mx_k = Math.max(...ks);
-                const mx_t_d_full = chartAll.find(d=>d.total===mx_t)?.fullDate||'';
+                const mx_t_idx = ts.indexOf(mx_t);
+                const mx_t_d_full = mx_t_idx >= 0 ? chartAll[mx_t_idx].fullDate : '';
                 const avg_r = rs.reduce((a,b)=>a+b,0)/rs.length;
                 const mx_r = Math.max(...rs), mn_r = Math.min(...rs);
                 
@@ -226,7 +227,7 @@
                 return {
                     avg_t, mx_t, mx_k, avg_r, mx_r, mn_r,
                     mx_t_d: mx_t_d_full,
-                    mx_k_d: chartAll.find(d=>d.karauri===mx_k)?.fullDate||'',
+                    mx_k_d: (() => { const ki = ks.indexOf(mx_k); return ki >= 0 ? chartAll[ki].fullDate : ''; })(),
                     latest_r: chartAll[chartAll.length-1]?.karauri_ratio||0,
                     latestPkFullDate // Pk
                 };
