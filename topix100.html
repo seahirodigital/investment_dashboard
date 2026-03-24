@@ -322,31 +322,27 @@
                     timeSeries.push(point);
                 }
 
-                // 終値補正
-                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
-                    rawIntraday && rawIntraday.generated_at) {
-                    const dailyGenAt = new Date(rawDaily.generated_at);
-                    const intradayGenAt = new Date(rawIntraday.generated_at);
-                    if (dailyGenAt > intradayGenAt) {
-                        const lastDate = dates[L - 1].split(' ')[0];
-                        const dailyDates = rawDaily.dates;
-                        let dailyEndIdx = -1;
-                        for (let di = dailyDates.length - 1; di >= 0; di--) {
-                            if (dailyDates[di] <= lastDate) { dailyEndIdx = di; break; }
-                        }
-                        if (dailyEndIdx >= 0) {
-                            const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
-                            const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
-                            symbolKeys.forEach(sym => {
-                                const sPrices = rawDaily.prices[sym];
-                                if (!sPrices) return;
-                                const sStart = sPrices[dailyBaseIdx];
-                                const sCurrent = sPrices[dailyEndIdx];
-                                if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
-                                    rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
-                                }
-                            });
-                        }
+                // 終値補正: 日次データが存在すれば常にランキング値を日次終値で上書き
+                // （イントラデイ5分足の最終tickは実際の終値と乖離するため）
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
+                    const lastDate = dates[L - 1].split(' ')[0];
+                    const dailyDates = rawDaily.dates;
+                    let dailyEndIdx = -1;
+                    for (let di = dailyDates.length - 1; di >= 0; di--) {
+                        if (dailyDates[di] <= lastDate) { dailyEndIdx = di; break; }
+                    }
+                    if (dailyEndIdx >= 0) {
+                        const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
+                        const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
+                        symbolKeys.forEach(sym => {
+                            const sPrices = rawDaily.prices[sym];
+                            if (!sPrices) return;
+                            const sStart = sPrices[dailyBaseIdx];
+                            const sCurrent = sPrices[dailyEndIdx];
+                            if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
+                                rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
+                            }
+                        });
                     }
                 }
                 const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
@@ -365,8 +361,8 @@
 
             const noData = catRanking.length === 0;
 
-            // フィルタモード: 'all' | 'top10' | 'worst10'
-            const [filterMode, setFilterMode] = useState('top10');
+            // フィルタモード: 'all' | 'top10' | 'worst10' | 'top10worst10'
+            const [filterMode, setFilterMode] = useState('top10worst10');
             const [hiddenTraces, setHiddenTraces] = useState(new Set());
 
             // フィルタモード変更時にhiddenTracesをリセット
@@ -374,18 +370,31 @@
                 setHiddenTraces(new Set());
             }, [filterMode]);
 
-            // フィルタ適用後のランキング
+            // フィルタ適用後のランキング（チャート用）
             const displayRanking = useMemo(() => {
                 if (!catRanking.length) return [];
                 if (filterMode === 'top10') return catRanking.slice(0, 10);
                 if (filterMode === 'worst10') return catRanking.slice(-10);
+                if (filterMode === 'top10worst10') {
+                    const top = catRanking.slice(0, 10);
+                    const worst = catRanking.slice(-10);
+                    // 重複排除（銘柄数が20未満の場合）
+                    const seen = new Set(top.map(r => r.symbol));
+                    const combined = [...top];
+                    worst.forEach(r => { if (!seen.has(r.symbol)) combined.push(r); });
+                    return combined;
+                }
                 return catRanking;
             }, [catRanking, filterMode]);
 
-            // 表示対象の銘柄名セット
-            const visibleNames = useMemo(() => {
-                return new Set(displayRanking.map(r => r.name));
-            }, [displayRanking]);
+            // ランキング表示用（上位から順に表示）
+            const rankingForDisplay = useMemo(() => {
+                if (!catRanking.length) return [];
+                if (filterMode === 'top10') return catRanking.slice(0, 10);
+                if (filterMode === 'worst10') return catRanking.slice(-10);
+                if (filterMode === 'top10worst10') return [...catRanking.slice(0, 10), ...catRanking.slice(-10).filter(r => !catRanking.slice(0, 10).find(t => t.symbol === r.symbol))];
+                return catRanking;
+            }, [catRanking, filterMode]);
 
             const toggleTrace = useCallback((name) => {
                 setHiddenTraces(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
@@ -439,6 +448,16 @@
                         </h3>
                         <div className="flex items-center gap-1">
                             <button
+                                onClick={() => setFilterMode('top10worst10')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                    filterMode === 'top10worst10'
+                                        ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                            >
+                                TOP10 + WORST10
+                            </button>
+                            <button
                                 onClick={() => setFilterMode('top10')}
                                 className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
                                     filterMode === 'top10'
@@ -462,7 +481,7 @@
                                 onClick={() => setFilterMode('all')}
                                 className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
                                     filterMode === 'all'
-                                        ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                        ? 'bg-slate-700 text-white shadow-sm'
                                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                 }`}
                             >
@@ -472,7 +491,7 @@
                     </div>
 
                     {/* チャート + ランキング */}
-                    <SwipeContainer className="h-[400px]">
+                    <SwipeContainer className="h-[800px]">
                         {/* 左：チャート */}
                         <div className="md:w-1/2 h-full relative z-10">
                             {noData ? (
@@ -511,13 +530,25 @@
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
                                 <div className="space-y-1.5">
-                                    {displayRanking.map((item, index) => {
+                                    {rankingForDisplay.map((item, index) => {
                                         const isPositive = item.performance >= 0;
                                         const displayName = getDisplayName(item);
                                         // ランキング全体における順位を表示
                                         const globalRank = catRanking.indexOf(item) + 1;
+                                        // チャート上のカラーインデックスを取得
+                                        const chartIndex = displayRanking.indexOf(item);
+                                        // TOP10とWORST10の境界にセパレーター表示
+                                        const showSeparator = filterMode === 'top10worst10' && index === 10;
                                         return (
-                                            <div key={item.symbol} className="relative group h-8 flex items-center">
+                                            <React.Fragment key={item.symbol}>
+                                            {showSeparator && (
+                                                <div className="flex items-center gap-2 py-1">
+                                                    <div className="flex-1 border-t border-dashed border-slate-300"></div>
+                                                    <span className="text-[9px] text-slate-400 font-bold uppercase">WORST 10</span>
+                                                    <div className="flex-1 border-t border-dashed border-slate-300"></div>
+                                                </div>
+                                            )}
+                                            <div className="relative group h-8 flex items-center">
                                                 <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
                                                     <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
                                                     <div className="w-1/2 flex justify-end">
@@ -536,7 +567,7 @@
                                                 <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-[9px] text-slate-400 font-mono w-4 text-right">{globalRank}</span>
-                                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: chartIndex >= 0 ? COLORS[chartIndex % COLORS.length] : '#94a3b8' }} />
                                                         <span className="font-bold truncate max-w-[100px]">{displayName}</span>
                                                     </div>
                                                     <span className={`font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -544,6 +575,7 @@
                                                     </span>
                                                 </div>
                                             </div>
+                                            </React.Fragment>
                                         );
                                     })}
                                 </div>
