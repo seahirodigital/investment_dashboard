@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TOPIX100分析</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <!-- Utilities -->
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        #global-error { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fee2e2; color: #b91c1c; padding: 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 90%; width: 400px; border: 1px solid #ef4444; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="global-error"></div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            if (message === 'Script error.' || (!source && lineno === 0)) return true;
+            if (typeof message === 'string' && (message.includes('fetch') || message.includes('Failed to fetch'))) return true;
+            const el = document.getElementById('global-error');
+            el.style.display = 'block';
+            el.innerHTML = `<strong>システムエラー:</strong><br>${message}<br><small class="text-xs opacity-75">${source}:${lineno}</small>`;
+            setTimeout(() => { el.style.display = 'none'; }, 10000);
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+        // Plotlyラッパー
+        const Plot = ({ data, layout, config, style, useResizeHandler }) => {
+            const divRef = useRef(null);
+            useEffect(() => {
+                if (divRef.current && window.Plotly) Plotly.react(divRef.current, data, layout, config);
+            }, [data, layout, config]);
+            useEffect(() => {
+                let resizeObserver;
+                if (useResizeHandler && divRef.current && window.Plotly) {
+                    resizeObserver = new ResizeObserver(() => window.Plotly.Plots.resize(divRef.current));
+                    resizeObserver.observe(divRef.current);
+                }
+                return () => resizeObserver && resizeObserver.disconnect();
+            }, [useResizeHandler]);
+            useEffect(() => () => divRef.current && window.Plotly && Plotly.purge(divRef.current), []);
+            return <div ref={divRef} style={style} />;
+        };
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icons = {
+                RefreshCw: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>,
+                PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>,
+                Info: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+                HelpCircle: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+                X: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+            };
+            return <span className={className}>{icons[name] || null}</span>;
+        };
+
+        const cn = (...classes) => classes.filter(Boolean).join(' ');
+        const isMobileGlobal = window.innerWidth < 768;
+
+        // スマホ横スワイプ対応コンテナ
+        const SwipeContainer = ({ children, className = '' }) => {
+            const ref = useRef(null);
+            const [page, setPage] = useState(0);
+            useEffect(() => {
+                const el = ref.current;
+                if (!el) return;
+                const onScroll = () => {
+                    const cardW = el.clientWidth * 0.85;
+                    setPage(el.scrollLeft > cardW * 0.5 ? 1 : 0);
+                };
+                el.addEventListener('scroll', onScroll, { passive: true });
+                return () => el.removeEventListener('scroll', onScroll);
+            }, []);
+            return (
+                <div>
+                    <div ref={ref}
+                        className={`flex flex-row gap-3 md:gap-4 overflow-x-scroll md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide ${className}`}
+                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                    >
+                        {React.Children.map(children, (child) => (
+                            <div className="w-[85%] max-w-[85%] shrink-0 snap-start overflow-hidden rounded-lg border border-slate-100 md:contents"
+                                style={{ touchAction: 'pan-x' }}
+                            >
+                                {child}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex justify-center gap-2 mt-2 md:hidden">
+                        <div className={`w-2 h-2 rounded-full transition-colors ${page === 0 ? 'bg-[#7C4DFF]' : 'bg-slate-300'}`} />
+                        <div className={`w-2 h-2 rounded-full transition-colors ${page === 1 ? 'bg-[#7C4DFF]' : 'bg-slate-300'}`} />
+                    </div>
+                </div>
+            );
+        };
+
+        // 期間選択肢
+        const PERIODS = [
+            { value: '1d', label: '1日' }, { value: '2d', label: '2日' }, { value: '3d', label: '3日' },
+            { value: '5d', label: '5日' }, { value: '7d', label: '7日' }, { value: '10d', label: '10日' },
+            { value: '14d', label: '14日' }, { value: '1mo', label: '1ヶ月' }, { value: '2mo', label: '2ヶ月' },
+            { value: '3mo', label: '3ヶ月' }, { value: '6mo', label: '6ヶ月' }, { value: '1y', label: '1年' },
+        ];
+
+        // チャートカラーパレット
+        const COLORS = [
+            '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6',
+            '#8b5cf6', '#ec4899', '#f43f5e', '#06b6d4', '#84cc16', '#a855f7',
+            '#d946ef', '#0ea5e9', '#10b981', '#f59e0b', '#6366f1', '#e879f9',
+            '#4f46e5', '#ea580c', '#16a34a', '#9333ea', '#e11d48', '#0284c7', '#ca8a04',
+            '#65a30d', '#475569', '#0f766e', '#14b8a6'
+        ];
+
+        // TOPIX100銘柄マップ
+        const TOPIX100 = {
+            '1925.T': '大和ハウス工業',
+            '1928.T': '積水ハウス',
+            '2413.T': 'エムスリー',
+            '2502.T': 'アサヒグループHD',
+            '2503.T': 'キリンHD',
+            '2802.T': '味の素',
+            '2914.T': 'JT',
+            '3382.T': 'セブン&アイ',
+            '3402.T': '東レ',
+            '3407.T': '旭化成',
+            '4063.T': '信越化学工業',
+            '4188.T': '三菱ケミカルG',
+            '4452.T': '花王',
+            '4502.T': '武田薬品工業',
+            '4503.T': 'アステラス製薬',
+            '4507.T': '塩野義製薬',
+            '4519.T': '中外製薬',
+            '4523.T': 'エーザイ',
+            '4528.T': '小野薬品工業',
+            '4543.T': 'テルモ',
+            '4568.T': '第一三共',
+            '4578.T': '大塚HD',
+            '4661.T': 'オリエンタルランド',
+            '4689.T': 'LINEヤフー',
+            '4901.T': '富士フイルムHD',
+            '4911.T': '資生堂',
+            '5020.T': 'ENEOS HD',
+            '5108.T': 'ブリヂストン',
+            '5401.T': '日本製鉄',
+            '5713.T': '住友金属鉱山',
+            '5802.T': '住友電気工業',
+            '6098.T': 'リクルートHD',
+            '6178.T': '日本郵政',
+            '6273.T': 'SMC',
+            '6301.T': '小松製作所',
+            '6326.T': 'クボタ',
+            '6367.T': 'ダイキン工業',
+            '6501.T': '日立製作所',
+            '6503.T': '三菱電機',
+            '6586.T': 'マキタ',
+            '6594.T': 'ニデック',
+            '6645.T': 'オムロン',
+            '6702.T': '富士通',
+            '6752.T': 'パナソニックHD',
+            '6758.T': 'ソニーG',
+            '6861.T': 'キーエンス',
+            '6869.T': 'シスメックス',
+            '6902.T': 'デンソー',
+            '6920.T': 'レーザーテック',
+            '6954.T': 'ファナック',
+            '6971.T': '京セラ',
+            '6981.T': '村田製作所',
+            '7011.T': '三菱重工業',
+            '7201.T': '日産自動車',
+            '7203.T': 'トヨタ自動車',
+            '7267.T': '本田技研工業',
+            '7269.T': 'スズキ',
+            '7270.T': 'SUBARU',
+            '7309.T': 'シマノ',
+            '7733.T': 'オリンパス',
+            '7741.T': 'HOYA',
+            '7751.T': 'キヤノン',
+            '7832.T': 'バンダイナムコHD',
+            '7974.T': '任天堂',
+            '8001.T': '伊藤忠商事',
+            '8002.T': '丸紅',
+            '8031.T': '三井物産',
+            '8035.T': '東京エレクトロン',
+            '8053.T': '住友商事',
+            '8058.T': '三菱商事',
+            '8113.T': 'ユニ・チャーム',
+            '8267.T': 'イオン',
+            '8306.T': '三菱UFJFG',
+            '8308.T': 'りそなHD',
+            '8309.T': '三井住友トラストHD',
+            '8316.T': '三井住友FG',
+            '8411.T': 'みずほFG',
+            '8591.T': 'オリックス',
+            '8604.T': '野村HD',
+            '8630.T': 'SOMPO HD',
+            '8697.T': 'JPX',
+            '8725.T': 'MS&AD',
+            '8750.T': '第一生命HD',
+            '8766.T': '東京海上HD',
+            '8801.T': '三井不動産',
+            '8802.T': '三菱地所',
+            '8830.T': '住友不動産',
+            '9020.T': 'JR東日本',
+            '9021.T': 'JR西日本',
+            '9022.T': 'JR東海',
+            '9101.T': '日本郵船',
+            '9202.T': 'ANA HD',
+            '9432.T': 'NTT',
+            '9433.T': 'KDDI',
+            '9434.T': 'ソフトバンク',
+            '9735.T': 'セコム',
+            '9843.T': 'ニトリHD',
+            '9983.T': 'ファーストリテイリング',
+            '9984.T': 'ソフトバンクG',
+        };
+
+        const NIKKEI_NAME = '日経指数';
+
+        // TOPIX100チャートセクション
+        const Topix100Section = ({ rawIntraday, rawDaily, period }) => {
+            const symbolMap = TOPIX100;
+            const symbolKeys = Object.keys(symbolMap);
+
+            // rawデータからJSTベースで独立計算
+            const computedData = useMemo(() => {
+                const wantIntraday = ['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d'].includes(period);
+                const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
+                    && rawIntraday.dates[0].includes(' ');
+                const isIntraday = wantIntraday && intradayAvailable;
+                const rawData = isIntraday ? rawIntraday : rawDaily;
+                if (!rawData) return null;
+
+                const { dates, prices } = rawData;
+                const L = dates.length;
+
+                const toJST = (utcStr) => {
+                    const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
+                    const j = new Date(d.getTime() + 9 * 3600 * 1000);
+                    const p = n => String(n).padStart(2, '0');
+                    return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+                };
+
+                let startIndex = 0;
+                if (isIntraday) {
+                    const calendarDates = [...new Set(dates.map(d => d.split(' ')[0]))];
+                    const daysAgo = parseInt(period.replace('d', '')) || 1;
+                    const targetDateStr = calendarDates[Math.max(0, calendarDates.length - daysAgo)];
+                    startIndex = dates.findIndex(d => d.startsWith(targetDateStr));
+                    if (startIndex === -1) startIndex = 0;
+                } else if (period.endsWith('d')) {
+                    const days = parseInt(period.replace('d', ''), 10);
+                    startIndex = Math.max(0, L - Math.max(days + 1, 3));
+                } else {
+                    const daysAgo = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 }[period] || 30;
+                    const latest = new Date(dates[L - 1]);
+                    const target = new Date(latest.getTime() - daysAgo * 86400000).getTime();
+                    for (let i = L - 1; i >= 0; i--) {
+                        if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
+                    }
+                }
+
+                const baseIndex = (isIntraday && startIndex > 0) ? startIndex - 1 : startIndex;
+
+                const timeSeries = [];
+                const rankingMap = {};
+                for (let i = startIndex; i < L; i++) {
+                    const date = isIntraday ? toJST(dates[i]) : dates[i];
+                    const point = { date };
+                    symbolKeys.forEach(sym => {
+                        const name = TOPIX100[sym];
+                        const sPrices = prices[sym];
+                        if (!sPrices) return;
+                        const sStart = sPrices[baseIndex];
+                        const sCurrent = sPrices[i];
+                        if (sStart && sCurrent && sStart !== 0) {
+                            const ret = ((sCurrent / sStart) - 1) * 100;
+                            point[name] = ret;
+                            rankingMap[sym] = { symbol: sym, name, performance: ret };
+                        }
+                    });
+                    // 日経指数も参考ラインとして追加
+                    const nikkeiPrices = prices['^N225'];
+                    if (nikkeiPrices) {
+                        const nStart = nikkeiPrices[baseIndex];
+                        const nCurrent = nikkeiPrices[i];
+                        if (nStart && nCurrent && nStart !== 0) {
+                            point[NIKKEI_NAME] = ((nCurrent / nStart) - 1) * 100;
+                        }
+                    }
+                    timeSeries.push(point);
+                }
+
+                // 終値補正
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
+                    rawIntraday && rawIntraday.generated_at) {
+                    const dailyGenAt = new Date(rawDaily.generated_at);
+                    const intradayGenAt = new Date(rawIntraday.generated_at);
+                    if (dailyGenAt > intradayGenAt) {
+                        const lastDate = dates[L - 1].split(' ')[0];
+                        const dailyDates = rawDaily.dates;
+                        let dailyEndIdx = -1;
+                        for (let di = dailyDates.length - 1; di >= 0; di--) {
+                            if (dailyDates[di] <= lastDate) { dailyEndIdx = di; break; }
+                        }
+                        if (dailyEndIdx >= 0) {
+                            const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
+                            const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
+                            symbolKeys.forEach(sym => {
+                                const sPrices = rawDaily.prices[sym];
+                                if (!sPrices) return;
+                                const sStart = sPrices[dailyBaseIdx];
+                                const sCurrent = sPrices[dailyEndIdx];
+                                if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
+                                    rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
+                                }
+                            });
+                        }
+                    }
+                }
+                const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
+                return { ranking, timeSeries, isIntraday, startDate: isIntraday ? toJST(dates[startIndex]) : dates[startIndex], endDate: isIntraday ? toJST(dates[L-1]) : dates[L-1] };
+            }, [rawIntraday, rawDaily, period]);
+
+            const catRanking = computedData ? computedData.ranking : [];
+            const activeTimeSeries = computedData ? computedData.timeSeries : [];
+            const isIntraday = computedData ? computedData.isIntraday : false;
+
+            const maxAbsPerf = useMemo(() => {
+                if (!catRanking.length) return 1;
+                const max = Math.max(...catRanking.map(r => Math.abs(r.performance)));
+                return max === 0 ? 1 : max;
+            }, [catRanking]);
+
+            const noData = catRanking.length === 0;
+
+            // フィルタモード: 'all' | 'top10' | 'worst10'
+            const [filterMode, setFilterMode] = useState('top10');
+            const [hiddenTraces, setHiddenTraces] = useState(new Set());
+
+            // フィルタモード変更時にhiddenTracesをリセット
+            useEffect(() => {
+                setHiddenTraces(new Set());
+            }, [filterMode]);
+
+            // フィルタ適用後のランキング
+            const displayRanking = useMemo(() => {
+                if (!catRanking.length) return [];
+                if (filterMode === 'top10') return catRanking.slice(0, 10);
+                if (filterMode === 'worst10') return catRanking.slice(-10);
+                return catRanking;
+            }, [catRanking, filterMode]);
+
+            // 表示対象の銘柄名セット
+            const visibleNames = useMemo(() => {
+                return new Set(displayRanking.map(r => r.name));
+            }, [displayRanking]);
+
+            const toggleTrace = useCallback((name) => {
+                setHiddenTraces(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
+            }, []);
+
+            const getDisplayName = (item) => symbolMap[item.symbol] || item.name;
+
+            // チャートデータ
+            const chartTraces = useMemo(() => {
+                if (!displayRanking.length || !activeTimeSeries.length) return [];
+                const traces = displayRanking.map((item, i) => {
+                    const displayName = getDisplayName(item);
+                    return {
+                        x: activeTimeSeries.map(d => d.date),
+                        y: activeTimeSeries.map(d => d[item.name] ?? null),
+                        type: 'scatter', mode: 'lines', name: displayName,
+                        line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                        hovertemplate: `<b>${displayName}</b> <span style="color:white;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
+                    };
+                });
+                // 日経指数を基準ラインとして追加（黒点線）
+                if (activeTimeSeries.some(d => NIKKEI_NAME in d)) {
+                    traces.push({
+                        x: activeTimeSeries.map(d => d.date),
+                        y: activeTimeSeries.map(d => d[NIKKEI_NAME] ?? null),
+                        type: 'scatter', mode: 'lines', name: NIKKEI_NAME,
+                        line: { color: '#1e293b', width: 1.5, dash: 'dot' },
+                        hovertemplate: `<b>${NIKKEI_NAME}</b><br>%{y:.2f}%<extra></extra>`,
+                    });
+                }
+                return traces;
+            }, [activeTimeSeries, displayRanking]);
+
+            // Rangebreaks設定
+            const rangebreaks = useMemo(() => {
+                if (!isIntraday) return [{ bounds: ["sat","mon"] }];
+                return [
+                    { bounds: ["sat","mon"] },
+                    { bounds: [15.5, 9], pattern: "hour" },
+                    { bounds: [11.5, 12.5], pattern: "hour" }
+                ];
+            }, [isIntraday]);
+
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    {/* タイトル + フィルタボタン */}
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <h3 className="text-[13px] font-bold text-[#7C4DFF] flex items-center gap-2">
+                            <Icon name="PieChart" size={14} />
+                            TOPIX100 個別銘柄パフォーマンス（絶対値）
+                        </h3>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setFilterMode('top10')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                    filterMode === 'top10'
+                                        ? 'bg-emerald-500 text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                            >
+                                TOP 10
+                            </button>
+                            <button
+                                onClick={() => setFilterMode('worst10')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                    filterMode === 'worst10'
+                                        ? 'bg-rose-500 text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                            >
+                                WORST 10
+                            </button>
+                            <button
+                                onClick={() => setFilterMode('all')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                    filterMode === 'all'
+                                        ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                            >
+                                ALL
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* チャート + ランキング */}
+                    <SwipeContainer className="h-[400px]">
+                        {/* 左：チャート */}
+                        <div className="md:w-1/2 h-full relative z-10">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                            ) : (
+                                <Plot
+                                    data={chartTraces.map(t => ({ ...t, visible: !hiddenTraces.has(t.name) }))}
+                                    layout={{
+                                        autosize: true,
+                                        margin: { t: 5, r: 5, l: 35, b: 10 },
+                                        dragmode: isMobileGlobal ? false : 'pan',
+                                        xaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            rangebreaks: rangebreaks,
+                                        },
+                                        yaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            ticksuffix: '%',
+                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 1.5,
+                                        },
+                                        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                        showlegend: false, hovermode: 'closest',
+                                    }}
+                                    config={{ responsive: true, scrollZoom: !isMobileGlobal, displayModeBar: false, staticPlot: isMobileGlobal }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    useResizeHandler={true}
+                                />
+                            )}
+                        </div>
+
+                        {/* 右：ランキング */}
+                        <div className="md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {displayRanking.map((item, index) => {
+                                        const isPositive = item.performance >= 0;
+                                        const displayName = getDisplayName(item);
+                                        // ランキング全体における順位を表示
+                                        const globalRank = catRanking.indexOf(item) + 1;
+                                        return (
+                                            <div key={item.symbol} className="relative group h-8 flex items-center">
+                                                <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
+                                                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
+                                                    <div className="w-1/2 flex justify-end">
+                                                        {!isPositive && (
+                                                            <div className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-1/2 flex justify-start">
+                                                        {isPositive && (
+                                                            <div className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] text-slate-400 font-mono w-4 text-right">{globalRank}</span>
+                                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                        <span className="font-bold truncate max-w-[100px]">{displayName}</span>
+                                                    </div>
+                                                    <span className={`font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                        {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </SwipeContainer>
+
+                    {/* 凡例 */}
+                    {!noData && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
+                            {displayRanking.map((item, i) => {
+                                const displayName = getDisplayName(item);
+                                return (
+                                    <div key={item.symbol}
+                                        className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(displayName) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                        onClick={() => toggleTrace(displayName)}
+                                    >
+                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                        <span className="text-[9px] text-slate-600">{displayName}</span>
+                                    </div>
+                                );
+                            })}
+                            {/* 日経指数凡例 */}
+                            <div
+                                className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(NIKKEI_NAME) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                onClick={() => toggleTrace(NIKKEI_NAME)}
+                            >
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#1e293b' }} />
+                                <span className="text-[9px] text-slate-600">{NIKKEI_NAME}(参考)</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // メインAppコンポーネント
+        const App = () => {
+            const [period, setPeriod] = useState('1d');
+            const [rawDaily, setRawDaily] = useState(null);
+            const [rawIntraday, setRawIntraday] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const fetchingRef = useRef(false);
+
+            const fetchRawData = useCallback(async () => {
+                if (fetchingRef.current) return;
+                fetchingRef.current = true;
+                setLoading(true);
+                setError(null);
+                try {
+                    const headers = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
+                    const ts = Date.now();
+                    const [resDaily, resIntraday] = await Promise.all([
+                        fetch(`./data/etf_data.json?t=${ts}`, { headers, cache: 'no-store' }),
+                        fetch(`./data/etf_intraday.json?t=${ts}`, { headers, cache: 'no-store' }).catch(() => null)
+                    ]);
+
+                    if (!resDaily.ok) {
+                        if (resDaily.status === 404) {
+                            throw new Error("データファイル(etf_data.json)が未生成です。GitHub Actionsの完了をお待ちください。");
+                        }
+                        throw new Error(`データ読み込み失敗: ${resDaily.status} ${resDaily.statusText}`);
+                    }
+                    const jsonDaily = await resDaily.json();
+                    if (!jsonDaily.dates || jsonDaily.dates.length === 0) {
+                        throw new Error("データが空です。");
+                    }
+                    setRawDaily(jsonDaily);
+
+                    if (resIntraday && resIntraday.ok) {
+                        try {
+                            const jsonIntraday = await resIntraday.json();
+                            if (jsonIntraday.dates && jsonIntraday.dates.length > 0) {
+                                setRawIntraday(jsonIntraday);
+                            }
+                        } catch (e) {
+                            console.warn('イントラデイデータ解析エラー:', e);
+                        }
+                    }
+                } catch (err) {
+                    if (!rawDaily) setError(err.message);
+                    else console.warn('データ更新失敗（前回データを維持）:', err.message);
+                } finally {
+                    setLoading(false);
+                    fetchingRef.current = false;
+                }
+            }, []);
+
+            useEffect(() => { fetchRawData(); }, [fetchRawData]);
+
+            // 自動更新
+            useEffect(() => {
+                let timerId = null;
+                const scheduleNext = () => {
+                    const jst = new Date(Date.now() + 9 * 3600 * 1000);
+                    const t = jst.getUTCHours() * 60 + jst.getUTCMinutes();
+                    const inSession = (t >= 535 && t <= 695) || (t >= 745 && t <= 935);
+                    const intervalMs = inSession ? 5 * 60 * 1000 : 30 * 60 * 1000;
+                    timerId = setTimeout(() => {
+                        fetchRawData().catch(() => {});
+                        scheduleNext();
+                    }, intervalMs);
+                };
+                scheduleNext();
+                return () => clearTimeout(timerId);
+            }, [fetchRawData]);
+
+            // ページ復帰時再取得
+            useEffect(() => {
+                let debounceTimer = null;
+                const onVisible = () => {
+                    if (document.visibilityState === 'visible') {
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(() => {
+                            fetchRawData().catch(() => {});
+                        }, 500);
+                    }
+                };
+                document.addEventListener('visibilitychange', onVisible);
+                return () => {
+                    clearTimeout(debounceTimer);
+                    document.removeEventListener('visibilitychange', onVisible);
+                };
+            }, [fetchRawData]);
+
+            // データ期間情報の計算
+            const dateRange = useMemo(() => {
+                const wantIntraday = ['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d'].includes(period);
+                const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
+                    && rawIntraday.dates[0].includes(' ');
+                const isIntraday = wantIntraday && intradayAvailable;
+                const rawData = isIntraday ? rawIntraday : rawDaily;
+                if (!rawData || !rawData.dates || rawData.dates.length === 0) return null;
+
+                const dates = rawData.dates;
+                const L = dates.length;
+                const toJST = (utcStr) => {
+                    const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
+                    const j = new Date(d.getTime() + 9 * 3600 * 1000);
+                    const p = n => String(n).padStart(2, '0');
+                    return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+                };
+
+                let startIndex = 0;
+                if (isIntraday) {
+                    const calendarDates = [...new Set(dates.map(d => d.split(' ')[0]))];
+                    const daysAgo = parseInt(period.replace('d', '')) || 1;
+                    const targetDateStr = calendarDates[Math.max(0, calendarDates.length - daysAgo)];
+                    startIndex = dates.findIndex(d => d.startsWith(targetDateStr));
+                    if (startIndex === -1) startIndex = 0;
+                } else if (period.endsWith('d')) {
+                    const days = parseInt(period.replace('d', ''), 10);
+                    startIndex = Math.max(0, L - Math.max(days + 1, 3));
+                } else {
+                    const daysAgo = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 }[period] || 30;
+                    const latest = new Date(dates[L - 1]);
+                    const target = new Date(latest.getTime() - daysAgo * 86400000).getTime();
+                    for (let i = L - 1; i >= 0; i--) {
+                        if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
+                    }
+                }
+                return {
+                    startDate: isIntraday ? toJST(dates[startIndex]) : dates[startIndex],
+                    endDate: isIntraday ? toJST(dates[L - 1]) : dates[L - 1],
+                };
+            }, [rawDaily, rawIntraday, period]);
+
+            return (
+                <div className="flex flex-col min-h-screen bg-[#f8fafc]">
+                    <main className="flex-1 overflow-auto p-4 md:p-6">
+                        <div className="max-w-full mx-auto space-y-4">
+                            {/* ヘッダー */}
+                            <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-2">
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-xs font-bold text-[#7C4DFF]">TOPIX100分析</h1>
+                                    <span className="text-slate-400 text-xs">TOPIX Core30 + Large70 構成銘柄の相対パフォーマンス</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs mt-3 md:mt-0 flex-wrap">
+                                    {dateRange && (
+                                        <span className="text-slate-400 font-mono hidden sm:block">
+                                            {dateRange.startDate} 〜 {dateRange.endDate}
+                                        </span>
+                                    )}
+                                    {/* データ鮮度インジケーター */}
+                                    {(() => {
+                                        const genAt = (rawIntraday || rawDaily)?.generated_at_jst;
+                                        const isIntra = !!rawIntraday?.generated_at;
+                                        const now = new Date();
+                                        const jstNow = new Date(now.getTime() + 9 * 3600 * 1000);
+                                        const tMin = jstNow.getUTCHours() * 60 + jstNow.getUTCMinutes();
+                                        const inSession = (tMin >= 535 && tMin <= 695) || (tMin >= 745 && tMin <= 935);
+                                        let staleMin = null;
+                                        const genUtc = (rawIntraday || rawDaily)?.generated_at;
+                                        if (genUtc) {
+                                            staleMin = Math.round((now.getTime() - new Date(genUtc).getTime()) / 60000);
+                                        }
+                                        const isStale = inSession && staleMin !== null && staleMin > 20;
+                                        return (
+                                            <span className={`font-mono hidden sm:flex items-center gap-1 ${isStale ? 'text-amber-500' : 'text-slate-400'}`}>
+                                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${isStale ? 'bg-amber-400 animate-pulse' : (inSession ? 'bg-emerald-400' : 'bg-slate-300')}`}></span>
+                                                {genAt ? `生成: ${genAt}` : ''}
+                                                {staleMin !== null ? ` (${staleMin}分前)` : ''}
+                                                {!isIntra && ' [日次のみ]'}
+                                            </span>
+                                        );
+                                    })()}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-slate-500 shrink-0">期間:</span>
+                                        <select
+                                            value={period}
+                                            onChange={(e) => setPeriod(e.target.value)}
+                                            className="bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-[#7C4DFF] [&>option]:text-slate-800"
+                                            disabled={loading}
+                                        >
+                                            {PERIODS.map(p => (
+                                                <option key={p.value} value={p.value}>{p.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={fetchRawData}
+                                        className="bg-[#7C4DFF] text-white hover:bg-[#651FFF] font-bold px-3 py-1 rounded flex items-center gap-2 transition-colors shadow-sm"
+                                        disabled={loading}
+                                    >
+                                        <Icon name="RefreshCw" size={14} className={cn(loading && "animate-spin")} />
+                                        <span>更新</span>
+                                    </button>
+                                </div>
+                            </header>
+
+                            {/* ローディング */}
+                            {loading && !rawDaily && (
+                                <div className="flex justify-center items-center h-64">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7C4DFF]"></div>
+                                </div>
+                            )}
+
+                            {/* イントラデイデータ不可時の通知 */}
+                            {!loading && rawDaily && ['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d'].includes(period)
+                                && !(rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1 && rawIntraday.dates[0].includes(' ')) && (
+                                <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl p-3 text-xs">
+                                    5分足データが未取得のため、日次データで表示中です。GitHub Actionsのイントラデイ更新完了後、自動的に切り替わります。
+                                </div>
+                            )}
+
+                            {/* エラー */}
+                            {!loading && error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+                                    <strong>エラー:</strong> {error}
+                                </div>
+                            )}
+
+                            {/* TOPIX100チャート */}
+                            {!loading && rawDaily && (
+                                <div className="flex flex-col gap-4 animate-fade-in">
+                                    <Topix100Section rawIntraday={rawIntraday} rawDaily={rawDaily} period={period} />
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
