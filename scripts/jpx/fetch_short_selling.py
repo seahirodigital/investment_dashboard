@@ -41,6 +41,13 @@ ARCHIVE_PAGES = {
     "archive_03": "00-archives-03.html",
     "archive_04": "00-archives-04.html",
     "archive_05": "00-archives-05.html",
+    "archive_06": "00-archives-06.html",
+    "archive_07": "00-archives-07.html",
+    "archive_08": "00-archives-08.html",
+    "archive_09": "00-archives-09.html",
+    "archive_10": "00-archives-10.html",
+    "archive_11": "00-archives-11.html",
+    "archive_12": "00-archives-12.html",
 }
 
 

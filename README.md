@@ -469,6 +469,55 @@ pip install yfinance pandas pytz
 python scripts/market/etf_data_manager.py
 ```
 
+## デザイン仕様 (Design Reference)
+
+本プロジェクトのUI/UXプロトコル。新規画面追加・既存画面改修時はこの仕様に従うこと。
+
+### 技術スタック
+- **UIライブラリ**: React 18 (Babel Standalone)
+- **スタイリング**: Tailwind CSS (CDN)
+- **アイコン**: Lucide Icons
+- **チャート**: Recharts
+- **その他**: html2canvas, Marked.js
+
+### カラースキーム
+
+| 用途 | カラーコード | Tailwind |
+|------|------------|----------|
+| **背景 (Body)** | `#f8fafc` | slate-50 |
+| **カード背景** | `#ffffff` | white |
+| **境界線** | `#e2e8f0` | slate-200 |
+| **メインテキスト** | `#334155` | slate-700 |
+| **見出し** | `#1e293b` | slate-800 |
+| **ラベル** | `#64748b` | slate-500 |
+| **注釈** | `#94a3b8` | slate-400 |
+| **Primary** | `#7C4DFF` | - |
+| **Primary Hover** | `#651FFF` | - |
+| **ポジティブ/上昇** | `#10B981` | emerald-500 |
+| **ネガティブ/下落** | `#F43F5E` | rose-500 |
+| **ベンチマーク** | `#475569` | slate-600 |
+
+### 売買フロー専用カラー（統一）
+
+| 項目 | カラー | 用途 |
+|------|--------|------|
+| **現物買い** | `#60a5fa` (blue-400) | チャート棒・テーブルハイライト・凡例 |
+| **現物売り** | `#a78bfa` (violet-400) | チャート棒・凡例 |
+| **空売り** | `#F43F5E` (rose-500) | チャート棒・テーブル警告・凡例 |
+| **ネット買い** | `#10B981` (emerald-500) | チャート線・ポジティブ表示 |
+
+### UIコンポーネント
+- **カード**: `bg-white rounded-xl shadow-sm border border-slate-200 p-6`
+- **サイドバー**: `bg-white border-r border-slate-200`
+  - アクティブ: `bg-[#7C4DFF] text-white shadow`
+  - 非アクティブ: `text-[#64748B] hover:bg-slate-100`
+- **ボタン**: `bg-[#7C4DFF] text-white hover:bg-[#651FFF] font-bold rounded-lg`
+- **テーブルヘッダー**: `bg-slate-50 text-xs uppercase font-bold text-slate-500`
+- **モーダル**: `bg-white p-6 rounded-xl shadow-xl max-w-lg w-[90%]`
+- **アニメーション**: `.animate-fade-in` (fadeIn 0.5s ease-out)
+
+---
+
 ## ⚠️ 免責事項
 
 - このツールは情報提供を目的としており、投資判断の根拠とするものではありません
