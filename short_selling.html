@@ -396,42 +396,22 @@
                                             
                                             <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} hide={hiddenKeys.has('total')}>
                                                 {(() => {
-                                                    // 最大売買代金のインデックスを直接計算（文字列比較の不一致を回避）
+                                                    // 最大売買代金のインデックスを直接計算
                                                     let maxIdx = 0;
                                                     for (let i = 1; i < chartAll.length; i++) {
                                                         if (chartAll[i].total > chartAll[maxIdx].total) maxIdx = i;
                                                     }
+                                                    console.log('[DEBUG] maxIdx=', maxIdx, 'date=', chartAll[maxIdx]?.fullDate, 'total=', chartAll[maxIdx]?.total, 'chartAll.length=', chartAll.length);
                                                     return chartAll.map((entry, index) => {
                                                         const isMax = index === maxIdx;
+                                                        if (isMax) console.log('[DEBUG] Cell isMax TRUE at index=', index, 'fill=', COLORS.total);
                                                         return <Cell key={`cell-total-${index}`} fill={isMax ? COLORS.total : COLORS.sell} opacity={isMax ? 1 : 0.5} />;
                                                     });
                                                 })()}
                                             </Bar>
-                                            <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" radius={[2,2,0,0]} hide={hiddenKeys.has('karauri')}>
-                                                {(() => {
-                                                    let maxIdx = 0;
-                                                    for (let i = 1; i < chartAll.length; i++) {
-                                                        if (chartAll[i].total > chartAll[maxIdx].total) maxIdx = i;
-                                                    }
-                                                    return chartAll.map((entry, index) => {
-                                                        const isMax = index === maxIdx;
-                                                        return <Cell key={`cell-karauri-${index}`} fill={isMax ? COLORS.total : COLORS.short} opacity={isMax ? 0.35 : 0.75} />;
-                                                    });
-                                                })()}
-                                            </Bar>
+                                            <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
                                             {/* 色逆転：現物売りを totalBar (グレー) で表現 */}
-                                            <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('genbutsu_uri')}>
-                                                {(() => {
-                                                    let maxIdx = 0;
-                                                    for (let i = 1; i < chartAll.length; i++) {
-                                                        if (chartAll[i].total > chartAll[maxIdx].total) maxIdx = i;
-                                                    }
-                                                    return chartAll.map((entry, index) => {
-                                                        const isMax = index === maxIdx || index === chartAll.length - 1;
-                                                        return <Cell key={`cell-genbutsu-${index}`} fill={isMax ? COLORS.total : COLORS.totalBar} opacity={(index === maxIdx) ? 0.35 : 0.75} />;
-                                                    });
-                                                })()}
-                                            </Bar>
+                                            <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" fill={COLORS.totalBar} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('genbutsu_uri')} />
                                             
                                             <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} dot={false} isAnimationActive={false} hide={hiddenKeys.has('karauri_ratio')} />
                                             
