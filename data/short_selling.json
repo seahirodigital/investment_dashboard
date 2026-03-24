@@ -1,0 +1,672 @@
+{
+  "data": [
+    {
+      "date": "2026-03-23",
+      "genbutsu_uri": 5173041,
+      "karauri": 2943974,
+      "genbutsu_kai": 5979254,
+      "net_kai": 806213,
+      "total": 8923228,
+      "karauri_free": 806213
+    },
+    {
+      "date": "2026-03-19",
+      "genbutsu_uri": 5772132,
+      "karauri": 3005664,
+      "genbutsu_kai": 6530393,
+      "net_kai": 758261,
+      "total": 9536057,
+      "karauri_free": 758261
+    },
+    {
+      "date": "2026-03-18",
+      "genbutsu_uri": 4734522,
+      "karauri": 2191243,
+      "genbutsu_kai": 5293104,
+      "net_kai": 558582,
+      "total": 7484347,
+      "karauri_free": 558582
+    },
+    {
+      "date": "2026-03-17",
+      "genbutsu_uri": 4082517,
+      "karauri": 2228896,
+      "genbutsu_kai": 4661013,
+      "net_kai": 578496,
+      "total": 6889909,
+      "karauri_free": 578496
+    },
+    {
+      "date": "2026-03-16",
+      "genbutsu_uri": 4323586,
+      "karauri": 2336579,
+      "genbutsu_kai": 4997319,
+      "net_kai": 673733,
+      "total": 7333898,
+      "karauri_free": 673733
+    },
+    {
+      "date": "2026-03-13",
+      "genbutsu_uri": 4983589,
+      "karauri": 2572177,
+      "genbutsu_kai": 5978446,
+      "net_kai": 994857,
+      "total": 8550623,
+      "karauri_free": 994857
+    },
+    {
+      "date": "2026-03-12",
+      "genbutsu_uri": 4595199,
+      "karauri": 2738810,
+      "genbutsu_kai": 5547946,
+      "net_kai": 952747,
+      "total": 8286756,
+      "karauri_free": 952747
+    },
+    {
+      "date": "2026-03-11",
+      "genbutsu_uri": 4982725,
+      "karauri": 2593715,
+      "genbutsu_kai": 5621216,
+      "net_kai": 638491,
+      "total": 8214931,
+      "karauri_free": 638491
+    },
+    {
+      "date": "2026-03-10",
+      "genbutsu_uri": 5507551,
+      "karauri": 2268142,
+      "genbutsu_kai": 6400044,
+      "net_kai": 892493,
+      "total": 8668186,
+      "karauri_free": 892493
+    },
+    {
+      "date": "2026-03-09",
+      "genbutsu_uri": 6599152,
+      "karauri": 3162515,
+      "genbutsu_kai": 7868316,
+      "net_kai": 1269164,
+      "total": 11030831,
+      "karauri_free": 1269164
+    },
+    {
+      "date": "2026-03-06",
+      "genbutsu_uri": 4868046,
+      "karauri": 2723264,
+      "genbutsu_kai": 5550547,
+      "net_kai": 682501,
+      "total": 8273811,
+      "karauri_free": 682501
+    },
+    {
+      "date": "2026-03-05",
+      "genbutsu_uri": 5908547,
+      "karauri": 3212500,
+      "genbutsu_kai": 6973244,
+      "net_kai": 1064697,
+      "total": 10185744,
+      "karauri_free": 1064697
+    },
+    {
+      "date": "2026-03-04",
+      "genbutsu_uri": 6903764,
+      "karauri": 4079372,
+      "genbutsu_kai": 8044093,
+      "net_kai": 1140329,
+      "total": 12123465,
+      "karauri_free": 1140329
+    },
+    {
+      "date": "2026-03-03",
+      "genbutsu_uri": 6415411,
+      "karauri": 3652457,
+      "genbutsu_kai": 7427211,
+      "net_kai": 1011800,
+      "total": 11079668,
+      "karauri_free": 1011800
+    },
+    {
+      "date": "2026-03-02",
+      "genbutsu_uri": 5927119,
+      "karauri": 3062764,
+      "genbutsu_kai": 6682920,
+      "net_kai": 755801,
+      "total": 9745684,
+      "karauri_free": 755801
+    },
+    {
+      "date": "2026-02-27",
+      "genbutsu_uri": 6989282,
+      "karauri": 3204474,
+      "genbutsu_kai": 7553520,
+      "net_kai": 564238,
+      "total": 10757994,
+      "karauri_free": 564238
+    },
+    {
+      "date": "2026-02-26",
+      "genbutsu_uri": 6182833,
+      "karauri": 2932369,
+      "genbutsu_kai": 6833418,
+      "net_kai": 650585,
+      "total": 9765787,
+      "karauri_free": 650585
+    },
+    {
+      "date": "2026-02-25",
+      "genbutsu_uri": 6397431,
+      "karauri": 2907487,
+      "genbutsu_kai": 7052312,
+      "net_kai": 654881,
+      "total": 9959799,
+      "karauri_free": 654881
+    },
+    {
+      "date": "2026-02-24",
+      "genbutsu_uri": 6013424,
+      "karauri": 2832931,
+      "genbutsu_kai": 6620473,
+      "net_kai": 607049,
+      "total": 9453404,
+      "karauri_free": 607049
+    },
+    {
+      "date": "2026-02-20",
+      "genbutsu_uri": 4920581,
+      "karauri": 2472511,
+      "genbutsu_kai": 5543265,
+      "net_kai": 622684,
+      "total": 8015776,
+      "karauri_free": 622684
+    },
+    {
+      "date": "2026-02-19",
+      "genbutsu_uri": 5028479,
+      "karauri": 2332956,
+      "genbutsu_kai": 5579643,
+      "net_kai": 551164,
+      "total": 7912599,
+      "karauri_free": 551164
+    },
+    {
+      "date": "2026-02-18",
+      "genbutsu_uri": 4730494,
+      "karauri": 2146230,
+      "genbutsu_kai": 5179538,
+      "net_kai": 449044,
+      "total": 7325768,
+      "karauri_free": 449044
+    },
+    {
+      "date": "2026-02-17",
+      "genbutsu_uri": 4314137,
+      "karauri": 2321018,
+      "genbutsu_kai": 4870512,
+      "net_kai": 556375,
+      "total": 7191530,
+      "karauri_free": 556375
+    },
+    {
+      "date": "2026-02-16",
+      "genbutsu_uri": 5051853,
+      "karauri": 2528259,
+      "genbutsu_kai": 5539284,
+      "net_kai": 487431,
+      "total": 8067543,
+      "karauri_free": 487431
+    },
+    {
+      "date": "2026-02-13",
+      "genbutsu_uri": 7509520,
+      "karauri": 3420702,
+      "genbutsu_kai": 8375174,
+      "net_kai": 865654,
+      "total": 11795876,
+      "karauri_free": 865654
+    },
+    {
+      "date": "2026-02-12",
+      "genbutsu_uri": 6987861,
+      "karauri": 3161848,
+      "genbutsu_kai": 7683403,
+      "net_kai": 695542,
+      "total": 10845251,
+      "karauri_free": 695542
+    },
+    {
+      "date": "2026-02-10",
+      "genbutsu_uri": 7018097,
+      "karauri": 2920070,
+      "genbutsu_kai": 7757308,
+      "net_kai": 739211,
+      "total": 10677378,
+      "karauri_free": 739211
+    },
+    {
+      "date": "2026-02-09",
+      "genbutsu_uri": 7535670,
+      "karauri": 3322181,
+      "genbutsu_kai": 8371095,
+      "net_kai": 835425,
+      "total": 11693276,
+      "karauri_free": 835425
+    },
+    {
+      "date": "2026-02-06",
+      "genbutsu_uri": 5840645,
+      "karauri": 2730159,
+      "genbutsu_kai": 6431501,
+      "net_kai": 590856,
+      "total": 9161660,
+      "karauri_free": 590856
+    },
+    {
+      "date": "2026-02-05",
+      "genbutsu_uri": 6024900,
+      "karauri": 2997354,
+      "genbutsu_kai": 6606210,
+      "net_kai": 581310,
+      "total": 9603564,
+      "karauri_free": 581310
+    },
+    {
+      "date": "2026-02-04",
+      "genbutsu_uri": 6053509,
+      "karauri": 2795568,
+      "genbutsu_kai": 6623882,
+      "net_kai": 570373,
+      "total": 9419450,
+      "karauri_free": 570373
+    },
+    {
+      "date": "2026-02-03",
+      "genbutsu_uri": 5566352,
+      "karauri": 2316390,
+      "genbutsu_kai": 6242597,
+      "net_kai": 676245,
+      "total": 8558987,
+      "karauri_free": 676245
+    },
+    {
+      "date": "2026-02-02",
+      "genbutsu_uri": 5619198,
+      "karauri": 2821889,
+      "genbutsu_kai": 6309739,
+      "net_kai": 690541,
+      "total": 9131628,
+      "karauri_free": 690541
+    },
+    {
+      "date": "2026-01-30",
+      "genbutsu_uri": 5530221,
+      "karauri": 2732862,
+      "genbutsu_kai": 6085536,
+      "net_kai": 555315,
+      "total": 8818398,
+      "karauri_free": 555315
+    },
+    {
+      "date": "2026-01-29",
+      "genbutsu_uri": 5023573,
+      "karauri": 2734653,
+      "genbutsu_kai": 5808468,
+      "net_kai": 784895,
+      "total": 8543121,
+      "karauri_free": 784895
+    },
+    {
+      "date": "2026-01-28",
+      "genbutsu_uri": 4812635,
+      "karauri": 2415988,
+      "genbutsu_kai": 5492813,
+      "net_kai": 680178,
+      "total": 7908801,
+      "karauri_free": 680178
+    },
+    {
+      "date": "2026-01-27",
+      "genbutsu_uri": 3922457,
+      "karauri": 1937092,
+      "genbutsu_kai": 4621655,
+      "net_kai": 699198,
+      "total": 6558747,
+      "karauri_free": 699198
+    },
+    {
+      "date": "2026-01-26",
+      "genbutsu_uri": 4179727,
+      "karauri": 2311216,
+      "genbutsu_kai": 4997030,
+      "net_kai": 817303,
+      "total": 7308246,
+      "karauri_free": 817303
+    },
+    {
+      "date": "2026-01-23",
+      "genbutsu_uri": 4397008,
+      "karauri": 2154947,
+      "genbutsu_kai": 4910201,
+      "net_kai": 513193,
+      "total": 7065148,
+      "karauri_free": 513193
+    },
+    {
+      "date": "2026-01-22",
+      "genbutsu_uri": 4874752,
+      "karauri": 2481967,
+      "genbutsu_kai": 5504809,
+      "net_kai": 630057,
+      "total": 7986776,
+      "karauri_free": 630057
+    },
+    {
+      "date": "2026-01-21",
+      "genbutsu_uri": 4637287,
+      "karauri": 2254085,
+      "genbutsu_kai": 5294945,
+      "net_kai": 657658,
+      "total": 7549030,
+      "karauri_free": 657658
+    },
+    {
+      "date": "2026-01-20",
+      "genbutsu_uri": 4109773,
+      "karauri": 2119092,
+      "genbutsu_kai": 4568056,
+      "net_kai": 458283,
+      "total": 6687148,
+      "karauri_free": 458283
+    },
+    {
+      "date": "2026-01-19",
+      "genbutsu_uri": 4164232,
+      "karauri": 2009453,
+      "genbutsu_kai": 4661107,
+      "net_kai": 496875,
+      "total": 6670560,
+      "karauri_free": 496875
+    },
+    {
+      "date": "2026-01-16",
+      "genbutsu_uri": 4976382,
+      "karauri": 2348265,
+      "genbutsu_kai": 5462389,
+      "net_kai": 486007,
+      "total": 7810654,
+      "karauri_free": 486007
+    },
+    {
+      "date": "2026-01-15",
+      "genbutsu_uri": 5063269,
+      "karauri": 2315003,
+      "genbutsu_kai": 5573720,
+      "net_kai": 510451,
+      "total": 7888723,
+      "karauri_free": 510451
+    },
+    {
+      "date": "2026-01-14",
+      "genbutsu_uri": 5340785,
+      "karauri": 2240543,
+      "genbutsu_kai": 5856426,
+      "net_kai": 515641,
+      "total": 8096969,
+      "karauri_free": 515641
+    },
+    {
+      "date": "2026-01-13",
+      "genbutsu_uri": 5672588,
+      "karauri": 2368833,
+      "genbutsu_kai": 6236383,
+      "net_kai": 563795,
+      "total": 8605216,
+      "karauri_free": 563795
+    },
+    {
+      "date": "2026-01-09",
+      "genbutsu_uri": 4079931,
+      "karauri": 2189521,
+      "genbutsu_kai": 4740705,
+      "net_kai": 660774,
+      "total": 6930226,
+      "karauri_free": 660774
+    },
+    {
+      "date": "2026-01-08",
+      "genbutsu_uri": 3854759,
+      "karauri": 2179591,
+      "genbutsu_kai": 4484588,
+      "net_kai": 629829,
+      "total": 6664179,
+      "karauri_free": 629829
+    },
+    {
+      "date": "2026-01-07",
+      "genbutsu_uri": 4312779,
+      "karauri": 2187162,
+      "genbutsu_kai": 4941639,
+      "net_kai": 628860,
+      "total": 7128801,
+      "karauri_free": 628860
+    },
+    {
+      "date": "2026-01-06",
+      "genbutsu_uri": 4452444,
+      "karauri": 2036014,
+      "genbutsu_kai": 4966703,
+      "net_kai": 514259,
+      "total": 7002717,
+      "karauri_free": 514259
+    },
+    {
+      "date": "2026-01-05",
+      "genbutsu_uri": 4247615,
+      "karauri": 1909720,
+      "genbutsu_kai": 4772722,
+      "net_kai": 525107,
+      "total": 6682442,
+      "karauri_free": 525107
+    },
+    {
+      "date": "2025-12-30",
+      "genbutsu_uri": 2667804,
+      "karauri": 1353273,
+      "genbutsu_kai": 3055577,
+      "net_kai": 387773,
+      "total": 4408850,
+      "karauri_free": 387773
+    },
+    {
+      "date": "2025-12-29",
+      "genbutsu_uri": 3007820,
+      "karauri": 1646728,
+      "genbutsu_kai": 3400689,
+      "net_kai": 392869,
+      "total": 5047417,
+      "karauri_free": 392869
+    },
+    {
+      "date": "2025-12-26",
+      "genbutsu_uri": 2746982,
+      "karauri": 1223550,
+      "genbutsu_kai": 3242125,
+      "net_kai": 495143,
+      "total": 4465675,
+      "karauri_free": 495143
+    },
+    {
+      "date": "2025-12-25",
+      "genbutsu_uri": 2172032,
+      "karauri": 988598,
+      "genbutsu_kai": 2506645,
+      "net_kai": 334613,
+      "total": 3495243,
+      "karauri_free": 334613
+    },
+    {
+      "date": "2025-12-24",
+      "genbutsu_uri": 2817620,
+      "karauri": 1295657,
+      "genbutsu_kai": 3244794,
+      "net_kai": 427174,
+      "total": 4540451,
+      "karauri_free": 427174
+    },
+    {
+      "date": "2025-12-23",
+      "genbutsu_uri": 2956889,
+      "karauri": 1394998,
+      "genbutsu_kai": 3454809,
+      "net_kai": 497920,
+      "total": 4849807,
+      "karauri_free": 497920
+    },
+    {
+      "date": "2025-12-22",
+      "genbutsu_uri": 3476666,
+      "karauri": 1728306,
+      "genbutsu_kai": 3953687,
+      "net_kai": 477021,
+      "total": 5681993,
+      "karauri_free": 477021
+    },
+    {
+      "date": "2025-12-19",
+      "genbutsu_uri": 4527384,
+      "karauri": 2221146,
+      "genbutsu_kai": 5021711,
+      "net_kai": 494327,
+      "total": 7242857,
+      "karauri_free": 494327
+    },
+    {
+      "date": "2025-12-18",
+      "genbutsu_uri": 3403748,
+      "karauri": 1761088,
+      "genbutsu_kai": 3890066,
+      "net_kai": 486318,
+      "total": 5651154,
+      "karauri_free": 486318
+    },
+    {
+      "date": "2025-12-17",
+      "genbutsu_uri": 3402610,
+      "karauri": 1708091,
+      "genbutsu_kai": 3905228,
+      "net_kai": 502618,
+      "total": 5613319,
+      "karauri_free": 502618
+    },
+    {
+      "date": "2025-12-16",
+      "genbutsu_uri": 3557945,
+      "karauri": 1892969,
+      "genbutsu_kai": 4056895,
+      "net_kai": 498950,
+      "total": 5949864,
+      "karauri_free": 498950
+    },
+    {
+      "date": "2025-12-15",
+      "genbutsu_uri": 3518240,
+      "karauri": 1788378,
+      "genbutsu_kai": 3940888,
+      "net_kai": 422648,
+      "total": 5729266,
+      "karauri_free": 422648
+    },
+    {
+      "date": "2025-12-12",
+      "genbutsu_uri": 4391983,
+      "karauri": 2042899,
+      "genbutsu_kai": 5114485,
+      "net_kai": 722502,
+      "total": 7157384,
+      "karauri_free": 722502
+    },
+    {
+      "date": "2025-12-11",
+      "genbutsu_uri": 3505046,
+      "karauri": 1902403,
+      "genbutsu_kai": 4067062,
+      "net_kai": 562016,
+      "total": 5969465,
+      "karauri_free": 562016
+    },
+    {
+      "date": "2025-12-10",
+      "genbutsu_uri": 3708943,
+      "karauri": 2062965,
+      "genbutsu_kai": 4213443,
+      "net_kai": 504500,
+      "total": 6276408,
+      "karauri_free": 504500
+    },
+    {
+      "date": "2025-12-09",
+      "genbutsu_uri": 3246960,
+      "karauri": 1730746,
+      "genbutsu_kai": 3703034,
+      "net_kai": 456074,
+      "total": 5433780,
+      "karauri_free": 456074
+    },
+    {
+      "date": "2025-12-08",
+      "genbutsu_uri": 3379619,
+      "karauri": 1712661,
+      "genbutsu_kai": 3832098,
+      "net_kai": 452479,
+      "total": 5544759,
+      "karauri_free": 452479
+    },
+    {
+      "date": "2025-12-05",
+      "genbutsu_uri": 3533834,
+      "karauri": 1894143,
+      "genbutsu_kai": 4081633,
+      "net_kai": 547799,
+      "total": 5975776,
+      "karauri_free": 547799
+    },
+    {
+      "date": "2025-12-04",
+      "genbutsu_uri": 3961654,
+      "karauri": 1863582,
+      "genbutsu_kai": 4560057,
+      "net_kai": 598403,
+      "total": 6423639,
+      "karauri_free": 598403
+    },
+    {
+      "date": "2025-12-03",
+      "genbutsu_uri": 3677082,
+      "karauri": 1760713,
+      "genbutsu_kai": 4227310,
+      "net_kai": 550228,
+      "total": 5988023,
+      "karauri_free": 550228
+    },
+    {
+      "date": "2025-12-02",
+      "genbutsu_uri": 3420071,
+      "karauri": 1791596,
+      "genbutsu_kai": 3962157,
+      "net_kai": 542086,
+      "total": 5753753,
+      "karauri_free": 542086
+    },
+    {
+      "date": "2025-12-01",
+      "genbutsu_uri": 3577075,
+      "karauri": 1893300,
+      "genbutsu_kai": 4161471,
+      "net_kai": 584396,
+      "total": 6054771,
+      "karauri_free": 584396
+    }
+  ],
+  "generated_at": "2026-03-24T13:12:58",
+  "generated_at_jst": "2026-03-24 13:12 JST"
+}

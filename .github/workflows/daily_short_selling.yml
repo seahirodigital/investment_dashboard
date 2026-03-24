@@ -1,9 +1,8 @@
-name: Daily ETF Sector Analysis
+name: Daily Short Selling Data Fetch
 
 on:
   schedule:
-    - cron: '0 7 * * *'    # 16:00 JST (07:00 UTC) — JP市場閉場後の日次データ確定
-    - cron: '30 21 * * 1-5' # 06:30 JST (21:30 UTC) — US市場閉場後の終値確定用
+    - cron: '5 8 * * 1-5'  # 毎営業日 08:05 UTC (17:05 JST)
   workflow_dispatch:
 
 permissions:
@@ -12,7 +11,7 @@ permissions:
   id-token: write
 
 jobs:
-  analyze:
+  fetch-short-selling:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -24,23 +23,20 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Fetch ETF Data
-        run: |
-          python scripts/market/etf_data_manager.py
+      - name: Fetch Short Selling Data
+        run: python scripts/jpx/fetch_short_selling.py
 
       - name: Commit and Push Data
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
-          [ -f data/etf_data.json ] && git add data/etf_data.json
-          [ -f data/etf_intraday.json ] && git add data/etf_intraday.json
-          
+
+          [ -f data/short_selling.json ] && git add data/short_selling.json
+
           if ! git diff --staged --quiet; then
-            git commit -m "Update ETF Data: $(date +'%Y-%m-%d')"
+            git commit -m "Update Short Selling Data: $(date +'%Y-%m-%d')"
             git push
             echo "Data updated and pushed."
           else
@@ -50,24 +46,23 @@ jobs:
       - name: Prepare deployment files
         run: |
           mkdir -p deploy
-          
+
           for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html short_selling.html; do
             if [ -f "$file" ]; then
               cp "$file" deploy/
-              echo "✅ Copied $file to deploy/"
+              echo "Copied $file to deploy/"
             else
-              echo "⚠️ Warning: $file not found"
+              echo "Warning: $file not found"
             fi
           done
-          
+
           [ -d css ] && cp -r css deploy/
           [ -d js ] && cp -r js deploy/
           [ -d data ] && cp -r data deploy/
-          # keep_files: true なので gh-pages の既存ファイル（GPIF/dist等）は自動保持
 
           echo "Deploy directory content:"
           ls -laR deploy/
-      
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

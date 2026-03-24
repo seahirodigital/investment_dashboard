@@ -147,7 +147,7 @@ jobs:
             done
 
             # HTMLファイルをコピー
-            for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html; do
+            for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html short_selling.html; do
               [ -f "$file" ] && cp "$file" /tmp/gh-pages/
             done
             [ -d css ] && cp -r css /tmp/gh-pages/
