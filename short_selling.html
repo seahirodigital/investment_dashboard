@@ -26,21 +26,26 @@
         .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .dark-table { background: #1e293b; border-radius: 12px; overflow: hidden; }
         .dark-table table { width: 100%; border-collapse: collapse; }
-        .dark-table th { background: #334155; color: #94a3b8; font-size: 12px; font-weight: 600; padding: 10px 16px; text-align: center; border-bottom: 1px solid #475569; }
-        .dark-table td { color: #e2e8f0; font-size: 13px; padding: 8px 16px; text-align: center; border-bottom: 1px solid #334155; font-variant-numeric: tabular-nums; }
+        .dark-table th { background: #334155; color: #94a3b8; font-size: 12px; font-weight: 600; padding: 10px 16px; text-align: center; border-bottom: 1px solid #475569; white-space: nowrap; }
+        .dark-table td { color: #e2e8f0; font-size: 13px; padding: 8px 16px; text-align: center; border-bottom: 1px solid #334155; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .dark-table tr:hover td { background: #334155; }
         .dark-table .highlight-row td { background: #1e3a5f; }
-        .dark-table .val-buy { color: #60a5fa; font-weight: 600; }
+        .dark-table .val-total { color: #60a5fa; font-weight: 600; }
         .dark-table .val-sell { color: #a78bfa; font-weight: 600; }
         .dark-table .val-short { color: #F43F5E; font-weight: 600; }
-        .dark-table .val-net { color: #10B981; font-weight: 600; }
-        .dark-table .val-net-weak { color: #f59e0b; font-weight: 600; }
+        .dark-table .val-ratio { color: #f59e0b; font-weight: 600; }
+        .dark-table .val-kikan { color: #fb7185; font-weight: 600; }
         .dark-table .date-star { color: #fbbf24; font-weight: 700; }
         .signal-red { background: linear-gradient(135deg, #fee2e2, #fecaca); border: 1px solid #fca5a5; }
         .signal-yellow { background: linear-gradient(135deg, #fef9c3, #fef08a); border: 1px solid #fde047; }
         .signal-green { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border: 1px solid #6ee7b7; }
         .phase-bar { display: flex; height: 32px; border-radius: 8px; overflow: hidden; }
         .phase-segment { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; transition: all 0.3s; }
+        .chart-scroll { overflow-x: auto; overflow-y: hidden; }
+        .chart-scroll::-webkit-scrollbar { height: 6px; }
+        .chart-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .chart-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .chart-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body>
@@ -54,18 +59,18 @@
         };
     </script>
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-        const { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, Cell } = window.Recharts || {};
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
+        const { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, Cell } = window.Recharts || {};
 
         // ==================== 統一カラー定義 ====================
         const COLORS = {
-            buy: '#60a5fa',      // 現物買い blue-400
-            sell: '#a78bfa',     // 現物売り violet-400
-            short: '#F43F5E',    // 空売り rose-500
-            net: '#10B981',      // ネット買い emerald-500
-            netWeak: '#f59e0b',  // ネット買い（平均以下） amber-500
-            accel: '#8b5cf6',    // 加速度 violet-500
-            ma: '#94a3b8',       // 移動平均 slate-400
+            total: '#60a5fa',       // 売買代金 blue-400
+            sell: '#a78bfa',        // 現物売り violet-400
+            short: '#F43F5E',       // 空売り合計 rose-500
+            kikan: '#fb7185',       // 機関空売り rose-400
+            free: '#f97316',        // 空売り規制なし orange-500
+            ratio: '#f59e0b',       // 空売り比率 amber-500
+            ma: '#94a3b8',          // 移動平均 slate-400
         };
 
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -82,7 +87,6 @@
                 LineChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>,
                 Copy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
                 Globe: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>,
-                ArrowUpDown: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 16-4 4-4-4"></path><path d="M17 20V4"></path><path d="m3 8 4-4 4 4"></path><path d="M7 4v16"></path></svg>,
                 FileText: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>,
                 HelpCircle: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
                 Zap: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>,
@@ -109,11 +113,12 @@
 
         const toT = (m) => m / 1000000;
         const fmtDate = (s) => { const d = new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+        const pct = (v) => (v * 100).toFixed(1);
 
-        // ==================== シグナルエンジン ====================
+        // ==================== シグナルエンジン（2指標） ====================
         const WINDOW = 20;
-        const S1_TH = 1.3;
-        const S2_TH = 0.7;
+        const S1_TH = 1.3;  // 売買代金膨張: 20日MA x 1.3
+        const S2_TH = 0.7;  // 空売りピークアウト: 20日内ピーク x 0.7
 
         function computeSignals(data) {
             const r = [];
@@ -121,46 +126,86 @@
                 const d = data[i];
                 const ws = Math.max(0, i - WINDOW + 1);
                 const w = data.slice(ws, i + 1);
-                const ma_k = w.reduce((s,x) => s + x.genbutsu_kai, 0) / w.length;
-                const pk_s = Math.max(...w.map(x => x.karauri));
-                const mx_n = i > 0 ? Math.max(...w.slice(0,-1).map(x => x.net_kai)) : 0;
-                const prev = i > 0 ? data[i-1] : null;
-                const accel = prev ? d.net_kai - prev.net_kai : 0;
                 const ok = w.length >= WINDOW;
-                const r1 = d.genbutsu_kai / ma_k;
+
+                // Signal 1: 売買代金膨張
+                const ma_total = w.reduce((s,x) => s + x.total, 0) / w.length;
+                const r1 = d.total / ma_total;
                 const s1 = ok && r1 >= S1_TH;
                 const n1 = ok && r1 >= S1_TH * 0.8 && !s1;
-                const r2 = pk_s > 0 ? d.karauri / pk_s : 1;
+
+                // Signal 2: 空売りピークアウト
+                const pk_karauri = Math.max(...w.map(x => x.karauri));
+                const r2 = pk_karauri > 0 ? d.karauri / pk_karauri : 1;
                 const s2 = ok && r2 <= S2_TH;
                 const n2 = ok && r2 <= S2_TH * 1.15 && !s2;
-                const s3 = ok && i > 0 && d.net_kai > mx_n && mx_n > 0;
-                const n3 = ok && i > 0 && d.net_kai > mx_n * 0.9 && !s3;
-                const lit = (s1?1:0)+(s2?1:0)+(s3?1:0);
-                r.push({ ...d, ma_k, pk_s, mx_n, accel, ok, r1, s1, n1, r2, s2, n2, s3, n3, lit });
+
+                // 補助: 空売り比率のMA
+                const ma_ratio = w.reduce((s,x) => s + x.karauri_ratio, 0) / w.length;
+
+                const lit = (s1?1:0) + (s2?1:0);
+                r.push({ ...d, ma_total, pk_karauri, ma_ratio, ok, r1, s1, n1, r2, s2, n2, lit });
             }
             return r;
         }
 
         function narrative(l) {
             if (!l || !l.ok) return { text: "20営業日未満のためシグナル計算不可", lv: 'neutral' };
-            if (l.lit === 3) return { text: "底打ちシグナル点灯。3条件全クリア。大口の買い吸収・空売り急減・ネット買い最大更新が同時確認され、フェーズ3（反転上昇）への移行が示唆されています。", lv: 'green' };
-            if (l.lit === 2) { const m = !l.s1 ? '現物買いの急増' : !l.s2 ? '空売りのピークアウト' : 'ネット買いの最大値更新'; return { text: `底打ち接近。3条件中2つが点灯。残る「${m}」が最終確認シグナルです。`, lv: 'yellow' }; }
-            if (l.lit === 1) { const w = l.s1 ? '現物買い急増を確認。大口が売りを吸収し始めている可能性。' : l.s2 ? '空売りピークアウトを確認。ショートカバー開始の可能性があるが買い側の反応は不十分。' : 'ネット買いが20日内最大を更新。需給改善の兆候だが他条件が揃わず慎重に。'; return { text: `先行シグナル1つ点灯。${w}`, lv: 'yellow' }; }
-            if (l.accel > 0) return { text: "シグナル未点灯だがネット買いが前日比プラス。売り圧力の緩和兆候を観察中。", lv: 'neutral' };
-            return { text: "下落トレンド継続中。売り圧力が強く底打ちの兆候なし。日次モニタリングを継続してください。", lv: 'red' };
+            if (l.lit === 2) return { text: "底打ちシグナル全点灯。売買代金の急膨張と空売りのピークアウトが同時確認され、需給転換（Phase 3: 反転上昇）への移行が示唆されています。", lv: 'green' };
+            if (l.lit === 1) {
+                const m = !l.s1 ? '売買代金の膨張（出来高急増）' : '空売りのピークアウト（ショートカバー）';
+                return { text: `先行シグナル1つ点灯。残る「${m}」が確認されれば底打ち判定。`, lv: 'yellow' };
+            }
+            return { text: "下落トレンド継続中。売り圧力が強く底打ちの兆候なし。空売り比率と売買代金の推移を日次モニタリングしてください。", lv: 'red' };
         }
+
+        // ==================== 横スクロールチャート ====================
+        const MIN_BAR_W = 36; // 1データポイントあたりの最小幅(px)
+
+        const ScrollChart = ({ children, data, height = 380, id }) => {
+            const scrollRef = useRef(null);
+            const containerRef = useRef(null);
+            const [containerW, setContainerW] = useState(800);
+            const chartW = Math.max(containerW, data.length * MIN_BAR_W);
+
+            useEffect(() => {
+                if (containerRef.current) setContainerW(containerRef.current.offsetWidth);
+                const onResize = () => { if (containerRef.current) setContainerW(containerRef.current.offsetWidth); };
+                window.addEventListener('resize', onResize);
+                return () => window.removeEventListener('resize', onResize);
+            }, []);
+
+            // 初期表示は右端（最新）にスクロール
+            useEffect(() => {
+                if (scrollRef.current) {
+                    scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+                }
+            }, [data, containerW]);
+
+            return (
+                <div ref={containerRef} style={{width:'100%'}}>
+                    <div ref={scrollRef} className="chart-scroll" style={{overflowX:'auto', overflowY:'hidden'}}>
+                        <div style={{width: chartW, height}}>
+                            {typeof children === 'function' ? children(chartW, height) : children}
+                        </div>
+                    </div>
+                    {chartW > containerW && (
+                        <p className="text-[10px] text-slate-400 text-center mt-1">← 横スクロールで過去データを表示 →</p>
+                    )}
+                </div>
+            );
+        };
 
         // ==================== App ====================
         const App = () => {
             const [raw, setRaw] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
-            const [cnt, setCnt] = useState(30);
+            const [cnt, setCnt] = useState(60);
             const [standalone] = useState(window.top === window.self);
             const [sbOpen, setSbOpen] = useState(false);
             const [collapsed, setCollapsed] = useState(false);
-            const [modal, setModal] = useState(null); // 'info' | 'table' | 'signal'
-            // 凡例トグル
+            const [modal, setModal] = useState(null);
             const [hiddenKeys, setHiddenKeys] = useState(new Set());
             const toggleKey = (key) => { const s = new Set(hiddenKeys); s.has(key) ? s.delete(key) : s.add(key); setHiddenKeys(s); };
 
@@ -179,34 +224,40 @@
                 const s = [...sig].reverse().slice(0, cnt);
                 return [...s].reverse().map(d => ({
                     date: fmtDate(d.date), fullDate: d.date,
-                    genbutsu_kai: toT(d.genbutsu_kai), genbutsu_uri: toT(d.genbutsu_uri),
-                    karauri: toT(d.karauri), net_kai: toT(d.net_kai),
-                    ma_k: toT(d.ma_k), accel: toT(d.accel),
-                    s1: d.s1, s2: d.s2, s3: d.s3, lit: d.lit,
+                    total: toT(d.total),
+                    genbutsu_uri: toT(d.genbutsu_uri),
+                    karauri: toT(d.karauri),
+                    karauri_kiseiari: toT(d.karauri_kiseiari),
+                    karauri_free: toT(d.karauri_free),
+                    karauri_ratio: d.karauri_ratio,
+                    ma_total: toT(d.ma_total),
+                    ma_ratio: d.ma_ratio,
+                    s1: d.s1, s2: d.s2, lit: d.lit,
                 }));
             }, [sig, cnt]);
             const stats = useMemo(() => {
                 if(!chart.length) return null;
-                const ns = chart.map(d=>d.net_kai), ks = chart.map(d=>d.genbutsu_kai);
-                const avg = ns.reduce((a,b)=>a+b,0)/ns.length;
-                const mx_n = Math.max(...ns), mn_n = Math.min(...ns), mx_k = Math.max(...ks);
-                return { avg, mx_n, mn_n, mx_k,
-                    mx_n_d: chart.find(d=>d.net_kai===mx_n)?.fullDate||'',
-                    mx_k_d: chart.find(d=>d.genbutsu_kai===mx_k)?.fullDate||'',
-                    mn_n_d: chart.find(d=>d.net_kai===mn_n)?.fullDate||'',
+                const ts = chart.map(d=>d.total), ks = chart.map(d=>d.karauri), rs = chart.map(d=>d.karauri_ratio);
+                const avg_t = ts.reduce((a,b)=>a+b,0)/ts.length;
+                const mx_t = Math.max(...ts), mx_k = Math.max(...ks);
+                const avg_r = rs.reduce((a,b)=>a+b,0)/rs.length;
+                const mx_r = Math.max(...rs), mn_r = Math.min(...rs);
+                return {
+                    avg_t, mx_t, mx_k, avg_r, mx_r, mn_r,
+                    mx_t_d: chart.find(d=>d.total===mx_t)?.fullDate||'',
+                    mx_k_d: chart.find(d=>d.karauri===mx_k)?.fullDate||'',
+                    latest_r: chart[chart.length-1]?.karauri_ratio||0,
                 };
             }, [chart]);
 
             const phase = latest ? (
-                latest.lit===3 ? {t:'Phase 3: 反転上昇',c:'text-emerald-700',bg:'bg-emerald-50 border-emerald-200'} :
-                latest.lit===2 ? {t:'Phase 2後期: 底打ち接近',c:'text-amber-700',bg:'bg-amber-50 border-amber-200'} :
+                latest.lit===2 ? {t:'Phase 3: 反転上昇',c:'text-emerald-700',bg:'bg-emerald-50 border-emerald-200'} :
                 latest.lit===1 ? {t:'Phase 2: 底値圏もみ合い',c:'text-amber-600',bg:'bg-amber-50 border-amber-100'} :
                 {t:'Phase 1: 下落トレンド',c:'text-red-700',bg:'bg-red-50 border-red-200'}
             ) : null;
 
             const Dot = ({lit,near}) => <span className={`inline-block w-3.5 h-3.5 rounded-full ${lit?'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]':near?'bg-amber-400':'bg-red-400'}`}></span>;
 
-            // カスタム凡例（クリックでトグル）
             const CustomLegend = ({ payload }) => (
                 <div className="flex flex-wrap justify-center gap-3 mt-2 text-xs">
                     {payload && payload.map((e, i) => {
@@ -226,7 +277,7 @@
 
             const content = (
                 <div className="space-y-6">
-                    {/* ========== 信号機ダッシュボード ========== */}
+                    {/* ========== 信号機ダッシュボード（2シグナル） ========== */}
                     {latest && latest.ok && (
                         <div id="signal-dashboard" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in relative">
                             <div className="flex justify-between items-start mb-4">
@@ -241,142 +292,154 @@
                                     <ScreenshotButton targetId="signal-dashboard" />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                {/* S1 */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                {/* S1: 売買代金膨張 */}
                                 <div className={`rounded-lg p-4 ${latest.s1?'signal-green':latest.n1?'signal-yellow':'signal-red'}`}>
-                                    <div className="flex items-center gap-2 mb-2"><Dot lit={latest.s1} near={latest.n1} /><span className="text-xs font-bold text-slate-700">1 現物買い急増</span></div>
-                                    <p className="text-xl font-bold font-mono text-slate-800">{toT(latest.genbutsu_kai).toFixed(2)} <span className="text-xs font-normal text-slate-500">兆</span></p>
+                                    <div className="flex items-center gap-2 mb-2"><Dot lit={latest.s1} near={latest.n1} /><span className="text-xs font-bold text-slate-700">1 売買代金膨張</span></div>
+                                    <p className="text-xl font-bold font-mono text-slate-800">{toT(latest.total).toFixed(2)} <span className="text-xs font-normal text-slate-500">兆円</span></p>
                                     <div className="mt-1">
-                                        <div className="flex justify-between text-[10px] text-slate-500"><span>20日MA: {toT(latest.ma_k).toFixed(2)}兆</span><span>閾値: {(toT(latest.ma_k)*S1_TH).toFixed(2)}兆</span></div>
+                                        <div className="flex justify-between text-[10px] text-slate-500"><span>20日MA: {toT(latest.ma_total).toFixed(2)}兆</span><span>閾値: {(toT(latest.ma_total)*S1_TH).toFixed(2)}兆</span></div>
                                         <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1"><div className={`h-1.5 rounded-full ${latest.s1?'bg-emerald-500':latest.n1?'bg-amber-400':'bg-red-400'}`} style={{width:`${Math.min(100,(latest.r1/S1_TH)*100)}%`}}></div></div>
                                         <p className="text-[10px] text-slate-500 mt-1 text-right">乖離: {((latest.r1-1)*100).toFixed(1)}%（閾値+30%）</p>
                                     </div>
                                 </div>
-                                {/* S2 */}
+                                {/* S2: 空売りピークアウト */}
                                 <div className={`rounded-lg p-4 ${latest.s2?'signal-green':latest.n2?'signal-yellow':'signal-red'}`}>
-                                    <div className="flex items-center gap-2 mb-2"><Dot lit={latest.s2} near={latest.n2} /><span className="text-xs font-bold text-slate-700">2 空売りピーク減</span></div>
-                                    <p className="text-xl font-bold font-mono text-slate-800">{toT(latest.karauri).toFixed(2)} <span className="text-xs font-normal text-slate-500">兆</span></p>
+                                    <div className="flex items-center gap-2 mb-2"><Dot lit={latest.s2} near={latest.n2} /><span className="text-xs font-bold text-slate-700">2 空売りピークアウト</span></div>
+                                    <p className="text-xl font-bold font-mono text-slate-800">{toT(latest.karauri).toFixed(2)} <span className="text-xs font-normal text-slate-500">兆円</span></p>
                                     <div className="mt-1">
-                                        <div className="flex justify-between text-[10px] text-slate-500"><span>20日Peak: {toT(latest.pk_s).toFixed(2)}兆</span><span>閾値: {(toT(latest.pk_s)*S2_TH).toFixed(2)}兆以下</span></div>
+                                        <div className="flex justify-between text-[10px] text-slate-500"><span>20日Peak: {toT(latest.pk_karauri).toFixed(2)}兆</span><span>閾値: {(toT(latest.pk_karauri)*S2_TH).toFixed(2)}兆以下</span></div>
                                         <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1"><div className={`h-1.5 rounded-full ${latest.s2?'bg-emerald-500':latest.n2?'bg-amber-400':'bg-red-400'}`} style={{width:`${Math.min(100,((1-latest.r2)/(1-S2_TH))*100)}%`}}></div></div>
                                         <p className="text-[10px] text-slate-500 mt-1 text-right">ピーク比: {((1-latest.r2)*100).toFixed(1)}%減（閾値-30%）</p>
                                     </div>
                                 </div>
-                                {/* S3 */}
-                                <div className={`rounded-lg p-4 ${latest.s3?'signal-green':latest.n3?'signal-yellow':'signal-red'}`}>
-                                    <div className="flex items-center gap-2 mb-2"><Dot lit={latest.s3} near={latest.n3} /><span className="text-xs font-bold text-slate-700">3 ネット買い最大更新</span></div>
-                                    <p className="text-xl font-bold font-mono text-slate-800">{toT(latest.net_kai).toFixed(2)} <span className="text-xs font-normal text-slate-500">兆</span></p>
-                                    <div className="mt-1">
-                                        <div className="flex justify-between text-[10px] text-slate-500"><span>20日MAX: {toT(latest.mx_n).toFixed(2)}兆</span><span>{latest.s3?'更新!':'未達'}</span></div>
-                                        <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1"><div className={`h-1.5 rounded-full ${latest.s3?'bg-emerald-500':latest.n3?'bg-amber-400':'bg-red-400'}`} style={{width:`${Math.min(100,latest.mx_n>0?(latest.net_kai/latest.mx_n)*100:0)}%`}}></div></div>
-                                        <p className="text-[10px] text-slate-500 mt-1 text-right">加速度: {toT(latest.accel)>=0?'+':''}{toT(latest.accel).toFixed(3)}兆/日</p>
-                                    </div>
-                                </div>
                             </div>
                             <div className="mb-4"><div className="phase-bar">
-                                <div className={`phase-segment ${latest.lit===0?'bg-red-500 text-white':'bg-red-200 text-red-400'}`} style={{flex:1}}>Phase 1 急落</div>
-                                <div className={`phase-segment ${latest.lit>=1&&latest.lit<=2?'bg-amber-400 text-amber-900':'bg-amber-100 text-amber-300'}`} style={{flex:1}}>Phase 2 底値圏</div>
-                                <div className={`phase-segment ${latest.lit===3?'bg-emerald-500 text-white':'bg-emerald-100 text-emerald-300'}`} style={{flex:1}}>Phase 3 反転</div>
+                                <div className={`phase-segment ${latest.lit===0?'bg-red-500 text-white':'bg-red-200 text-red-400'}`} style={{flex:1}}>Phase 1 下落</div>
+                                <div className={`phase-segment ${latest.lit===1?'bg-amber-400 text-amber-900':'bg-amber-100 text-amber-300'}`} style={{flex:1}}>Phase 2 底値圏</div>
+                                <div className={`phase-segment ${latest.lit===2?'bg-emerald-500 text-white':'bg-emerald-100 text-emerald-300'}`} style={{flex:1}}>Phase 3 反転</div>
                             </div></div>
                             <div className={`rounded-lg p-4 border ${phase.bg}`}>
-                                <div className="flex items-center gap-2 mb-2"><span className={`text-sm font-bold ${phase.c}`}>{phase.t}</span><span className="text-xs text-slate-400">({latest.lit}/3 点灯)</span></div>
+                                <div className="flex items-center gap-2 mb-2"><span className={`text-sm font-bold ${phase.c}`}>{phase.t}</span><span className="text-xs text-slate-400">({latest.lit}/2 点灯)</span></div>
                                 <p className="text-xs text-slate-600 leading-relaxed">{narr.text}</p>
                             </div>
                         </div>
                     )}
 
-                    {/* ========== カード（順序: 最大現物買い→最大ネット→平均→最小） ========== */}
+                    {/* ========== サマリーカード ========== */}
                     {stats && (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">最大現物買い</p>
-                                <p className="text-xl font-bold font-mono" style={{color:COLORS.buy}}>{stats.mx_k.toFixed(2)}<span className="text-xs text-slate-400 ml-1">兆</span></p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">最大売買代金</p>
+                                <p className="text-xl font-bold font-mono" style={{color:COLORS.total}}>{stats.mx_t.toFixed(2)}<span className="text-xs text-slate-400 ml-1">兆</span></p>
+                                <p className="text-[10px] text-slate-400">{stats.mx_t_d}</p>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">最大空売り</p>
+                                <p className="text-xl font-bold font-mono" style={{color:COLORS.short}}>{stats.mx_k.toFixed(2)}<span className="text-xs text-slate-400 ml-1">兆</span></p>
                                 <p className="text-[10px] text-slate-400">{stats.mx_k_d}</p>
                             </div>
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">最大ネット買い</p>
-                                <p className="text-xl font-bold font-mono" style={{color:COLORS.net}}>{stats.mx_n.toFixed(2)}<span className="text-xs text-slate-400 ml-1">兆</span></p>
-                                <p className="text-[10px] text-slate-400">{stats.mx_n_d}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">直近 空売り比率</p>
+                                <p className="text-xl font-bold font-mono" style={{color:COLORS.ratio}}>{pct(stats.latest_r)}<span className="text-xs text-slate-400 ml-1">%</span></p>
+                                <p className="text-[10px] text-slate-400">平均 {pct(stats.avg_r)}%</p>
                             </div>
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">平均ネット買い</p>
-                                <p className="text-xl font-bold text-[#7C4DFF] font-mono">{stats.avg.toFixed(2)}<span className="text-xs text-slate-400 ml-1">兆</span></p>
-                            </div>
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">最小ネット買い</p>
-                                <p className="text-xl font-bold font-mono" style={{color:COLORS.short}}>{stats.mn_n.toFixed(2)}<span className="text-xs text-slate-400 ml-1">兆</span></p>
-                                <p className="text-[10px] text-slate-400">{stats.mn_n_d}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">空売り比率 レンジ</p>
+                                <p className="text-lg font-bold font-mono text-slate-600">{pct(stats.mn_r)}<span className="text-xs text-slate-400">%</span> ~ {pct(stats.mx_r)}<span className="text-xs text-slate-400">%</span></p>
+                                <p className="text-[10px] text-slate-400">表示期間内</p>
                             </div>
                         </div>
                     )}
 
-                    {/* ========== 売買フロー推移チャート（凡例クリックでトグル） ========== */}
+                    {/* ========== 売買フロー推移チャート（横スクロール対応） ========== */}
                     <div id="chart-flow" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in relative">
                         <div className="flex justify-between items-start mb-4">
-                            <div><h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icon name="BarChart3" className="text-[#7C4DFF]" /> 売買フロー推移</h2><p className="text-xs text-slate-500">凡例クリックで表示/非表示切替</p></div>
-                            <ScreenshotButton targetId="chart-flow" />
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icon name="BarChart3" className="text-[#7C4DFF]" /> 売買フロー推移</h2>
+                                <p className="text-xs text-slate-500">凡例クリックで表示/非表示 | 横スクロールで過去データ表示</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <ScreenshotButton targetId="chart-flow" />
+                                <select value={cnt} onChange={e=>setCnt(+e.target.value)} className="text-xs border border-slate-300 rounded px-2 py-1 text-slate-600">
+                                    <option value={30}>直近30日</option><option value={60}>直近60日</option><option value={120}>直近120日</option><option value={9999}>全データ</option>
+                                </select>
+                            </div>
                         </div>
-                        <ResponsiveContainer width="100%" height={380}>
-                            <ComposedChart data={chart} margin={{top:20,right:10,left:0,bottom:5}}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis dataKey="date" tick={{fontSize:10,fill:'#94a3b8'}} interval="preserveStartEnd" />
-                                <YAxis tick={{fontSize:10,fill:'#94a3b8'}} />
-                                <Tooltip content={({active,payload,label})=>{
-                                    if(!active||!payload?.length) return null;
-                                    const d=payload[0]?.payload;
-                                    return <div className="bg-slate-800 text-white p-3 rounded-lg shadow-lg text-xs min-w-[180px]">
-                                        <p className="font-bold mb-1">{label} ({d?.fullDate})</p>
-                                        {payload.filter(p=>p.dataKey!=='ma_k').map((p,i)=><p key={i} style={{color:p.color}}>{p.name}: {p.value.toFixed(2)} 兆</p>)}
-                                        {d&&<p className="mt-1 border-t border-slate-600 pt-1 text-slate-300">20日MA: {d.ma_k.toFixed(2)}兆</p>}
-                                        {d&&d.lit>0&&<p className="text-amber-300 font-bold mt-1">Signal {d.lit}/3 点灯</p>}
-                                    </div>;
-                                }} />
-                                <Legend content={<CustomLegend />} />
-                                {!hiddenKeys.has('genbutsu_kai') && <Bar dataKey="genbutsu_kai" name="現物買い" fill={COLORS.buy} radius={[2,2,0,0]} opacity={0.7} />}
-                                {!hiddenKeys.has('genbutsu_uri') && <Bar dataKey="genbutsu_uri" name="現物売り" fill={COLORS.sell} radius={[2,2,0,0]} opacity={0.7} />}
-                                {!hiddenKeys.has('karauri') && <Bar dataKey="karauri" name="空売り" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.7} />}
-                                {!hiddenKeys.has('net_kai') && <Line type="monotone" dataKey="net_kai" name="ネット買い" stroke={COLORS.net} strokeWidth={2.5} dot={(props)=>{
-                                    const {cx,cy,payload}=props; if(!payload?.lit) return null;
-                                    if(payload.lit>=3) return <svg x={cx-8} y={cy-22} width={16} height={16} viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9 16,14 18,21 12,17 6,21 8,14 2,9 9,9" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1"/></svg>;
-                                    if(payload.lit>=2) return <circle cx={cx} cy={cy} r={5} fill="#f59e0b" stroke="#fff" strokeWidth={1.5}/>;
-                                    if(payload.lit>=1) return <circle cx={cx} cy={cy} r={4} fill={COLORS.buy} stroke="#fff" strokeWidth={1}/>;
-                                    return null;
-                                }} />}
-                                {!hiddenKeys.has('ma_k') && <Line type="monotone" dataKey="ma_k" name="20日MA(買い)" stroke={COLORS.ma} strokeWidth={1} strokeDasharray="5 5" dot={false} />}
-                            </ComposedChart>
-                        </ResponsiveContainer>
+                        <ScrollChart data={chart} height={380} id="chart-flow-inner">
+                            {(w, h) => (
+                                <ComposedChart width={w} height={h} data={chart} margin={{top:20,right:50,left:10,bottom:5}}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                    <XAxis dataKey="date" tick={{fontSize:10,fill:'#94a3b8'}} />
+                                    <YAxis yAxisId="left" tick={{fontSize:10,fill:'#94a3b8'}} label={{value:'兆円',angle:-90,position:'insideLeft',style:{fontSize:10,fill:'#94a3b8'}}} />
+                                    <YAxis yAxisId="right" orientation="right" tick={{fontSize:10,fill:'#94a3b8'}} tickFormatter={v=>`${(v*100).toFixed(0)}%`} domain={[0.3, 0.55]} label={{value:'空売り比率',angle:90,position:'insideRight',style:{fontSize:10,fill:'#94a3b8'}}} />
+                                    <Tooltip content={({active,payload,label})=>{
+                                        if(!active||!payload?.length) return null;
+                                        const d=payload[0]?.payload;
+                                        return <div className="bg-slate-800 text-white p-3 rounded-lg shadow-lg text-xs min-w-[200px]">
+                                            <p className="font-bold mb-1">{label} ({d?.fullDate})</p>
+                                            <p style={{color:COLORS.total}}>売買代金: {d?.total?.toFixed(2)} 兆</p>
+                                            <p style={{color:COLORS.sell}}>現物売り: {d?.genbutsu_uri?.toFixed(2)} 兆</p>
+                                            <p style={{color:COLORS.short}}>空売り合計: {d?.karauri?.toFixed(2)} 兆</p>
+                                            <p className="text-slate-400 pl-2">機関(規制有): {d?.karauri_kiseiari?.toFixed(2)} 兆</p>
+                                            <p className="text-slate-400 pl-2">規制なし: {d?.karauri_free?.toFixed(2)} 兆</p>
+                                            <p style={{color:COLORS.ratio}}>空売り比率: {pct(d?.karauri_ratio)}%</p>
+                                            <p className="text-slate-300 mt-1 border-t border-slate-600 pt-1">20日MA(代金): {d?.ma_total?.toFixed(2)}兆</p>
+                                            {d&&d.lit>0&&<p className="text-amber-300 font-bold mt-1">Signal {d.lit}/2 点灯</p>}
+                                        </div>;
+                                    }} />
+                                    <Legend content={<CustomLegend />} />
+                                    {!hiddenKeys.has('total') && <Bar yAxisId="left" dataKey="total" name="売買代金" fill={COLORS.total} radius={[2,2,0,0]} opacity={0.5} />}
+                                    {!hiddenKeys.has('karauri') && <Bar yAxisId="left" dataKey="karauri" name="空売り合計" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.7} />}
+                                    {!hiddenKeys.has('genbutsu_uri') && <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り" fill={COLORS.sell} radius={[2,2,0,0]} opacity={0.7} />}
+                                    {!hiddenKeys.has('karauri_ratio') && <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} dot={(props)=>{
+                                        const {cx,cy,payload}=props; if(!payload?.lit) return null;
+                                        if(payload.lit>=2) return <svg x={cx-8} y={cy-22} width={16} height={16} viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9 16,14 18,21 12,17 6,21 8,14 2,9 9,9" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1"/></svg>;
+                                        if(payload.lit>=1) return <circle cx={cx} cy={cy} r={4} fill={COLORS.ratio} stroke="#fff" strokeWidth={1}/>;
+                                        return null;
+                                    }} />}
+                                    {!hiddenKeys.has('ma_total') && <Line yAxisId="left" type="monotone" dataKey="ma_total" name="20日MA(代金)" stroke={COLORS.ma} strokeWidth={1} strokeDasharray="5 5" dot={false} />}
+                                </ComposedChart>
+                            )}
+                        </ScrollChart>
                         <div className="flex flex-wrap gap-4 mt-1 text-[10px] text-slate-400 justify-end">
-                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{background:COLORS.buy}}></span> 1sig</span>
-                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 2sig</span>
-                            <span className="flex items-center gap-1"><span className="text-amber-400 text-sm">&#9733;</span> 3sig(底打ち)</span>
+                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{background:COLORS.ratio}}></span> 1sig</span>
+                            <span className="flex items-center gap-1"><span className="text-amber-400 text-sm">&#9733;</span> 2sig(底打ち)</span>
                         </div>
                     </div>
 
-                    {/* ========== ネット買い + 加速度 ========== */}
-                    <div id="chart-net" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in relative">
+                    {/* ========== 空売り内訳チャート（横スクロール対応） ========== */}
+                    <div id="chart-breakdown" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-fade-in relative">
                         <div className="flex justify-between items-start mb-4">
-                            <div><h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icon name="TrendingUp" className="text-emerald-500" /> ネット買い + 加速度</h2><p className="text-xs text-slate-500">ネット買い（兆円）と前日差分</p></div>
-                            <ScreenshotButton targetId="chart-net" />
+                            <div><h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icon name="TrendingUp" className="text-rose-500" /> 空売り内訳 + 比率推移</h2><p className="text-xs text-slate-500">機関空売り(規制あり) vs 規制なし + 空売り比率MA</p></div>
+                            <ScreenshotButton targetId="chart-breakdown" />
                         </div>
-                        <ResponsiveContainer width="100%" height={250}>
-                            <ComposedChart data={chart} margin={{top:5,right:10,left:0,bottom:5}}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis dataKey="date" tick={{fontSize:10,fill:'#94a3b8'}} interval="preserveStartEnd" />
-                                <YAxis yAxisId="l" tick={{fontSize:10,fill:'#94a3b8'}} />
-                                <YAxis yAxisId="r" orientation="right" tick={{fontSize:10,fill:'#94a3b8'}} />
-                                <Tooltip content={({active,payload,label})=>{
-                                    if(!active||!payload?.length) return null;
-                                    return <div className="bg-slate-800 text-white p-3 rounded-lg shadow-lg text-xs"><p className="font-bold mb-1">{label}</p>{payload.map((p,i)=><p key={i} style={{color:p.color}}>{p.name}: {p.value>=0?'+':''}{p.value.toFixed(3)} 兆</p>)}</div>;
-                                }} />
-                                <Legend wrapperStyle={{fontSize:11}} />
-                                <ReferenceLine yAxisId="l" y={stats?.avg||0} stroke="#94a3b8" strokeDasharray="5 5" label={{value:'AVG',position:'right',fontSize:10,fill:'#94a3b8'}} />
-                                <ReferenceLine yAxisId="r" y={0} stroke="#e2e8f0" />
-                                <Bar yAxisId="l" dataKey="net_kai" name="ネット買い" radius={[3,3,0,0]}>
-                                    {chart.map((e,i)=><Cell key={i} fill={e.net_kai>=(stats?.avg||0)?COLORS.net:COLORS.netWeak} opacity={0.8} />)}
-                                </Bar>
-                                <Line yAxisId="r" type="monotone" dataKey="accel" name="加速度" stroke={COLORS.accel} strokeWidth={1.5} dot={false} />
-                            </ComposedChart>
-                        </ResponsiveContainer>
+                        <ScrollChart data={chart} height={280} id="chart-break-inner">
+                            {(w, h) => (
+                                <ComposedChart width={w} height={h} data={chart} margin={{top:5,right:50,left:10,bottom:5}}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                    <XAxis dataKey="date" tick={{fontSize:10,fill:'#94a3b8'}} />
+                                    <YAxis yAxisId="left" tick={{fontSize:10,fill:'#94a3b8'}} />
+                                    <YAxis yAxisId="right" orientation="right" tick={{fontSize:10,fill:'#94a3b8'}} tickFormatter={v=>`${(v*100).toFixed(0)}%`} />
+                                    <Tooltip content={({active,payload,label})=>{
+                                        if(!active||!payload?.length) return null;
+                                        const d=payload[0]?.payload;
+                                        return <div className="bg-slate-800 text-white p-3 rounded-lg shadow-lg text-xs">
+                                            <p className="font-bold mb-1">{label}</p>
+                                            <p style={{color:COLORS.kikan}}>機関空売り: {d?.karauri_kiseiari?.toFixed(2)} 兆</p>
+                                            <p style={{color:COLORS.free}}>規制なし: {d?.karauri_free?.toFixed(2)} 兆</p>
+                                            <p style={{color:COLORS.ratio}}>空売り比率: {pct(d?.karauri_ratio)}%</p>
+                                            <p style={{color:COLORS.ma}}>比率20日MA: {pct(d?.ma_ratio)}%</p>
+                                        </div>;
+                                    }} />
+                                    <Legend wrapperStyle={{fontSize:11}} />
+                                    <Bar yAxisId="left" dataKey="karauri_kiseiari" name="機関空売り" stackId="short" fill={COLORS.kikan} opacity={0.8} />
+                                    <Bar yAxisId="left" dataKey="karauri_free" name="規制なし" stackId="short" fill={COLORS.free} radius={[2,2,0,0]} opacity={0.8} />
+                                    <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} dot={false} />
+                                    <Line yAxisId="right" type="monotone" dataKey="ma_ratio" name="比率20日MA" stroke={COLORS.ma} strokeWidth={1} strokeDasharray="5 5" dot={false} />
+                                </ComposedChart>
+                            )}
+                        </ScrollChart>
                     </div>
 
                     {/* ========== テーブル ========== */}
@@ -386,31 +449,30 @@
                                 <Icon name="FileText" className="text-[#7C4DFF]" /> 全銘柄合計の売買フローデータ
                                 <button onClick={()=>setModal('table')} className="text-slate-300 hover:text-slate-500 ml-1"><Icon name="HelpCircle" size={16} /></button>
                             </h2>
-                            <div className="flex items-center gap-2">
-                                <ScreenshotButton targetId="table-container" />
-                                <select value={cnt} onChange={e=>setCnt(+e.target.value)} className="text-xs border border-slate-300 rounded px-2 py-1 text-slate-600">
-                                    <option value={15}>直近15日</option><option value={30}>直近30日</option><option value={50}>直近50日</option><option value={999}>全データ</option>
-                                </select>
-                            </div>
+                            <ScreenshotButton targetId="table-container" />
                         </div>
-                        <div className="dark-table">
+                        <div className="dark-table overflow-x-auto">
                             <table><thead><tr>
                                 <th>日付</th>
-                                <th style={{color:COLORS.buy}}>現物買い（兆）</th>
+                                <th style={{color:COLORS.total}}>売買代金（兆）</th>
                                 <th style={{color:COLORS.sell}}>現物売り（兆）</th>
-                                <th style={{color:COLORS.short}}>空売り（兆）</th>
-                                <th style={{color:COLORS.net}}>ネット買い（兆）</th>
+                                <th style={{color:COLORS.short}}>空売り合計（兆）</th>
+                                <th style={{color:COLORS.kikan}}>機関空売り（兆）</th>
+                                <th style={{color:COLORS.free}}>規制なし（兆）</th>
+                                <th style={{color:COLORS.ratio}}>空売り比率</th>
                                 <th>Signal</th>
                             </tr></thead><tbody>
                                 {tbl.map(d => {
-                                    const k=toT(d.genbutsu_kai),u=toT(d.genbutsu_uri),s=toT(d.karauri),n=toT(d.net_kai);
+                                    const t=toT(d.total),u=toT(d.genbutsu_uri),k=toT(d.karauri),b=toT(d.karauri_kiseiari),c=toT(d.karauri_free);
                                     return <tr key={d.date} className={d.lit>=2?'highlight-row':''}>
-                                        <td className={d.lit>=3?'date-star':''}>{d.lit>=3&&'\u2605 '}{d.date}</td>
-                                        <td className={d.s1?'val-buy':''}>{k.toFixed(2)}</td>
+                                        <td className={d.lit>=2?'date-star':''}>{d.lit>=2&&'\u2605 '}{d.date}</td>
+                                        <td className={d.s1?'val-total':''}>{t.toFixed(2)}</td>
                                         <td>{u.toFixed(2)}</td>
-                                        <td className={s>=3?'val-short':''}>{s.toFixed(2)}</td>
-                                        <td className={n>=1?'val-net':n<=0.5?'val-net-weak':''}>{n.toFixed(2)}</td>
-                                        <td>{d.ok?<div className="flex justify-center gap-1"><Dot lit={d.s1} near={d.n1}/><Dot lit={d.s2} near={d.n2}/><Dot lit={d.s3} near={d.n3}/></div>:<span className="text-slate-500 text-[10px]">-</span>}</td>
+                                        <td className={k>=3?'val-short':''}>{k.toFixed(2)}</td>
+                                        <td className="val-kikan">{b.toFixed(2)}</td>
+                                        <td>{c.toFixed(2)}</td>
+                                        <td className="val-ratio">{pct(d.karauri_ratio)}%</td>
+                                        <td>{d.ok?<div className="flex justify-center gap-1"><Dot lit={d.s1} near={d.n1}/><Dot lit={d.s2} near={d.n2}/></div>:<span className="text-slate-500 text-[10px]">-</span>}</td>
                                     </tr>;
                                 })}
                             </tbody></table>
@@ -470,60 +532,61 @@
                             <div className="text-sm text-slate-600 space-y-3">
                                 <p><strong>データソース:</strong> JPX 空売り集計（日次）PDF</p>
                                 <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-1">
-                                    <p className="font-bold text-xs text-slate-500">計算式:</p>
+                                    <p className="font-bold text-xs text-slate-500">ファクトデータ（全てPDFから直接取得）:</p>
                                     <p className="font-mono text-xs"><span style={{color:COLORS.sell}}>現物売り</span> = (a) 実売り売買代金</p>
-                                    <p className="font-mono text-xs"><span style={{color:COLORS.short}}>空売り</span> = (b) 価格規制あり売買代金</p>
-                                    <p className="font-mono text-xs"><span style={{color:COLORS.buy}}>現物買い</span> = (d)合計 - (b)空売り</p>
-                                    <p className="font-mono text-xs"><span style={{color:COLORS.net}}>ネット買い</span> = 現物買い - 現物売り</p>
+                                    <p className="font-mono text-xs"><span style={{color:COLORS.short}}>空売り合計</span> = (b) 規制あり + (c) 規制なし</p>
+                                    <p className="font-mono text-xs"><span style={{color:COLORS.kikan}}>機関空売り</span> = (b) 価格規制あり</p>
+                                    <p className="font-mono text-xs"><span style={{color:COLORS.free}}>空売り規制なし</span> = (c)</p>
+                                    <p className="font-mono text-xs"><span style={{color:COLORS.total}}>売買代金</span> = (d) = (a) + (b) + (c)</p>
+                                    <p className="font-mono text-xs"><span style={{color:COLORS.ratio}}>空売り比率</span> = (b+c) / (d)</p>
+                                </div>
+                                <div className="bg-amber-50 p-3 rounded border border-amber-200">
+                                    <p className="text-xs text-amber-800"><strong>注意:</strong> (d)は売り側の合計であり、買いの内訳は含まれていません。従って「現物買い」や「ネット買い」は本データからは導出できません。本ダッシュボードではファクト（実測値）のみを使用しています。</p>
                                 </div>
                                 <p><strong>空売り（価格規制あり）:</strong> ヘッジファンド等の機関投資家による空売り。直前の価格以下での空売りに制限あり。</p>
-                                <p><strong>ネット買い:</strong> 市場全体の買い圧力の強さを示す。値が大きいほど買い優勢。</p>
+                                <p><strong>空売り比率:</strong> 売り全体に占める空売りの割合。高水準→急低下は底打ちの兆候。</p>
                             </div>
                         </ModalWrap>}
 
-                        {modal==='table'&&<ModalWrap onClose={()=>setModal(null)}><ModalHead title="計算ロジック（JPX PDFテーブルから）" icon="HelpCircle" onClose={()=>setModal(null)}/>
+                        {modal==='table'&&<ModalWrap onClose={()=>setModal(null)}><ModalHead title="データ定義（JPX PDFから）" icon="HelpCircle" onClose={()=>setModal(null)}/>
                             <div className="text-sm text-slate-600 space-y-4">
-                                <p>JPX「空売り集計（日次）」PDFの4つの数値 <strong>(a)(b)(c)(d)</strong> から算出:</p>
+                                <p>JPX「空売り集計（日次）」PDFの4つの数値 <strong>(a)(b)(c)(d)</strong> から構成:</p>
                                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
-                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.sell}}>現物売り</span><span className="font-mono text-xs">= (a) 実売り売買代金</span></div>
-                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.short}}>空売り</span><span className="font-mono text-xs">= (b) 価格規制あり（ヘッジファンド等）</span></div>
-                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.buy}}>現物買い</span><span className="font-mono text-xs">= (d) 合計 - (b) 空売り</span></div>
-                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.net}}>ネット買い</span><span className="font-mono text-xs">= 現物買い - 現物売り</span></div>
+                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.sell}}>現物売り</span><span className="font-mono text-xs">= (a) 実売り売買代金【ファクト】</span></div>
+                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.kikan}}>機関空売り</span><span className="font-mono text-xs">= (b) 価格規制あり（ヘッジファンド等）【ファクト】</span></div>
+                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.free}}>規制なし</span><span className="font-mono text-xs">= (c) 価格規制なし（個人信用売り中心）【ファクト】</span></div>
+                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.short}}>空売り合計</span><span className="font-mono text-xs">= (b) + (c)【ファクト】</span></div>
+                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.total}}>売買代金</span><span className="font-mono text-xs">= (d) = (a)+(b)+(c)【ファクト】</span></div>
+                                    <div className="flex items-start gap-2"><span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white" style={{background:COLORS.ratio}}>空売り比率</span><span className="font-mono text-xs">= (b+c) / (d)【計算値】</span></div>
                                 </div>
-                                <div className="bg-amber-50 p-3 rounded-lg border border-amber-200"><p className="text-xs text-amber-800"><strong>補足:</strong> 価格規制あり＝直前価格以下での空売りに制限あり（主に機関投資家）。価格規制なし(c)は個人信用売り中心。</p></div>
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200"><p className="text-xs text-slate-500"><strong>数学的関係:</strong> (a)+(b)+(c)=(d) → ネット買い=(c)と一致。</p></div>
+                                <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                                    <p className="text-xs text-red-800"><strong>廃止した項目:</strong> 旧バージョンにあった「現物買い = d - b」「ネット買い = d - b - a」は論理的に無効（dは売り側合計であり買いは導出不可）のため廃止しました。</p>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200"><p className="text-xs text-slate-500"><strong>数学的関係:</strong> (a) + (b) + (c) = (d)。空売り比率 = 1 - (a)/(d)。</p></div>
                             </div>
                         </ModalWrap>}
 
                         {modal==='signal'&&<ModalWrap onClose={()=>setModal(null)}><ModalHead title="底打ちシグナル判定ロジック" icon="Zap" onClose={()=>setModal(null)}/>
                             <div className="text-sm text-slate-600 space-y-4">
-                                <p>直近<strong>20営業日</strong>ローリングウィンドウで3つのコアシグナル＋補助指標を算出。</p>
+                                <p>直近<strong>20営業日</strong>ローリングウィンドウで2つのコアシグナルを算出。ファクトデータのみを使用。</p>
                                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                    <p className="font-bold text-blue-800 mb-2">シグナル1: 現物買い急増</p>
-                                    <p className="text-xs mb-1">大口投資家がパニック売りを吸収しているか。</p>
-                                    <div className="bg-white p-2 rounded border border-blue-100"><p className="font-mono text-xs">条件: 現物買い &gt; 20日MA x 1.3（+30%乖離）</p></div>
-                                    <p className="text-xs mt-2 text-blue-700"><strong>閾値根拠:</strong> 過去データで20日MAに対する倍率は平均1.08x、最大1.50x。+30%乖離は上位約10%の異常値。2倍基準では過去一度も点灯しないため、実データに基づき1.3倍を採用。</p>
+                                    <p className="font-bold text-blue-800 mb-2">シグナル1: 売買代金膨張</p>
+                                    <p className="text-xs mb-1">出来高の急増は転換点の兆候。大口投資家のポジション変更を示唆。</p>
+                                    <div className="bg-white p-2 rounded border border-blue-100"><p className="font-mono text-xs">条件: 売買代金(d) &gt; 20日MA x 1.3（+30%乖離）</p></div>
+                                    <p className="text-xs mt-2 text-blue-700"><strong>閾値根拠:</strong> 過去データで20日MAに対する倍率は通常1.0x前後。+30%乖離は市場の異常な活況を示し、転換点の兆候として機能します。</p>
                                 </div>
                                 <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                                    <p className="font-bold text-red-800 mb-2">シグナル2: 空売りピーク減少</p>
-                                    <p className="text-xs mb-1">ヘッジファンド等がショートカバー開始したか。</p>
-                                    <div className="bg-white p-2 rounded border border-red-100"><p className="font-mono text-xs">条件: 空売り &lt;= 20日内ピーク x 0.7（30%以上減少）</p></div>
-                                </div>
-                                <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
-                                    <p className="font-bold text-emerald-800 mb-2">シグナル3: ネット買い最大値更新</p>
-                                    <p className="text-xs mb-1">需給逆転の「最終確認シグナル」。</p>
-                                    <div className="bg-white p-2 rounded border border-emerald-100"><p className="font-mono text-xs">条件: ネット買い &gt; 20日内の過去最大値</p></div>
-                                </div>
-                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                                    <p className="font-bold text-slate-700 mb-2">補助: ネット買い加速度</p>
-                                    <p className="text-xs">前日差分（今日 - 昨日）。正方向への加速は底打ちプロセス進行中を示唆。</p>
+                                    <p className="font-bold text-red-800 mb-2">シグナル2: 空売りピークアウト</p>
+                                    <p className="text-xs mb-1">空売り勢の撤退・ショートカバー開始を検知。</p>
+                                    <div className="bg-white p-2 rounded border border-red-100"><p className="font-mono text-xs">条件: 空売り(b+c) &lt;= 20日内ピーク x 0.7（30%以上減少）</p></div>
+                                    <p className="text-xs mt-2 text-red-700"><strong>意味:</strong> 空売りがピークから30%以上減少した場合、ショートカバー（買い戻し）が進行中と判断。売り圧力の大幅緩和を示します。</p>
                                 </div>
                                 <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                                     <p className="font-bold text-purple-800 mb-3">フェーズ定義</p>
                                     <div className="space-y-2 text-xs">
-                                        <div className="flex items-start gap-2"><span className="bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">Phase 1</span><div><strong>急落期</strong> — シグナル0個点灯。売り圧力が強く底打ち兆候なし。現金比率を高め、新規ポジションは控える局面。</div></div>
-                                        <div className="flex items-start gap-2"><span className="bg-amber-400 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold shrink-0">Phase 2</span><div><strong>底値圏もみ合い</strong> — シグナル1〜2個点灯。空売りピークアウトや買い急増が散発的に発生。底打ちプロセスが進行中だが、まだ確定的ではない。監視強化の段階。</div></div>
-                                        <div className="flex items-start gap-2"><span className="bg-emerald-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">Phase 3</span><div><strong>反転上昇</strong> — シグナル3個全点灯。買い吸収・空売り急減・ネット買い最大更新が同時確認。需給が完全に逆転し、反転上昇への移行が示唆される。</div></div>
+                                        <div className="flex items-start gap-2"><span className="bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">Phase 1</span><div><strong>下落トレンド</strong> — シグナル0個。売り圧力が強く底打ち兆候なし。現金比率を高め、新規ポジションは控える局面。</div></div>
+                                        <div className="flex items-start gap-2"><span className="bg-amber-400 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold shrink-0">Phase 2</span><div><strong>底値圏もみ合い</strong> — シグナル1個。売買代金膨張か空売りピークアウトのいずれかを確認。底打ちプロセス進行中だが確定的ではない。監視強化の段階。</div></div>
+                                        <div className="flex items-start gap-2"><span className="bg-emerald-500 text-white px-2 py-0.5 rounded text-[10px] font-bold shrink-0">Phase 3</span><div><strong>反転上昇</strong> — シグナル2個全点灯。出来高急増と空売り急減が同時確認。需給が転換し、反転上昇への移行が示唆される。</div></div>
                                     </div>
                                 </div>
                                 <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
@@ -533,6 +596,10 @@
                                         <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-400 shrink-0"></span>リーチ（閾値の80%到達）</div>
                                         <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500 shrink-0"></span>点灯（閾値クリア）</div>
                                     </div>
+                                </div>
+                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                    <p className="font-bold text-slate-700 mb-2">補助指標: 空売り比率</p>
+                                    <p className="text-xs">空売り比率 = (b+c)/d。空売り比率が高水準から急低下するパターンは、シグナル2（ピークアウト）の先行指標として参考になります。チャート右Y軸および内訳チャートで推移を確認できます。</p>
                                 </div>
                             </div>
                         </ModalWrap>}
