@@ -168,8 +168,56 @@ daily_participant.yml / daily_task.yml が GITHUB_TOKEN + peaceiris で正常に
 | `intraday_etf.yml` | イントラデイETF更新 | 市場時間中 **15分ごとループ** | mainにcommit + gh-pages直接push |
 | `daily_etf.yml` | 日次ETFデータ取得 | **毎日 JST 16:00** | peaceiris（keep_files: true） |
 | `daily_short_selling.yml`| 空売り集計・株式相場状況 | **毎営業日 JST 17:05** | peaceiris（keep_files: true） |
-| `daily_participant.yml` | 手口・オプション取得 | **毎日 JST 20:05** | peaceiris（keep_files: true） |
+| `daily_participant.yml` | 手口・オプション取得 | **毎日 JST 17:45** | peaceiris（keep_files: true） |
 | `daily_task.yml` | JPX週次 + フルデプロイ | **毎週木曜 JST 18:00** + HTML/yml変更時 | peaceiris（keep_files: true） |
+| `daily_market_analysis.yml` | **Gemini自動市場分析** | **平日 JST 18:15** | mainにcommit + Gist直接更新 |
+
+### `daily_market_analysis.yml` — Gemini API 自動市場分析（2026-03-25 実装）
+
+**概要:** 全データ取得→Gemini 3.1 Flash Lite Preview APIで分析→レポート生成→投資カレンダー「情報」タブに自動反映
+
+**処理フロー:**
+```
+1. データ取得（5スクリプト順次実行）
+   fetch_intraday.py → etf_data_manager.py → fetch_short_selling.py → fetch_teguchi.py → fetch_option.py
+
+2. Gemini分析（scripts/market/gemini_analysis.py）
+   - data/ 配下の5つのJSONを読み込み
+   - Python側でサマリーに集約（6.3MB → 約150KB、トークン節約）
+   - Gemini 3.1 Flash Lite Preview API に送信（入力 ~96,000 tokens）
+   - レポートを market_analysis/reports/YYYYMMDD_daily_report.md に保存
+
+3. 投資カレンダー連携（Gist API）
+   - raw_url方式でGistの完全なデータを取得（truncation回避）
+   - history[日付].info フィールドのみ更新（他フィールドは一切変更しない）
+   - ブラウザリロードで「情報」タブにレポートが反映
+
+4. コミット＆プッシュ（data/*.json + レポート）
+```
+
+**必要な GitHub Secrets:**
+| Secret名 | 用途 |
+|---|---|
+| `GEMINI_API_KEY` | Gemini API認証キー |
+| `FIREBASE_KEY_JSON` | 手口・オプションデータ取得（既存） |
+| `GIST_TOKEN` | 投資カレンダーGist読み書き用GitHub PAT |
+| `GIST_ID` | 投資カレンダーデータのGist ID |
+
+**ローカル実行:**
+```bash
+GEMINI_API_KEY="..." GIST_TOKEN="..." GIST_ID="..." python scripts/market/gemini_analysis.py
+```
+
+**データ軽量化の仕組み:**
+| データ | 元サイズ | 送信サイズ | 手法 |
+|---|---|---|---|
+| etf_intraday.json | 6.3MB | ~10KB | 銘柄ごとの始値・終値・騰落率のみ抽出 |
+| etf_data.json | 788KB | ~5KB | 前日比・週比・月比のサマリーのみ |
+| option_history.json | 153KB | ~30KB | 直近2日分のみ |
+| teguchi.json | 28KB | 28KB | そのまま |
+| short_selling.json | 58KB | 58KB | そのまま |
+
+---
 
 ### `intraday_etf.yml` — ループ型15分間隔（決定版）
 
@@ -206,8 +254,8 @@ concurrency: cancel-in-progress: false
 | `data/etf_intraday.json` | `fetch_intraday.py` / `etf_data_manager.py` | `sector_category.html`, `topix100.html` | **市場中15分ごと** + 毎日 JST 16:00 |
 | `data/sector_data.json` | `sector_manager.py` | `analytics.html` | 週1回（木曜） |
 | `data/short_selling.json` | `fetch_short_selling.py` | `short_selling.html` | 毎営業日 JST 17:05 |
-| `data/teguchi.json` | `fetch_teguchi.py` | `teguchi.html` | 毎営業日 JST 20:05 |
-| `data/option_history.json` | `fetch_option.py` | `option.html` | 毎営業日 JST 20:05 |
+| `data/teguchi.json` | `fetch_teguchi.py` | `teguchi.html` | 毎営業日 JST 17:45 |
+| `data/option_history.json` | `fetch_option.py` | `option.html` | 毎営業日 JST 17:45 |
 | `data/gpif_data.json` | `fetch_gpif_data.py` | `GPIF/dist/index.html` | 週1回（木曜） |
 
 ---
@@ -404,13 +452,13 @@ const intradayAvailable = rawIntraday?.dates?.length > 1
 | **市場中 毎15分（JST 9:00〜15:45）** | ループ型: `fetch_intraday.py` | mainコミット + gh-pages直接push → **CDN即時更新** |
 | 毎日 JST 16:00 | `etf_data_manager.py` | 日次+イントラデイ両方再生成 → peaceirisでCDNデプロイ |
 | 毎営業日 JST 17:05 | `fetch_short_selling.py` | 空売り集計・株式相場状況 → peaceirisでCDNデプロイ |
-| 毎営業日 JST 20:05 | `fetch_teguchi.py` + `fetch_option.py` | 手口・建玉 → peaceirisでCDNデプロイ |
+| 毎営業日 JST 17:45 | `fetch_teguchi.py` + `fetch_option.py` | 手口・建玉 → peaceirisでCDNデプロイ |
 | 毎週木曜 JST 18:00 | JPX週次 + GPIF + フルデプロイ | → peaceirisでCDNデプロイ |
 | HTML/yml変更プッシュ時 | daily_task.yml | → peaceirisでCDNデプロイ |
 
 ### ⚠️ 手口データの「古く見える」理由
 
-JPXは**当日分の手口データを翌営業日 10:30頃に公開**するため、毎日 JST 20:05 に取得できる最新データは「前営業日分」になる。
+JPXは**当日分の手口データを翌営業日 10:30頃に公開**するため、毎日 JST 17:45 に取得できる最新データは「前営業日分」になる。
 
 ---
 
@@ -473,7 +521,7 @@ investment_dashboard/
     ├── intraday_etf.yml                # ループ型15分間隔更新（mainコミット + gh-pages直接push）
     ├── daily_etf.yml                   # 毎日 JST 16:00 ETFデータ
     ├── daily_short_selling.yml         # 毎営業日 JST 17:05 空売り集計取得
-    ├── daily_participant.yml           # 毎営業日 JST 20:05 手口・オプション
+    ├── daily_participant.yml           # 毎営業日 JST 17:45 手口・オプション
     └── daily_task.yml                  # 週次 + HTML変更時フルデプロイ
 ```
 

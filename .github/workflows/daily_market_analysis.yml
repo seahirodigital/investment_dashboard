@@ -1,0 +1,73 @@
+name: Daily Market Analysis (Gemini)
+
+on:
+  schedule:
+    # 18:15 JST = 09:15 UTC
+    - cron: '15 9 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  market-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Step 1: データ取得 ──────────────────────────────────
+      - name: Fetch intraday data
+        run: python scripts/market/fetch_intraday.py
+        continue-on-error: true
+
+      - name: Fetch ETF daily data
+        run: python scripts/market/etf_data_manager.py
+        continue-on-error: true
+
+      - name: Fetch short selling data
+        run: python scripts/market/fetch_short_selling.py
+        continue-on-error: true
+
+      - name: Fetch teguchi data
+        env:
+          FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
+        run: python scripts/jpx/fetch_teguchi.py
+
+      - name: Fetch option data
+        env:
+          FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
+        run: python scripts/jpx/fetch_option.py
+
+      # ── Step 2: Gemini 分析 + レポート生成 + カレンダー更新 ─
+      - name: Run Gemini market analysis
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+        run: python scripts/market/gemini_analysis.py
+
+      # ── Step 3: レポートとデータをコミット ──────────────────
+      - name: Commit reports and data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add data/*.json
+          git add market_analysis/reports/*.md
+
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto: Daily Market Analysis Report $(date +'%Y-%m-%d')"
+            git push
+            echo "Report committed and pushed."
+          else
+            echo "No changes to commit."
+          fi
