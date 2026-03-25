@@ -187,7 +187,7 @@
 
             // チャート用全データ（Brush で範囲選択するため全件渡す）
             const chartAll = useMemo(() => {
-                return sig.map(d => ({
+                const arr = sig.map(d => ({
                     date: fmtDate(d.date), fullDate: d.date,
                     total: toT(d.total),
                     genbutsu_uri: toT(d.genbutsu_uri),
@@ -200,19 +200,17 @@
                     pk_ratio: d.pk_ratio,
                     s1: d.s1, s2: d.s2, lit: d.lit,
                 }));
+                // 最大売買代金にフラグを付与
+                if (arr.length) {
+                    let mx = 0;
+                    for (let i = 1; i < arr.length; i++) { if (arr[i].total > arr[mx].total) mx = i; }
+                    arr[mx].isMaxTotal = true;
+                }
+                return arr;
             }, [sig]);
 
             // Brush デフォルト: 直近20日表示
             const defaultBrushStart = useMemo(() => Math.max(0, chartAll.length - 20), [chartAll]);
-
-            // 最大売買代金のインデックス（Cell着色に使用）
-            const maxTotalIdx = useMemo(() => {
-                let mx = 0;
-                for (let i = 1; i < chartAll.length; i++) {
-                    if (chartAll[i].total > chartAll[mx].total) mx = i;
-                }
-                return mx;
-            }, [chartAll]);
 
             const stats = useMemo(() => {
                 if(!chartAll.length) return null;
@@ -388,7 +386,7 @@
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                             <XAxis dataKey="date" tick={{fontSize:9,fill:'#94a3b8'}} tickMargin={8} />
                                             <YAxis yAxisId="left" tick={{fontSize:9,fill:'#94a3b8'}} width={40} axisLine={false} tickLine={false} />
-                                            <YAxis yAxisId="right" orientation="right" tick={{fontSize:9,fill:'#94a3b8'}} width={35} tickFormatter={v=>`${(v*100).toFixed(0)}%`} domain={['auto','auto']} axisLine={false} tickLine={false} />
+                                            <YAxis yAxisId="right" orientation="right" tick={{fontSize:9,fill:'#94a3b8'}} width={35} tickFormatter={v=>`${(v*100).toFixed(0)}%`} domain={[0.15,'auto']} axisLine={false} tickLine={false} />
                                             <Tooltip content={({active,payload,label})=>{
                                                 if(!active||!payload?.length) return null;
                                                 const d=payload[0]?.payload;
@@ -405,8 +403,8 @@
                                             
                                             <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} hide={hiddenKeys.has('total')}
                                                 shape={(props) => {
-                                                    const { x, y, width, height, index } = props;
-                                                    const isMax = index === maxTotalIdx;
+                                                    const { x, y, width, height, payload } = props;
+                                                    const isMax = payload && payload.isMaxTotal;
                                                     return <rect x={x} y={y} width={width} height={height} rx={2} ry={2}
                                                         fill={isMax ? '#7C4DFF' : '#a78bfa'}
                                                         fillOpacity={isMax ? 1 : 0.5}
@@ -418,8 +416,19 @@
                                             <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
                                             {/* 色逆転：現物売りを totalBar (グレー) で表現 */}
                                             <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" fill={COLORS.totalBar} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('genbutsu_uri')} />
-                                            
-                                            <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} dot={false} isAnimationActive={false} hide={hiddenKeys.has('karauri_ratio')} />
+
+                                            <Line yAxisId="right" type="monotone" dataKey="karauri_ratio" name="空売り比率" stroke={COLORS.ratio} strokeWidth={2} isAnimationActive={false} dot={(props)=>{
+                                                const {cx,cy,payload}=props;
+                                                if (payload && payload.isMaxTotal) {
+                                                    return (
+                                                        <g key={`mx-${payload.fullDate}`}>
+                                                            <circle cx={cx} cy={cy} r={5} fill={COLORS.total} stroke="#fff" strokeWidth={1.5} />
+                                                            <text x={cx} y={cy-12} textAnchor="middle" fontSize="9" fill={COLORS.total} fontWeight="bold">Max</text>
+                                                        </g>
+                                                    );
+                                                }
+                                                return null;
+                                            }} hide={hiddenKeys.has('karauri_ratio')} />
                                             
                                             <Line yAxisId="left" type="monotone" dataKey="ma_total" name="20日MA(代金)" stroke={COLORS.ma} strokeWidth={1.5} strokeDasharray="3 3" dot={false} hide={hiddenKeys.has('ma_total')} />
                                             <Brush dataKey="date" height={16} stroke={COLORS.ma} fill="#f8fafc" startIndex={defaultBrushStart} endIndex={chartAll.length - 1} tickFormatter={()=>""} />
