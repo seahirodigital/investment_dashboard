@@ -2,7 +2,7 @@ name: Daily JPX Participant Analysis & NF Option Fetch
 
 on:
   schedule:
-    - cron: '5 11 * * *'
+    - cron: '45 8 * * *'
   workflow_dispatch:
 
 permissions:
