@@ -403,16 +403,18 @@
                                             }} cursor={{fill:'rgba(241, 245, 249, 0.4)'}} />
                                             <Legend content={<CustomLegend toggle={1} />} wrapperStyle={{paddingTop:'5px'}} />
                                             
-                                            <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} hide={hiddenKeys.has('total')}>
-                                                {chartAll.map((_, i) => (
-                                                    <Cell key={`ct-${i}`}
-                                                        fill={i === maxTotalIdx ? '#7C4DFF' : '#a78bfa'}
-                                                        fillOpacity={i === maxTotalIdx ? 1 : 0.5}
-                                                        stroke={i === maxTotalIdx ? '#5B21B6' : 'none'}
-                                                        strokeWidth={i === maxTotalIdx ? 2 : 0}
-                                                    />
-                                                ))}
-                                            </Bar>
+                                            <Bar yAxisId="left" dataKey="total" name="売買代金(d)" radius={[2,2,0,0]} hide={hiddenKeys.has('total')}
+                                                shape={(props) => {
+                                                    const { x, y, width, height, index } = props;
+                                                    const isMax = index === maxTotalIdx;
+                                                    return <rect x={x} y={y} width={width} height={height} rx={2} ry={2}
+                                                        fill={isMax ? '#7C4DFF' : '#a78bfa'}
+                                                        fillOpacity={isMax ? 1 : 0.5}
+                                                        stroke={isMax ? '#4C1D95' : 'none'}
+                                                        strokeWidth={isMax ? 2 : 0}
+                                                    />;
+                                                }}
+                                            />
                                             <Bar yAxisId="left" dataKey="karauri" name="空売合計(b+c)" fill={COLORS.short} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('karauri')} />
                                             {/* 色逆転：現物売りを totalBar (グレー) で表現 */}
                                             <Bar yAxisId="left" dataKey="genbutsu_uri" name="現物売り(a)" fill={COLORS.totalBar} radius={[2,2,0,0]} opacity={0.75} hide={hiddenKeys.has('genbutsu_uri')} />
