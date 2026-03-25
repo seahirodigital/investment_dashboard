@@ -4,7 +4,16 @@
 
 ---
 
-## 📋 本日（2026-03-19）の実装履歴＆解決済み課題
+## 📋 最新の大型アップデート (2026-03-25)
+
+### 新規実装：TOPIX100分析 ＆ 売買フロー底打ち検知
+**実績:** 
+- **TOPIX100分析** (`topix100.html`): TOPIX Core30 + Large70 の全98銘柄のパフォーマンスを絶対値ベースで比較（日経指数等の参照ライン付き）する専用ダッシュボード構築。
+- **売買フロー底打ち検知** (`short_selling.html`): 東証の日次「空売り集計」から、①売買代金の急膨張(パニック売り) ②空売り比率ピークアウト(ショートカバー)の2つのシグナルを検知し、相場の底打ち(Phase 3)を判定するアルゴリズムを実装。
+
+---
+
+## 📋 過去（2026-03-19）の実装履歴＆解決済み課題
 
 ### 最終達成：15分ごと確実なデータ更新＆CDN配信
 
@@ -158,6 +167,7 @@ daily_participant.yml / daily_task.yml が GITHUB_TOKEN + peaceiris で正常に
 |---|---|---|---|
 | `intraday_etf.yml` | イントラデイETF更新 | 市場時間中 **15分ごとループ** | mainにcommit + gh-pages直接push |
 | `daily_etf.yml` | 日次ETFデータ取得 | **毎日 JST 16:00** | peaceiris（keep_files: true） |
+| `daily_short_selling.yml`| 空売り集計・株式相場状況 | **毎営業日 JST 17:05** | peaceiris（keep_files: true） |
 | `daily_participant.yml` | 手口・オプション取得 | **毎日 JST 20:05** | peaceiris（keep_files: true） |
 | `daily_task.yml` | JPX週次 + フルデプロイ | **毎週木曜 JST 18:00** + HTML/yml変更時 | peaceiris（keep_files: true） |
 
@@ -192,9 +202,10 @@ concurrency: cancel-in-progress: false
 
 | ファイル | 生成スクリプト | 参照HTML | 更新頻度 |
 |---|---|---|---|
-| `data/etf_data.json` | `etf_data_manager.py` | `etf.html`, `sector_category.html` | 毎日 JST 16:00 |
-| `data/etf_intraday.json` | `fetch_intraday.py` / `etf_data_manager.py` | `sector_category.html` | **市場中15分ごと** + 毎日 JST 16:00 |
+| `data/etf_data.json` | `etf_data_manager.py` | `etf.html`, `sector_category.html`, `topix100.html` | 毎日 JST 16:00 |
+| `data/etf_intraday.json` | `fetch_intraday.py` / `etf_data_manager.py` | `sector_category.html`, `topix100.html` | **市場中15分ごと** + 毎日 JST 16:00 |
 | `data/sector_data.json` | `sector_manager.py` | `analytics.html` | 週1回（木曜） |
+| `data/short_selling.json` | `fetch_short_selling.py` | `short_selling.html` | 毎営業日 JST 17:05 |
 | `data/teguchi.json` | `fetch_teguchi.py` | `teguchi.html` | 毎営業日 JST 20:05 |
 | `data/option_history.json` | `fetch_option.py` | `option.html` | 毎営業日 JST 20:05 |
 | `data/gpif_data.json` | `fetch_gpif_data.py` | `GPIF/dist/index.html` | 週1回（木曜） |
@@ -392,7 +403,8 @@ const intradayAvailable = rawIntraday?.dates?.length > 1
 |---|---|---|
 | **市場中 毎15分（JST 9:00〜15:45）** | ループ型: `fetch_intraday.py` | mainコミット + gh-pages直接push → **CDN即時更新** |
 | 毎日 JST 16:00 | `etf_data_manager.py` | 日次+イントラデイ両方再生成 → peaceirisでCDNデプロイ |
-| 毎日 JST 20:05 | `fetch_teguchi.py` + `fetch_option.py` | 手口・建玉 → peaceirisでCDNデプロイ |
+| 毎営業日 JST 17:05 | `fetch_short_selling.py` | 空売り集計・株式相場状況 → peaceirisでCDNデプロイ |
+| 毎営業日 JST 20:05 | `fetch_teguchi.py` + `fetch_option.py` | 手口・建玉 → peaceirisでCDNデプロイ |
 | 毎週木曜 JST 18:00 | JPX週次 + GPIF + フルデプロイ | → peaceirisでCDNデプロイ |
 | HTML/yml変更プッシュ時 | daily_task.yml | → peaceirisでCDNデプロイ |
 
@@ -417,11 +429,13 @@ basket_price[t] = mean( stock_price[t] / stock_price[t0] ) × 100
 ## ファイル構成
 
 ```
-investment_dasboard/
+investment_dashboard/
 │
 ├── index.html                          # メインダッシュボード（サイドバーナビ）
+├── topix100.html                       # TOPIX100銘柄分析（絶対値パフォーマンス）
 ├── etf.html                            # セクター分析（全セクター単一チャート）
 ├── sector_category.html                # セクター分類分析（7カテゴリ × チャート+ランキング）
+├── short_selling.html                  # 売買フロー底打ち検知・空売り集計
 ├── analytics.html                      # セクター別感応度分析
 ├── option.html                         # オプション建玉監視
 ├── teguchi.html                        # 手口データ分析
@@ -433,8 +447,9 @@ investment_dasboard/
 │
 ├── data/
 │   ├── etf_data.json                   # ETF・バスケット 日次（daily_etf.yml）
-│   ├── etf_intraday.json              # ETF・バスケット 5分足（intraday_etf.yml / daily_etf.yml）
+│   ├── etf_intraday.json               # ETF・バスケット 5分足（intraday_etf.yml / daily_etf.yml）
 │   ├── sector_data.json                # セクター集計（daily_task.yml）
+│   ├── short_selling.json              # 空売り・売買フロー集計（daily_short_selling.yml）
 │   ├── option_history.json             # オプション建玉（daily_participant.yml）
 │   ├── teguchi.json                    # 手口データ（daily_participant.yml）
 │   ├── daily_participant.json          # 日次参加者データ
@@ -446,6 +461,7 @@ investment_dasboard/
 │   │   ├── fetch_intraday.py           # イントラデイ専用取得（リトライ付き）
 │   │   └── fetch_gpif_data.py          # GPIF データ取得
 │   └── jpx/
+│       ├── fetch_short_selling.py      # 空売り集計・株式相場状況（JPX スクレイピング）
 │       ├── fetch_option.py             # オプション建玉（JPX スクレイピング）
 │       └── fetch_teguchi.py            # 手口データ（JPX API）
 │
@@ -456,7 +472,8 @@ investment_dasboard/
 └── .github/workflows/
     ├── intraday_etf.yml                # ループ型15分間隔更新（mainコミット + gh-pages直接push）
     ├── daily_etf.yml                   # 毎日 JST 16:00 ETFデータ
-    ├── daily_participant.yml           # 毎日 JST 20:05 手口・オプション
+    ├── daily_short_selling.yml         # 毎営業日 JST 17:05 空売り集計取得
+    ├── daily_participant.yml           # 毎営業日 JST 20:05 手口・オプション
     └── daily_task.yml                  # 週次 + HTML変更時フルデプロイ
 ```
 
@@ -568,7 +585,7 @@ python scripts/market/etf_data_manager.py
 両方が点灯した場合にのみ「Phase 3: 反転上昇（底打ちシグナル全点灯）」とみなす。
 
 ### GitHub Actions との連携
-*   空売り集計データは、東証公式サイトから前営業日分のデータが発表される夕方時刻を狙い、**毎日 JST 16:30** に `daily_short_selling.yml` (`fetch_short_selling.py`) によって新規取得・生成が行われ、GitHub Pages（CDN）へ自動配信されるアーキテクチャとなっている。
+*   空売り集計データは、東証公式サイトから前営業日分のデータが発表される夕方時刻を狙い、**毎営業日 JST 17:05** に `daily_short_selling.yml` (`fetch_short_selling.py`) によって新規取得・生成が行われ、GitHub Pages（CDN）へ自動配信されるアーキテクチャとなっている。
 
 ---
 
