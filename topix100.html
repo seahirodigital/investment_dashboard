@@ -293,6 +293,28 @@
 
                 const baseIndex = (isIntraday && startIndex > 0) ? startIndex - 1 : startIndex;
 
+                // 前日終値ベースマップを構築（イントラデイ時、日次終値のほうが正確）
+                let dailyBaseMap = null;
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
+                    const startDateStr = dates[startIndex].split(' ')[0];
+                    const dailyDates = rawDaily.dates;
+                    // startDate の前営業日を日次データから探す
+                    let prevDailyIdx = -1;
+                    for (let di = dailyDates.length - 1; di >= 0; di--) {
+                        if (dailyDates[di] < startDateStr) { prevDailyIdx = di; break; }
+                    }
+                    if (prevDailyIdx >= 0) {
+                        dailyBaseMap = {};
+                        symbolKeys.forEach(sym => {
+                            const dp = rawDaily.prices[sym];
+                            if (dp && dp[prevDailyIdx]) dailyBaseMap[sym] = dp[prevDailyIdx];
+                        });
+                        // 日経指数も
+                        const ndp = rawDaily.prices['^N225'];
+                        if (ndp && ndp[prevDailyIdx]) dailyBaseMap['^N225'] = ndp[prevDailyIdx];
+                    }
+                }
+
                 const timeSeries = [];
                 const rankingMap = {};
                 for (let i = startIndex; i < L; i++) {
@@ -302,7 +324,7 @@
                         const name = TOPIX100[sym];
                         const sPrices = prices[sym];
                         if (!sPrices) return;
-                        const sStart = sPrices[baseIndex];
+                        const sStart = (dailyBaseMap && dailyBaseMap[sym]) ? dailyBaseMap[sym] : sPrices[baseIndex];
                         const sCurrent = sPrices[i];
                         if (sStart && sCurrent && sStart !== 0) {
                             const ret = ((sCurrent / sStart) - 1) * 100;
@@ -313,7 +335,7 @@
                     // 日経指数も参考ラインとして追加
                     const nikkeiPrices = prices['^N225'];
                     if (nikkeiPrices) {
-                        const nStart = nikkeiPrices[baseIndex];
+                        const nStart = (dailyBaseMap && dailyBaseMap['^N225']) ? dailyBaseMap['^N225'] : nikkeiPrices[baseIndex];
                         const nCurrent = nikkeiPrices[i];
                         if (nStart && nCurrent && nStart !== 0) {
                             point[NIKKEI_NAME] = ((nCurrent / nStart) - 1) * 100;
@@ -322,27 +344,32 @@
                     timeSeries.push(point);
                 }
 
-                // 終値補正: 日次データが存在すれば常にランキング値を日次終値で上書き
+                // 終値補正: 日次データで当日分が確定している場合のみランキング値を上書き
                 // （イントラデイ5分足の最終tickは実際の終値と乖離するため）
+                // ただし今日のライブデータを表示中（日次データにまだ今日が含まれない）は補正しない
                 if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
-                    const lastDate = dates[L - 1].split(' ')[0];
+                    const lastIntradayDate = dates[L - 1].split(' ')[0];
                     const dailyDates = rawDaily.dates;
-                    let dailyEndIdx = -1;
-                    for (let di = dailyDates.length - 1; di >= 0; di--) {
-                        if (dailyDates[di] <= lastDate) { dailyEndIdx = di; break; }
-                    }
-                    if (dailyEndIdx >= 0) {
-                        const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
-                        const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
-                        symbolKeys.forEach(sym => {
-                            const sPrices = rawDaily.prices[sym];
-                            if (!sPrices) return;
-                            const sStart = sPrices[dailyBaseIdx];
-                            const sCurrent = sPrices[dailyEndIdx];
-                            if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
-                                rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
-                            }
-                        });
+                    const latestDailyDate = dailyDates[dailyDates.length - 1];
+                    // 日次データにイントラデイ最終日が含まれている場合のみ補正
+                    if (latestDailyDate >= lastIntradayDate) {
+                        let dailyEndIdx = -1;
+                        for (let di = dailyDates.length - 1; di >= 0; di--) {
+                            if (dailyDates[di] <= lastIntradayDate) { dailyEndIdx = di; break; }
+                        }
+                        if (dailyEndIdx >= 0) {
+                            const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
+                            const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
+                            symbolKeys.forEach(sym => {
+                                const sPrices = rawDaily.prices[sym];
+                                if (!sPrices) return;
+                                const sStart = sPrices[dailyBaseIdx];
+                                const sCurrent = sPrices[dailyEndIdx];
+                                if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
+                                    rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
+                                }
+                            });
+                        }
                     }
                 }
                 const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
