@@ -1279,27 +1279,35 @@
                                     const content = JSON.parse(json.files['market_data.json'].content);
                                     let hasNewData = false;
                                     
-                                    if (content.history) { 
-                                        setHistoryData(content.history); 
-                                        localStorage.setItem('history_data', JSON.stringify(content.history)); 
+                                    // Gistから取得した history を確定値として保持（setHistoryData は非同期のため）
+                                    const loadedHistory = content.history || {};
+                                    if (content.history) {
+                                        setHistoryData(content.history);
+                                        localStorage.setItem('history_data', JSON.stringify(content.history));
                                     }
-                                    if (content.links && content.links.length > 0) { 
-                                        setCustomLinks(content.links); 
+                                    let syncLinks = null;
+                                    let syncQuotes = null;
+                                    if (content.links && content.links.length > 0) {
+                                        setCustomLinks(content.links);
                                         localStorage.setItem('market-dash-links', JSON.stringify(content.links));
                                         hasNewData = true;
                                     } else {
-                                        // クラウドが空、または存在しない場合は、バックアップを強制的にクラウドへ書き込む
+                                        // クラウドが空 → ローカルバックアップをクラウドへ同期
                                         console.log("☁️ Cloud links empty. Syncing backup to Gist...");
-                                        saveAllData(undefined, initialLinks, initialQuotes);
-                                        hasNewData = true;
+                                        syncLinks = initialLinks;
                                     }
-                                    if (content.quotes && content.quotes.length > 0) { 
-                                        setQuotes(content.quotes); 
+                                    if (content.quotes && content.quotes.length > 0) {
+                                        setQuotes(content.quotes);
                                         localStorage.setItem('market-dash-quotes', JSON.stringify(content.quotes));
                                         hasNewData = true;
                                     } else {
                                         console.log("☁️ Cloud quotes empty. Syncing backup to Gist...");
-                                        saveAllData(undefined, undefined, initialQuotes);
+                                        syncQuotes = initialQuotes;
+                                    }
+                                    // links/quotes の同期が必要な場合、確定した history を明示的に渡して1回で更新
+                                    // （React state が未反映の historyData を使わせない）
+                                    if (syncLinks || syncQuotes) {
+                                        saveAllData(loadedHistory, syncLinks || customLinks, syncQuotes || quotes);
                                         hasNewData = true;
                                     }
                                     if (hasNewData) cloudLoaded = true;
