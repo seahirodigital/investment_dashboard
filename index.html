@@ -1292,11 +1292,15 @@
                                         setHistoryData(content.history);
                                         localStorage.setItem('history_data', JSON.stringify(content.history));
                                         // サーバー書き込みの info を保存（デフォルト値 "# YYYY/MM/DD" より長いもの）
-                                        const infoMap = {};
-                                        for (const [k, v] of Object.entries(content.history)) {
-                                            if (v.info && v.info.length > 15) infoMap[k] = v.info;
-                                        }
-                                        serverInfoRef.current = infoMap;
+                                        try {
+                                            const infoMap = {};
+                                            const hEntries = Object.entries(content.history);
+                                            for (let i = 0; i < hEntries.length; i++) {
+                                                const v = hEntries[i][1];
+                                                if (v && v.info && typeof v.info === 'string' && v.info.length > 15) infoMap[hEntries[i][0]] = v.info;
+                                            }
+                                            serverInfoRef.current = infoMap;
+                                        } catch (e) { console.warn("serverInfoRef init skipped:", e); }
                                     }
                                     let syncLinks = null;
                                     let syncQuotes = null;
@@ -1376,16 +1380,20 @@
                 } catch (e) { console.error("Local Save Failed", e); }
                 if (gistToken && gistId) {
                     // サーバー書き込みの info をマージ（ワークフローが書いたレポートを保護）
-                    const mergedH = { ...h };
-                    for (const [key, serverInfo] of Object.entries(serverInfoRef.current)) {
-                        if (mergedH[key]) {
-                            const localInfo = mergedH[key].info || '';
-                            // ローカルがデフォルト値（"# YYYY/MM/DD"）ならサーバー版を優先
-                            if (serverInfo.length > localInfo.length) {
-                                mergedH[key] = { ...mergedH[key], info: serverInfo };
+                    let mergedH = h;
+                    try {
+                        mergedH = { ...h };
+                        const entries = Object.entries(serverInfoRef.current || {});
+                        for (let i = 0; i < entries.length; i++) {
+                            const key = entries[i][0], serverInfo = entries[i][1];
+                            if (mergedH[key] && serverInfo && typeof serverInfo === 'string') {
+                                const localInfo = (mergedH[key].info || '');
+                                if (serverInfo.length > localInfo.length) {
+                                    mergedH[key] = { ...mergedH[key], info: serverInfo };
+                                }
                             }
                         }
-                    }
+                    } catch (e) { console.warn("Info merge skipped:", e); mergedH = h; }
                     const content = JSON.stringify({ history: mergedH, links: l, quotes: q, lastUpdated: new Date().toISOString() });
                     fetch(`https://api.github.com/gists/${gistId.trim()}`, { method: 'PATCH', headers: { 'Authorization': `token ${gistToken.trim()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'market_data.json': { content: content } } }) })
                     .then(res => { if(!res.ok) console.warn("⚠️ Sync: Gist Save Failed", res.status); })
