@@ -1379,24 +1379,29 @@
                     if (newQuotes !== undefined) localStorage.setItem('market-dash-quotes', JSON.stringify(q));
                 } catch (e) { console.error("Local Save Failed", e); }
                 if (gistToken && gistId) {
-                    // サーバー書き込みの info をマージ（ワークフローが書いたレポートを保護）
-                    let mergedH = h;
-                    try {
-                        mergedH = { ...h };
-                        const entries = Object.entries(serverInfoRef.current || {});
-                        for (let i = 0; i < entries.length; i++) {
-                            const key = entries[i][0], serverInfo = entries[i][1];
-                            if (mergedH[key] && serverInfo && typeof serverInfo === 'string') {
-                                const localInfo = (mergedH[key].info || '');
-                                if (serverInfo.length > localInfo.length) {
-                                    mergedH[key] = { ...mergedH[key], info: serverInfo };
+                    const gistUrl = `https://api.github.com/gists/${gistId.trim()}`;
+                    const gistAuth = { 'Authorization': `token ${gistToken.trim()}` };
+                    // Read-Merge-Write: Gistの現在の info をフェッチして保護してから書き込む
+                    fetch(gistUrl, { headers: gistAuth })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(gistData => {
+                        const mergedH = { ...h };
+                        try {
+                            if (gistData && gistData.files && gistData.files['market_data.json']) {
+                                const gistHistory = JSON.parse(gistData.files['market_data.json'].content).history || {};
+                                for (const key in gistHistory) {
+                                    const gi = gistHistory[key] && gistHistory[key].info;
+                                    if (gi && gi.length > 15 && mergedH[key]) {
+                                        const li = mergedH[key].info || '';
+                                        if (gi.length > li.length) mergedH[key] = { ...mergedH[key], info: gi };
+                                    }
                                 }
                             }
-                        }
-                    } catch (e) { console.warn("Info merge skipped:", e); mergedH = h; }
-                    const content = JSON.stringify({ history: mergedH, links: l, quotes: q, lastUpdated: new Date().toISOString() });
-                    fetch(`https://api.github.com/gists/${gistId.trim()}`, { method: 'PATCH', headers: { 'Authorization': `token ${gistToken.trim()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'market_data.json': { content: content } } }) })
-                    .then(res => { if(!res.ok) console.warn("⚠️ Sync: Gist Save Failed", res.status); })
+                        } catch (e) { console.warn("Info merge skipped:", e); }
+                        const content = JSON.stringify({ history: mergedH, links: l, quotes: q, lastUpdated: new Date().toISOString() });
+                        return fetch(gistUrl, { method: 'PATCH', headers: { ...gistAuth, 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'market_data.json': { content: content } } }) });
+                    })
+                    .then(res => { if(res && !res.ok) console.warn("⚠️ Sync: Gist Save Failed", res.status); })
                     .catch(e => console.error("❌ Sync: Gist Network Error", e));
                 }
             };
