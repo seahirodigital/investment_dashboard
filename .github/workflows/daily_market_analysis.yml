@@ -37,15 +37,19 @@ jobs:
         run: python scripts/market/fetch_short_selling.py
         continue-on-error: true
 
-      - name: Fetch teguchi data
+      # teguchi/option データは daily_participant.yml (08:45 UTC) で取得済み
+      # 万一未取得の場合のフォールバックとして実行（失敗しても分析は続行）
+      - name: Fetch teguchi data (fallback)
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: python scripts/jpx/fetch_teguchi.py
+        continue-on-error: true
 
-      - name: Fetch option data
+      - name: Fetch option data (fallback)
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: python scripts/jpx/fetch_option.py
+        continue-on-error: true
 
       # ── Step 2: Gemini 分析 + レポート生成 + カレンダー更新 ─
       - name: Run Gemini market analysis
@@ -66,8 +70,18 @@ jobs:
 
           if ! git diff --staged --quiet; then
             git commit -m "Auto: Daily Market Analysis Report $(date +'%Y-%m-%d')"
-            git push
-            echo "Report committed and pushed."
+            # intraday_etf が頻繁にpushするため、pull --rebase で競合回避
+            for i in 1 2 3; do
+              git pull --rebase origin main || { git rebase --abort 2>/dev/null; true; }
+              if git push origin main; then
+                echo "Report committed and pushed."
+                exit 0
+              fi
+              echo "Push failed (attempt $i/3). Retrying in 10s..."
+              sleep 10
+            done
+            echo "::error::All push attempts failed."
+            exit 1
           else
             echo "No changes to commit."
           fi
