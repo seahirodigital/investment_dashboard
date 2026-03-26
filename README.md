@@ -219,6 +219,89 @@ GEMINI_API_KEY="..." GIST_TOKEN="..." GIST_ID="..." python scripts/market/gemini
 
 ---
 
+### `daily_market_analysis.yml` 実装時の苦戦と解決策（2026-03-26）
+
+#### 問題1：ワークフローが18:15に動作していなかった（に見えた）
+
+**症状:** JST 18:15に動作していない
+**実際の原因:** GitHub Actions のcronは混雑時に**最大1時間程度遅延**することが仕様。当日は56分遅延して19:11 JSTに実行・成功していた。
+**対応:** ワークフロー自体の問題ではなく、cronの遅延であることを確認。ただし以下の副次的問題も発見・修正した。
+
+#### 問題2：`git push` が競合エラーで失敗するリスク
+
+**原因:** `intraday_etf.yml` が15分ごとにmainブランチにコミット＆プッシュするため、`daily_market_analysis.yml` のプッシュ時点でリモートが先に進んでいる（non-fast-forward）。
+
+**修正:** `git pull --rebase origin main` をプッシュ前に追加し、最大3回リトライする方式に変更。
+
+```yaml
+for i in 1 2 3; do
+  git pull --rebase origin main || { git rebase --abort 2>/dev/null; true; }
+  if git push origin main; then exit 0; fi
+  sleep 10
+done
+```
+
+#### 問題3：`fetch_teguchi.py` / `fetch_option.py` のエラーでワークフロー全体が停止
+
+**原因:** 他のfetchステップには `continue-on-error: true` があったが、これら2つには設定が漏れていた。いずれかが失敗するとGemini分析まで到達しない。
+
+**修正:** `continue-on-error: true` を追加し、フォールバック扱いにした（`daily_participant.yml` で08:45 UTCに取得済みのため二重取得でもある）。
+
+#### 問題4：`GIST_TOKEN` / `GIST_ID` のSecretsが未登録
+
+**原因:** ワークフローログで `GIST_TOKEN:（空）` `GIST_ID:（空）` を確認。スクリプトが「⏭️ Gist設定なし — カレンダー更新をスキップ」と出力して情報タブ更新をスキップしていた。
+
+**対応:** `gh secret set GIST_TOKEN` / `gh secret set GIST_ID` でSecretを登録。
+
+#### 問題5：フロントエンドがGistのinfoフィールドを上書きする（最難関）
+
+**症状:** ワークフローがGistのinfoに2000文字超のレポートを書き込むが、数十秒後に「# 2026/03/26」（12文字）に戻る。
+
+**根本原因（3層構造）:**
+
+1. **React非同期stateバグ（第1層）:** 初回ページロード時、Gistデータを取得して `setHistoryData(content.history)` した直後に `saveAllData(undefined, ...)` を呼んでいた。`undefined` を渡すと「現在の `historyData` state を使う」仕様だが、React stateは非同期更新のため、その時点では古い空データが入っていた。古いデータでGistを上書きしてしまう。
+
+2. **ページ開きっぱなしの問題（第2層）:** ユーザーがページを開いたまま（ワークフロー実行前に読み込んだ状態）でいると、ブラウザのReact stateは古い `info` を持ち続ける。そのまま保存操作を行うと古いデータでGistを上書きする。
+
+3. **保存のたびに全フィールドをGISTへ送信（第3層）:** `saveAllData` はhistory全体を1つのJSONとしてGist PATCHするため、ワークフローが書いたフィールドも上書きされる。
+
+**修正の変遷:**
+
+| 試み | 内容 | 結果 |
+|------|------|------|
+| 第1版 | 初回ロードの `saveAllData(undefined,...)` を `saveAllData(loadedHistory,...)` に修正 | 第1層は解決。第2層・第3層は残存 |
+| 第2版 | `serverInfoRef` でGistロード時のinfoをキャッシュし、保存時にマージ | ページロード前にinfoが空だとRefに保存されず保護されない |
+| 第3版（最終）| **Read-Merge-Write方式**: `saveAllData` のGist書き込み前に現在のGistデータをフェッチし、infoフィールドが15文字超であれば必ずローカルより優先してマージしてから書き込む | **完全解決** |
+
+**最終実装（`saveAllData` 内のGist書き込み部分）:**
+```js
+fetch(gistUrl, { headers: gistAuth })
+.then(r => r.ok ? r.json() : null)
+.then(gistData => {
+    const mergedH = { ...h };
+    // Gistの現在のinfoが15文字超なら保護（ワークフロー書き込み分）
+    const gistHistory = JSON.parse(gistData.files['market_data.json'].content).history || {};
+    for (const key in gistHistory) {
+        const gi = gistHistory[key]?.info;
+        if (gi && gi.length > 15 && mergedH[key]) {
+            const li = mergedH[key].info || '';
+            if (gi.length > li.length) mergedH[key] = { ...mergedH[key], info: gi };
+        }
+    }
+    // マージ後に書き込む
+    return fetch(gistUrl, { method: 'PATCH', ... });
+})
+```
+
+**副作用として発覚したバグ:** `serverInfoRef` のイテレーションが `saveCurrentState()` 呼び出しのタイミングでエラーを起こし、モーダルの全ボタン（タブ切替・保存・キャンセル）が動作不能になった。try-catch で保護して修正。
+
+#### Windows端末での文字化け誤検知
+
+**症状:** Gistデータを `curl | python3` で読むと日本語が文字化けして見える。
+**実際:** Gistには正しいUTF-8が保存されており、WindowsのCP932端末で表示する際に文字化けして見えるだけ。バイト列を直接確認（`efbc91` = `１`）して問題なしを確認。
+
+---
+
 ### `intraday_etf.yml` — ループ型15分間隔（決定版）
 
 ```
