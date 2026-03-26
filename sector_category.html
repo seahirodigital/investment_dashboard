@@ -646,14 +646,13 @@
                         });
                         timeSeries.push(point);
                     });
-                    // ── 終値補正: 日次データがイントラデイより新しければランキングを終値ベースに上書き ──
-                    if (rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
-                        rawIntraday && rawIntraday.generated_at) {
-                        const dailyGenAt = new Date(rawDaily.generated_at);
-                        const intradayGenAt = new Date(rawIntraday.generated_at);
-                        if (dailyGenAt > intradayGenAt) {
-                            const lastSessionDate = sessionDates[sessionDates.length - 1];
-                            const dailyDates = rawDaily.dates;
+                    // ── 終値補正: 日次データにUS最終セッション日が含まれている場合のみ補正 ──
+                    // （TOPIX100分析と統一ロジック: generated_atではなく日付包含で判定）
+                    if (rawDaily && rawDaily.dates && rawDaily.prices) {
+                        const lastSessionDate = sessionDates[sessionDates.length - 1];
+                        const dailyDates = rawDaily.dates;
+                        const latestDailyDate = dailyDates[dailyDates.length - 1];
+                        if (latestDailyDate >= lastSessionDate) {
                             let dailyEndIdx = -1;
                             for (let di = dailyDates.length - 1; di >= 0; di--) {
                                 if (dailyDates[di] <= lastSessionDate) { dailyEndIdx = di; break; }
@@ -671,6 +670,29 @@
                                 };
                                 usSymbols.forEach(sym => overrideWithClose(sym));
                                 refSymbols.forEach(ref => overrideWithClose(ref.code));
+                                // チャート時系列の最終ポイントも終値で補正
+                                if (timeSeries.length > 0) {
+                                    const lastPoint = timeSeries[timeSeries.length - 1];
+                                    usSymbols.forEach(sym => {
+                                        const name = US_SECTORS[sym];
+                                        const sPrices = rawDaily.prices[sym];
+                                        if (!sPrices) return;
+                                        const sStart = sPrices[dailyBaseIdx];
+                                        const sCurrent = sPrices[dailyEndIdx];
+                                        if (sStart && sCurrent && sStart !== 0) {
+                                            lastPoint[name] = ((sCurrent / sStart) - 1) * 100;
+                                        }
+                                    });
+                                    refSymbols.forEach(ref => {
+                                        const rPrices = rawDaily.prices[ref.code];
+                                        if (!rPrices) return;
+                                        const rStart = rPrices[dailyBaseIdx];
+                                        const rCurrent = rPrices[dailyEndIdx];
+                                        if (rStart && rCurrent && rStart !== 0) {
+                                            lastPoint[ref.name] = ((rCurrent / rStart) - 1) * 100;
+                                        }
+                                    });
+                                }
                             }
                         }
                     }
@@ -1744,6 +1766,24 @@
                 // 基準価格: イントラデイは前日終値（startIndex - 1）、日次は期間開始日
                 const baseIndex = (isIntraday && startIndex > 0) ? startIndex - 1 : startIndex;
 
+                // 前日終値ベースマップを構築（TOPIX100と統一ロジック）
+                let dailyBaseMap = null;
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
+                    const startDateStr = dates[startIndex].split(' ')[0];
+                    const dbDates = rawDaily.dates;
+                    let prevDailyIdx = -1;
+                    for (let di = dbDates.length - 1; di >= 0; di--) {
+                        if (dbDates[di] < startDateStr) { prevDailyIdx = di; break; }
+                    }
+                    if (prevDailyIdx >= 0) {
+                        dailyBaseMap = {};
+                        jpSymbols.forEach(sym => {
+                            const dp = rawDaily.prices[sym];
+                            if (dp && dp[prevDailyIdx]) dailyBaseMap[sym] = dp[prevDailyIdx];
+                        });
+                    }
+                }
+
                 const timeSeries = [];
                 const rankingMap = {};
                 for (let i = startIndex; i < L; i++) {
@@ -1753,7 +1793,7 @@
                         const name = SEMICONDUCTOR_JP[sym];
                         const sPrices = prices[sym];
                         if (!sPrices) return;
-                        const sStart = sPrices[baseIndex];
+                        const sStart = (dailyBaseMap && dailyBaseMap[sym]) ? dailyBaseMap[sym] : sPrices[baseIndex];
                         const sCurrent = sPrices[i];
                         if (sStart && sCurrent && sStart !== 0) {
                             const ret = ((sCurrent / sStart) - 1) * 100;
@@ -1763,14 +1803,13 @@
                     });
                     timeSeries.push(point);
                 }
-                // ── 終値補正（半導体JP）: 日次データがイントラデイより新しければランキングを終値ベースに上書き ──
-                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
-                    rawIntraday && rawIntraday.generated_at) {
-                    const dailyGenAt = new Date(rawDaily.generated_at);
-                    const intradayGenAt = new Date(rawIntraday.generated_at);
-                    if (dailyGenAt > intradayGenAt) {
-                        const lastDate = dates[L - 1].split(' ')[0];
-                        const dailyDates = rawDaily.dates;
+                // ── 終値補正（半導体JP）: 日次データにイントラデイ最終日が含まれている場合のみ補正 ──
+                // （TOPIX100分析と統一ロジック: generated_atではなく日付包含で判定）
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
+                    const lastDate = dates[L - 1].split(' ')[0];
+                    const dailyDates = rawDaily.dates;
+                    const latestDailyDate = dailyDates[dailyDates.length - 1];
+                    if (latestDailyDate >= lastDate) {
                         let dailyEndIdx = -1;
                         for (let di = dailyDates.length - 1; di >= 0; di--) {
                             if (dailyDates[di] <= lastDate) { dailyEndIdx = di; break; }
@@ -1787,6 +1826,20 @@
                                     rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
                                 }
                             });
+                            // チャート時系列の最終ポイントも終値で補正
+                            if (timeSeries.length > 0) {
+                                const lastPoint = timeSeries[timeSeries.length - 1];
+                                jpSymbols.forEach(sym => {
+                                    const name = SEMICONDUCTOR_JP[sym];
+                                    const sPrices = rawDaily.prices[sym];
+                                    if (!sPrices) return;
+                                    const sStart = sPrices[dailyBaseIdx];
+                                    const sCurrent = sPrices[dailyEndIdx];
+                                    if (sStart && sCurrent && sStart !== 0) {
+                                        lastPoint[name] = ((sCurrent / sStart) - 1) * 100;
+                                    }
+                                });
+                            }
                         }
                     }
                 }
@@ -1866,14 +1919,13 @@
                         timeSeries.push(point);
                     });
 
-                    // ── 終値補正（半導体US）: 日次データがイントラデイより新しければランキングを終値ベースに上書き ──
-                    if (rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
-                        rawIntraday && rawIntraday.generated_at) {
-                        const dailyGenAt = new Date(rawDaily.generated_at);
-                        const intradayGenAt = new Date(rawIntraday.generated_at);
-                        if (dailyGenAt > intradayGenAt) {
-                            const lastSessionDate = sessionDates[sessionDates.length - 1];
-                            const dailyDates = rawDaily.dates;
+                    // ── 終値補正（半導体US）: 日次データにUS最終セッション日が含まれている場合のみ補正 ──
+                    // （TOPIX100分析と統一ロジック: generated_atではなく日付包含で判定）
+                    if (rawDaily && rawDaily.dates && rawDaily.prices) {
+                        const lastSessionDate = sessionDates[sessionDates.length - 1];
+                        const dailyDates = rawDaily.dates;
+                        const latestDailyDate = dailyDates[dailyDates.length - 1];
+                        if (latestDailyDate >= lastSessionDate) {
                             let dailyEndIdx = -1;
                             for (let di = dailyDates.length - 1; di >= 0; di--) {
                                 if (dailyDates[di] <= lastSessionDate) { dailyEndIdx = di; break; }
@@ -1890,6 +1942,29 @@
                                         rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
                                     }
                                 });
+                                // チャート時系列の最終ポイントも終値で補正
+                                if (timeSeries.length > 0) {
+                                    const lastPoint = timeSeries[timeSeries.length - 1];
+                                    usSymbols.forEach(sym => {
+                                        const name = SEMICONDUCTOR_US[sym];
+                                        const sPrices = rawDaily.prices[sym];
+                                        if (!sPrices) return;
+                                        const sStart = sPrices[dailyBaseIdx];
+                                        const sCurrent = sPrices[dailyEndIdx];
+                                        if (sStart && sCurrent && sStart !== 0) {
+                                            lastPoint[name] = ((sCurrent / sStart) - 1) * 100;
+                                        }
+                                    });
+                                    // SOX指数も終値補正
+                                    const soxPrices = rawDaily.prices['^SOX'];
+                                    if (soxPrices) {
+                                        const soxStart = soxPrices[dailyBaseIdx];
+                                        const soxCurrent = soxPrices[dailyEndIdx];
+                                        if (soxStart && soxCurrent && soxStart !== 0) {
+                                            lastPoint['SOX指数'] = ((soxCurrent / soxStart) - 1) * 100;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -2296,6 +2371,27 @@
                 // 日次: 期間開始日を基準にする
                 const baseIndex = (isIntraday && startIndex > 0) ? startIndex - 1 : startIndex;
 
+                // 前日終値ベースマップを構築（イントラデイ時、日次終値のほうが正確）
+                // TOPIX100分析と統一ロジック
+                let dailyBaseMap = null;
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
+                    const startDateStr = dates[startIndex].split(' ')[0];
+                    const dbDates = rawDaily.dates;
+                    let prevDailyIdx = -1;
+                    for (let di = dbDates.length - 1; di >= 0; di--) {
+                        if (dbDates[di] < startDateStr) { prevDailyIdx = di; break; }
+                    }
+                    if (prevDailyIdx >= 0) {
+                        dailyBaseMap = {};
+                        const bpd = rawDaily.prices[benchmark];
+                        if (bpd && bpd[prevDailyIdx]) dailyBaseMap[benchmark] = bpd[prevDailyIdx];
+                        Object.keys(sectors).forEach(sym => {
+                            const dp = rawDaily.prices[sym];
+                            if (dp && dp[prevDailyIdx]) dailyBaseMap[sym] = dp[prevDailyIdx];
+                        });
+                    }
+                }
+
                 // yfinanceはUTCタイムスタンプを出力（tz_localize(None)でラベル除去）
                 // 表示用にJSTへ+9h変換が必要
                 const toJST = (utcStr) => {
@@ -2310,7 +2406,7 @@
 
                 for (let i = startIndex; i <= endIndex; i++) {
                     const date = isIntraday ? toJST(dates[i]) : dates[i];
-                    const bStart = bPrices[baseIndex];
+                    const bStart = (dailyBaseMap && dailyBaseMap[benchmark]) ? dailyBaseMap[benchmark] : bPrices[baseIndex];
                     const bCurrent = bPrices[i];
 
                     if (!bStart || !bCurrent) continue;
@@ -2330,7 +2426,7 @@
                         const sPrices = prices[symbol];
                         if (!sPrices) return;
 
-                        const sStart = sPrices[baseIndex];
+                        const sStart = (dailyBaseMap && dailyBaseMap[symbol]) ? dailyBaseMap[symbol] : sPrices[baseIndex];
                         const sCurrent = sPrices[i];
 
                         if (sStart && sCurrent) {
@@ -2422,14 +2518,13 @@
                     absoluteRanking.sort((a, b) => b.performance - a.performance);
                 }
 
-                // ── 終値補正: 日次データがイントラデイより新しければランキング値を終値ベースに上書き ──
-                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && rawDaily.generated_at &&
-                    rawIntraday && rawIntraday.generated_at) {
-                    const dailyGenAt = new Date(rawDaily.generated_at);
-                    const intradayGenAt = new Date(rawIntraday.generated_at);
-                    if (dailyGenAt > intradayGenAt) {
-                        const lastIntradayDate = dates[endIndex].split(' ')[0];
-                        const dailyDates = rawDaily.dates;
+                // ── 終値補正: 日次データにイントラデイ最終日が含まれている場合のみ補正 ──
+                // （TOPIX100分析と統一ロジック: generated_atではなく日付包含で判定）
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
+                    const lastIntradayDate = dates[endIndex].split(' ')[0];
+                    const dailyDates = rawDaily.dates;
+                    const latestDailyDate = dailyDates[dailyDates.length - 1];
+                    if (latestDailyDate >= lastIntradayDate) {
                         let dailyEndIdx = -1;
                         for (let di = dailyDates.length - 1; di >= 0; di--) {
                             if (dailyDates[di] <= lastIntradayDate) { dailyEndIdx = di; break; }
@@ -2467,6 +2562,40 @@
                                         }
                                     });
                                     ranking.sort((a, b) => b.performance - a.performance);
+
+                                    // チャート時系列の最終ポイントも終値で補正
+                                    if (timeSeries.length > 0) {
+                                        const lastPoint = timeSeries[timeSeries.length - 1];
+                                        const lastAbsPoint = absoluteTimeSeries[absoluteTimeSeries.length - 1];
+                                        lastPoint.TOPIX = bReturnD * 100;
+                                        lastAbsPoint.TOPIX = bReturnD * 100;
+                                        Object.keys(sectors).forEach(symbol => {
+                                            const name = sectors[symbol];
+                                            const sPricesD = rawDaily.prices[symbol];
+                                            if (!sPricesD) return;
+                                            const sStartD = sPricesD[dailyBaseIdx];
+                                            const sCurrentD = sPricesD[dailyEndIdx];
+                                            if (sStartD && sCurrentD && sStartD !== 0) {
+                                                const sReturnD = (sCurrentD / sStartD) - 1;
+                                                lastPoint[name] = (sReturnD - bReturnD) * 100;
+                                                lastAbsPoint[name] = sReturnD * 100;
+                                            }
+                                        });
+                                        // US主要指数も終値補正
+                                        const US_CLOSE_SYMS = {
+                                            '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数',
+                                            'NQM26.CME': 'NQmain(2606)', 'ESM26.CME': 'ESmain(2606)', 'YMM26.CBT': 'YMmain(2606)',
+                                        };
+                                        Object.entries(US_CLOSE_SYMS).forEach(([sym, name]) => {
+                                            const rPrices = rawDaily.prices[sym];
+                                            if (!rPrices) return;
+                                            const rStart = rPrices[dailyBaseIdx];
+                                            const rCurrent = rPrices[dailyEndIdx];
+                                            if (rStart && rCurrent && rStart !== 0) {
+                                                lastAbsPoint[name] = ((rCurrent / rStart) - 1) * 100;
+                                            }
+                                        });
+                                    }
                                 }
                             }
                         }
