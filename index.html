@@ -537,6 +537,9 @@
 
             // Ref to keep track of latest state for event listeners
             const stateRef = useRef({ historyData, editData, selectedDate, isModalOpen });
+            // サーバー（ワークフロー）がGistに書き込んだ info を保持するRef
+            // フロントエンドの保存でサーバー側の info が消失するのを防ぐ
+            const serverInfoRef = useRef({});
             useEffect(() => {
                 stateRef.current = { historyData, editData, selectedDate, isModalOpen };
             }, [historyData, editData, selectedDate, isModalOpen]);
@@ -558,6 +561,10 @@
                 if (currentDate) {
                     const key = getDateKey(currentDate);
                     updateHistoryData({ ...currentHistory, [key]: currentEdit });
+                    // ユーザーが info を手動編集した場合、serverInfoRef も更新して保護対象にする
+                    if (currentEdit.info && currentEdit.info.length > 15) {
+                        serverInfoRef.current[key] = currentEdit.info;
+                    }
                 }
             };
 
@@ -1284,6 +1291,12 @@
                                     if (content.history) {
                                         setHistoryData(content.history);
                                         localStorage.setItem('history_data', JSON.stringify(content.history));
+                                        // サーバー書き込みの info を保存（デフォルト値 "# YYYY/MM/DD" より長いもの）
+                                        const infoMap = {};
+                                        for (const [k, v] of Object.entries(content.history)) {
+                                            if (v.info && v.info.length > 15) infoMap[k] = v.info;
+                                        }
+                                        serverInfoRef.current = infoMap;
                                     }
                                     let syncLinks = null;
                                     let syncQuotes = null;
@@ -1362,7 +1375,18 @@
                     if (newQuotes !== undefined) localStorage.setItem('market-dash-quotes', JSON.stringify(q));
                 } catch (e) { console.error("Local Save Failed", e); }
                 if (gistToken && gistId) {
-                    const content = JSON.stringify({ history: h, links: l, quotes: q, lastUpdated: new Date().toISOString() });
+                    // サーバー書き込みの info をマージ（ワークフローが書いたレポートを保護）
+                    const mergedH = { ...h };
+                    for (const [key, serverInfo] of Object.entries(serverInfoRef.current)) {
+                        if (mergedH[key]) {
+                            const localInfo = mergedH[key].info || '';
+                            // ローカルがデフォルト値（"# YYYY/MM/DD"）ならサーバー版を優先
+                            if (serverInfo.length > localInfo.length) {
+                                mergedH[key] = { ...mergedH[key], info: serverInfo };
+                            }
+                        }
+                    }
+                    const content = JSON.stringify({ history: mergedH, links: l, quotes: q, lastUpdated: new Date().toISOString() });
                     fetch(`https://api.github.com/gists/${gistId.trim()}`, { method: 'PATCH', headers: { 'Authorization': `token ${gistToken.trim()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'market_data.json': { content: content } } }) })
                     .then(res => { if(!res.ok) console.warn("⚠️ Sync: Gist Save Failed", res.status); })
                     .catch(e => console.error("❌ Sync: Gist Network Error", e));
