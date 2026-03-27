@@ -1,0 +1,65 @@
+name: MOF Weekly Securities Data
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 毎週木曜日 JST 9:00 (UTC 0:00) - 財務省が8:50に更新
+    - cron: '0 0 * * 4'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  fetch-mof-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch MOF weekly data
+        run: python scripts/mof/fetch_mof_weekly.py
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git add -A
+          if git diff --staged --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected"
+          fi
+
+      - name: Commit to main branch
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update MOF weekly securities data: $(date)"
+          git push origin HEAD
+
+      - name: Prepare deployment files
+        run: |
+          mkdir -p deploy/data
+          [ -d data ] && cp -r data/* deploy/data/
+          echo "Deploy directory content:"
+          ls -la deploy/data/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy
+          keep_files: true
