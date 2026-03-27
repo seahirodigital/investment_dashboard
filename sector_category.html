@@ -2385,7 +2385,11 @@
                         dailyBaseMap = {};
                         const bpd = rawDaily.prices[benchmark];
                         if (bpd && bpd[prevDailyIdx]) dailyBaseMap[benchmark] = bpd[prevDailyIdx];
+                        // バスケットセクター（ティッカーでないキー、例: '電線','鉱業'）は
+                        // 日次とイントラデイで正規化起点が異なりスケールが不一致のため除外
+                        const isTickerSymbol = (s) => s.includes('.') || s.startsWith('^');
                         Object.keys(sectors).forEach(sym => {
+                            if (!isTickerSymbol(sym)) return;
                             const dp = rawDaily.prices[sym];
                             if (dp && dp[prevDailyIdx]) dailyBaseMap[sym] = dp[prevDailyIdx];
                         });
@@ -2533,8 +2537,12 @@
                             const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
                             const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
 
+                            // バスケットセクター判定（ティッカーでないキー = 日次と正規化スケールが不一致）
+                            const isTickerSym = (s) => s.includes('.') || s.startsWith('^');
+
                             // 絶対値ランキングの終値補正
                             absoluteRanking.forEach(entry => {
+                                if (!isTickerSym(entry.symbol)) return;
                                 const sPrices = rawDaily.prices[entry.symbol];
                                 if (!sPrices) return;
                                 const sStart = sPrices[dailyBaseIdx];
@@ -2553,6 +2561,7 @@
                                 if (bStartD && bCurrentD && bStartD !== 0) {
                                     const bReturnD = (bCurrentD / bStartD) - 1;
                                     ranking.forEach(entry => {
+                                        if (!isTickerSym(entry.symbol)) return;
                                         const sPrices = rawDaily.prices[entry.symbol];
                                         if (!sPrices) return;
                                         const sStart = sPrices[dailyBaseIdx];
@@ -2570,6 +2579,7 @@
                                         lastPoint.TOPIX = bReturnD * 100;
                                         lastAbsPoint.TOPIX = bReturnD * 100;
                                         Object.keys(sectors).forEach(symbol => {
+                                            if (!isTickerSym(symbol)) return;
                                             const name = sectors[symbol];
                                             const sPricesD = rawDaily.prices[symbol];
                                             if (!sPricesD) return;
