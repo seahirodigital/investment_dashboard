@@ -1280,13 +1280,21 @@
                     
                     if (gistToken && gistId) {
                         try {
-                            const response = await fetch(`https://api.github.com/gists/${gistId.trim()}`, { 
-                                headers: { 'Authorization': `token ${gistToken.trim()}` } 
+                            const gistHeaders = { 'Authorization': `token ${gistToken.trim()}` };
+                            const response = await fetch(`https://api.github.com/gists/${gistId.trim()}`, {
+                                headers: gistHeaders, cache: 'no-store'
                             });
                             if (response.ok) {
                                 const json = await response.json();
                                 if (json.files && json.files['market_data.json']) {
-                                    const content = JSON.parse(json.files['market_data.json'].content);
+                                    // raw_url経由で完全なコンテンツを取得（truncation回避）
+                                    let rawContent = json.files['market_data.json'].content;
+                                    const rawUrl = json.files['market_data.json'].raw_url;
+                                    if (json.files['market_data.json'].truncated && rawUrl) {
+                                        const rawResp = await fetch(rawUrl, { headers: gistHeaders, cache: 'no-store' });
+                                        if (rawResp.ok) rawContent = await rawResp.text();
+                                    }
+                                    const content = JSON.parse(rawContent);
                                     let hasNewData = false;
                                     
                                     // Gistから取得した history を確定値として保持（setHistoryData は非同期のため）
@@ -1384,23 +1392,42 @@
                 if (gistToken && gistId) {
                     const gistUrl = `https://api.github.com/gists/${gistId.trim()}`;
                     const gistAuth = { 'Authorization': `token ${gistToken.trim()}` };
-                    // Read-Merge-Write: Gistの現在の info をフェッチして保護してから書き込む
-                    fetch(gistUrl, { headers: gistAuth })
+                    // Read-Merge-Write v3: raw_url経由でtruncation完全回避 + エントリ保全 + フェイルセーフ
+                    fetch(gistUrl, { headers: gistAuth, cache: 'no-store' })
                     .then(r => r.ok ? r.json() : null)
-                    .then(gistData => {
+                    .then(async (gistData) => {
                         const mergedH = { ...h };
+                        let gistReadOk = false;
                         try {
                             if (gistData && gistData.files && gistData.files['market_data.json']) {
-                                const gistHistory = JSON.parse(gistData.files['market_data.json'].content).history || {};
-                                for (const key in gistHistory) {
-                                    const gi = gistHistory[key] && gistHistory[key].info;
-                                    if (gi && gi.length > 15 && mergedH[key]) {
-                                        const li = mergedH[key].info || '';
-                                        if (gi.length > li.length) mergedH[key] = { ...mergedH[key], info: gi };
+                                // truncated時はraw_urlで完全データ取得（gemini_analysis.pyと同方式）
+                                let gistContent = gistData.files['market_data.json'].content;
+                                const rawUrl = gistData.files['market_data.json'].raw_url;
+                                if (gistData.files['market_data.json'].truncated && rawUrl) {
+                                    const rawResp = await fetch(rawUrl, { headers: gistAuth, cache: 'no-store' });
+                                    if (rawResp.ok) gistContent = await rawResp.text();
+                                }
+                                if (gistContent) {
+                                    const gistHistory = JSON.parse(gistContent).history || {};
+                                    gistReadOk = true;
+                                    for (const key in gistHistory) {
+                                        if (!mergedH[key]) {
+                                            // ローカルに存在しない日付 → Gistのエントリを完全保全
+                                            mergedH[key] = gistHistory[key];
+                                        } else {
+                                            // 両方に存在 → infoフィールドはGist側が長ければ保護
+                                            const gi = gistHistory[key] && gistHistory[key].info;
+                                            if (gi && gi.length > 15) {
+                                                const li = mergedH[key].info || '';
+                                                if (gi.length > li.length) mergedH[key] = { ...mergedH[key], info: gi };
+                                            }
+                                        }
                                     }
                                 }
                             }
                         } catch (e) { console.warn("Info merge skipped:", e); }
+                        // フェイルセーフ: Gist読み取り失敗時はGist書き込みを中止（データ消失防止）
+                        if (!gistReadOk) { console.warn("⚠️ Sync: Gist read failed, skipping write to prevent data loss"); return; }
                         const content = JSON.stringify({ history: mergedH, links: l, quotes: q, lastUpdated: new Date().toISOString() });
                         return fetch(gistUrl, { method: 'PATCH', headers: { ...gistAuth, 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'market_data.json': { content: content } } }) });
                     })
