@@ -346,42 +346,105 @@ if (!gistReadOk) {
 
 ### 発見の経緯
 
-第4層〜第5層の修正後もinfo（情報）タブが空のままだった。Gist APIでは4/1, 4/2のレポートが正常に保存されていることを確認。
+第4層〜第5層の修正後もinfo（情報）タブが空のままだった。Gist APIを直接確認すると4/1, 4/2のレポートは存在していたが、ブラウザ側で読み込めていなかった。
+また3/30・3/31の復旧を試みるために作成した `restore_gist_history.py` が、実行後にGistファイルを952KBまで膨張させていたことが判明した。
 
 ### 根本原因（2つの問題の複合）
 
 #### 問題A: `restore_gist_history.py`が`indent=2`でGistに書き込み（ファイル膨張）
 
-`json.dump(market_data, f, ensure_ascii=False, indent=2)` により、コンパクト時400KB → インデント時952KBに膨張。Gist APIのcontent truncation閾値（約389K文字）を超過。
+```python
+# 誤った実装（indent=2でファイルが2.5倍に膨張）
+json.dump(market_data, f, ensure_ascii=False, indent=2)
+```
+
+コンパクト時400KB → インデント時952KBに膨張。Gist APIの`content`フィールドのtruncation閾値（約389K文字）を超過し、API経由でのJSONパースが不可能な状態になった。
+
+**誤解の経緯:** `truncated: true` でも raw_url で完全データは取得できていた。問題は別にあった（問題B参照）。
 
 #### 問題B: ブラウザからのraw_url fetchでCORS preflight失敗
 
-`gist.githubusercontent.com`へのfetchに`Authorization`ヘッダーを付与していたため、CORSプリフライト（OPTIONSリクエスト）が発生。`gist.githubusercontent.com`は`Access-Control-Allow-Headers: Authorization`を返さないため、プリフライトが失敗し、raw_urlからのデータ取得ができなかった。
+第5層修正で「truncated時はraw_urlフォールバック」を実装したが、**raw_urlへのfetchに`Authorization`ヘッダーを付与していた**ため、ブラウザのCORSプリフライト（OPTIONSリクエスト）が発生。
 
-**結果:** API contentは切り詰め → raw_urlフォールバックもCORSで失敗 → `JSON.parse()` → エラー → catchで無視 → 空のhistoryDataが表示される
+```
+gist.githubusercontent.com の CORS レスポンスヘッダー:
+  Access-Control-Allow-Origin: *
+  ✗ Access-Control-Allow-Headers: Authorization  ← このヘッダーがない
+```
+
+`*`（ワイルドカード）の場合、認証情報付きリクエストはCORSで禁止される。プリフライトが失敗し、raw_urlからのデータ取得が完全に不可能だった。
+
+**失敗の連鎖:**
+```
+API content取得 → 389K文字で切り捨て → 不完全JSON
+  ↓
+raw_url fetch → CORS preflight失敗
+  ↓
+rawContent = 不完全JSONのまま
+  ↓
+JSON.parse() → SyntaxError
+  ↓
+catch() → 無視 → historyData = {} → 情報タブ空白
+```
+
+**注意:** `raw_url`（`gist.githubusercontent.com`）はURLにコミットハッシュを含むためAuthorizationヘッダー不要。Python（サーバーサイド）ではCORS制約がないため`gemini_analysis.py`は動作していた。
 
 ### 修正内容
 
 #### 修正1: raw_url fetchからAuthorizationヘッダーを除去
 
-`raw_url`（`gist.githubusercontent.com`）はURL自体にコミットハッシュを含むため認証不要。Authヘッダーを除去しCORSプリフライトを回避。
-
 ```js
-// 旧: const rawResp = await fetch(rawUrl, { headers: gistAuth, cache: 'no-store' });
-// 新: const rawResp = await fetch(rawUrl, { cache: 'no-store' });
+// 旧（CORS preflight失敗）
+const rawResp = await fetch(rawUrl, { headers: gistAuth, cache: 'no-store' });
+
+// 新（Auth不要、プリフライト不発生）
+const rawResp = await fetch(rawUrl, { cache: 'no-store' });
 ```
 
-#### 修正2: raw_urlを常に優先取得
+適用箇所2か所: 初回ロード（`loadData`内）、Read-Merge-Write（`saveAllData`内）
 
-`truncated`フラグに関係なく、`raw_url`が利用可能な場合は常にraw_url経由で完全データを取得。API contentは400KB付近で切り詰められるため、サイズが閾値付近のファイルでは`truncated: false`でも不完全なJSONが返る場合がある。
+#### 修正2: `truncated`フラグに依存せずraw_urlを常に優先取得
+
+`truncated: false`でもAPIのcontent閾値（約389K文字）付近では不完全なJSONが返る可能性があるため、`raw_url`が利用可能な場合は常にraw_url経由で取得するよう変更。
+
+```js
+// 旧（truncatedフラグ依存）
+if (json.files['market_data.json'].truncated && rawUrl) { ... }
+
+// 新（常にraw_url優先）
+if (rawUrl) { ... }
+```
 
 #### 修正3: `restore_gist_history.py`のコンパクトJSON化
 
-`json.dump(market_data, f, ensure_ascii=False, indent=2)` → `json.dump(market_data, f, ensure_ascii=False)` に変更。ファイルサイズを952KB → 398KBに圧縮。
+```python
+# 旧（indent=2で952KB）
+json.dump(market_data, f, ensure_ascii=False, indent=2)
 
-#### 修正4: 3/30, 3/31のレポート再復旧
+# 新（コンパクトで398KB）
+json.dump(market_data, f, ensure_ascii=False)
+```
 
-Gist APIで直接コンパクトJSONに書き戻し。
+ファイルサイズ: 952KB → 398KB（ただしGist APIの`size`フィールドはキャッシュ遅延で旧値を返すことがある）
+
+#### 修正4: 消失レポートをGist APIで再復旧
+
+`market_analysis/reports/` 内のMarkdownファイルをGist APIで直接PATCH。
+
+| 日付 | 復旧文字数 | 復旧方法 |
+|------|----------|---------|
+| 3/30 | 2438文字 | `20260330_daily_report.md` からPATCH |
+| 3/31 | 2404文字 | `20260331_daily_report.md` からPATCH |
+| 4/1  | 2491文字 | `20260401_daily_report.md` からPATCH（存在確認・再確定） |
+| 4/2  | 2439文字 | `20260402_daily_report.md` からPATCH（存在確認・再確定） |
+
+### 教訓
+
+| 間違い | 正しい対処 |
+|--------|----------|
+| Gistへの書き込みに`indent=2`を使う | 常に`json.dump(...)`のみ（インデントなし）でコンパクトに |
+| raw_url fetchにAuthorizationヘッダーを付ける | raw_urlはAuth不要（CORS preflight回避のため除去必須）|
+| `truncated`フラグだけで分岐する | raw_urlがあれば常に優先取得する |
 
 ---
 
