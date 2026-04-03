@@ -12,6 +12,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- EasyMDE (投資記録カード) -->
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
     <style>
         body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
@@ -42,6 +45,18 @@
         .signal-lit { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #c4b5fd; }
         .signal-near { background: linear-gradient(135deg, #faf5ff, #f3e8ff); border: 1px solid #e9d5ff; }
         .signal-off { background: linear-gradient(135deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; }
+        /* 投資記録カード */
+        .cal-card { background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 1rem; margin-bottom: 1.5rem; }
+        .cal-tab-btn-ss { cursor: pointer; border-bottom-width: 2px; transition: color 0.15s, border-color 0.15s; padding: 0.5rem 1rem; font-size: 0.875rem; }
+        .cal-tab-btn-ss.active { border-color: #7C4DFF; color: #7C4DFF; font-weight: 600; }
+        .cal-tab-btn-ss:not(.active) { border-color: transparent; color: #64748b; }
+        .cal-tab-btn-ss:not(.active):hover { color: #334155; }
+        .cal-tab-pane-ss.hidden { display: none; }
+        .cal-tab-pane-ss .EasyMDEContainer { border-radius: 0.5rem; }
+        .cal-tab-pane-ss .CodeMirror { min-height: 320px; font-size: 13px; }
+        .cal-tab-pane-ss .editor-toolbar { border-radius: 0.5rem 0.5rem 0 0; background: #f8fafc; }
+        .cal-tab-pane-ss .EasyMDEContainer .CodeMirror-scroll { min-height: 320px; }
+        .income-card-ss { background: #faf8ff; border: 1px solid #ede9fe; border-radius: 0.5rem; padding: 0.75rem 1rem; }
     </style>
 </head>
 <body>
@@ -698,5 +713,281 @@
         };
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
+
+<!-- 投資記録カード HTML (空売り内訳推移の下・日次データの上に挿入) -->
+<div id="cal-card-ss" class="cal-card" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <h2 style="font-size:1.125rem;font-weight:600;color:#334155;margin:0;">投資記録</h2>
+            <select id="calDateSelSS" style="background:white;border:1px solid #e2e8f0;border-radius:4px;padding:2px 8px;font-size:12px;color:#334155;outline:none;">
+                <option value="">読込中...</option>
+            </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span id="gistSyncStatusSS" style="font-size:12px;color:#94a3b8;">接続中...</span>
+            <button id="btnSaveCalendarSS" style="background:#7C4DFF;color:white;font-weight:700;font-size:12px;padding:4px 12px;border-radius:4px;border:none;cursor:pointer;">✓ 保存</button>
+        </div>
+    </div>
+    <!-- タブバー -->
+    <div style="display:flex;border-bottom:1px solid #e2e8f0;margin-bottom:12px;">
+        <button class="cal-tab-btn-ss" data-tab-ss="income">収支入力</button>
+        <button class="cal-tab-btn-ss" data-tab-ss="diary">日記</button>
+        <button class="cal-tab-btn-ss" data-tab-ss="market">市況</button>
+        <button class="cal-tab-btn-ss active" data-tab-ss="info">情報</button>
+    </div>
+    <!-- 収支入力タブ -->
+    <div id="calTabIncomeSS" class="cal-tab-pane-ss hidden">
+        <div class="income-card-ss" style="margin-bottom:12px;">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:11px;font-weight:600;color:#7E57C2;">現物 (円)</label>
+                    <input type="number" id="incomeStocksSS" step="1" style="border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;font-size:13px;outline:none;" placeholder="0">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:11px;font-weight:600;color:#5C6BC0;">信用 (円)</label>
+                    <input type="number" id="incomeMarginSS" step="1" style="border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;font-size:13px;outline:none;" placeholder="0">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:11px;font-weight:600;color:#673AB7;">米国 (円)</label>
+                    <input type="number" id="incomeForeignSS" step="1" style="border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;font-size:13px;outline:none;" placeholder="0">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:11px;font-weight:600;color:#D81B60;">CFD (円)</label>
+                    <input type="number" id="incomeCfdSS" step="1" style="border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;font-size:13px;outline:none;" placeholder="0">
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <span style="font-size:12px;color:#64748b;">合計:</span>
+                <span id="incomeTotalSS" style="background:#ede9fe;color:#7C4DFF;font-weight:700;border-radius:9999px;padding:2px 12px;font-size:13px;">+0 円</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:12px;color:#64748b;">メモ</label>
+                <textarea id="incomeNoteSS" rows="2" style="border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;font-size:13px;outline:none;resize:none;width:100%;" placeholder="備考..."></textarea>
+            </div>
+        </div>
+    </div>
+    <!-- 日記タブ -->
+    <div id="calTabDiarySS" class="cal-tab-pane-ss hidden">
+        <textarea id="editorDiarySS"></textarea>
+    </div>
+    <!-- 市況タブ -->
+    <div id="calTabMarketSS" class="cal-tab-pane-ss hidden">
+        <textarea id="editorMarketSS"></textarea>
+    </div>
+    <!-- 情報タブ (デフォルト) -->
+    <div id="calTabInfoSS" class="cal-tab-pane-ss">
+        <textarea id="editorInfoSS"></textarea>
+    </div>
+</div>
+
+<!-- 投資記録カード JS -->
+<script>
+(function() {
+    'use strict';
+
+    let calHistorySS = {};
+    let currentCalDateSS = null;
+    let mdeInfoSS = null, mdeDiarySS = null, mdeMarketSS = null;
+    let isSavingSS = false;
+    let editorsInitSS = false;
+
+    function initEditorsSS() {
+        if (editorsInitSS) return;
+        editorsInitSS = true;
+        const opts = {
+            spellChecker: false,
+            autoSave: { enabled: false },
+            toolbar: ['bold','italic','heading','|','quote','unordered-list','ordered-list','|','link','|','preview','side-by-side','fullscreen'],
+            minHeight: '320px',
+        };
+        mdeInfoSS   = new EasyMDE({ element: document.getElementById('editorInfoSS'),   ...opts });
+        mdeDiarySS  = new EasyMDE({ element: document.getElementById('editorDiarySS'),  ...opts });
+        mdeMarketSS = new EasyMDE({ element: document.getElementById('editorMarketSS'), ...opts });
+    }
+
+    function initTabsSS() {
+        document.querySelectorAll('.cal-tab-btn-ss').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tabSs;
+                document.querySelectorAll('.cal-tab-btn-ss').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.cal-tab-pane-ss').forEach(p => p.classList.add('hidden'));
+                const map = { income: 'calTabIncomeSS', diary: 'calTabDiarySS', market: 'calTabMarketSS', info: 'calTabInfoSS' };
+                document.getElementById(map[tab]).classList.remove('hidden');
+                setTimeout(() => {
+                    if (tab === 'info'   && mdeInfoSS)   mdeInfoSS.codemirror.refresh();
+                    if (tab === 'diary'  && mdeDiarySS)  mdeDiarySS.codemirror.refresh();
+                    if (tab === 'market' && mdeMarketSS) mdeMarketSS.codemirror.refresh();
+                }, 30);
+            });
+        });
+    }
+
+    function initIncomeCalcSS() {
+        ['incomeStocksSS','incomeMarginSS','incomeForeignSS','incomeCfdSS'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateIncomeTotalSS);
+        });
+    }
+
+    function updateIncomeTotalSS() {
+        const total = ['incomeStocksSS','incomeMarginSS','incomeForeignSS','incomeCfdSS']
+            .reduce((s, id) => s + (parseFloat(document.getElementById(id).value) || 0), 0);
+        const el = document.getElementById('incomeTotalSS');
+        el.textContent = (total >= 0 ? '+' : '') + total.toLocaleString() + ' 円';
+        el.style.background = total > 0 ? '#ede9fe' : total < 0 ? '#fee2e2' : '#f1f5f9';
+        el.style.color = total > 0 ? '#7C4DFF' : total < 0 ? '#ef4444' : '#64748b';
+    }
+
+    function populateCalDateSelectorSS(history) {
+        const sel = document.getElementById('calDateSelSS');
+        const dates = Object.keys(history).sort().reverse();
+        if (dates.length === 0) { sel.innerHTML = '<option value="">データなし</option>'; return; }
+        sel.innerHTML = dates.map(d => {
+            const [y, m, day] = d.split('-');
+            return `<option value="${d}">${y}年${parseInt(m)}月${parseInt(day)}日</option>`;
+        }).join('');
+        sel.value = dates[0];
+        loadDateToEditorsSS(dates[0]);
+    }
+
+    async function loadGistDataSS() {
+        const token  = localStorage.getItem('gist_token') || '';
+        const gistId = localStorage.getItem('gist_id') || '';
+        const statusEl = document.getElementById('gistSyncStatusSS');
+        if (!token || !gistId) {
+            statusEl.textContent = '⚠ Gist未設定';
+            statusEl.style.color = '#f59e0b';
+            return;
+        }
+        statusEl.textContent = '読込中...';
+        try {
+            const resp = await fetch(`https://api.github.com/gists/${gistId.trim()}`, {
+                headers: { 'Authorization': `token ${token.trim()}`, 'Accept': 'application/vnd.github.v3+json' },
+                cache: 'no-store'
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const gist = await resp.json();
+            const rawUrl = gist.files['market_data.json']?.raw_url;
+            if (!rawUrl) throw new Error('ファイルなし');
+            const rawResp = await fetch(rawUrl, { cache: 'no-store' });
+            if (!rawResp.ok) throw new Error(`raw HTTP ${rawResp.status}`);
+            const data = JSON.parse(await rawResp.text());
+            calHistorySS = data.history || {};
+            statusEl.textContent = '✓ 同期済み';
+            statusEl.style.color = '#7C4DFF';
+            populateCalDateSelectorSS(calHistorySS);
+        } catch(e) {
+            statusEl.textContent = `⚠ ${e.message}`;
+            statusEl.style.color = '#ef4444';
+        }
+    }
+
+    function loadDateToEditorsSS(gistDate) {
+        if (!editorsInitSS) return;
+        currentCalDateSS = gistDate;
+        const d = calHistorySS[gistDate] || {};
+        const sel = document.getElementById('calDateSelSS');
+        if (sel && sel.value !== gistDate) sel.value = gistDate;
+        const def = `# ${gistDate.replace(/-/g, '/')}`;
+        if (mdeInfoSS)   mdeInfoSS.value(d.info   || def);
+        if (mdeDiarySS)  mdeDiarySS.value(d.diary  || def);
+        if (mdeMarketSS) mdeMarketSS.value(d.market || def);
+        document.getElementById('incomeStocksSS').value  = d.stocks  || 0;
+        document.getElementById('incomeMarginSS').value  = d.margin  || 0;
+        document.getElementById('incomeForeignSS').value = d.foreign || 0;
+        document.getElementById('incomeCfdSS').value     = d.cfd     || 0;
+        document.getElementById('incomeNoteSS').value    = d.note    || '';
+        updateIncomeTotalSS();
+        setTimeout(() => {
+            const at = document.querySelector('.cal-tab-btn-ss.active')?.dataset.tabSs;
+            if (at === 'info'   && mdeInfoSS)   mdeInfoSS.codemirror.refresh();
+            if (at === 'diary'  && mdeDiarySS)  mdeDiarySS.codemirror.refresh();
+            if (at === 'market' && mdeMarketSS) mdeMarketSS.codemirror.refresh();
+        }, 50);
+    }
+
+    async function saveCalendarDataSS() {
+        if (!currentCalDateSS || isSavingSS) return;
+        const token  = localStorage.getItem('gist_token') || '';
+        const gistId = localStorage.getItem('gist_id') || '';
+        const statusEl = document.getElementById('gistSyncStatusSS');
+        if (!token || !gistId) { statusEl.textContent = '⚠ Gist未設定'; return; }
+        isSavingSS = true;
+        statusEl.textContent = '保存中...';
+        statusEl.style.color = '#f59e0b';
+        try {
+            const gistUrl = `https://api.github.com/gists/${gistId.trim()}`;
+            const auth = { 'Authorization': `token ${token.trim()}`, 'Accept': 'application/vnd.github.v3+json' };
+            const readResp = await fetch(gistUrl, { headers: auth, cache: 'no-store' });
+            if (!readResp.ok) throw new Error(`Read HTTP ${readResp.status}`);
+            const gistMeta = await readResp.json();
+            const rawUrl = gistMeta.files['market_data.json']?.raw_url;
+            if (!rawUrl) throw new Error('ファイルなし');
+            const rawResp = await fetch(rawUrl, { cache: 'no-store' });
+            if (!rawResp.ok) throw new Error(`raw HTTP ${rawResp.status}`);
+            const fullData = JSON.parse(await rawResp.text());
+            const h = fullData.history || {};
+            if (!h[currentCalDateSS]) h[currentCalDateSS] = {};
+            if (mdeInfoSS)   h[currentCalDateSS].info   = mdeInfoSS.value();
+            if (mdeDiarySS)  h[currentCalDateSS].diary   = mdeDiarySS.value();
+            if (mdeMarketSS) h[currentCalDateSS].market  = mdeMarketSS.value();
+            h[currentCalDateSS].stocks  = parseFloat(document.getElementById('incomeStocksSS').value)  || 0;
+            h[currentCalDateSS].margin  = parseFloat(document.getElementById('incomeMarginSS').value)  || 0;
+            h[currentCalDateSS].foreign = parseFloat(document.getElementById('incomeForeignSS').value) || 0;
+            h[currentCalDateSS].cfd     = parseFloat(document.getElementById('incomeCfdSS').value)     || 0;
+            h[currentCalDateSS].note    = document.getElementById('incomeNoteSS').value || '';
+            fullData.history = h;
+            fullData.lastUpdated = new Date().toISOString();
+            calHistorySS = h;
+            const writeResp = await fetch(gistUrl, {
+                method: 'PATCH',
+                headers: { ...auth, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ files: { 'market_data.json': { content: JSON.stringify(fullData) } } })
+            });
+            if (!writeResp.ok) throw new Error(`Write HTTP ${writeResp.status}`);
+            statusEl.textContent = '✓ 保存完了';
+            statusEl.style.color = '#7C4DFF';
+            setTimeout(() => { statusEl.textContent = '✓ 同期済み'; }, 2000);
+        } catch(e) {
+            statusEl.textContent = `⚠ ${e.message}`;
+            statusEl.style.color = '#ef4444';
+        } finally {
+            isSavingSS = false;
+        }
+    }
+
+    // カードを #chart-breakdown の直後に挿入 (Reactレンダリング後)
+    function insertCard() {
+        const breakdown = document.getElementById('chart-breakdown');
+        if (!breakdown) return false;
+        const card = document.getElementById('cal-card-ss');
+        if (!card || card.parentNode === breakdown.parentNode) return true; // 挿入済み
+        breakdown.parentNode.insertBefore(card, breakdown.nextSibling);
+        card.style.display = '';
+        return true;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        initEditorsSS();
+        initTabsSS();
+        initIncomeCalcSS();
+        document.getElementById('calDateSelSS').addEventListener('change', (e) => {
+            if (e.target.value) loadDateToEditorsSS(e.target.value);
+        });
+        document.getElementById('btnSaveCalendarSS').addEventListener('click', saveCalendarDataSS);
+
+        // Reactレンダリング完了を待ってカードを挿入
+        if (!insertCard()) {
+            const ob = new MutationObserver(() => {
+                if (insertCard()) ob.disconnect();
+            });
+            ob.observe(document.getElementById('root'), { childList: true, subtree: true });
+        }
+
+        // Gistロード
+        loadGistDataSS();
+    });
+})();
+</script>
 </body>
 </html>

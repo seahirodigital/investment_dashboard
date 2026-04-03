@@ -188,7 +188,12 @@
     <div class="glass-panel p-4 mt-6" id="calendarCard">
         <!-- カードヘッダー -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-            <h2 class="text-sm font-semibold text-slate-700" id="calCardTitle">📅 投資記録 / --</h2>
+            <div class="flex items-center gap-3">
+                <h2 class="text-lg font-semibold text-slate-700">投資記録</h2>
+                <select id="calDateSel" class="bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-700 text-xs focus:outline-none focus:border-[#7C4DFF]">
+                    <option value="">読込中...</option>
+                </select>
+            </div>
             <div class="flex items-center gap-2">
                 <span id="gistSyncStatus" class="text-xs text-slate-400">接続中...</span>
                 <button id="btnSaveCalendar" class="btn-primary text-xs px-3 py-1 rounded">✓ 保存</button>
@@ -793,12 +798,8 @@
             statusEl.textContent = '✓ 同期済み';
             statusEl.style.color = '#7C4DFF';
 
-            // 現在のdateSelectorの日付をロード
-            const sel = document.getElementById('dateSelector');
-            if (sel && sel.value && sel.value !== 'latest') {
-                const gd = toGistDate(sel.value);
-                if (gd) loadDateToEditors(gd);
-            }
+            // カード専用の日程プルダウンを最新日でセット
+            populateCalDateSelector(calendarHistory);
         } catch(e) {
             statusEl.textContent = `⚠ 読込エラー: ${e.message}`;
             statusEl.style.color = '#ef4444';
@@ -813,7 +814,9 @@
         const d = calendarHistory[gistDate] || {};
         const [y, m, day] = gistDate.split('-');
         const label = `${y}年${parseInt(m)}月${parseInt(day)}日`;
-        document.getElementById('calCardTitle').textContent = `📅 投資記録 / ${label}`;
+        // calDateSelの選択値を同期
+        const dsel = document.getElementById('calDateSel');
+        if (dsel && dsel.value !== gistDate) dsel.value = gistDate;
 
         // EasyMDEにセット
         const defaultInfo   = `# ${gistDate.replace(/-/g, '/')}`;
@@ -903,14 +906,17 @@
         }
     }
 
-    // ── dateSelector 変更フック ───────────────────────────────
-    // renderAllChartsをラップして日付変更時にカレンダーも更新
-    function hookDateChange() {
-        const sel = document.getElementById('dateSelector');
-        sel.addEventListener('change', (e) => {
-            const gd = toGistDate(e.target.value);
-            if (gd) loadDateToEditors(gd);
-        });
+    // ── カード専用日程プルダウンの構築 ────────────────────────
+    function populateCalDateSelector(history) {
+        const sel = document.getElementById('calDateSel');
+        const dates = Object.keys(history).sort().reverse(); // 最新順
+        if (dates.length === 0) { sel.innerHTML = '<option value="">データなし</option>'; return; }
+        sel.innerHTML = dates.map(d => {
+            const [y, m, day] = d.split('-');
+            return `<option value="${d}">${y}年${parseInt(m)}月${parseInt(day)}日</option>`;
+        }).join('');
+        sel.value = dates[0]; // 最新日をデフォルト
+        loadDateToEditors(dates[0]);
     }
 
     // ── 初期化 ───────────────────────────────────────────────
@@ -918,26 +924,11 @@
         initEditors();
         initTabs();
         initIncomeCalc();
-        hookDateChange();
+        document.getElementById('calDateSel').addEventListener('change', (e) => {
+            if (e.target.value) loadDateToEditors(e.target.value);
+        });
         document.getElementById('btnSaveCalendar').addEventListener('click', saveCalendarData);
-
-        // Gistデータをロード (Firebase初期化より少し後に実行)
-        // renderAllChartsが呼ばれてdateSelectorが確定した後にロード
         loadGistData();
-    });
-
-    // Firebaseデータが揃った後（renderAllCharts後）にも再ロードを試みる
-    // dateSelectorのoptionが変化したらロード (MutationObserver)
-    const _observer = new MutationObserver(() => {
-        const sel = document.getElementById('dateSelector');
-        if (sel && sel.options.length > 1 && !currentCalDate) {
-            const gd = toGistDate(sel.value);
-            if (gd) loadDateToEditors(gd);
-        }
-    });
-    window.addEventListener('DOMContentLoaded', () => {
-        const sel = document.getElementById('dateSelector');
-        if (sel) _observer.observe(sel, { childList: true });
     });
 
 })();
