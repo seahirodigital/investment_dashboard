@@ -1287,11 +1287,13 @@
                             if (response.ok) {
                                 const json = await response.json();
                                 if (json.files && json.files['market_data.json']) {
-                                    // raw_url経由で完全なコンテンツを取得（truncation回避）
-                                    let rawContent = json.files['market_data.json'].content;
+                                    // raw_url経由で常に完全なコンテンツを取得
+                                    // raw_urlはgist.githubusercontent.comでAuth不要（CORS preflight回避）
+                                    // API contentは400KB付近で切り詰められるため、raw_urlを常に優先
                                     const rawUrl = json.files['market_data.json'].raw_url;
-                                    if (json.files['market_data.json'].truncated && rawUrl) {
-                                        const rawResp = await fetch(rawUrl, { headers: gistHeaders, cache: 'no-store' });
+                                    let rawContent = json.files['market_data.json'].content;
+                                    if (rawUrl) {
+                                        const rawResp = await fetch(rawUrl, { cache: 'no-store' });
                                         if (rawResp.ok) rawContent = await rawResp.text();
                                     }
                                     const content = JSON.parse(rawContent);
@@ -1400,11 +1402,13 @@
                         let gistReadOk = false;
                         try {
                             if (gistData && gistData.files && gistData.files['market_data.json']) {
-                                // truncated時はraw_urlで完全データ取得（gemini_analysis.pyと同方式）
+                                // truncated時はraw_urlで完全データ取得（Auth不要、CORS preflight回避）
                                 let gistContent = gistData.files['market_data.json'].content;
                                 const rawUrl = gistData.files['market_data.json'].raw_url;
-                                if (gistData.files['market_data.json'].truncated && rawUrl) {
-                                    const rawResp = await fetch(rawUrl, { headers: gistAuth, cache: 'no-store' });
+                                if (rawUrl) {
+                                    // truncatedフラグに関係なく、raw_urlがあれば常に完全データを取得
+                                    // （APIのcontentは閾値付近で不完全になる場合があるため）
+                                    const rawResp = await fetch(rawUrl, { cache: 'no-store' });
                                     if (rawResp.ok) gistContent = await rawResp.text();
                                 }
                                 if (gistContent) {
