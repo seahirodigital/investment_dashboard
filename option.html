@@ -52,6 +52,9 @@
     </script>
     <!-- SheetJS (XLSX) -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <!-- EasyMDE -->
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
     <style>
         body {
             background-color: #f8fafc;
@@ -100,6 +103,20 @@
             border-bottom: 1px solid #e2e8f0;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
+        /* 投資記録カード */
+        .cal-tab-btn { cursor: pointer; border-bottom-width: 2px; transition: color 0.15s, border-color 0.15s; }
+        .cal-tab-btn.active { border-color: #7C4DFF; color: #7C4DFF; font-weight: 600; }
+        .cal-tab-btn:not(.active) { border-color: transparent; color: #64748b; }
+        .cal-tab-btn:not(.active):hover { color: #334155; }
+        .cal-tab-pane.hidden { display: none; }
+        /* EasyMDE上書き */
+        .cal-tab-pane .EasyMDEContainer { border-radius: 0.5rem; }
+        .cal-tab-pane .CodeMirror { min-height: 320px; font-size: 13px; }
+        .cal-tab-pane .editor-toolbar { border-radius: 0.5rem 0.5rem 0 0; background: #f8fafc; }
+        .cal-tab-pane .EasyMDEContainer .CodeMirror-scroll { min-height: 320px; }
+        /* 収支フォーム */
+        .income-card { background: #faf8ff; border: 1px solid #ede9fe; border-radius: 0.5rem; padding: 0.75rem 1rem; }
+        .income-total-badge { background: #ede9fe; color: #7C4DFF; font-weight: 700; border-radius: 9999px; padding: 0.2rem 0.75rem; font-size: 0.8rem; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-700">
@@ -167,6 +184,68 @@
 
     </div>
     
+    <!-- 投資記録カード (Gist同期 / 投資カレンダーと同一データ) -->
+    <div class="glass-panel p-4 mt-6" id="calendarCard">
+        <!-- カードヘッダー -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <h2 class="text-sm font-semibold text-slate-700" id="calCardTitle">📅 投資記録 / --</h2>
+            <div class="flex items-center gap-2">
+                <span id="gistSyncStatus" class="text-xs text-slate-400">接続中...</span>
+                <button id="btnSaveCalendar" class="btn-primary text-xs px-3 py-1 rounded">✓ 保存</button>
+            </div>
+        </div>
+        <!-- タブバー -->
+        <div class="flex border-b border-slate-200 mb-3 -mx-1">
+            <button class="cal-tab-btn px-4 py-2 text-sm" data-tab="income">収支入力</button>
+            <button class="cal-tab-btn px-4 py-2 text-sm" data-tab="diary">日記</button>
+            <button class="cal-tab-btn px-4 py-2 text-sm" data-tab="market">市況</button>
+            <button class="cal-tab-btn active px-4 py-2 text-sm" data-tab="info">情報</button>
+        </div>
+        <!-- 収支入力タブ -->
+        <div id="calTabIncome" class="cal-tab-pane hidden">
+            <div class="income-card mb-3">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-semibold text-[#7E57C2]">現物 (円)</label>
+                        <input type="number" id="incomeStocks" step="1" class="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#7C4DFF] bg-white" placeholder="0">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-semibold text-[#5C6BC0]">信用 (円)</label>
+                        <input type="number" id="incomeMargin" step="1" class="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#7C4DFF] bg-white" placeholder="0">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-semibold text-[#673AB7]">米国 (円)</label>
+                        <input type="number" id="incomeForeign" step="1" class="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#7C4DFF] bg-white" placeholder="0">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-semibold text-[#D81B60]">CFD (円)</label>
+                        <input type="number" id="incomeCfd" step="1" class="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#7C4DFF] bg-white" placeholder="0">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs text-slate-500">合計:</span>
+                    <span id="incomeTotal" class="income-total-badge">+0 円</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-medium text-slate-500">メモ</label>
+                    <textarea id="incomeNote" rows="2" class="border border-slate-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#7C4DFF] resize-none bg-white" placeholder="備考..."></textarea>
+                </div>
+            </div>
+        </div>
+        <!-- 日記タブ -->
+        <div id="calTabDiary" class="cal-tab-pane hidden">
+            <textarea id="editorDiary"></textarea>
+        </div>
+        <!-- 市況タブ -->
+        <div id="calTabMarket" class="cal-tab-pane hidden">
+            <textarea id="editorMarket"></textarea>
+        </div>
+        <!-- 情報タブ (デフォルト表示) -->
+        <div id="calTabInfo" class="cal-tab-pane">
+            <textarea id="editorInfo"></textarea>
+        </div>
+    </div>
+
     <!-- Logs -->
     <div class="glass-panel p-4 mt-8">
         <details>
@@ -601,6 +680,267 @@
     // Run
     window.addEventListener('DOMContentLoaded', init);
 
+</script>
+
+<!-- ── 投資記録カード: Gist同期モジュール ────────────────────────────── -->
+<script>
+(function() {
+    'use strict';
+
+    // ── 状態 ─────────────────────────────────────────────────
+    let calendarHistory = {};   // Gist history 全体のキャッシュ
+    let currentCalDate = null;  // 表示中の日付 (YYYY-MM-DD)
+    let mdeInfo = null, mdeDiary = null, mdeMarket = null;
+    let isSaving = false;
+    let editorsInitialized = false;
+
+    // ── 日付変換: YYYYMMDD → YYYY-MM-DD ──────────────────────
+    function toGistDate(yyyymmdd) {
+        if (!yyyymmdd || yyyymmdd.length !== 8) return null;
+        return `${yyyymmdd.slice(0,4)}-${yyyymmdd.slice(4,6)}-${yyyymmdd.slice(6,8)}`;
+    }
+
+    // ── EasyMDE 初期化 (DOMが準備完了後に1回だけ) ─────────────
+    function initEditors() {
+        if (editorsInitialized) return;
+        editorsInitialized = true;
+        const toolbarConfig = [
+            'bold','italic','heading','|',
+            'quote','unordered-list','ordered-list','|',
+            'link','|','preview','side-by-side','fullscreen'
+        ];
+        const commonOpts = {
+            spellChecker: false,
+            autoSave: { enabled: false },
+            toolbar: toolbarConfig,
+            minHeight: '320px',
+        };
+        mdeInfo   = new EasyMDE({ element: document.getElementById('editorInfo'),   ...commonOpts });
+        mdeDiary  = new EasyMDE({ element: document.getElementById('editorDiary'),  ...commonOpts });
+        mdeMarket = new EasyMDE({ element: document.getElementById('editorMarket'), ...commonOpts });
+    }
+
+    // ── タブ切り替え ──────────────────────────────────────────
+    function initTabs() {
+        document.querySelectorAll('.cal-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                // アクティブスタイル切り替え
+                document.querySelectorAll('.cal-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // パネル表示切り替え
+                document.querySelectorAll('.cal-tab-pane').forEach(p => p.classList.add('hidden'));
+                const tabId = 'calTab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+                document.getElementById(tabId).classList.remove('hidden');
+                // EasyMDEリフレッシュ (非表示→表示時の描画修正)
+                setTimeout(() => {
+                    if (tab === 'info'   && mdeInfo)   mdeInfo.codemirror.refresh();
+                    if (tab === 'diary'  && mdeDiary)  mdeDiary.codemirror.refresh();
+                    if (tab === 'market' && mdeMarket) mdeMarket.codemirror.refresh();
+                }, 30);
+            });
+        });
+    }
+
+    // ── 収支合計の自動更新 ────────────────────────────────────
+    function initIncomeCalc() {
+        const ids = ['incomeStocks','incomeMargin','incomeForeign','incomeCfd'];
+        ids.forEach(id => {
+            document.getElementById(id).addEventListener('input', updateIncomeTotal);
+        });
+    }
+
+    function updateIncomeTotal() {
+        const total = ['incomeStocks','incomeMargin','incomeForeign','incomeCfd']
+            .reduce((sum, id) => sum + (parseFloat(document.getElementById(id).value) || 0), 0);
+        const el = document.getElementById('incomeTotal');
+        el.textContent = (total >= 0 ? '+' : '') + total.toLocaleString() + ' 円';
+        el.style.background = total > 0 ? '#ede9fe' : total < 0 ? '#fee2e2' : '#f1f5f9';
+        el.style.color = total > 0 ? '#7C4DFF' : total < 0 ? '#ef4444' : '#64748b';
+    }
+
+    // ── Gistデータ読み込み ─────────────────────────────────────
+    async function loadGistData() {
+        const token  = localStorage.getItem('gist_token') || '';
+        const gistId = localStorage.getItem('gist_id') || '';
+        const statusEl = document.getElementById('gistSyncStatus');
+
+        if (!token || !gistId) {
+            statusEl.textContent = '⚠ Gist未設定 (投資カレンダーの設定画面で設定してください)';
+            statusEl.style.color = '#f59e0b';
+            return;
+        }
+        statusEl.textContent = '読込中...';
+        statusEl.style.color = '';
+
+        try {
+            // Gist APIメタデータ取得 (raw_urlを得るため)
+            const resp = await fetch(`https://api.github.com/gists/${gistId.trim()}`, {
+                headers: { 'Authorization': `token ${token.trim()}`, 'Accept': 'application/vnd.github.v3+json' },
+                cache: 'no-store'
+            });
+            if (!resp.ok) throw new Error(`API HTTP ${resp.status}`);
+            const gist = await resp.json();
+            const rawUrl = gist.files['market_data.json']?.raw_url;
+            if (!rawUrl) throw new Error('market_data.json が見つかりません');
+
+            // raw_url (Auth不要 — CORS preflight回避)
+            const rawResp = await fetch(rawUrl, { cache: 'no-store' });
+            if (!rawResp.ok) throw new Error(`raw_url HTTP ${rawResp.status}`);
+            const data = JSON.parse(await rawResp.text());
+            calendarHistory = data.history || {};
+
+            statusEl.textContent = '✓ 同期済み';
+            statusEl.style.color = '#7C4DFF';
+
+            // 現在のdateSelectorの日付をロード
+            const sel = document.getElementById('dateSelector');
+            if (sel && sel.value && sel.value !== 'latest') {
+                const gd = toGistDate(sel.value);
+                if (gd) loadDateToEditors(gd);
+            }
+        } catch(e) {
+            statusEl.textContent = `⚠ 読込エラー: ${e.message}`;
+            statusEl.style.color = '#ef4444';
+            console.error('[CalendarCard] Gist load error:', e);
+        }
+    }
+
+    // ── エディタに日付データをセット ──────────────────────────
+    function loadDateToEditors(gistDate) {
+        if (!editorsInitialized) return;
+        currentCalDate = gistDate;
+        const d = calendarHistory[gistDate] || {};
+        const [y, m, day] = gistDate.split('-');
+        const label = `${y}年${parseInt(m)}月${parseInt(day)}日`;
+        document.getElementById('calCardTitle').textContent = `📅 投資記録 / ${label}`;
+
+        // EasyMDEにセット
+        const defaultInfo   = `# ${gistDate.replace(/-/g, '/')}`;
+        if (mdeInfo)   { mdeInfo.value(d.info   || defaultInfo); }
+        if (mdeDiary)  { mdeDiary.value(d.diary  || defaultInfo); }
+        if (mdeMarket) { mdeMarket.value(d.market || defaultInfo); }
+
+        // 収支フォーム
+        document.getElementById('incomeStocks').value  = d.stocks  || 0;
+        document.getElementById('incomeMargin').value  = d.margin  || 0;
+        document.getElementById('incomeForeign').value = d.foreign || 0;
+        document.getElementById('incomeCfd').value     = d.cfd     || 0;
+        document.getElementById('incomeNote').value    = d.note    || '';
+        updateIncomeTotal();
+
+        // CodeMirror再描画 (表示状態のエディタのみ)
+        setTimeout(() => {
+            const activeTab = document.querySelector('.cal-tab-btn.active')?.dataset.tab;
+            if (activeTab === 'info'   && mdeInfo)   mdeInfo.codemirror.refresh();
+            if (activeTab === 'diary'  && mdeDiary)  mdeDiary.codemirror.refresh();
+            if (activeTab === 'market' && mdeMarket) mdeMarket.codemirror.refresh();
+        }, 50);
+    }
+
+    // ── Gistに保存 (Read-Merge-Write v3) ─────────────────────
+    async function saveCalendarData() {
+        if (!currentCalDate || isSaving) return;
+        const token  = localStorage.getItem('gist_token') || '';
+        const gistId = localStorage.getItem('gist_id') || '';
+        const statusEl = document.getElementById('gistSyncStatus');
+
+        if (!token || !gistId) {
+            statusEl.textContent = '⚠ Gist未設定';
+            return;
+        }
+        isSaving = true;
+        statusEl.textContent = '保存中...';
+        statusEl.style.color = '#f59e0b';
+
+        try {
+            const gistUrl = `https://api.github.com/gists/${gistId.trim()}`;
+            const auth = { 'Authorization': `token ${token.trim()}`, 'Accept': 'application/vnd.github.v3+json' };
+
+            // Read: 最新のGistを取得 (他ページでの変更をマージするため)
+            const readResp = await fetch(gistUrl, { headers: auth, cache: 'no-store' });
+            if (!readResp.ok) throw new Error(`Read HTTP ${readResp.status}`);
+            const gistMeta = await readResp.json();
+            const rawUrl = gistMeta.files['market_data.json']?.raw_url;
+            if (!rawUrl) throw new Error('market_data.json が見つかりません');
+
+            const rawResp = await fetch(rawUrl, { cache: 'no-store' });
+            if (!rawResp.ok) throw new Error(`raw_url HTTP ${rawResp.status}`);
+            const fullData = JSON.parse(await rawResp.text());
+
+            // Merge: このページで編集した日付のデータだけ上書き
+            const h = fullData.history || {};
+            if (!h[currentCalDate]) h[currentCalDate] = {};
+            if (mdeInfo)   h[currentCalDate].info   = mdeInfo.value();
+            if (mdeDiary)  h[currentCalDate].diary   = mdeDiary.value();
+            if (mdeMarket) h[currentCalDate].market  = mdeMarket.value();
+            h[currentCalDate].stocks  = parseFloat(document.getElementById('incomeStocks').value)  || 0;
+            h[currentCalDate].margin  = parseFloat(document.getElementById('incomeMargin').value)  || 0;
+            h[currentCalDate].foreign = parseFloat(document.getElementById('incomeForeign').value) || 0;
+            h[currentCalDate].cfd     = parseFloat(document.getElementById('incomeCfd').value)     || 0;
+            h[currentCalDate].note    = document.getElementById('incomeNote').value || '';
+            fullData.history = h;
+            fullData.lastUpdated = new Date().toISOString();
+            calendarHistory = h;  // ローカルキャッシュ更新
+
+            // Write: コンパクトJSONでPATCH
+            const writeResp = await fetch(gistUrl, {
+                method: 'PATCH',
+                headers: { ...auth, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ files: { 'market_data.json': { content: JSON.stringify(fullData) } } })
+            });
+            if (!writeResp.ok) throw new Error(`Write HTTP ${writeResp.status}`);
+
+            statusEl.textContent = '✓ 保存完了';
+            statusEl.style.color = '#7C4DFF';
+            setTimeout(() => { statusEl.textContent = '✓ 同期済み'; }, 2000);
+        } catch(e) {
+            statusEl.textContent = `⚠ 保存エラー: ${e.message}`;
+            statusEl.style.color = '#ef4444';
+            console.error('[CalendarCard] Save error:', e);
+        } finally {
+            isSaving = false;
+        }
+    }
+
+    // ── dateSelector 変更フック ───────────────────────────────
+    // renderAllChartsをラップして日付変更時にカレンダーも更新
+    function hookDateChange() {
+        const sel = document.getElementById('dateSelector');
+        sel.addEventListener('change', (e) => {
+            const gd = toGistDate(e.target.value);
+            if (gd) loadDateToEditors(gd);
+        });
+    }
+
+    // ── 初期化 ───────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', () => {
+        initEditors();
+        initTabs();
+        initIncomeCalc();
+        hookDateChange();
+        document.getElementById('btnSaveCalendar').addEventListener('click', saveCalendarData);
+
+        // Gistデータをロード (Firebase初期化より少し後に実行)
+        // renderAllChartsが呼ばれてdateSelectorが確定した後にロード
+        loadGistData();
+    });
+
+    // Firebaseデータが揃った後（renderAllCharts後）にも再ロードを試みる
+    // dateSelectorのoptionが変化したらロード (MutationObserver)
+    const _observer = new MutationObserver(() => {
+        const sel = document.getElementById('dateSelector');
+        if (sel && sel.options.length > 1 && !currentCalDate) {
+            const gd = toGistDate(sel.value);
+            if (gd) loadDateToEditors(gd);
+        }
+    });
+    window.addEventListener('DOMContentLoaded', () => {
+        const sel = document.getElementById('dateSelector');
+        if (sel) _observer.observe(sel, { childList: true });
+    });
+
+})();
 </script>
 </body>
 </html>
