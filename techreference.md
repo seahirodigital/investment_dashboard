@@ -14,6 +14,7 @@
 - [上場廃止・データ取得不可の11銘柄削除](#上場廃止データ取得不可の11銘柄削除)
 - [daily_market_analysis.yml 実装時の苦戦と解決策（2026-03-26）](#daily_market_analysisyml-実装時の苦戦と解決策2026-03-26)
 - [Gist info消失バグ 第4層〜第5層（2026-04-01）](#gist-info消失バグ-第4層第5層2026-04-01)
+- [Gist info消失バグ 第6層（2026-04-03）](#gist-info消失バグ-第6層2026-04-03)
 - [intraday_etf.yml ループ型設計の経緯](#intraday_etfyml-ループ型設計の経緯)
 
 ---
@@ -338,6 +339,49 @@ if (!gistReadOk) {
 ### データ復旧
 
 消失した3/30と3/31のレポートをgitリモート履歴（`a976b53`, `ddc9a9d`）から取得し、Gist APIで直接書き戻して復旧。
+
+---
+
+## Gist info消失バグ 第6層（2026-04-03）
+
+### 発見の経緯
+
+第4層〜第5層の修正後もinfo（情報）タブが空のままだった。Gist APIでは4/1, 4/2のレポートが正常に保存されていることを確認。
+
+### 根本原因（2つの問題の複合）
+
+#### 問題A: `restore_gist_history.py`が`indent=2`でGistに書き込み（ファイル膨張）
+
+`json.dump(market_data, f, ensure_ascii=False, indent=2)` により、コンパクト時400KB → インデント時952KBに膨張。Gist APIのcontent truncation閾値（約389K文字）を超過。
+
+#### 問題B: ブラウザからのraw_url fetchでCORS preflight失敗
+
+`gist.githubusercontent.com`へのfetchに`Authorization`ヘッダーを付与していたため、CORSプリフライト（OPTIONSリクエスト）が発生。`gist.githubusercontent.com`は`Access-Control-Allow-Headers: Authorization`を返さないため、プリフライトが失敗し、raw_urlからのデータ取得ができなかった。
+
+**結果:** API contentは切り詰め → raw_urlフォールバックもCORSで失敗 → `JSON.parse()` → エラー → catchで無視 → 空のhistoryDataが表示される
+
+### 修正内容
+
+#### 修正1: raw_url fetchからAuthorizationヘッダーを除去
+
+`raw_url`（`gist.githubusercontent.com`）はURL自体にコミットハッシュを含むため認証不要。Authヘッダーを除去しCORSプリフライトを回避。
+
+```js
+// 旧: const rawResp = await fetch(rawUrl, { headers: gistAuth, cache: 'no-store' });
+// 新: const rawResp = await fetch(rawUrl, { cache: 'no-store' });
+```
+
+#### 修正2: raw_urlを常に優先取得
+
+`truncated`フラグに関係なく、`raw_url`が利用可能な場合は常にraw_url経由で完全データを取得。API contentは400KB付近で切り詰められるため、サイズが閾値付近のファイルでは`truncated: false`でも不完全なJSONが返る場合がある。
+
+#### 修正3: `restore_gist_history.py`のコンパクトJSON化
+
+`json.dump(market_data, f, ensure_ascii=False, indent=2)` → `json.dump(market_data, f, ensure_ascii=False)` に変更。ファイルサイズを952KB → 398KBに圧縮。
+
+#### 修正4: 3/30, 3/31のレポート再復旧
+
+Gist APIで直接コンパクトJSONに書き戻し。
 
 ---
 
