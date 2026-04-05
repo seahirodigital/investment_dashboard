@@ -956,13 +956,13 @@
         }
     }
 
-    // カードを #chart-breakdown の直後に挿入 (Reactレンダリング後)
+    // カードを #table-container の直前に挿入 (Reactレンダリング後)
     function insertCard() {
-        const breakdown = document.getElementById('chart-breakdown');
-        if (!breakdown) return false;
+        const tableContainer = document.getElementById('table-container');
+        if (!tableContainer) return false;
         const card = document.getElementById('cal-card-ss');
-        if (!card || card.parentNode === breakdown.parentNode) return true; // 挿入済み
-        breakdown.parentNode.insertBefore(card, breakdown.nextSibling);
+        if (!card || card.parentNode === tableContainer.parentNode) return true; // 挿入済み
+        tableContainer.parentNode.insertBefore(card, tableContainer);
         card.style.display = '';
         return true;
     }
