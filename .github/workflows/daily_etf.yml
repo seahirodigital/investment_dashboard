@@ -41,6 +41,7 @@ jobs:
           
           if ! git diff --staged --quiet; then
             git commit -m "Update ETF Data: $(date +'%Y-%m-%d')"
+            git pull --rebase
             git push
             echo "Data updated and pushed."
           else
