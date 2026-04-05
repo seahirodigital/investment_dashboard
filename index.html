@@ -17,6 +17,8 @@
 
     <!-- EasyMDE CSS -->
     <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <!-- Markdown 共通スタイル (3ページ共通: index / short_selling / option) -->
+    <link rel="stylesheet" href="./markdown-common.css">
 
     <!-- Libraries -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -96,27 +98,7 @@
             justify-content: center; align-items: flex-end; padding-right: 8px; gap: 4px;
         }
 
-        /* Markdown Style Fix */
-        .markdown-preview, .editor-preview, .editor-preview-side { color: #334155; font-size: 13px; line-height: 1.6; }
-        .editor-preview img, .editor-preview-side img, .markdown-preview img {
-            max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .CodeMirror .cm-header-1 { font-size: 1.5rem !important; line-height: 1.4; font-weight: 700; color: #1e293b; }
-        .CodeMirror .cm-header-2 { font-size: 1.25rem !important; line-height: 1.4; font-weight: 600; color: #334155; }
-        .CodeMirror .cm-header-3 { font-size: 1.15rem !important; line-height: 1.4; font-weight: 600; color: #475569; }
-        .CodeMirror .cm-formatting-header, .CodeMirror .cm-formatting-strong, .CodeMirror .cm-formatting-em, .CodeMirror .cm-formatting-quote { display: none !important; }
-        .editor-preview h1, .editor-preview-side h1, .markdown-preview h1 { 
-            font-size: 1.5rem !important; font-weight: 700; margin: 0.6em 0 0.4em 0; 
-            border-bottom: 1px solid #e2e8f0; padding-bottom: 0.2em; color: #1e293b; 
-        }
-        .editor-preview h2, .editor-preview-side h2, .markdown-preview h2 { 
-            font-size: 1.25rem !important; font-weight: 600; margin: 0.5em 0 0.3em 0; 
-            color: #334155; border-left: 4px solid #7C4DFF; padding-left: 0.5em; 
-        }
-        .editor-preview h3, .editor-preview-side h3, .markdown-preview h3 { 
-            font-size: 1.15rem !important; font-weight: 600; margin: 0.4em 0 0.2em 0; color: #475569; 
-        }
-        .editor-preview ul, .editor-preview-side ul, .markdown-preview ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.6em; }
+        /* Markdown Style: markdown-common.css で一元管理 */
         
         .EasyMDEContainer { background: white; border-radius: 0.5rem; height: 100%; display: flex; flex-direction: column; }
         .editor-toolbar { border: 1px solid #e2e8f0; border-radius: 0.5rem 0.5rem 0 0; background-color: #f8fafc; opacity: 1; flex-shrink: 0; }
@@ -1001,9 +983,36 @@
 2025/07/18	39,819.11	▲0.63%	+187,508	-390,766	-87,985	-215,409	+127,424	+58,475	+216,272	+12,853	+10,791	-42,083	-49,544
 2025/07/11	39,569.68	▼0.61%	+403,085	-148,323	-66,547	-199,569	+133,022	-442,783	+228,086	+48,797	-35,304	-2,137	-27,560`;
             const [inputText, setInputText] = useState(defaultData);
+            const [allRows, setAllRows] = useState([]);
             const [chartData, setChartData] = useState([]);
-            // 起動時に自動取得済みデータ(data/investor_trends.json)を優先ロード。
-            // 取得失敗時は defaultData のまま手動入力フォームで上書き可能。
+            const [trendsRange, setTrendsRange] = useState('all');
+
+            // 期間フィルタ + 累積計算
+            const buildCumulative = (rows, range) => {
+                let filtered = rows;
+                if (range !== 'all') {
+                    const cutoff = new Date();
+                    if (range === '1m') cutoff.setMonth(cutoff.getMonth() - 1);
+                    else if (range === '3m') cutoff.setMonth(cutoff.getMonth() - 3);
+                    else if (range === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
+                    else if (range === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
+                    filtered = rows.filter(r => new Date(r.date) >= cutoff);
+                }
+                let f=0,p=0,i=0,t=0,b=0,tb=0,ins=0,cb=0;
+                return filtered.map(item => {
+                    f+=item.foreign; p+=item.proprietary; i+=item.individual;
+                    t+=item.trust; b+=item.business; tb+=item.trustBank; ins+=item.insurance; cb+=item.cityBank;
+                    return {...item, foreign:f, proprietary:p, individual:i, trust:t, business:b, trustBank:tb, insurance:ins, cityBank:cb};
+                });
+            };
+
+            // allRows or trendsRange が変わったら再計算
+            useEffect(() => {
+                if (allRows.length === 0) return;
+                setChartData(buildCumulative(allRows, trendsRange));
+            }, [allRows, trendsRange]);
+
+            // 起動時: investor_trends.json を優先ロード、失敗時は defaultData にフォールバック
             useEffect(() => {
                 let cancelled = false;
                 (async () => {
@@ -1011,7 +1020,17 @@
                         const res = await fetch('./data/investor_trends.json', { cache: 'no-store' });
                         if (!res.ok) throw new Error('fetch failed: ' + res.status);
                         const json = await res.json();
-                        if (!cancelled && json && typeof json.tsv === 'string' && json.tsv.trim()) {
+                        if (cancelled) return;
+                        // 構造化 rows 形式（新形式）
+                        if (Array.isArray(json.rows) && json.rows.length > 0) {
+                            const sorted = [...json.rows].sort((a, b) => new Date(a.date) - new Date(b.date));
+                            setAllRows(sorted);
+                            const tsv = sorted.map(r => [r.date, r.nikkei, r.change||'', r.foreign, r.proprietary, r.individual, r.individual_cash||'', r.individual_margin||'', r.trust, r.business, r.other||'', r.trustBank, r.insurance, r.cityBank].join('\t')).join('\n');
+                            setInputText(tsv);
+                            return;
+                        }
+                        // 旧形式 tsv フォールバック
+                        if (json.tsv && typeof json.tsv === 'string' && json.tsv.trim()) {
                             setInputText(json.tsv);
                             parseData(json.tsv);
                             return;
@@ -1023,6 +1042,8 @@
                 })();
                 return () => { cancelled = true; };
             }, []);
+
+            // TSV テキストをパースして allRows にセット（累積はしない）
             const parseData = (text) => {
                 if (!text.trim()) return;
                 const lines = text.split('\n');
@@ -1036,25 +1057,28 @@
                             date: parts[0],
                             nikkei: parseFloat(parts[1].replace(/,/g, '')),
                             foreign: cleanNum(parts[3]), proprietary: cleanNum(parts[4]), individual: cleanNum(parts[5]),
-                            trust: cleanNum(parts[8]), business: cleanNum(parts[9]), trustBank: cleanNum(parts[11]), insurance: cleanNum(parts[12]), cityBank: cleanNum(parts[13])
+                            individual_cash: cleanNum(parts[6]), individual_margin: cleanNum(parts[7]),
+                            trust: cleanNum(parts[8]), business: cleanNum(parts[9]), other: cleanNum(parts[10]),
+                            trustBank: cleanNum(parts[11]), insurance: cleanNum(parts[12]), cityBank: cleanNum(parts[13])
                         });
                     }
                 });
                 data.sort((a, b) => new Date(a.date) - new Date(b.date));
-                let cumForeign = 0, cumProprietary = 0, cumIndividual = 0, cumTrust = 0, cumBusiness = 0, cumTrustBank = 0, cumInsurance = 0, cumCityBank = 0;
-                const cumulativeData = data.map(item => {
-                    cumForeign += item.foreign; cumProprietary += item.proprietary; cumIndividual += item.individual;
-                    cumTrust += item.trust; cumBusiness += item.business; cumTrustBank += item.trustBank; cumInsurance += item.insurance; cumCityBank += item.cityBank;
-                    return { ...item, foreign: cumForeign, proprietary: cumProprietary, individual: cumIndividual, trust: cumTrust, business: cumBusiness, trustBank: cumTrustBank, insurance: cumInsurance, cityBank: cumCityBank };
-                });
-                setChartData(cumulativeData);
+                setAllRows(data);
             };
             const handleParse = () => { parseData(inputText); };
             return (
                 <div className="h-full flex flex-col pb-20">
                     <div className="unified-header-card"><div className="unified-header-title"><Icon name="TrendingUp" size={14} /> 主体別投資動向</div><p className="unified-header-sub">主要投資主体の累積売買ポジション推移</p></div>
                     <div className="bg-white rounded-xl shadow border border-slate-200 p-6 mb-6 animate-fade-in-up">
-                        <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-700">主体別 累積売買動向チャート</h2><a href="https://nikkei225jp.com/data/shutai.php" target="_blank" rel="noopener noreferrer" className="text-[#7C4DFF] hover:underline text-sm font-bold flex items-center gap-1">日経225投手主体別 <Icon name="ExternalLink" size={12} /></a></div>
+                        <div className="flex justify-between items-center mb-3"><h2 className="text-lg font-bold text-slate-700">主体別 累積売買動向チャート</h2><a href="https://nikkei225jp.com/data/shutai.php" target="_blank" rel="noopener noreferrer" className="text-[#7C4DFF] hover:underline text-sm font-bold flex items-center gap-1">日経225投手主体別 <Icon name="ExternalLink" size={12} /></a></div>
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                            <span className="text-slate-600 text-sm font-medium">表示期間:</span>
+                            {[{v:'all',l:'全期間'},{v:'1y',l:'1年'},{v:'6m',l:'6ヶ月'},{v:'3m',l:'3ヶ月'},{v:'1m',l:'1ヶ月'}].map(opt => (
+                                <button key={opt.v} onClick={() => setTrendsRange(opt.v)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${trendsRange === opt.v ? 'bg-[#7C4DFF] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{opt.l}</button>
+                            ))}
+                            {allRows.length > 0 && <span className="text-xs text-slate-400 ml-2">{allRows.length}週分 | 最新: {allRows[allRows.length-1]?.date}</span>}
+                        </div>
                         <div className="h-[500px] w-full"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} stackOffset="sign"><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="date" tick={{fontSize: 10}} /><YAxis yAxisId="left" tickFormatter={(val) => `${(val / 10000).toFixed(0)}`} width={40} tick={{fontSize: 10}} label={{ value: '(単位: 100億円)', angle: -90, position: 'insideLeft', style: { fontSize: '10px', fill: '#64748b' } }} /><YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tickFormatter={(val) => val.toLocaleString()} width={50} tick={{fontSize: 10}} /><Tooltip formatter={(val, name) => [val.toLocaleString() + (name === '日経平均' ? '円' : ' (百万)'), name]} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><Legend /><ReferenceLine y={0} yAxisId="left" stroke="#000" /><Bar dataKey="foreign" name="海外" fill="#7C4DFF" stackId="a" yAxisId="left" /><Bar dataKey="individual" name="個人" fill="#FF4081" stackId="a" yAxisId="left" /><Bar dataKey="proprietary" name="証券自己" fill="#607D8B" stackId="a" yAxisId="left" /><Bar dataKey="trust" name="投資信託" fill="#ECEFF1" stackId="a" yAxisId="left" /><Bar dataKey="business" name="事業法人" fill="#B0BEC5" stackId="a" yAxisId="left" /><Bar dataKey="trustBank" name="信託銀行" fill="#F8BBD0" stackId="a" yAxisId="left" /><Bar dataKey="insurance" name="生保損保" fill="#EF9A9A" stackId="a" yAxisId="left" /><Bar dataKey="cityBank" name="都銀地銀" fill="#E53935" stackId="a" yAxisId="left" /><Line type="monotone" dataKey="nikkei" name="日経平均" stroke="#D1C4E9" strokeWidth={2} dot={false} yAxisId="right" /></ComposedChart></ResponsiveContainer></div>
                     </div>
                     <div className="max-w-3xl mx-auto bg-white rounded-xl shadow border border-slate-200 p-6 w-full"><div className="mb-4"><h3 className="font-bold text-slate-700 mb-2 text-sm">データ入力 (Excel/Text貼り付け)</h3><p className="text-xs text-slate-500 mb-2">ヘッダー行の有無に関わらず、日付(YYYY/MM/DD)で始まる行を自動検出してグラフ化します。</p></div><div className="flex flex-col gap-2"><textarea className="w-full border border-slate-300 rounded-lg p-3 text-xs font-mono focus:ring-2 focus:ring-[#7C4DFF] outline-none min-h-[150px]" rows={6} placeholder="日付..." value={inputText} onChange={(e) => setInputText(e.target.value)} /><button onClick={handleParse} className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 font-bold self-end">更新</button></div></div>
