@@ -125,13 +125,11 @@
 
         // 期間選択肢（日次データのみ）
         const PERIODS = [
-            { value: '5d', label: '5日' },
-            { value: '10d', label: '10日' },
-            { value: '1mo', label: '1ヶ月' },
-            { value: '2mo', label: '2ヶ月' },
-            { value: '3mo', label: '3ヶ月' },
-            { value: '6mo', label: '6ヶ月' },
-            { value: '1y', label: '1年' },
+            { value: '1d', label: '1日' }, { value: '2d', label: '2日' },
+            { value: '3d', label: '3日' }, { value: '5d', label: '5日' },
+            { value: '10d', label: '10日' }, { value: '1mo', label: '1ヶ月' },
+            { value: '2mo', label: '2ヶ月' }, { value: '3mo', label: '3ヶ月' },
+            { value: '6mo', label: '6ヶ月' }, { value: '1y', label: '1年' },
         ];
 
         // チャートカラーパレット
@@ -155,23 +153,43 @@
                 const L = dates.length;
                 if (!L) return null;
 
-                let startIndex = 0;
+                // ^GSPC が変化しない日（米国休場・forward-fill 日）を除外した実取引日インデックス配列を構築
+                const gspcPrices = prices[BENCHMARK_SYMBOL];
+                const tradingIndices = [];
+                for (let i = 0; i < L; i++) {
+                    if (!gspcPrices) { tradingIndices.push(i); continue; }
+                    // 最初の行、または前日と価格が異なる日だけ米市場営業日として採用
+                    if (i === 0 || gspcPrices[i] !== gspcPrices[i - 1]) {
+                        tradingIndices.push(i);
+                    }
+                }
+                const TL = tradingIndices.length;
+                if (!TL) return null;
+
+                // 期間に応じて tradingIndices 上の startPos を決定
+                let startPos = 0;
                 if (period.endsWith('d')) {
                     const days = parseInt(period.replace('d', ''), 10);
-                    startIndex = Math.max(0, L - Math.max(days + 1, 3));
+                    // 1d: 前営業日終値を基準 → tradingIndices[TL-2]
+                    startPos = Math.max(0, TL - days - 1);
                 } else {
                     const daysAgo = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 }[period] || 30;
-                    const latest = new Date(dates[L - 1]);
-                    const target = new Date(latest.getTime() - daysAgo * 86400000).getTime();
-                    for (let i = L - 1; i >= 0; i--) {
-                        if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
+                    const latestDate = new Date(dates[tradingIndices[TL - 1]]);
+                    const target = new Date(latestDate.getTime() - daysAgo * 86400000).getTime();
+                    for (let p = TL - 1; p >= 0; p--) {
+                        if (new Date(dates[tradingIndices[p]]).getTime() <= target) { startPos = p; break; }
                     }
                 }
 
-                const baseIndex = startIndex;
+                const baseIndex = tradingIndices[startPos];  // 実取引日の基準行インデックス
+                // 表示範囲: startPos+1 から TL-1 までの実取引日（基準日は %0% 基点なので表示は翌日から）
+                // ただし startPos=0 のときは基準日も含める
+                const displayFrom = startPos > 0 ? startPos + 1 : startPos;
+
                 const timeSeries = [];
                 const rankingMap = {};
-                for (let i = startIndex; i < L; i++) {
+                for (let p = displayFrom; p < TL; p++) {
+                    const i = tradingIndices[p];
                     const date = dates[i];
                     const point = { date };
                     symbolList.forEach(sym => {
@@ -186,10 +204,9 @@
                         }
                     });
                     // S&P500基準線
-                    const bPrices = prices[BENCHMARK_SYMBOL];
-                    if (bPrices) {
-                        const bStart = bPrices[baseIndex];
-                        const bCurrent = bPrices[i];
+                    if (gspcPrices) {
+                        const bStart = gspcPrices[baseIndex];
+                        const bCurrent = gspcPrices[i];
                         if (bStart && bCurrent && bStart !== 0) {
                             point[BENCHMARK_NAME] = ((bCurrent / bStart) - 1) * 100;
                         }
@@ -197,7 +214,8 @@
                     timeSeries.push(point);
                 }
                 const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
-                return { ranking, timeSeries, startDate: dates[startIndex], endDate: dates[L - 1] };
+                const lastIdx = tradingIndices[TL - 1];
+                return { ranking, timeSeries, startDate: dates[baseIndex], endDate: dates[lastIdx] };
             }, [rawDaily, period, symbolList]);
 
             const catRanking = computedData ? computedData.ranking : [];
@@ -380,7 +398,7 @@
 
         // メインAppコンポーネント
         const App = () => {
-            const [period, setPeriod] = useState('5d');
+            const [period, setPeriod] = useState('1d');
             const [rawDaily, setRawDaily] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
@@ -453,19 +471,26 @@
                 if (!rawDaily || !rawDaily.dates || rawDaily.dates.length === 0) return null;
                 const dates = rawDaily.dates;
                 const L = dates.length;
-                let startIndex = 0;
+                const gspcPrices = rawDaily.prices && rawDaily.prices[BENCHMARK_SYMBOL];
+                const tradingIndices = [];
+                for (let i = 0; i < L; i++) {
+                    if (!gspcPrices || i === 0 || gspcPrices[i] !== gspcPrices[i - 1]) tradingIndices.push(i);
+                }
+                const TL = tradingIndices.length;
+                if (!TL) return null;
+                let startPos = 0;
                 if (period.endsWith('d')) {
                     const days = parseInt(period.replace('d', ''), 10);
-                    startIndex = Math.max(0, L - Math.max(days + 1, 3));
+                    startPos = Math.max(0, TL - days - 1);
                 } else {
                     const daysAgo = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 }[period] || 30;
-                    const latest = new Date(dates[L - 1]);
-                    const target = new Date(latest.getTime() - daysAgo * 86400000).getTime();
-                    for (let i = L - 1; i >= 0; i--) {
-                        if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
+                    const latestDate = new Date(dates[tradingIndices[TL - 1]]);
+                    const target = new Date(latestDate.getTime() - daysAgo * 86400000).getTime();
+                    for (let p = TL - 1; p >= 0; p--) {
+                        if (new Date(dates[tradingIndices[p]]).getTime() <= target) { startPos = p; break; }
                     }
                 }
-                return { startDate: dates[startIndex], endDate: dates[L - 1] };
+                return { startDate: dates[tradingIndices[startPos]], endDate: dates[tradingIndices[TL - 1]] };
             }, [rawDaily, period]);
 
             return (
