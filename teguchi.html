@@ -136,11 +136,11 @@
             <!-- Main Results -->
             <div v-if="results.length > 0 && !loading" class="glass-panel p-4">
                 <div class="flex gap-2 mb-4">
-                    <button @click="activeTab = 'delta'" :class="['px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors', activeTab === 'delta' ? 'bg-[#eff6ff] text-[#7C4DFF] border-[#7C4DFF]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50']">
-                        デルタ一覧表
-                    </button>
                     <button @click="activeTab = 'matrix'" :class="['px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors', activeTab === 'matrix' ? 'bg-[#eff6ff] text-[#7C4DFF] border-[#7C4DFF]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50']">
                         オプションマトリクス
+                    </button>
+                    <button @click="activeTab = 'delta'" :class="['px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors', activeTab === 'delta' ? 'bg-[#eff6ff] text-[#7C4DFF] border-[#7C4DFF]' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50']">
+                        デルタ一覧表
                     </button>
                 </div>
 
@@ -226,7 +226,7 @@
                     loading: false,
                     error: null,
                     statusText: '読み込み中...',
-                    activeTab: 'delta',
+                    activeTab: 'matrix',
                     results: [],
                     matrixData: [],
                     strikes: [],
