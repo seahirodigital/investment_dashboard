@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>US個別分析</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <!-- Utilities -->
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        #global-error { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: #fee2e2; color: #b91c1c; padding: 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 90%; width: 400px; border: 1px solid #ef4444; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="global-error"></div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            if (message === 'Script error.' || (!source && lineno === 0)) return true;
+            if (typeof message === 'string' && (message.includes('fetch') || message.includes('Failed to fetch'))) return true;
+            const el = document.getElementById('global-error');
+            el.style.display = 'block';
+            el.innerHTML = `<strong>システムエラー:</strong><br>${message}<br><small class="text-xs opacity-75">${source}:${lineno}</small>`;
+            setTimeout(() => { el.style.display = 'none'; }, 10000);
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+        // Plotlyラッパー
+        const Plot = ({ data, layout, config, style, useResizeHandler }) => {
+            const divRef = useRef(null);
+            useEffect(() => {
+                if (divRef.current && window.Plotly) Plotly.react(divRef.current, data, layout, config);
+            }, [data, layout, config]);
+            useEffect(() => {
+                let resizeObserver;
+                if (useResizeHandler && divRef.current && window.Plotly) {
+                    resizeObserver = new ResizeObserver(() => window.Plotly.Plots.resize(divRef.current));
+                    resizeObserver.observe(divRef.current);
+                }
+                return () => resizeObserver && resizeObserver.disconnect();
+            }, [useResizeHandler]);
+            useEffect(() => () => divRef.current && window.Plotly && Plotly.purge(divRef.current), []);
+            return <div ref={divRef} style={style} />;
+        };
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icons = {
+                RefreshCw: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>,
+                PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>,
+            };
+            return <span className={className}>{icons[name] || null}</span>;
+        };
+
+        const cn = (...classes) => classes.filter(Boolean).join(' ');
+        const isMobileGlobal = window.innerWidth < 768;
+
+        // スマホ横スワイプ対応コンテナ
+        const SwipeContainer = ({ children, className = '' }) => {
+            const ref = useRef(null);
+            const [page, setPage] = useState(0);
+            useEffect(() => {
+                const el = ref.current;
+                if (!el) return;
+                const onScroll = () => {
+                    const cardW = el.clientWidth * 0.85;
+                    setPage(el.scrollLeft > cardW * 0.5 ? 1 : 0);
+                };
+                el.addEventListener('scroll', onScroll, { passive: true });
+                return () => el.removeEventListener('scroll', onScroll);
+            }, []);
+            return (
+                <div>
+                    <div ref={ref}
+                        className={`flex flex-row gap-3 md:gap-4 overflow-x-scroll md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide ${className}`}
+                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+                    >
+                        {React.Children.map(children, (child) => (
+                            <div className="w-[85%] max-w-[85%] shrink-0 snap-start overflow-hidden rounded-lg border border-slate-100 md:contents"
+                                style={{ touchAction: 'pan-x' }}
+                            >
+                                {child}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex justify-center gap-2 mt-2 md:hidden">
+                        <div className={`w-2 h-2 rounded-full transition-colors ${page === 0 ? 'bg-[#7C4DFF]' : 'bg-slate-300'}`} />
+                        <div className={`w-2 h-2 rounded-full transition-colors ${page === 1 ? 'bg-[#7C4DFF]' : 'bg-slate-300'}`} />
+                    </div>
+                </div>
+            );
+        };
+
+        // 期間選択肢（日次データのみ）
+        const PERIODS = [
+            { value: '5d', label: '5日' },
+            { value: '10d', label: '10日' },
+            { value: '1mo', label: '1ヶ月' },
+            { value: '2mo', label: '2ヶ月' },
+            { value: '3mo', label: '3ヶ月' },
+            { value: '6mo', label: '6ヶ月' },
+            { value: '1y', label: '1年' },
+        ];
+
+        // チャートカラーパレット
+        const COLORS = [
+            '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6',
+            '#8b5cf6', '#ec4899', '#f43f5e', '#06b6d4', '#84cc16', '#a855f7',
+            '#d946ef', '#0ea5e9', '#10b981', '#f59e0b', '#6366f1', '#e879f9',
+            '#4f46e5', '#ea580c', '#16a34a', '#9333ea', '#e11d48', '#0284c7', '#ca8a04',
+            '#65a30d', '#475569', '#0f766e', '#14b8a6'
+        ];
+
+        const BENCHMARK_SYMBOL = '^GSPC';
+        const BENCHMARK_NAME = 'S&P500';
+
+        // 汎用: 米国個別株チャートセクション（タイトル+銘柄リスト可変）
+        const StockSection = ({ title, symbolList, rawDaily, period }) => {
+            // rawデータから独立計算
+            const computedData = useMemo(() => {
+                if (!rawDaily) return null;
+                const { dates, prices } = rawDaily;
+                const L = dates.length;
+                if (!L) return null;
+
+                let startIndex = 0;
+                if (period.endsWith('d')) {
+                    const days = parseInt(period.replace('d', ''), 10);
+                    startIndex = Math.max(0, L - Math.max(days + 1, 3));
+                } else {
+                    const daysAgo = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 }[period] || 30;
+                    const latest = new Date(dates[L - 1]);
+                    const target = new Date(latest.getTime() - daysAgo * 86400000).getTime();
+                    for (let i = L - 1; i >= 0; i--) {
+                        if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
+                    }
+                }
+
+                const baseIndex = startIndex;
+                const timeSeries = [];
+                const rankingMap = {};
+                for (let i = startIndex; i < L; i++) {
+                    const date = dates[i];
+                    const point = { date };
+                    symbolList.forEach(sym => {
+                        const sPrices = prices[sym];
+                        if (!sPrices) return;
+                        const sStart = sPrices[baseIndex];
+                        const sCurrent = sPrices[i];
+                        if (sStart && sCurrent && sStart !== 0) {
+                            const ret = ((sCurrent / sStart) - 1) * 100;
+                            point[sym] = ret;
+                            rankingMap[sym] = { symbol: sym, name: sym, performance: ret };
+                        }
+                    });
+                    // S&P500基準線
+                    const bPrices = prices[BENCHMARK_SYMBOL];
+                    if (bPrices) {
+                        const bStart = bPrices[baseIndex];
+                        const bCurrent = bPrices[i];
+                        if (bStart && bCurrent && bStart !== 0) {
+                            point[BENCHMARK_NAME] = ((bCurrent / bStart) - 1) * 100;
+                        }
+                    }
+                    timeSeries.push(point);
+                }
+                const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
+                return { ranking, timeSeries, startDate: dates[startIndex], endDate: dates[L - 1] };
+            }, [rawDaily, period, symbolList]);
+
+            const catRanking = computedData ? computedData.ranking : [];
+            const activeTimeSeries = computedData ? computedData.timeSeries : [];
+
+            const maxAbsPerf = useMemo(() => {
+                if (!catRanking.length) return 1;
+                const max = Math.max(...catRanking.map(r => Math.abs(r.performance)));
+                return max === 0 ? 1 : max;
+            }, [catRanking]);
+
+            const noData = catRanking.length === 0;
+
+            const [filterMode, setFilterMode] = useState('all');
+            const [hiddenTraces, setHiddenTraces] = useState(new Set());
+
+            useEffect(() => { setHiddenTraces(new Set()); }, [filterMode]);
+
+            const displayRanking = useMemo(() => {
+                if (!catRanking.length) return [];
+                if (filterMode === 'top10') return catRanking.slice(0, 10);
+                if (filterMode === 'worst10') return catRanking.slice(-10);
+                const top = catRanking.slice(0, 10);
+                const worst = catRanking.slice(-10);
+                const seen = new Set(top.map(r => r.symbol));
+                const combined = [...top];
+                worst.forEach(r => { if (!seen.has(r.symbol)) combined.push(r); });
+                return combined;
+            }, [catRanking, filterMode]);
+
+            const rankingRef = useRef(null);
+            useEffect(() => {
+                if (!rankingRef.current || !catRanking.length) return;
+                if (filterMode === 'worst10') {
+                    requestAnimationFrame(() => { rankingRef.current.scrollTop = rankingRef.current.scrollHeight; });
+                } else {
+                    requestAnimationFrame(() => { rankingRef.current.scrollTop = 0; });
+                }
+            }, [filterMode, catRanking]);
+
+            const toggleTrace = useCallback((name) => {
+                setHiddenTraces(prev => { const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next; });
+            }, []);
+
+            const chartTraces = useMemo(() => {
+                if (!displayRanking.length || !activeTimeSeries.length) return [];
+                const traces = displayRanking.map((item, i) => ({
+                    x: activeTimeSeries.map(d => d.date),
+                    y: activeTimeSeries.map(d => d[item.symbol] ?? null),
+                    type: 'scatter', mode: 'lines', name: item.symbol,
+                    line: { color: COLORS[i % COLORS.length], width: 1.5 },
+                    hovertemplate: `<b>${item.symbol}</b><br>%{y:.2f}%<extra></extra>`,
+                }));
+                if (activeTimeSeries.some(d => BENCHMARK_NAME in d)) {
+                    traces.push({
+                        x: activeTimeSeries.map(d => d.date),
+                        y: activeTimeSeries.map(d => d[BENCHMARK_NAME] ?? null),
+                        type: 'scatter', mode: 'lines', name: BENCHMARK_NAME,
+                        line: { color: '#1e293b', width: 1.5, dash: 'dot' },
+                        hovertemplate: `<b>${BENCHMARK_NAME}</b><br>%{y:.2f}%<extra></extra>`,
+                    });
+                }
+                return traces;
+            }, [activeTimeSeries, displayRanking]);
+
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <h3 className="text-[13px] font-bold text-[#7C4DFF] flex items-center gap-2">
+                            <Icon name="PieChart" size={14} />
+                            {title}（{symbolList.length}銘柄）
+                        </h3>
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => setFilterMode('all')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${filterMode === 'all' ? 'bg-slate-700 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>ALL</button>
+                            <button onClick={() => setFilterMode('top10worst10')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${filterMode === 'top10worst10' ? 'bg-[#7C4DFF] text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>TOP10 + WORST10</button>
+                            <button onClick={() => setFilterMode('top10')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${filterMode === 'top10' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>TOP 10</button>
+                            <button onClick={() => setFilterMode('worst10')}
+                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${filterMode === 'worst10' ? 'bg-rose-500 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>WORST 10</button>
+                        </div>
+                    </div>
+
+                    <SwipeContainer className="h-[600px]">
+                        <div className="md:w-1/2 h-full relative z-10">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                            ) : (
+                                <Plot
+                                    data={chartTraces.map(t => ({ ...t, visible: !hiddenTraces.has(t.name) }))}
+                                    layout={{
+                                        autosize: true,
+                                        margin: { t: 5, r: 5, l: 35, b: 10 },
+                                        dragmode: isMobileGlobal ? false : 'pan',
+                                        xaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            rangebreaks: [{ bounds: ["sat","mon"] }],
+                                        },
+                                        yaxis: {
+                                            showgrid: true, gridcolor: '#e2e8f0',
+                                            tickfont: { color: '#64748b', size: 9 },
+                                            ticksuffix: '%',
+                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 1.5,
+                                        },
+                                        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                        showlegend: false, hovermode: 'closest',
+                                    }}
+                                    config={{ responsive: true, scrollZoom: !isMobileGlobal, displayModeBar: false, staticPlot: isMobileGlobal }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    useResizeHandler={true}
+                                />
+                            )}
+                        </div>
+
+                        <div ref={rankingRef} className="md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                            {noData ? (
+                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {catRanking.map((item, index) => {
+                                        const isPositive = item.performance >= 0;
+                                        const globalRank = index + 1;
+                                        return (
+                                            <div key={item.symbol} className="relative group h-8 flex items-center">
+                                                <div className="absolute inset-0 bg-slate-50 border border-slate-100/50 rounded-lg overflow-hidden flex">
+                                                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 z-10"></div>
+                                                    <div className="w-1/2 flex justify-end">
+                                                        {!isPositive && (
+                                                            <div className="h-full bg-rose-500/20 border-r-2 border-rose-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-1/2 flex justify-start">
+                                                        {isPositive && (
+                                                            <div className="h-full bg-emerald-500/20 border-l-2 border-emerald-500 transition-all duration-500 ease-out"
+                                                                style={{ width: `${(Math.abs(item.performance)/maxAbsPerf)*100}%` }} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center w-full text-xs z-20 relative px-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] text-slate-400 font-mono w-4 text-right">{globalRank}</span>
+                                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                                        <span className="font-bold truncate max-w-[100px]">{item.symbol}</span>
+                                                    </div>
+                                                    <span className={`font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                        {isPositive ? '+' : ''}{item.performance.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </SwipeContainer>
+
+                    {!noData && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center mt-2">
+                            {displayRanking.map((item, i) => (
+                                <div key={item.symbol}
+                                    className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(item.symbol) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                    onClick={() => toggleTrace(item.symbol)}>
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                    <span className="text-[9px] text-slate-600">{item.symbol}</span>
+                                </div>
+                            ))}
+                            <div className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${hiddenTraces.has(BENCHMARK_NAME) ? 'opacity-25' : 'hover:opacity-70'}`}
+                                onClick={() => toggleTrace(BENCHMARK_NAME)}>
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#1e293b' }} />
+                                <span className="text-[9px] text-slate-600">{BENCHMARK_NAME}(参考)</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // メインAppコンポーネント
+        const App = () => {
+            const [period, setPeriod] = useState('5d');
+            const [rawDaily, setRawDaily] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const fetchingRef = useRef(false);
+
+            const fetchRawData = useCallback(async () => {
+                if (fetchingRef.current) return;
+                fetchingRef.current = true;
+                setLoading(true);
+                setError(null);
+                try {
+                    const headers = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
+                    const ts = Date.now();
+                    const resDaily = await fetch(`./data/etf_data.json?t=${ts}`, { headers, cache: 'no-store' });
+
+                    if (!resDaily.ok) {
+                        if (resDaily.status === 404) {
+                            throw new Error("データファイル(etf_data.json)が未生成です。GitHub Actionsの完了をお待ちください。");
+                        }
+                        throw new Error(`データ読み込み失敗: ${resDaily.status} ${resDaily.statusText}`);
+                    }
+                    const jsonDaily = await resDaily.json();
+                    if (!jsonDaily.dates || jsonDaily.dates.length === 0) {
+                        throw new Error("データが空です。");
+                    }
+                    if (!jsonDaily.us_individual) {
+                        throw new Error("us_individual データが存在しません。etf_data_manager.py を最新化してください。");
+                    }
+                    setRawDaily(jsonDaily);
+                } catch (err) {
+                    if (!rawDaily) setError(err.message);
+                    else console.warn('データ更新失敗（前回データを維持）:', err.message);
+                } finally {
+                    setLoading(false);
+                    fetchingRef.current = false;
+                }
+            }, []);
+
+            useEffect(() => { fetchRawData(); }, [fetchRawData]);
+
+            // ページ復帰時再取得
+            useEffect(() => {
+                let debounceTimer = null;
+                const onVisible = () => {
+                    if (document.visibilityState === 'visible') {
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(() => { fetchRawData().catch(() => {}); }, 500);
+                    }
+                };
+                document.addEventListener('visibilitychange', onVisible);
+                return () => {
+                    clearTimeout(debounceTimer);
+                    document.removeEventListener('visibilitychange', onVisible);
+                };
+            }, [fetchRawData]);
+
+            // セクター情報と全銘柄リスト
+            const { sectorMap, allSymbols } = useMemo(() => {
+                if (!rawDaily || !rawDaily.us_individual) return { sectorMap: {}, allSymbols: [] };
+                const sm = rawDaily.us_individual;
+                const all = [];
+                const seen = new Set();
+                Object.values(sm).forEach(list => list.forEach(s => {
+                    if (!seen.has(s)) { seen.add(s); all.push(s); }
+                }));
+                return { sectorMap: sm, allSymbols: all };
+            }, [rawDaily]);
+
+            const dateRange = useMemo(() => {
+                if (!rawDaily || !rawDaily.dates || rawDaily.dates.length === 0) return null;
+                const dates = rawDaily.dates;
+                const L = dates.length;
+                let startIndex = 0;
+                if (period.endsWith('d')) {
+                    const days = parseInt(period.replace('d', ''), 10);
+                    startIndex = Math.max(0, L - Math.max(days + 1, 3));
+                } else {
+                    const daysAgo = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 }[period] || 30;
+                    const latest = new Date(dates[L - 1]);
+                    const target = new Date(latest.getTime() - daysAgo * 86400000).getTime();
+                    for (let i = L - 1; i >= 0; i--) {
+                        if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
+                    }
+                }
+                return { startDate: dates[startIndex], endDate: dates[L - 1] };
+            }, [rawDaily, period]);
+
+            return (
+                <div className="flex flex-col min-h-screen bg-[#f8fafc]">
+                    <main className="flex-1 overflow-auto p-4 md:p-6">
+                        <div className="max-w-full mx-auto space-y-4">
+                            <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-2">
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-xs font-bold text-[#7C4DFF]">US個別分析</h1>
+                                    <span className="text-slate-400 text-xs">finviz treemap準拠・セクター別米国個別銘柄の相対パフォーマンス（S&amp;P500基準）</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs mt-3 md:mt-0 flex-wrap">
+                                    {dateRange && (
+                                        <span className="text-slate-400 font-mono hidden sm:block">
+                                            {dateRange.startDate} 〜 {dateRange.endDate}
+                                        </span>
+                                    )}
+                                    {(() => {
+                                        const genAt = rawDaily?.generated_at_jst;
+                                        return (
+                                            <span className="font-mono hidden sm:flex items-center gap-1 text-slate-400">
+                                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                                                {genAt ? `生成: ${genAt}` : ''}
+                                                {' [日次終値]'}
+                                            </span>
+                                        );
+                                    })()}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-slate-500 shrink-0">期間:</span>
+                                        <select value={period} onChange={(e) => setPeriod(e.target.value)}
+                                            className="bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:border-[#7C4DFF] [&>option]:text-slate-800"
+                                            disabled={loading}>
+                                            {PERIODS.map(p => (<option key={p.value} value={p.value}>{p.label}</option>))}
+                                        </select>
+                                    </div>
+                                    <button onClick={fetchRawData}
+                                        className="bg-[#7C4DFF] text-white hover:bg-[#651FFF] font-bold px-3 py-1 rounded flex items-center gap-2 transition-colors shadow-sm"
+                                        disabled={loading}>
+                                        <Icon name="RefreshCw" size={14} className={cn(loading && "animate-spin")} />
+                                        <span>更新</span>
+                                    </button>
+                                </div>
+                            </header>
+
+                            {loading && !rawDaily && (
+                                <div className="flex justify-center items-center h-64">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7C4DFF]"></div>
+                                </div>
+                            )}
+
+                            {!loading && error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+                                    <strong>エラー:</strong> {error}
+                                </div>
+                            )}
+
+                            {!loading && rawDaily && allSymbols.length > 0 && (
+                                <div className="flex flex-col gap-4 animate-fade-in">
+                                    {/* 全銘柄統合セクション */}
+                                    <StockSection
+                                        title="US個別全銘柄パフォーマンス"
+                                        symbolList={allSymbols}
+                                        rawDaily={rawDaily}
+                                        period={period}
+                                    />
+                                    {/* セクター別カード */}
+                                    {Object.entries(sectorMap).map(([sectorName, tickers]) => (
+                                        <StockSection
+                                            key={sectorName}
+                                            title={sectorName}
+                                            symbolList={tickers}
+                                            rawDaily={rawDaily}
+                                            period={period}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+/* =========================================================
+   markdown-common.css
+   投資カレンダー / 売買フロー / 日経225建玉 の3ページで共通使用。
+   EasyMDE エディタ内・プレビュー内の見出しサイズを統一する。
+   ここを1箇所変えれば3ページすべてに反映される。
+   ========================================================= */
+
+/* プレビュー・エディタプレビュー共通のベーススタイル */
+.markdown-preview,
+.editor-preview,
+.editor-preview-side {
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* 画像 */
+.editor-preview img,
+.editor-preview-side img,
+.markdown-preview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 8px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* CodeMirror エディタ内の見出し（入力中の表示） */
+.CodeMirror .cm-header-1 { font-size: 1.1rem !important; line-height: 1.4; font-weight: 700; color: #1e293b; }
+.CodeMirror .cm-header-2 { font-size: 1.0rem !important; line-height: 1.4; font-weight: 600; color: #334155; }
+.CodeMirror .cm-header-3 { font-size: 0.95rem !important; line-height: 1.4; font-weight: 600; color: #475569; }
+
+/* Markdown 記号を非表示 */
+.CodeMirror .cm-formatting-header,
+.CodeMirror .cm-formatting-strong,
+.CodeMirror .cm-formatting-em,
+.CodeMirror .cm-formatting-quote {
+    display: none !important;
+}
+
+/* プレビュー内の見出し（3ページ共通サイズ） */
+.editor-preview h1,
+.editor-preview-side h1,
+.markdown-preview h1 {
+    font-size: 1.1rem !important;
+    font-weight: 700;
+    margin: 0.6em 0 0.4em 0;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.2em;
+    color: #1e293b;
+}
+
+.editor-preview h2,
+.editor-preview-side h2,
+.markdown-preview h2 {
+    font-size: 1.0rem !important;
+    font-weight: 600;
+    margin: 0.5em 0 0.3em 0;
+    color: #334155;
+    border-left: 4px solid #7C4DFF;
+    padding-left: 0.5em;
+}
+
+.editor-preview h3,
+.editor-preview-side h3,
+.markdown-preview h3 {
+    font-size: 0.95rem !important;
+    font-weight: 600;
+    margin: 0.4em 0 0.2em 0;
+    color: #475569;
+}
+
+/* リスト */
+.editor-preview ul,
+.editor-preview-side ul,
+.markdown-preview ul {
+    list-style-type: disc;
+    padding-left: 1.5em;
+    margin-bottom: 0.6em;
+}
+
+.editor-preview ol,
+.editor-preview-side ol,
+.markdown-preview ol {
+    list-style-type: decimal;
+    padding-left: 1.5em;
+    margin-bottom: 0.6em;
+}
+
+/* コードブロック */
+.editor-preview code,
+.editor-preview-side code,
+.markdown-preview code {
+    background: #f1f5f9;
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    font-size: 0.85em;
+    color: #7C4DFF;
+}
+
+.editor-preview pre,
+.editor-preview-side pre,
+.markdown-preview pre {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 0.75em 1em;
+    overflow-x: auto;
+    margin-bottom: 0.6em;
+}
+
+/* 引用 */
+.editor-preview blockquote,
+.editor-preview-side blockquote,
+.markdown-preview blockquote {
+    border-left: 3px solid #c4b5fd;
+    padding-left: 0.75em;
+    color: #64748b;
+    margin: 0.5em 0;
+}
