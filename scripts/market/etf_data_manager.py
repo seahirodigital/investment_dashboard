@@ -596,10 +596,11 @@ def fetch_data(period="400d", interval="1d"):
         return output
 
     if isinstance(df.columns, pd.MultiIndex):
-        if 'Adj Close' in df.columns.get_level_values(0):
-            df = df['Adj Close']
-        elif 'Close' in df.columns.get_level_values(0):
+        # Close（生値）優先: 配当落ち調整で短期パフォーマンスが歪むため
+        if 'Close' in df.columns.get_level_values(0):
             df = df['Close']
+        elif 'Adj Close' in df.columns.get_level_values(0):
+            df = df['Adj Close']
 
     # タイムゾーン除去
     df.index = pd.to_datetime(df.index).tz_localize(None)
