@@ -1002,7 +1002,27 @@
 2025/07/11	39,569.68	▼0.61%	+403,085	-148,323	-66,547	-199,569	+133,022	-442,783	+228,086	+48,797	-35,304	-2,137	-27,560`;
             const [inputText, setInputText] = useState(defaultData);
             const [chartData, setChartData] = useState([]);
-            useEffect(() => { parseData(inputText); }, []);
+            // 起動時に自動取得済みデータ(data/investor_trends.json)を優先ロード。
+            // 取得失敗時は defaultData のまま手動入力フォームで上書き可能。
+            useEffect(() => {
+                let cancelled = false;
+                (async () => {
+                    try {
+                        const res = await fetch('./data/investor_trends.json', { cache: 'no-store' });
+                        if (!res.ok) throw new Error('fetch failed: ' + res.status);
+                        const json = await res.json();
+                        if (!cancelled && json && typeof json.tsv === 'string' && json.tsv.trim()) {
+                            setInputText(json.tsv);
+                            parseData(json.tsv);
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('investor_trends.json の自動ロードに失敗:', e);
+                    }
+                    if (!cancelled) parseData(defaultData);
+                })();
+                return () => { cancelled = true; };
+            }, []);
             const parseData = (text) => {
                 if (!text.trim()) return;
                 const lines = text.split('\n');
