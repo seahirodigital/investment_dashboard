@@ -3,7 +3,7 @@ name: Daily ETF Sector Analysis
 on:
   schedule:
     - cron: '0 7 * * *'    # 16:00 JST (07:00 UTC) — JP市場閉場後の日次データ確定
-    - cron: '30 21 * * 1-5' # 06:30 JST (21:30 UTC) — US市場閉場後の終値確定用
+    - cron: '15 21 * * 1-5' # 06:15 JST (21:15 UTC) — US市場閉場後の終値確定用
   workflow_dispatch:
 
 permissions:
@@ -51,7 +51,7 @@ jobs:
         run: |
           mkdir -p deploy
           
-          for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html short_selling.html; do
+          for file in index.html option.html etf.html teguchi.html advanced.html analytics.html sector_category.html short_selling.html topix100.html us_individual.html markdown-common.css; do
             if [ -f "$file" ]; then
               cp "$file" deploy/
               echo "✅ Copied $file to deploy/"

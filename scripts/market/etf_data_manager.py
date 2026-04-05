@@ -195,6 +195,62 @@ TOPIX100 = {
   '9984.T': 'ソフトバンクG',
 }
 
+# ── 米国個別株（セクター別、finviz treemap準拠）─────────────────────────
+# yfinance は .A/.B を -A/-B 形式で扱うため、そのまま格納する（表示側もダッシュ形式）
+US_INDIVIDUAL = {
+    '半導体': ['NVDA','TSM','AVGO','MU','AMD','TXN','ARM','INTC','ADI','MRVL','MPWR','QCOM','ASX','NXPI','MCHP'],
+    'ソフトウェア-インフラ': ['MSFT','PANW','CRWD','ORCL','SNPS','NET','PLTR','FTNT','XYZ','VRSN','CRWV','ZS','MDB','NTAP','CPAY'],
+    '銀行-多角化経営': ['JPM','WFC','RY','BAC','C','MUFG','SAN','HSBC','TD','BBVA','UBS','SMFG','BMO','CM','BNS'],
+    '自動車メーカー': ['TSLA','TM','RACE','F','HMC','GM','STLA','LI','XPEV','RIVN','NIO','LCID','VFS','PSNY'],
+    'ソフトウェア-アプリケーション': ['SAP','CRM','SHOP','UBER','NOW','ADP','CDNS','INTU','SNOW','DDOG','MSTR','ADBE','ADSK','ROP','WDAY'],
+    '情報サービス': ['GOOGL','GOOG','META','BIDU','NBIS','RDDT','PINS','ZG','Z','SNAP','SPOT','TME','BILI','MTCH','BZ'],
+    '消費電子製品': ['AAPL','LPL','SONO','SONY','TBCH','ZEPP','GPRO','UEIC','FOXX','KOSS','VUZI','AXIL','RIME','FEBO','MSN'],
+    'Eコマース': ['AMZN','PDD','MELI','BABA','DASH','EBAY','JD','SE','CPNG','W','CART','CHWY','VIPS','GLBE','ETSY'],
+    '製薬-総合': ['LLY','ABBV','AZN','JNJ','MRK','AMGN','GILD','NVO','BMY','SNY','PFE','NVS','GSK','BIIB','GRFS'],
+    '石油・ガス-総合': ['XOM','SHEL','PBR','BP','CVX','TTE','PBR-A','E','SU','IMO','EC','EQNR','CVE','YPF','NFG'],
+    '保険-多角化経営': ['BRK-A','AIG','SLF','ACGL','BRK-B','HIG','BNT','FIHL','XZO','AEG','IGIC','WDH','ACGLO'],
+    '銀行-地方銀行': ['HDB','MFG','ITUB','IBN','LYG','NU','PNC','NWG','DB','BSBR','USB','TFC','FITB','BBD','BBDO'],
+    '宇宙・防衛': ['GE','LMT','NOC','GD','HWM','RTX','LHX','ESLT','RKLB','BA','TDG','HEI','HEI-A','AXON','CW'],
+    'ディスカウントストア': ['WMT','TGT','DG','DLTR','OLLI','COST','BJ','PSMT','TBBB'],
+    'クレジットサービス': ['AXP','COF','V','PYPL','SOFI','AFRM','MA','SYF','ALLY','OMF','NNI','FCFS','CACC','SLM'],
+    '半導体製造装置・材料': ['ASML','LRCX','KLAC','TER','ENTG','NVMI','AMAT','Q','AMKR','FORM','ONTO','CAMT','IPGP'],
+    '電力': ['NEE','NGG','AEP','SO','D','ETR','EXC','XEL','PEG','PCG','DUK','ED','WEC','AEE','DTE'],
+    '通信サービス': ['TMUS','VZ','T','AMX','SATS','VOD','CHT','VIV','BCE','CMCSA','CHTR','TU','TLK','RCI','TIGO'],
+    '資産運用管理': ['BLK','SATA','KKR','BN','BAM','AMP','STT','BX','APO','ARES','NTRS','RJF','TROW','PFG'],
+    '石油・ガス-輸送': ['ENB','KMI','TRP','WMB','ET','MPLX','OKE','EPD','LNG','TRGP','VG'],
+    'エンタメ': ['NFLX','WBD','TKO','LYV','FOX','FWONK','DIS','FOXA','FWONA','ROKU','NWS'],
+    '石油・ガス-探査・生産': ['COP','CNQ','EOG','FANG','WDS','OXY','EQT','TPL','CTRA','DVN'],
+    '特殊産業用機械': ['GEV','ETN','PH','ITW','EMR','AME','SYM','IR','CMI','ROK','OTIS','DOV','XYL','ITT'],
+    '医療機器': ['ABT','SYK','MDT','EW','GEHC','BSX','PHG','STE','DXCM','ZBH'],
+    '情報技術サービス': ['IBM','ACN','INFY','FISV','FIS','LDOS','BR','CTSH','WIT','GIB','CDW'],
+    '特殊化学品': ['LIN','SHW','ECL','APD','SQM','ALB','DD','LYB','PPG','IFF','WLK','RPM'],
+    '診断・研究': ['TMO','DHR','IDXX','A','NTRA','MTD','LH','WAT','IQV','DGX','EXAS'],
+    'パソコンハードウェア': ['ANET','DELL','SNDK','STX','PSTG','WDC','HPQ','SMCI'],
+    'バイオテクノロジー': ['VRTX','REGN','ARGX','ALNY','INSM','ROIV','RVMD','RPRX','MRNA','INCY','ONC','BNTX','GMAB','SMMT','ASND'],
+    '通信設備': ['CSCO','CIEN','LITE','UI','ERIC','MSI','NOK','ASTS','HPE'],
+    'ノンアルコール飲料': ['KO','MNST','CCEP','KDP','COKE','PEP','KOF','CELH','PRMB'],
+    '生活必需品': ['PG','CL','KVUE','KMB','CHD','UL','EL','CLX'],
+    '外食': ['MCD','CMG','YUM','SBUX','QSR','YUMC','DRI','DPZ'],
+    'ヘルスケア・プラン': ['UNH','CI','ELV','HUM','MOH','CVS','CNC','ALHC'],
+    '電子部品': ['APH','TEL','CLS','GLW','JBL','FN','FLEX','TTMI'],
+    '財務データ・証券取引所': ['SPGI','ICE','MCO','NDAQ','MSCI','CME','COIN'],
+    '旅行': ['BKNG','RCL','CCL','CUK','TCOM','ABNB','VIK','EXPE'],
+    '鉄道': ['UNP','CP','NSC','CSX','CNI','TRN','WAB','GBX'],
+    '医療機器・製品': ['ISRG','BDX','ALC','RMD','HOLX','MDLN','WST'],
+    '資本市場': ['MS','GS','SCHW','HOOD','TW','NMR','CRCL','FUTU','IBKR','LPLA','EVR'],
+    '農業・建設用重機': ['CAT','PCAR','CNH','OSK','TEX','DE','AGCO'],
+    'ゴールド': ['NEM','B','WPM','AU','GFI','AEM','FNV','KGC','PAAS'],
+    '損害保険': ['CB','TRV','ALL','PGR','CINF','WRB','MKL'],
+    'タバコ': ['PM','MO','RLX','BTI','TPB','UVV','ISPR','PAPA'],
+    '鉱業-金属': ['BHP','VALE','TECK','RIO','MP','ALM','EMAT','SKE'],
+    '内装材': ['HD','FND','HVT-A','LOW','HVT','LIVE'],
+    '建設': ['PWR','FER','EME','FIX','MTZ','APG','J'],
+    'REIT-特化型': ['EQIX','AMT','CCI','DLR','IRM','SBAC'],
+    '製薬-専門特化': ['TAK','HLN','UTHR','ZTS','TEVA','VTRS'],
+    '建設製品・設備': ['CARR','CSL','TT','JCI','LII','MAS'],
+}
+ALL_US_INDIVIDUAL_SYMBOLS = sorted(set(s for lst in US_INDIVIDUAL.values() for s in lst))
+
 # ── 米国セクターETF（SPDRセレクト・セクター等）─────────────────────────────
 US_SECTORS = {
   'XLK':  '情報技術',
@@ -507,6 +563,7 @@ ALL_SYMBOLS = list(set(
     + list(SEMICONDUCTOR_US.keys())
     + list(US_SECTORS.keys())
     + list(TOPIX100.keys())
+    + ALL_US_INDIVIDUAL_SYMBOLS
     + ALL_BASKET_SYMBOLS
 ))
 FETCH_DAYS = 400
@@ -523,6 +580,7 @@ def fetch_data(period="400d", interval="1d"):
         "semiconductor_us": SEMICONDUCTOR_US,
         "topix100": TOPIX100,
         "us_sectors": US_SECTORS,
+        "us_individual": US_INDIVIDUAL,
         "dates": [],
         "prices": {}
     }
@@ -554,7 +612,7 @@ def fetch_data(period="400d", interval="1d"):
         df = df[df[BENCHMARK].notna()]
 
     # ── ETFセクター・半導体銘柄価格の保存──
-    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys()) + list(TOPIX100.keys())
+    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys()) + list(TOPIX100.keys()) + ALL_US_INDIVIDUAL_SYMBOLS
     for symbol in etf_symbols:
         if symbol in df.columns:
             output["prices"][symbol] = [

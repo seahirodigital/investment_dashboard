@@ -6,9 +6,10 @@
 
 ## 📋 最新の大型アップデート (2026-03-25)
 
-### 新規実装：TOPIX100分析 ＆ 売買フロー底打ち検知
+### 新規実装：TOPIX100分析 ＆ 売買フロー底打ち検知 ＆ US個別分析
 **実績:** 
 - **TOPIX100分析** (`topix100.html`): TOPIX Core30 + Large70 の全98銘柄のパフォーマンスを絶対値ベースで比較（日経指数等の参照ライン付き）する専用ダッシュボード構築。
+- **US個別分析** (`us_individual.html`): finviz treemap準拠・48セクター約460銘柄の米国個別株パフォーマンスをS&P500基準で比較する専用ダッシュボード構築。全銘柄統合チャート＋セクター別カードを縦積み表示。日次終値ベース、US市場閉場後 JST 06:15 に自動更新（`daily_etf.yml`）。
 - **売買フロー底打ち検知** (`short_selling.html`): 東証の日次「空売り集計」から、①売買代金の急膨張(パニック売り) ②空売り比率ピークアウト(ショートカバー)の2つのシグナルを検知し、相場の底打ち(Phase 3)を判定するアルゴリズムを実装。
 
 > 技術的なトラブルシューティング・試行錯誤の記録は [techreference.md](techreference.md) を参照
@@ -614,3 +615,100 @@ TOPIX100（TOPIX Core30 + TOPIX Large70）構成銘柄98銘柄の相対パフォ
 ### GitHub Actions との連携
 *   TOPIX100銘柄データは `etf_data_manager.py` の `TOPIX100` 定数に定義され、既存のETF・半導体銘柄と一括でダウンロード
 *   `daily_etf.yml` / `intraday_etf.yml` の既存ワークフローでデータ更新・GitHub Pages配信される（追加のワークフロー不要）
+
+---
+
+## US個別分析ページ (`us_individual.html`)
+
+### 概要
+finviz treemap準拠の米国個別株48セクター・約460銘柄を、**S&P500（^GSPC）基準**で相対パフォーマンス比較するページ。TOPIX100分析ページの `Topix100Section` コンポーネントを汎用化した `StockSection` コンポーネントを流用し、全銘柄統合セクション＋セクター別カードを縦積み表示。
+
+### サイドバー配置
+「個別分析」カテゴリ、`TOPIX100分析` の直下に「US個別分析」として配置。
+
+### 構成：全48セクター・約460銘柄
+
+| # | セクター | ティッカー |
+|---|---------|---------|
+| 1 | 半導体 | NVDA, TSM, AVGO, MU, AMD, TXN, ARM, INTC, ADI, MRVL, MPWR, QCOM, ASX, NXPI, MCHP |
+| 2 | ソフトウェア-インフラ | MSFT, PANW, CRWD, ORCL, SNPS, NET, PLTR, FTNT, XYZ, VRSN, CRWV, ZS, MDB, NTAP, CPAY |
+| 3 | 銀行-多角化経営 | JPM, WFC, RY, BAC, C, MUFG, SAN, HSBC, TD, BBVA, UBS, SMFG, BMO, CM, BNS |
+| 4 | 自動車メーカー | TSLA, TM, RACE, F, HMC, GM, STLA, LI, XPEV, RIVN, NIO, LCID, VFS, PSNY |
+| 5 | ソフトウェア-アプリケーション | SAP, CRM, SHOP, UBER, NOW, ADP, CDNS, INTU, SNOW, DDOG, MSTR, ADBE, ADSK, ROP, WDAY |
+| 6 | 情報サービス | GOOGL, GOOG, META, BIDU, NBIS, RDDT, PINS, ZG, Z, SNAP, SPOT, TME, BILI, MTCH, BZ |
+| 7 | 消費電子製品 | AAPL, LPL, SONO, SONY, TBCH, ZEPP, GPRO, UEIC, FOXX, KOSS, VUZI, AXIL, RIME, FEBO, MSN |
+| 8 | Eコマース | AMZN, PDD, MELI, BABA, DASH, EBAY, JD, SE, CPNG, W, CART, CHWY, VIPS, GLBE, ETSY |
+| 9 | 製薬-総合 | LLY, ABBV, AZN, JNJ, MRK, AMGN, GILD, NVO, BMY, SNY, PFE, NVS, GSK, BIIB, GRFS |
+| 10 | 石油・ガス-総合 | XOM, SHEL, PBR, BP, CVX, TTE, PBR-A, E, SU, IMO, EC, EQNR, CVE, YPF, NFG |
+| 11 | 保険-多角化経営 | BRK-A, AIG, SLF, ACGL, BRK-B, HIG, BNT, FIHL, XZO, AEG, IGIC, WDH, ACGLO |
+| 12 | 銀行-地方銀行 | HDB, MFG, ITUB, IBN, LYG, NU, PNC, NWG, DB, BSBR, USB, TFC, FITB, BBD, BBDO |
+| 13 | 宇宙・防衛 | GE, LMT, NOC, GD, HWM, RTX, LHX, ESLT, RKLB, BA, TDG, HEI, HEI-A, AXON, CW |
+| 14 | ディスカウントストア | WMT, TGT, DG, DLTR, OLLI, COST, BJ, PSMT, TBBB |
+| 15 | クレジットサービス | AXP, COF, V, PYPL, SOFI, AFRM, MA, SYF, ALLY, OMF, NNI, FCFS, CACC, SLM |
+| 16 | 半導体製造装置・材料 | ASML, LRCX, KLAC, TER, ENTG, NVMI, AMAT, Q, AMKR, FORM, ONTO, CAMT, IPGP |
+| 17 | 電力 | NEE, NGG, AEP, SO, D, ETR, EXC, XEL, PEG, PCG, DUK, ED, WEC, AEE, DTE |
+| 18 | 通信サービス | TMUS, VZ, T, AMX, SATS, VOD, CHT, VIV, BCE, CMCSA, CHTR, TU, TLK, RCI, TIGO |
+| 19 | 資産運用管理 | BLK, SATA, KKR, BN, BAM, AMP, STT, BX, APO, ARES, NTRS, RJF, TROW, PFG |
+| 20 | 石油・ガス-輸送 | ENB, KMI, TRP, WMB, ET, MPLX, OKE, EPD, LNG, TRGP, VG |
+| 21 | エンタメ | NFLX, WBD, TKO, LYV, FOX, FWONK, DIS, FOXA, FWONA, ROKU, NWS |
+| 22 | 石油・ガス-探査・生産 | COP, CNQ, EOG, FANG, WDS, OXY, EQT, TPL, CTRA, DVN |
+| 23 | 特殊産業用機械 | GEV, ETN, PH, ITW, EMR, AME, SYM, IR, CMI, ROK, OTIS, DOV, XYL, ITT |
+| 24 | 医療機器 | ABT, SYK, MDT, EW, GEHC, BSX, PHG, STE, DXCM, ZBH |
+| 25 | 情報技術サービス | IBM, ACN, INFY, FISV, FIS, LDOS, BR, CTSH, WIT, GIB, CDW |
+| 26 | 特殊化学品 | LIN, SHW, ECL, APD, SQM, ALB, DD, LYB, PPG, IFF, WLK, RPM |
+| 27 | 診断・研究 | TMO, DHR, IDXX, A, NTRA, MTD, LH, WAT, IQV, DGX, EXAS |
+| 28 | パソコンハードウェア | ANET, DELL, SNDK, STX, PSTG, WDC, HPQ, SMCI |
+| 29 | バイオテクノロジー | VRTX, REGN, ARGX, ALNY, INSM, ROIV, RVMD, RPRX, MRNA, INCY, ONC, BNTX, GMAB, SMMT, ASND |
+| 30 | 通信設備 | CSCO, CIEN, LITE, UI, ERIC, MSI, NOK, ASTS, HPE |
+| 31 | ノンアルコール飲料 | KO, MNST, CCEP, KDP, COKE, PEP, KOF, CELH, PRMB |
+| 32 | 生活必需品 | PG, CL, KVUE, KMB, CHD, UL, EL, CLX |
+| 33 | 外食 | MCD, CMG, YUM, SBUX, QSR, YUMC, DRI, DPZ |
+| 34 | ヘルスケア・プラン | UNH, CI, ELV, HUM, MOH, CVS, CNC, ALHC |
+| 35 | 電子部品 | APH, TEL, CLS, GLW, JBL, FN, FLEX, TTMI |
+| 36 | 財務データ・証券取引所 | SPGI, ICE, MCO, NDAQ, MSCI, CME, COIN |
+| 37 | 旅行 | BKNG, RCL, CCL, CUK, TCOM, ABNB, VIK, EXPE |
+| 38 | 鉄道 | UNP, CP, NSC, CSX, CNI, TRN, WAB, GBX |
+| 39 | 医療機器・製品 | ISRG, BDX, ALC, RMD, HOLX, MDLN, WST |
+| 40 | 資本市場 | MS, GS, SCHW, HOOD, TW, NMR, CRCL, FUTU, IBKR, LPLA, EVR |
+| 41 | 農業・建設用重機 | CAT, PCAR, CNH, OSK, TEX, DE, AGCO |
+| 42 | ゴールド | NEM, B, WPM, AU, GFI, AEM, FNV, KGC, PAAS |
+| 43 | 損害保険 | CB, TRV, ALL, PGR, CINF, WRB, MKL |
+| 44 | タバコ | PM, MO, RLX, BTI, TPB, UVV, ISPR, PAPA |
+| 45 | 鉱業-金属 | BHP, VALE, TECK, RIO, MP, ALM, EMAT, SKE |
+| 46 | 内装材 | HD, FND, HVT-A, LOW, HVT, LIVE |
+| 47 | 建設 | PWR, FER, EME, FIX, MTZ, APG, J |
+| 48 | REIT-特化型 | EQIX, AMT, CCI, DLR, IRM, SBAC |
+| 49 | 製薬-専門特化 | TAK, HLN, UTHR, ZTS, TEVA, VTRS |
+| 50 | 建設製品・設備 | CARR, CSL, TT, JCI, LII, MAS |
+
+**注記:**
+- `BRK-A`, `BRK-B`, `PBR-A`, `HEI-A`, `HVT-A` は yfinance 仕様によりドット記法（`.A`/`.B`）をダッシュ記法（`-A`/`-B`）で格納。表示もダッシュ形式。
+- 切れ文字ラベルの復元: `SB..`=SBAC, `PA..`=PAAS, `CT.`=CTRA, `PS.`=PSNY, `SM..`=SMCI/SMMT, `GM..`=GMAB, `AS..`=ASND, `PR..`=PRMB
+- ティッカーはユーザー提示の finviz treemap 画面どおり全件登録（フィルタなし）
+
+### データソース
+*   `data/etf_data.json` — 日次終値データ（400日分、イントラデイは使用しない）
+*   データ取得元: Yahoo Finance (`yfinance`)、`scripts/market/etf_data_manager.py` の `US_INDIVIDUAL` 定数で定義
+*   ベンチマーク: `^GSPC`（S&P500 Index）
+
+### パフォーマンス計算ロジック
+1. **絶対値ベース**: S&P500 で割り返しせず、各銘柄の期間開始日を基準に変動率を計算
+2. **計算式**: `((当日終値 / 期間開始日終値) - 1) × 100 [%]`
+3. **基準ライン**: `^GSPC`（S&P500 Index）を黒点線で同時表示
+
+### UIレイアウト
+*   **上段**: 全セクター横断の統合チャート＋ランキング（約460銘柄）
+*   **以下**: セクター別カードを **finviz treemap 順**に縦積み表示（半導体 → ソフトウェア-インフラ → ... → 建設製品・設備）
+*   **カード構成**: TOPIX100分析と同一（左半面チャート、右半面ランキング、高さ600px、フィルタボタン ALL/TOP10+WORST10/TOP10/WORST10）
+
+### 期間選択
+5日 / 10日 / 1ヶ月 / 2ヶ月 / 3ヶ月 / 6ヶ月 / 1年（**日次終値のみ**、イントラデイなし）
+
+### 自動更新
+*   **US市場閉場後 JST 06:15**（`daily_etf.yml` の第二 cron `15 21 * * 1-5`）に yfinance 経由で一括取得
+*   ページ復帰時（タブ切替・スリープ復帰）: 500ms デバウンス後に再取得
+
+### GitHub Actions との連携
+*   US個別銘柄データは `etf_data_manager.py` の `US_INDIVIDUAL` 定数に定義され、既存のETF・TOPIX100銘柄と一括でダウンロード
+*   `daily_etf.yml` のデプロイ対象に `us_individual.html` を追加済
+*   追加のワークフローは不要
