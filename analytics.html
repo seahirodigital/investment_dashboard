@@ -238,24 +238,17 @@
                         }
                         setRawData(json);
                         
-                        const today = new Date();
-                        const formatYMD = (d) => d.toISOString().split('T')[0];
-                        
-                        // 今日を終了日に設定
-                        setEndDate(formatYMD(today));
-            
-                        // 今週の月曜日を取得
-                        const currentDayOfWeek = today.getDay(); // 0=日曜, 1=月曜, ..., 6=土曜
-                        const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1; // 日曜の場合は6日前、それ以外は (曜日 - 1)
-                        const thisMonday = new Date(today);
-                        thisMonday.setDate(today.getDate() - daysFromMonday);
-            
-                        // 先週の月曜日を取得（今週の月曜日から7日前）
-                        const lastMonday = new Date(thisMonday);
-                        lastMonday.setDate(thisMonday.getDate() - 7);
-                        
-                        // 先週の月曜日を開始日に設定
-                        setStartDate(formatYMD(lastMonday));
+                        const availableWeeks = [...json.data]
+                            .filter(d => d.week_start && d.week_end)
+                            .sort((a, b) => a.week_end.localeCompare(b.week_end));
+                        const latestWeek = availableWeeks[availableWeeks.length - 1];
+                        const startWeek = availableWeeks[Math.max(availableWeeks.length - 5, 0)];
+
+                        // JPX週次データには公表ラグがあるため、今日基準ではなく直近5件の利用可能な週を初期表示する
+                        if (latestWeek && startWeek) {
+                            setEndDate(latestWeek.week_end);
+                            setStartDate(startWeek.week_start);
+                        }
                         
                         setLoading(false);
                     })
@@ -313,7 +306,7 @@
                     return d.week_start <= endDate && d.week_end >= startDate;
                 });
                 
-                filtered.sort((a, b) => a.date.localeCompare(b.date));
+                filtered.sort((a, b) => a.week_start.localeCompare(b.week_start));
                 
                 let cumFlow = 0;
                 
