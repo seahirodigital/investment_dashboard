@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 # ファイルパス定義
 SECTORS_FILE = 'sectors.json'
 HISTORY_CSV = 'history.csv'
-OUTPUT_JSON = 'sector_data.json'
+OUTPUT_JSON = os.path.join('data', 'sector_data.json')
+LEGACY_OUTPUT_JSON = 'sector_data.json'
 
 # デフォルト設定
 DEFAULT_SECTORS = [
@@ -229,8 +230,12 @@ def main():
     # 【重要修正】データ件数が0でも必ずJSONファイルを生成する
     # これによりHTML側で404エラーになるのを防ぐ
     try:
-        with open(OUTPUT_JSON, 'w', encoding='utf-8') as f:
-            json.dump(output, f, ensure_ascii=False, indent=2)
+        for output_path in (OUTPUT_JSON, LEGACY_OUTPUT_JSON):
+            output_dir = os.path.dirname(output_path)
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(output, f, ensure_ascii=False, indent=2)
         
         if processed_count > 0:
             print(f"Successfully generated {OUTPUT_JSON} with {processed_count} records.")
