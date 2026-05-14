@@ -79,7 +79,7 @@ jobs:
           fi
       
       - name: Commit to main branch
-        if: steps.check_changes.outputs.has_changes == 'true'
+        if: ${{ steps.check_changes.outputs.has_changes == 'true' && github.event_name != 'workflow_dispatch' }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
