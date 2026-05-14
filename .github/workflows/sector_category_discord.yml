@@ -31,11 +31,14 @@ jobs:
         run: |
           python - <<'PY'
           import os
+          import re
           import subprocess
           import time
           from pathlib import Path
           from PIL import Image, ImageOps
           from playwright.sync_api import sync_playwright
+          from zoneinfo import ZoneInfo
+          from datetime import datetime
 
           output_dir = Path('artifacts/sector_category_screenshots')
           output_dir.mkdir(parents=True, exist_ok=True)
@@ -91,6 +94,52 @@ jobs:
                       canvas.paste(left, (0, 0))
                       canvas.paste(right, (left.width + gap, 0))
                       canvas.save(output_path)
+
+                  def extract_ranking_items():
+                      rows = ranking.evaluate(
+                          """element => Array.from(element.querySelectorAll('.relative.group.h-8')).map(row => {
+                            const nameEl = row.querySelector('[title]');
+                            const perfEl = row.querySelector('.font-mono');
+                            return {
+                              name: (nameEl?.getAttribute('title') || nameEl?.textContent || '').trim(),
+                              performance: (perfEl?.textContent || '').trim(),
+                            };
+                          }).filter(item => item.name && item.performance)"""
+                      )
+                      items = []
+                      for row in rows:
+                          performance = re.sub(r'\s+', '', row['performance'])
+                          items.append({'name': row['name'], 'performance': performance})
+                      return items
+
+                  def write_ranking_summary(items):
+                      today = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
+                      top_items = items[:5]
+                      bottom_items = list(reversed(items[-5:]))
+
+                      lines = [
+                          f"{today}の上昇・下落セクター/TOPIX相対分析",
+                          "#日経平均 #株式投資 #デイトレ",
+                          "",
+                          "▼上位",
+                      ]
+                      lines.extend(f"{item['name']}: {item['performance']}" for item in top_items)
+                      lines.extend([
+                          "",
+                          "▼下位",
+                      ])
+                      lines.extend(f"{item['name']}: {item['performance']}" for item in bottom_items)
+                      lines.extend([
+                          "",
+                          "セクター分類分析ページ",
+                          "https://seahirodigital.github.io/investment_dashboard/sector_category.html",
+                          "https://seahirodigital.github.io/investment_dashboard/",
+                      ])
+
+                      (output_dir / 'discord_message.txt').write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+                  ranking_items = extract_ranking_items()
+                  write_ranking_summary(ranking_items)
 
                   page.get_by_role('button', name='▲ 上7').click()
                   page.wait_for_timeout(2500)
@@ -157,20 +206,6 @@ jobs:
             echo "DISCORD_OPTION_WEBHOOK_URL secret is not set."
             exit 1
           fi
-
-          python - <<'PY'
-          from pathlib import Path
-
-          lines = [
-              "セクター分類分析ページの15:40時点スクリーンショットです。",
-              "",
-              "セクター分類分析ページ",
-              "https://seahirodigital.github.io/investment_dashboard/sector_category.html",
-              "https://seahirodigital.github.io/investment_dashboard/",
-          ]
-          message = "\n".join(lines) + "\n"
-          Path("artifacts/sector_category_screenshots/discord_message.txt").write_text(message, encoding="utf-8")
-          PY
 
           curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
             -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
