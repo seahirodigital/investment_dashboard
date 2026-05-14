@@ -146,7 +146,7 @@ jobs:
           targets = [
               {
                   'url': 'http://127.0.0.1:8000/index.html?view=jpx',
-                  'selector': 'text=海外投資家動向',
+                  'selector': 'xpath=//h2[contains(., "差引推移")]/ancestor::div[contains(@class, "bg-white")][1]',
                   'file': 'foreign_investors_jpx_mof.png',
               },
               {
@@ -165,9 +165,10 @@ jobs:
 
                   for target in targets:
                       page.goto(target['url'], wait_until='domcontentloaded', timeout=60000)
-                      page.locator(target['selector']).first.wait_for(state='visible', timeout=45000)
+                      locator = page.locator(target['selector']).first
+                      locator.wait_for(state='visible', timeout=45000)
                       page.wait_for_timeout(8000)
-                      page.screenshot(
+                      locator.screenshot(
                           path=f"artifacts/dashboard_screenshots/{target['file']}",
                       )
 
@@ -187,7 +188,25 @@ jobs:
             exit 1
           fi
 
+          python - <<'PY'
+          from pathlib import Path
+
+          lines = [
+              "海外投資家動向（JPX・財務省） / セクター別感応度ページを更新しました。現状の最新データでスクリーンショットを送信します。",
+              "",
+              "海外投資家動向（JPX・財務省）",
+              "https://seahirodigital.github.io/investment_dashboard/index.html?view=jpx",
+              "https://seahirodigital.github.io/investment_dashboard/",
+              "",
+              "セクター別感応度ページ",
+              "https://seahirodigital.github.io/investment_dashboard/analytics.html",
+              "https://seahirodigital.github.io/investment_dashboard/",
+          ]
+          message = "\n".join(lines) + "\n"
+          Path("artifacts/dashboard_screenshots/discord_message.txt").write_text(message, encoding="utf-8")
+          PY
+
           curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
-            -F 'content=海外投資家動向（JPX・財務省） / セクター別感応度ページを更新しました。現状の最新データでスクリーンショットを送信します。\n\n海外投資家動向（JPX・財務省）\nURL: https://seahirodigital.github.io/investment_dashboard/index.html?view=jpx\nURL: https://seahirodigital.github.io/investment_dashboard/\n\nセクター別感応度ページ\nURL: https://seahirodigital.github.io/investment_dashboard/analytics.html\nURL: https://seahirodigital.github.io/investment_dashboard/' \
+            -F "content=<artifacts/dashboard_screenshots/discord_message.txt" \
             -F "files[0]=@artifacts/dashboard_screenshots/foreign_investors_jpx_mof.png" \
             -F "files[1]=@artifacts/dashboard_screenshots/sector_sensitivity.png"
