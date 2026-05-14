@@ -25,6 +25,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install playwright
+          python -m playwright install --with-deps chromium
 
       - name: Fetch JPX Data and Export JSON
         env:
@@ -32,6 +34,61 @@ jobs:
         run: |
           python scripts/jpx/fetch_teguchi.py
           python scripts/jpx/fetch_option.py
+
+      - name: Capture option charts
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          import time
+          from playwright.sync_api import sync_playwright
+
+          os.makedirs('artifacts/option_screenshots', exist_ok=True)
+
+          targets = [
+              ('chartPurpose1_Diff', '01_major_option_diff.png'),
+              ('chartPurpose1_Total', '02_major_option_total.png'),
+              ('chartTrend', '03_major_option_trend.png'),
+              ('chartPurpose2_225_OI', '04_n225_oi_by_strike.png'),
+              ('chartPurpose2_225_Diff', '05_n225_diff_by_strike.png'),
+          ]
+
+          server = subprocess.Popen(['python', '-m', 'http.server', '8000'])
+          time.sleep(2)
+          try:
+              with sync_playwright() as p:
+                  browser = p.chromium.launch()
+                  page = browser.new_page(viewport={"width": 1920, "height": 3000})
+                  page.goto('http://127.0.0.1:8000/option.html', wait_until='networkidle')
+                  page.wait_for_timeout(8000)
+
+                  for element_id, file_name in targets:
+                      locator = page.locator(f'#{element_id}')
+                      locator.wait_for(state='visible', timeout=30000)
+                      locator.screenshot(path=f'artifacts/option_screenshots/{file_name}')
+
+                  browser.close()
+          finally:
+              server.terminate()
+              server.wait(timeout=10)
+          PY
+
+      - name: Send option chart screenshots to Discord
+        env:
+          DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_OPTION_WEBHOOK_URL" ]; then
+            echo "DISCORD_OPTION_WEBHOOK_URL secret is not set."
+            exit 1
+          fi
+
+          curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
+            -F 'content=Option取得分析 完了。主要オプション 概要 / 日経225オプション 権利行使価格別 建玉増減 の全図表スクリーンショットです。' \
+            -F "files[0]=@artifacts/option_screenshots/01_major_option_diff.png" \
+            -F "files[1]=@artifacts/option_screenshots/02_major_option_total.png" \
+            -F "files[2]=@artifacts/option_screenshots/03_major_option_trend.png" \
+            -F "files[3]=@artifacts/option_screenshots/04_n225_oi_by_strike.png" \
+            -F "files[4]=@artifacts/option_screenshots/05_n225_diff_by_strike.png"
 
       - name: Commit and Push Data
         run: |
