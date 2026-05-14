@@ -83,7 +83,7 @@ jobs:
           fi
 
           curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
-            -F 'content=Option取得分析 完了。主要オプション 概要 / 日経225オプション 権利行使価格別 建玉増減 の全図表スクリーンショットです。' \
+            -F 'content=Option取得分析 完了。主要オプション 概要 / 日経225オプション 権利行使価格別 建玉増減 の全図表スクリーンショットです。\n\nURL: https://seahirodigital.github.io/investment_dashboard/option.html' \
             -F "files[0]=@artifacts/option_screenshots/01_major_option_diff.png" \
             -F "files[1]=@artifacts/option_screenshots/02_major_option_total.png" \
             -F "files[2]=@artifacts/option_screenshots/03_major_option_trend.png" \
