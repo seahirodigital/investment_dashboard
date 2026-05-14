@@ -1,0 +1,132 @@
+name: Sector Category Discord Screenshots
+
+on:
+  schedule:
+    # 平日 15:40 JST = 06:40 UTC。16:00 JST の ETF 日次更新より前に送信する。
+    - cron: '40 6 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  send-sector-category:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Capture sector category screenshots
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          import time
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          output_dir = Path('artifacts/sector_category_screenshots')
+          output_dir.mkdir(parents=True, exist_ok=True)
+
+          page_url = 'http://127.0.0.1:8000/sector_category.html'
+          chart_selector = (
+              'xpath=//span[contains(., "相対パフォーマンス推移（全セクター / vs TOPIX）")]'
+              '/ancestor::div[contains(@class, "bg-white")][1]'
+              '//div[contains(@class, "md:w-[58%]")]'
+          )
+          ranking_selector = (
+              'xpath=//span[contains(., "相対パフォーマンス推移（全セクター / vs TOPIX）")]'
+              '/ancestor::div[contains(@class, "bg-white")][1]'
+              '//div[contains(@class, "md:w-[42%]")]'
+          )
+
+          server = subprocess.Popen(['python', '-m', 'http.server', '8000'])
+          time.sleep(2)
+          try:
+              with sync_playwright() as p:
+                  browser = p.chromium.launch()
+                  page = browser.new_page(viewport={"width": 1440, "height": 2200})
+                  page.goto(page_url, wait_until='domcontentloaded', timeout=60000)
+                  page.locator('text=相対パフォーマンス推移').first.wait_for(state='visible', timeout=45000)
+                  page.wait_for_timeout(8000)
+
+                  chart = page.locator(chart_selector).first
+                  chart.wait_for(state='visible', timeout=45000)
+
+                  page.get_by_role('button', name='▲ 上7').click()
+                  page.wait_for_timeout(2500)
+                  chart.screenshot(path=str(output_dir / 'sector_category_top7_chart.png'))
+
+                  page.get_by_role('button', name='▼ 下7').click()
+                  page.wait_for_timeout(2500)
+                  chart.screenshot(path=str(output_dir / 'sector_category_bottom7_chart.png'))
+
+                  ranking = page.locator(ranking_selector).first
+                  ranking.wait_for(state='visible', timeout=45000)
+                  ranking.evaluate(
+                      """element => {
+                        const scroller = element.querySelector('.overflow-y-auto');
+                        if (scroller) {
+                          scroller.style.overflow = 'visible';
+                          scroller.style.height = 'auto';
+                          scroller.style.maxHeight = 'none';
+                        }
+                        element.style.height = 'auto';
+                        element.style.maxHeight = 'none';
+                        element.style.overflow = 'visible';
+                        let parent = element.parentElement;
+                        for (let i = 0; i < 6 && parent; i += 1) {
+                          parent.style.height = 'auto';
+                          parent.style.maxHeight = 'none';
+                          parent.style.overflow = 'visible';
+                          parent = parent.parentElement;
+                        }
+                      }"""
+                  )
+                  page.wait_for_timeout(1000)
+                  ranking.screenshot(path=str(output_dir / 'sector_category_full_ranking.png'))
+
+                  browser.close()
+          finally:
+              server.terminate()
+              server.wait(timeout=10)
+          PY
+
+      - name: Send sector category screenshots to Discord
+        env:
+          DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_OPTION_WEBHOOK_URL" ]; then
+            echo "DISCORD_OPTION_WEBHOOK_URL secret is not set."
+            exit 1
+          fi
+
+          python - <<'PY'
+          from pathlib import Path
+
+          lines = [
+              "セクター分類分析ページの15:40時点スクリーンショットです。",
+              "",
+              "セクター分類分析ページ",
+              "https://seahirodigital.github.io/investment_dashboard/sector_category.html",
+              "https://seahirodigital.github.io/investment_dashboard/",
+          ]
+          message = "\n".join(lines) + "\n"
+          Path("artifacts/sector_category_screenshots/discord_message.txt").write_text(message, encoding="utf-8")
+          PY
+
+          curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
+            -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
+            -F "files[0]=@artifacts/sector_category_screenshots/sector_category_top7_chart.png" \
+            -F "files[1]=@artifacts/sector_category_screenshots/sector_category_bottom7_chart.png" \
+            -F "files[2]=@artifacts/sector_category_screenshots/sector_category_full_ranking.png"
