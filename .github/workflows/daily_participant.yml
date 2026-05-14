@@ -82,8 +82,27 @@ jobs:
             exit 1
           fi
 
+          python - <<'PY'
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          today = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
+          lines = [
+              f"{today}の日経225 オプション分析",
+              "",
+              "",
+              "#日経平均 #株式投資 #デイトレ #N225 #オプション #CFD",
+              "",
+              "",
+              "https://seahirodigital.github.io/investment_dashboard/option.html",
+              "https://seahirodigital.github.io/investment_dashboard/",
+          ]
+          Path("artifacts/option_screenshots/discord_message.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+
           curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
-            -F 'content=Option取得分析 完了。主要オプション 概要 / 日経225オプション 権利行使価格別 建玉増減 の全図表スクリーンショットです。\n\nURL: https://seahirodigital.github.io/investment_dashboard/option.html' \
+            -F "content=<artifacts/option_screenshots/discord_message.txt" \
             -F "files[0]=@artifacts/option_screenshots/01_major_option_diff.png" \
             -F "files[1]=@artifacts/option_screenshots/02_major_option_total.png" \
             -F "files[2]=@artifacts/option_screenshots/03_major_option_trend.png" \

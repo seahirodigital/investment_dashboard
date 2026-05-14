@@ -37,8 +37,6 @@ jobs:
           from pathlib import Path
           from PIL import Image, ImageOps
           from playwright.sync_api import sync_playwright
-          from zoneinfo import ZoneInfo
-          from datetime import datetime
 
           output_dir = Path('artifacts/sector_category_screenshots')
           output_dir.mkdir(parents=True, exist_ok=True)
@@ -113,25 +111,24 @@ jobs:
                       return items
 
                   def write_ranking_summary(items):
-                      today = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
                       top_items = items[:5]
                       bottom_items = list(reversed(items[-5:]))
 
                       lines = [
-                          f"{today}の上昇・下落セクター/TOPIX相対分析",
-                          "#日経平均 #株式投資 #デイトレ",
+                          "先週の海外投資家のセクター資金注入割合",
                           "",
-                          "▼上位",
+                          "▼上位5件",
                       ]
                       lines.extend(f"{item['name']}: {item['performance']}" for item in top_items)
                       lines.extend([
                           "",
-                          "▼下位",
+                          "▼下位5件",
                       ])
                       lines.extend(f"{item['name']}: {item['performance']}" for item in bottom_items)
                       lines.extend([
                           "",
-                          "セクター分類分析ページ",
+                          "#日経平均 #株式投資 #デイトレ #TOPIX #N225 #オプション #CFD",
+                          "",
                           "https://seahirodigital.github.io/investment_dashboard/sector_category.html",
                           "https://seahirodigital.github.io/investment_dashboard/",
                       ])
