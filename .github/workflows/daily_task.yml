@@ -86,6 +86,7 @@ jobs:
           
           # すでに check_changes で git add -A しているので、ここではコミットのみ行う
           git commit -m "Update JPX & Sector data: $(date)"
+          git pull --rebase origin main
           git push origin HEAD
       
       - name: GPIF React アプリのビルド
