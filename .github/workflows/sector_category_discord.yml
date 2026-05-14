@@ -24,6 +24,7 @@ jobs:
       - name: Install Playwright
         run: |
           pip install playwright
+          pip install pillow
           python -m playwright install --with-deps chromium
 
       - name: Capture sector category screenshots
@@ -33,6 +34,7 @@ jobs:
           import subprocess
           import time
           from pathlib import Path
+          from PIL import Image, ImageOps
           from playwright.sync_api import sync_playwright
 
           output_dir = Path('artifacts/sector_category_screenshots')
@@ -62,17 +64,62 @@ jobs:
 
                   chart = page.locator(chart_selector).first
                   chart.wait_for(state='visible', timeout=45000)
+                  ranking = page.locator(ranking_selector).first
+                  ranking.wait_for(state='visible', timeout=45000)
+
+                  def scroll_ranking(position):
+                      ranking.evaluate(
+                          """(element, position) => {
+                            const scroller = element.querySelector('.overflow-y-auto');
+                            if (!scroller) return;
+                            scroller.scrollTop = position === 'bottom' ? scroller.scrollHeight : 0;
+                          }""",
+                          position,
+                      )
+
+                  def combine(left_path, right_path, output_path):
+                      left = Image.open(left_path).convert('RGB')
+                      right = Image.open(right_path).convert('RGB')
+                      if right.height != left.height:
+                          if right.height < left.height:
+                              right = ImageOps.pad(right, (right.width, left.height), color='white', centering=(0.5, 0.0))
+                          else:
+                              right = right.crop((0, 0, right.width, left.height))
+
+                      gap = 18
+                      canvas = Image.new('RGB', (left.width + gap + right.width, left.height), 'white')
+                      canvas.paste(left, (0, 0))
+                      canvas.paste(right, (left.width + gap, 0))
+                      canvas.save(output_path)
 
                   page.get_by_role('button', name='▲ 上7').click()
                   page.wait_for_timeout(2500)
-                  chart.screenshot(path=str(output_dir / 'sector_category_top7_chart.png'))
+                  scroll_ranking('top')
+                  page.wait_for_timeout(500)
+                  top_chart = output_dir / 'sector_category_top7_chart.png'
+                  top_ranking = output_dir / 'sector_category_top7_ranking.png'
+                  chart.screenshot(path=str(top_chart))
+                  ranking.screenshot(path=str(top_ranking))
+                  combine(
+                      top_chart,
+                      top_ranking,
+                      output_dir / 'sector_category_top7_with_ranking.png',
+                  )
 
                   page.get_by_role('button', name='▼ 下7').click()
                   page.wait_for_timeout(2500)
-                  chart.screenshot(path=str(output_dir / 'sector_category_bottom7_chart.png'))
+                  scroll_ranking('bottom')
+                  page.wait_for_timeout(500)
+                  bottom_chart = output_dir / 'sector_category_bottom7_chart.png'
+                  bottom_ranking = output_dir / 'sector_category_bottom7_ranking.png'
+                  chart.screenshot(path=str(bottom_chart))
+                  ranking.screenshot(path=str(bottom_ranking))
+                  combine(
+                      bottom_chart,
+                      bottom_ranking,
+                      output_dir / 'sector_category_bottom7_with_ranking.png',
+                  )
 
-                  ranking = page.locator(ranking_selector).first
-                  ranking.wait_for(state='visible', timeout=45000)
                   ranking.evaluate(
                       """element => {
                         const scroller = element.querySelector('.overflow-y-auto');
@@ -127,6 +174,6 @@ jobs:
 
           curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
             -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
-            -F "files[0]=@artifacts/sector_category_screenshots/sector_category_top7_chart.png" \
-            -F "files[1]=@artifacts/sector_category_screenshots/sector_category_bottom7_chart.png" \
+            -F "files[0]=@artifacts/sector_category_screenshots/sector_category_top7_with_ranking.png" \
+            -F "files[1]=@artifacts/sector_category_screenshots/sector_category_bottom7_with_ranking.png" \
             -F "files[2]=@artifacts/sector_category_screenshots/sector_category_full_ranking.png"
