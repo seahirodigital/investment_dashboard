@@ -59,7 +59,7 @@ jobs:
               with sync_playwright() as p:
                   browser = p.chromium.launch()
                   page = browser.new_page(viewport={"width": 1920, "height": 3000})
-                  page.goto('http://127.0.0.1:8000/option.html', wait_until='networkidle')
+                  page.goto('http://127.0.0.1:8000/option.html', wait_until='domcontentloaded', timeout=60000)
                   page.wait_for_timeout(8000)
 
                   for element_id, file_name in targets:
