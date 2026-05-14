@@ -41,7 +41,10 @@ jobs:
           python-version: '3.10'
       
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install playwright
+          python -m playwright install --with-deps chromium
       
       - name: Run Script
         env:
@@ -127,3 +130,63 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./deploy
           keep_files: true
+
+      - name: Capture dashboard screenshots
+        if: ${{ (github.event_name == 'schedule' && steps.check_changes.outputs.has_changes == 'true') || github.event_name == 'workflow_dispatch' }}
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          import time
+          from playwright.sync_api import sync_playwright
+
+          os.makedirs('artifacts/dashboard_screenshots', exist_ok=True)
+
+          targets = [
+              {
+                  'url': 'http://127.0.0.1:8000/index.html?view=jpx',
+                  'selector': 'text=海外投資家動向',
+                  'file': 'foreign_investors_jpx_mof.png',
+              },
+              {
+                  'url': 'http://127.0.0.1:8000/analytics.html',
+                  'selector': '#chart-container',
+                  'file': 'sector_sensitivity.png',
+              },
+          ]
+
+          server = subprocess.Popen(['python', '-m', 'http.server', '8000'])
+          time.sleep(2)
+          try:
+              with sync_playwright() as p:
+                  browser = p.chromium.launch()
+                  page = browser.new_page(viewport={"width": 1440, "height": 1600})
+
+                  for target in targets:
+                      page.goto(target['url'], wait_until='domcontentloaded', timeout=60000)
+                      page.locator(target['selector']).first.wait_for(state='visible', timeout=45000)
+                      page.wait_for_timeout(8000)
+                      page.screenshot(
+                          path=f"artifacts/dashboard_screenshots/{target['file']}",
+                      )
+
+                  browser.close()
+          finally:
+              server.terminate()
+              server.wait(timeout=10)
+          PY
+
+      - name: Send dashboard screenshots to Discord
+        if: ${{ (github.event_name == 'schedule' && steps.check_changes.outputs.has_changes == 'true') || github.event_name == 'workflow_dispatch' }}
+        env:
+          DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_OPTION_WEBHOOK_URL" ]; then
+            echo "DISCORD_OPTION_WEBHOOK_URL secret is not set."
+            exit 1
+          fi
+
+          curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
+            -F 'content=海外投資家動向（JPX・財務省） / セクター別感応度ページを更新しました。現状の最新データでスクリーンショットを送信します。\n\n海外投資家動向（JPX・財務省）\nURL: https://seahirodigital.github.io/investment_dashboard/index.html?view=jpx\nURL: https://seahirodigital.github.io/investment_dashboard/\n\nセクター別感応度ページ\nURL: https://seahirodigital.github.io/investment_dashboard/analytics.html\nURL: https://seahirodigital.github.io/investment_dashboard/' \
+            -F "files[0]=@artifacts/dashboard_screenshots/foreign_investors_jpx_mof.png" \
+            -F "files[1]=@artifacts/dashboard_screenshots/sector_sensitivity.png"
