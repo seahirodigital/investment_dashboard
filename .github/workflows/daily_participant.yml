@@ -59,12 +59,44 @@ jobs:
               with sync_playwright() as p:
                   browser = p.chromium.launch()
                   page = browser.new_page(viewport={"width": 1920, "height": 3000})
-                  page.goto('http://127.0.0.1:8000/option.html', wait_until='domcontentloaded', timeout=60000)
-                  page.wait_for_timeout(8000)
+                  page.goto('http://127.0.0.1:8000/option.html?source=json&capture=1', wait_until='domcontentloaded', timeout=60000)
+                  page.wait_for_function(
+                      """() => window.optionChartsReady === true || Boolean(window.optionChartsError)""",
+                      timeout=60000,
+                  )
+                  chart_error = page.evaluate("() => window.optionChartsError")
+                  if chart_error:
+                      raise RuntimeError(f"Option charts failed to render: {chart_error}")
 
-                  for element_id, file_name in targets:
+                  def assert_canvas_has_content(element_id):
                       locator = page.locator(f'#{element_id}')
                       locator.wait_for(state='visible', timeout=30000)
+                      has_content = locator.evaluate(
+                          """canvas => {
+                            const context = canvas.getContext('2d');
+                            if (!context || canvas.width === 0 || canvas.height === 0) return false;
+                            const image = context.getImageData(0, 0, canvas.width, canvas.height);
+                            let paintedPixels = 0;
+                            for (let index = 0; index < image.data.length; index += 4) {
+                              const alpha = image.data[index + 3];
+                              if (alpha === 0) continue;
+                              const red = image.data[index];
+                              const green = image.data[index + 1];
+                              const blue = image.data[index + 2];
+                              if (!(red > 248 && green > 248 && blue > 248)) {
+                                paintedPixels += 1;
+                                if (paintedPixels > 50) return true;
+                              }
+                            }
+                            return false;
+                          }"""
+                      )
+                      if not has_content:
+                          raise RuntimeError(f"Canvas #{element_id} is blank or nearly blank.")
+                      return locator
+
+                  for element_id, file_name in targets:
+                      locator = assert_canvas_has_content(element_id)
                       locator.screenshot(path=f'artifacts/option_screenshots/{file_name}')
 
                   browser.close()

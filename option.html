@@ -27,28 +27,36 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+        const params = new URLSearchParams(window.location.search);
+        const useLocalJson = params.get('source') === 'json' || params.get('capture') === '1';
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCMTP8g8Ku1Vy6IAq9wHdESP3pRkDberOM",
-            authDomain: "nkf-option.firebaseapp.com",
-            projectId: "nkf-option",
-            storageBucket: "nkf-option.firebasestorage.app",
-            messagingSenderId: "1061572991366",
-            appId: "1:1061572991366:web:e326d645e8be1047153407",
-            measurementId: "G-8DLH6CCC3W"
-        };
+        if (!useLocalJson) {
+            const [{ initializeApp }, firestore] = await Promise.all([
+                import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js"),
+                import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js"),
+            ]);
+            const { getFirestore, collection, getDocs, doc, getDoc } = firestore;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        
-        window.firebaseDb = db;
-        window.firebaseCollection = collection;
-        window.firebaseGetDocs = getDocs;
-        window.firebaseDoc = doc;
-        window.firebaseGetDoc = getDoc;
-        window.dispatchEvent(new Event('firebase-ready'));
+            const firebaseConfig = {
+                apiKey: "AIzaSyCMTP8g8Ku1Vy6IAq9wHdESP3pRkDberOM",
+                authDomain: "nkf-option.firebaseapp.com",
+                projectId: "nkf-option",
+                storageBucket: "nkf-option.firebasestorage.app",
+                messagingSenderId: "1061572991366",
+                appId: "1:1061572991366:web:e326d645e8be1047153407",
+                measurementId: "G-8DLH6CCC3W"
+            };
+
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+
+            window.firebaseDb = db;
+            window.firebaseCollection = collection;
+            window.firebaseGetDocs = getDocs;
+            window.firebaseDoc = doc;
+            window.firebaseGetDoc = getDoc;
+            window.dispatchEvent(new Event('firebase-ready'));
+        }
     </script>
     <!-- SheetJS (XLSX) -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
@@ -266,6 +274,11 @@
 <script>
     let storedData = {};
     let chartObj = { p1_total: null, p1_diff: null, p2_225_oi: null, p2_225_diff: null, trend: null };
+    window.optionChartsReady = false;
+    window.optionChartsError = null;
+    if (window.Chart) {
+        Chart.defaults.animation = false;
+    }
     
     // UI Elements
     const logArea = document.getElementById('logArea');
@@ -287,6 +300,17 @@
         }
     }
 
+    function shouldUseLocalJson() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('source') === 'json' || params.get('capture') === '1';
+    }
+
+    function markOptionChartsReady() {
+        window.optionChartsReady = true;
+        window.optionChartsError = null;
+        window.dispatchEvent(new Event('option-charts-ready'));
+    }
+
     // Initialize
     function init() {
         btnFetch.addEventListener('click', () => {
@@ -298,6 +322,11 @@
         });
         
         logMessage("システムを初期化しました", 'success');
+        if (shouldUseLocalJson()) {
+            fetchAndProcessData();
+            return;
+        }
+
         if (window.firebaseDb) {
             initFirebase();
         } else {
@@ -307,6 +336,7 @@
             // タイムアウト設定：一定時間待ってもロードされない場合はエラーにする
             setTimeout(() => {
                 if (!window.firebaseDb) {
+                    fetchAndProcessData();
                     logMessage("Firebaseの読み込みがタイムアウトしました。通信環境を確認してください。", 'error');
                 }
             }, 5000);
@@ -349,7 +379,7 @@
              console.error("Firebase init error:", err);
              logMessage(`エラー: Firebaseの読み込みに失敗しました`, 'error');
              // 従来のJSONでのフォールバック
-             fetchAndProcessData();
+             await fetchAndProcessData();
         } finally {
             btnFetch.disabled = false;
             loader.classList.add('hidden');
@@ -379,6 +409,7 @@
             }
 
         } catch (error) {
+            window.optionChartsError = error.message;
             logMessage(`エラー: ${error.message} (本日のデータがまだ準備されていない可能性があります)`, 'error');
             console.error(error);
         } finally {
@@ -400,12 +431,18 @@
     }
 
     function renderAllCharts(dateKey) {
-        if(!storedData[dateKey]) return;
+        window.optionChartsReady = false;
+        window.optionChartsError = null;
+        if(!storedData[dateKey]) {
+            window.optionChartsError = `No option data for ${dateKey}`;
+            return;
+        }
         const d = storedData[dateKey];
         
         renderPurpose1Chart(d.p1);
         renderPurpose2Chart('chartPurpose2_225', 'p2_225', d.p2_225, '日経225');
         renderTrendChart();
+        requestAnimationFrame(() => requestAnimationFrame(markOptionChartsReady));
     }
 
     function renderPurpose1Chart(dataObj) {
