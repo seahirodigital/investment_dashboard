@@ -802,13 +802,26 @@
 
             const copySummary = useCallback(() => {
                 if (!activeRanking.length) return;
-                const top3 = activeRanking.slice(0, 3);
-                const worst = activeRanking[activeRanking.length - 1];
-                const label = market === 'jp' ? '全セクター / vs TOPIX' : '米国セクターETF（絶対値）';
-                const note = market === 'jp' ? '※TOPIX(1306.T)を基準とした相対騰落率を算出。' : '※各セクターETFの絶対騰落率を算出。';
-                const text = `【セクター資金流入分析サマリー - ${label}】\n期間: ${period}\n\n🚀 トップ3\n1位: ${top3[0]?.name} (+${top3[0]?.performance.toFixed(2)}%)\n2位: ${top3[1]?.name} (+${top3[1]?.performance.toFixed(2)}%)\n3位: ${top3[2]?.name} (+${top3[2]?.performance.toFixed(2)}%)\n\n📉 ワースト\n・${worst?.name} (${worst?.performance.toFixed(2)}%)\n\n${note}`;
+                const formatDate = (value) => {
+                    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (!match) return '';
+                    return `${match[1]}${match[2]}${match[3]}`;
+                };
+                const formatLine = (item) => {
+                    const sign = item.performance >= 0 ? '+' : '';
+                    return `${item.name}: ${sign}${item.performance.toFixed(2)}%`;
+                };
+                const top5 = activeRanking.slice(0, 5).map(formatLine).join('\n');
+                const bottom5 = activeRanking.slice(-5).reverse().map(formatLine).join('\n');
+                const dateLabel = market === 'jp'
+                    ? formatDate(processedData?.endDate)
+                    : formatDate(activeTimeSeries[activeTimeSeries.length - 1]?.date);
+                const title = market === 'jp'
+                    ? `${dateLabel}のセクター毎 / TOPIX相対化 資金注入割合`
+                    : `${dateLabel}の米国セクターETF 資金注入割合`;
+                const text = `${title}\n\n▼上位5件\n${top5}\n\n▼下位5件\n${bottom5}\n\n#日経平均 #株式投資 #デイトレ #TOPIX #N225 #オプション #CFD`;
                 navigator.clipboard.writeText(text).then(() => alert('サマリーをクリップボードにコピーしました。'));
-            }, [activeRanking, period, market]);
+            }, [activeRanking, activeTimeSeries, market, processedData]);
 
             // US用: 日本語名(ティッカー) の表示
             const getDisplayName = (item) => {
