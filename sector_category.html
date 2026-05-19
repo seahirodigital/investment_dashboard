@@ -562,8 +562,8 @@
         };
 
         // 全セクター相対パフォーマンス + ランキング（etf.html から移植）
-        const FullSectorChart = ({ processedData, period, rawIntraday, rawDaily }) => {
-            const [market, setMarket] = useState('jp');
+        const FullSectorChart = ({ processedData, period, rawIntraday, rawDaily, initialMarket = 'jp', lockMarket = false }) => {
+            const [market, setMarket] = useState(initialMarket);
 
             // === JP モード: 既存の processedData を使用 ===
             const filteredRanking = useMemo(() => {
@@ -953,24 +953,28 @@
                             <span className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors" onClick={copySummary} title="サマリーをコピー">
                                 <Icon name="Copy" size={14} />
                             </span>
-                            <button
-                                data-capture="market-jp"
-                                onClick={() => setMarket('jp')}
-                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
-                                    market === 'jp'
-                                        ? 'bg-[#7C4DFF] text-white shadow-sm'
-                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                }`}
-                            >JP</button>
-                            <button
-                                data-capture="market-us"
-                                onClick={() => setMarket('us')}
-                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
-                                    market === 'us'
-                                        ? 'bg-[#7C4DFF] text-white shadow-sm'
-                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                }`}
-                            >US</button>
+                            {!lockMarket && (
+                                <>
+                                    <button
+                                        data-capture="market-jp"
+                                        onClick={() => setMarket('jp')}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                            market === 'jp'
+                                                ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                        }`}
+                                    >JP</button>
+                                    <button
+                                        data-capture="market-us"
+                                        onClick={() => setMarket('us')}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                            market === 'us'
+                                                ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                        }`}
+                                    >US</button>
+                                </>
+                            )}
                             <button data-capture="show-top7" onClick={showTop7} className="text-xs px-2 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▲ 上7</button>
                             <button data-capture="show-bottom7" onClick={showBottom7} className="text-xs px-2 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▼ 下7</button>
                         </div>
@@ -2256,13 +2260,16 @@
         };
 
         const App = () => {
-            const [period, setPeriod] = useState('1d');
+            const initialPeriod = new URLSearchParams(window.location.search).get('period');
+            const [period, setPeriod] = useState(PERIODS.some(p => p.value === initialPeriod) ? initialPeriod : '1d');
             const [rawDaily, setRawDaily] = useState(null);
             const [rawIntraday, setRawIntraday] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [lastFetchTime, setLastFetchTime] = useState(null);
             const fetchingRef = useRef(false);
+            const embedMode = new URLSearchParams(window.location.search).get('embed');
+            const isUSSectorEmbed = embedMode === 'us-sector';
 
             // データ取得（useCallbackで安定参照）— 重複呼び出し防止 + Cache-Control: no-cache
             const fetchRawData = useCallback(async () => {
@@ -2668,6 +2675,33 @@
                 };
 
             }, [rawDaily, rawIntraday, period]);
+
+            if (isUSSectorEmbed) {
+                return (
+                    <div className="bg-[#f8fafc] p-0">
+                        {loading && !processedData && (
+                            <div className="flex justify-center items-center h-[560px] bg-white rounded-xl border border-slate-200">
+                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#7C4DFF]"></div>
+                            </div>
+                        )}
+                        {!loading && error && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+                                <strong>エラー:</strong> {error}
+                            </div>
+                        )}
+                        {!loading && rawDaily && (
+                            <FullSectorChart
+                                processedData={processedData}
+                                period={period}
+                                rawIntraday={rawIntraday}
+                                rawDaily={rawDaily}
+                                initialMarket="us"
+                                lockMarket={true}
+                            />
+                        )}
+                    </div>
+                );
+            }
 
             return (
                 <div className="flex flex-col min-h-screen bg-[#f8fafc]">
