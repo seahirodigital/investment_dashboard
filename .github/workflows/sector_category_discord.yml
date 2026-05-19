@@ -34,7 +34,9 @@ jobs:
           import re
           import subprocess
           import time
+          from datetime import datetime
           from pathlib import Path
+          from zoneinfo import ZoneInfo
           from PIL import Image, ImageOps
           from playwright.sync_api import sync_playwright
 
@@ -113,9 +115,10 @@ jobs:
                   def write_ranking_summary(items):
                       top_items = items[:5]
                       bottom_items = list(reversed(items[-5:]))
+                      report_date = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
 
                       lines = [
-                          "先週の海外投資家のセクター資金注入割合",
+                          f"{report_date} セクター資金流入割合分析",
                           "",
                           "▼上位5件",
                       ]
