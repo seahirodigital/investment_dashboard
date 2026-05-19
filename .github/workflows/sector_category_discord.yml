@@ -2,9 +2,20 @@ name: Sector Category Discord Screenshots
 
 on:
   schedule:
-    # 平日 15:40 JST = 06:40 UTC。16:00 JST の ETF 日次更新より前に送信する。
+    # 平日 15:40 JST = 06:40 UTC。16:00 JST の ETF 日次更新より前に日本株版を送信する。
     - cron: '40 6 * * 1-5'
+    # 米国市場引け後 06:25 JST = 21:25 UTC。06:30 JST までの米国株版到着を狙う。
+    - cron: '25 21 * * 1-5'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: '通知モード'
+        required: false
+        default: 'jp'
+        type: choice
+        options:
+          - jp
+          - us
 
 permissions:
   contents: read
@@ -28,6 +39,9 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Capture sector category screenshots
+        env:
+          GITHUB_EVENT_SCHEDULE: ${{ github.event.schedule }}
+          WORKFLOW_DISPATCH_MODE: ${{ github.event.inputs.mode }}
         run: |
           python - <<'PY'
           import os
@@ -43,17 +57,15 @@ jobs:
           output_dir = Path('artifacts/sector_category_screenshots')
           output_dir.mkdir(parents=True, exist_ok=True)
 
-          page_url = 'http://127.0.0.1:8000/sector_category.html'
-          chart_selector = (
-              'xpath=//span[contains(., "相対パフォーマンス推移（全セクター / vs TOPIX）")]'
-              '/ancestor::div[contains(@class, "bg-white")][1]'
-              '//div[contains(@class, "md:w-[58%]")]'
-          )
-          ranking_selector = (
-              'xpath=//span[contains(., "相対パフォーマンス推移（全セクター / vs TOPIX）")]'
-              '/ancestor::div[contains(@class, "bg-white")][1]'
-              '//div[contains(@class, "md:w-[42%]")]'
-          )
+          schedule = os.environ.get('GITHUB_EVENT_SCHEDULE', '')
+          dispatch_mode = os.environ.get('WORKFLOW_DISPATCH_MODE', '')
+          mode = dispatch_mode if dispatch_mode in {'jp', 'us'} else ('us' if schedule == '25 21 * * 1-5' else 'jp')
+          (output_dir / 'mode.txt').write_text(mode, encoding='utf-8')
+
+          page_url = 'http://127.0.0.1:8000/sector_category.html#full-sector-flow'
+          card_selector = '[data-capture="full-sector-card"]'
+          chart_selector = '[data-capture="full-sector-chart"]'
+          ranking_selector = '[data-capture="full-sector-ranking"]'
 
           server = subprocess.Popen(['python', '-m', 'http.server', '8000'])
           time.sleep(2)
@@ -62,13 +74,26 @@ jobs:
                   browser = p.chromium.launch()
                   page = browser.new_page(viewport={"width": 1440, "height": 2200})
                   page.goto(page_url, wait_until='domcontentloaded', timeout=60000)
-                  page.locator('text=相対パフォーマンス推移').first.wait_for(state='visible', timeout=45000)
+                  page.locator(card_selector).first.wait_for(state='visible', timeout=45000)
                   page.wait_for_timeout(8000)
 
-                  chart = page.locator(chart_selector).first
+                  card = page.locator(card_selector).first
+                  if mode == 'us':
+                      card.locator('[data-capture="market-us"]').click()
+                      page.wait_for_function(
+                          """() => document.querySelector('[data-capture="full-sector-card"]')?.dataset.market === 'us'""",
+                          timeout=30000,
+                      )
+                      page.wait_for_timeout(5000)
+
+                  chart = card.locator(chart_selector).first
                   chart.wait_for(state='visible', timeout=45000)
-                  ranking = page.locator(ranking_selector).first
+                  ranking = card.locator(ranking_selector).first
                   ranking.wait_for(state='visible', timeout=45000)
+                  page.wait_for_function(
+                      """() => document.querySelectorAll('[data-capture="full-sector-ranking"] .relative.group.h-8').length > 0""",
+                      timeout=45000,
+                  )
 
                   def scroll_ranking(position):
                       ranking.evaluate(
@@ -112,7 +137,7 @@ jobs:
                           items.append({'name': row['name'], 'performance': performance})
                       return items
 
-                  def write_ranking_summary(items):
+                  def write_jp_summary(items):
                       top_items = items[:5]
                       bottom_items = list(reversed(items[-5:]))
                       report_date = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
@@ -132,65 +157,96 @@ jobs:
                           "",
                           "#日経平均 #株式投資 #デイトレ #TOPIX #N225 #オプション #CFD",
                           "",
-                          "https://seahirodigital.github.io/investment_dashboard/sector_category.html",
+                          "https://seahirodigital.github.io/investment_dashboard/sector_category.html#full-sector-flow",
                           "https://seahirodigital.github.io/investment_dashboard/",
                       ])
 
                       (output_dir / 'discord_message.txt').write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-                  ranking_items = extract_ranking_items()
-                  write_ranking_summary(ranking_items)
+                  def write_us_summary(items):
+                      top_items = items[:7]
+                      bottom_items = list(reversed(items[-7:]))
+                      report_date = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
 
-                  page.get_by_role('button', name='▲ 上7').click()
+                      lines = [
+                          f"{report_date}の米国株各セクター資金流入",
+                          "",
+                          "▼上位7件",
+                      ]
+                      lines.extend(f"{item['name']}: {item['performance']}" for item in top_items)
+                      lines.extend([
+                          "",
+                          "▼下位7件",
+                      ])
+                      lines.extend(f"{item['name']}: {item['performance']}" for item in bottom_items)
+                      lines.extend([
+                          "",
+                          "#米国株 #株式投資 #デイトレ #オプション #FX",
+                          "",
+                          "https://seahirodigital.github.io/investment_dashboard/sector_category.html#full-sector-flow",
+                      ])
+
+                      (output_dir / 'discord_message.txt').write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+                  ranking_items = extract_ranking_items()
+                  if mode == 'us':
+                      write_us_summary(ranking_items)
+                  else:
+                      write_jp_summary(ranking_items)
+
+                  prefix = 'us_sector_category' if mode == 'us' else 'sector_category'
+
+                  card.locator('[data-capture="show-top7"]').click()
                   page.wait_for_timeout(2500)
                   scroll_ranking('top')
                   page.wait_for_timeout(500)
-                  top_chart = output_dir / 'sector_category_top7_chart.png'
-                  top_ranking = output_dir / 'sector_category_top7_ranking.png'
+                  top_chart = output_dir / f'{prefix}_top7_chart.png'
+                  top_ranking = output_dir / f'{prefix}_top7_ranking.png'
                   chart.screenshot(path=str(top_chart))
                   ranking.screenshot(path=str(top_ranking))
                   combine(
                       top_chart,
                       top_ranking,
-                      output_dir / 'sector_category_top7_with_ranking.png',
+                      output_dir / f'{prefix}_top7_with_ranking.png',
                   )
 
-                  page.get_by_role('button', name='▼ 下7').click()
+                  card.locator('[data-capture="show-bottom7"]').click()
                   page.wait_for_timeout(2500)
                   scroll_ranking('bottom')
                   page.wait_for_timeout(500)
-                  bottom_chart = output_dir / 'sector_category_bottom7_chart.png'
-                  bottom_ranking = output_dir / 'sector_category_bottom7_ranking.png'
+                  bottom_chart = output_dir / f'{prefix}_bottom7_chart.png'
+                  bottom_ranking = output_dir / f'{prefix}_bottom7_ranking.png'
                   chart.screenshot(path=str(bottom_chart))
                   ranking.screenshot(path=str(bottom_ranking))
                   combine(
                       bottom_chart,
                       bottom_ranking,
-                      output_dir / 'sector_category_bottom7_with_ranking.png',
+                      output_dir / f'{prefix}_bottom7_with_ranking.png',
                   )
 
-                  ranking.evaluate(
-                      """element => {
-                        const scroller = element.querySelector('.overflow-y-auto');
-                        if (scroller) {
-                          scroller.style.overflow = 'visible';
-                          scroller.style.height = 'auto';
-                          scroller.style.maxHeight = 'none';
-                        }
-                        element.style.height = 'auto';
-                        element.style.maxHeight = 'none';
-                        element.style.overflow = 'visible';
-                        let parent = element.parentElement;
-                        for (let i = 0; i < 6 && parent; i += 1) {
-                          parent.style.height = 'auto';
-                          parent.style.maxHeight = 'none';
-                          parent.style.overflow = 'visible';
-                          parent = parent.parentElement;
-                        }
-                      }"""
-                  )
-                  page.wait_for_timeout(1000)
-                  ranking.screenshot(path=str(output_dir / 'sector_category_full_ranking.png'))
+                  if mode == 'jp':
+                      ranking.evaluate(
+                          """element => {
+                            const scroller = element.querySelector('.overflow-y-auto');
+                            if (scroller) {
+                              scroller.style.overflow = 'visible';
+                              scroller.style.height = 'auto';
+                              scroller.style.maxHeight = 'none';
+                            }
+                            element.style.height = 'auto';
+                            element.style.maxHeight = 'none';
+                            element.style.overflow = 'visible';
+                            let parent = element.parentElement;
+                            for (let i = 0; i < 6 && parent; i += 1) {
+                              parent.style.height = 'auto';
+                              parent.style.maxHeight = 'none';
+                              parent.style.overflow = 'visible';
+                              parent = parent.parentElement;
+                            }
+                          }"""
+                      )
+                      page.wait_for_timeout(1000)
+                      ranking.screenshot(path=str(output_dir / 'sector_category_full_ranking.png'))
 
                   browser.close()
           finally:
@@ -207,8 +263,17 @@ jobs:
             exit 1
           fi
 
-          curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
-            -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
-            -F "files[0]=@artifacts/sector_category_screenshots/sector_category_top7_with_ranking.png" \
-            -F "files[1]=@artifacts/sector_category_screenshots/sector_category_bottom7_with_ranking.png" \
-            -F "files[2]=@artifacts/sector_category_screenshots/sector_category_full_ranking.png"
+          MODE="$(cat artifacts/sector_category_screenshots/mode.txt)"
+
+          if [ "$MODE" = "us" ]; then
+            curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
+              -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
+              -F "files[0]=@artifacts/sector_category_screenshots/us_sector_category_top7_with_ranking.png" \
+              -F "files[1]=@artifacts/sector_category_screenshots/us_sector_category_bottom7_with_ranking.png"
+          else
+            curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
+              -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
+              -F "files[0]=@artifacts/sector_category_screenshots/sector_category_top7_with_ranking.png" \
+              -F "files[1]=@artifacts/sector_category_screenshots/sector_category_bottom7_with_ranking.png" \
+              -F "files[2]=@artifacts/sector_category_screenshots/sector_category_full_ranking.png"
+          fi
