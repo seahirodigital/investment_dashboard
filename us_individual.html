@@ -500,7 +500,6 @@
                             <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-2">
                                 <div className="flex items-center gap-3">
                                     <h1 className="text-xs font-bold text-[#7C4DFF]">US個別分析</h1>
-                                    <span className="text-slate-400 text-xs">finviz treemap準拠・セクター別米国個別銘柄の相対パフォーマンス（S&amp;P500基準）</span>
                                 </div>
                                 <div className="flex items-center gap-4 text-xs mt-3 md:mt-0 flex-wrap">
                                     {dateRange && (
@@ -549,6 +548,12 @@
 
                             {!loading && rawDaily && allSymbols.length > 0 && (
                                 <div className="flex flex-col gap-4 animate-fade-in">
+                                    <iframe
+                                        title="米国セクター パフォーマンス推移"
+                                        src={`sector_category.html?embed=us-sector&period=${encodeURIComponent(period)}#full-sector-flow`}
+                                        className="w-full h-[612px] rounded-xl border-0"
+                                        loading="lazy"
+                                    />
                                     {/* 全銘柄統合セクション */}
                                     <StockSection
                                         title="US個別全銘柄パフォーマンス"
