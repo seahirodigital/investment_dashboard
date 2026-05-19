@@ -143,15 +143,121 @@
 
         const BENCHMARK_SYMBOL = '^GSPC';
         const BENCHMARK_NAME = 'S&P500';
+        const INTRADAY_PERIODS = new Set(['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d']);
+        const toJST = (utcStr) => {
+            const d = new Date(String(utcStr).replace(' ', 'T') + ':00Z');
+            const j = new Date(d.getTime() + 9 * 3600 * 1000);
+            const p = n => String(n).padStart(2, '0');
+            return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+        };
 
         // 汎用: 米国個別株チャートセクション（タイトル+銘柄リスト可変）
-        const StockSection = ({ title, symbolList, rawDaily, period }) => {
+        const StockSection = ({ title, symbolList, rawDaily, rawIntraday, period }) => {
             // rawデータから独立計算
             const computedData = useMemo(() => {
-                if (!rawDaily) return null;
-                const { dates, prices } = rawDaily;
+                const wantIntraday = INTRADAY_PERIODS.has(period);
+                const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
+                    && rawIntraday.dates[0].includes(' ');
+                const isIntraday = wantIntraday && intradayAvailable;
+                const rawData = isIntraday ? rawIntraday : rawDaily;
+                if (!rawData) return null;
+                const { dates, prices } = rawData;
                 const L = dates.length;
                 if (!L) return null;
+
+                if (isIntraday) {
+                    const usTradingIndices = [];
+                    dates.forEach((d, i) => {
+                        const parts = String(d).split(' ');
+                        if (parts.length < 2) return;
+                        const hour = parseInt(parts[1].split(':')[0], 10);
+                        if (hour >= 13 && hour < 21) usTradingIndices.push(i);
+                    });
+                    if (usTradingIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+
+                    const sessionDates = [...new Set(usTradingIndices.map(i => dates[i].split(' ')[0]))];
+                    const daysAgo = parseInt(period.replace('d', ''), 10) || 1;
+                    const targetDateStr = sessionDates[Math.max(0, sessionDates.length - daysAgo)];
+                    const filteredIndices = usTradingIndices.filter(i => dates[i] >= targetDateStr);
+                    if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+
+                    const startIdx = filteredIndices[0];
+                    const baseIdx = startIdx > 0 ? startIdx - 1 : startIdx;
+                    const gspcPrices = prices[BENCHMARK_SYMBOL];
+                    const timeSeries = [];
+                    const rankingMap = {};
+
+                    filteredIndices.forEach(i => {
+                        const point = { date: toJST(dates[i]) };
+                        symbolList.forEach(sym => {
+                            const sPrices = prices[sym];
+                            if (!sPrices) return;
+                            const sStart = sPrices[baseIdx];
+                            const sCurrent = sPrices[i];
+                            if (sStart && sCurrent && sStart !== 0) {
+                                const ret = ((sCurrent / sStart) - 1) * 100;
+                                point[sym] = ret;
+                                rankingMap[sym] = { symbol: sym, name: sym, performance: ret };
+                            }
+                        });
+                        if (gspcPrices) {
+                            const bStart = gspcPrices[baseIdx];
+                            const bCurrent = gspcPrices[i];
+                            if (bStart && bCurrent && bStart !== 0) {
+                                point[BENCHMARK_NAME] = ((bCurrent / bStart) - 1) * 100;
+                            }
+                        }
+                        timeSeries.push(point);
+                    });
+
+                    if (rawDaily && rawDaily.dates && rawDaily.prices) {
+                        const lastSessionDate = sessionDates[sessionDates.length - 1];
+                        const dailyDates = rawDaily.dates;
+                        const latestDailyDate = dailyDates[dailyDates.length - 1];
+                        if (latestDailyDate >= lastSessionDate) {
+                            let dailyEndIdx = -1;
+                            for (let di = dailyDates.length - 1; di >= 0; di--) {
+                                if (dailyDates[di] <= lastSessionDate) { dailyEndIdx = di; break; }
+                            }
+                            if (dailyEndIdx >= 0) {
+                                const dailyBaseIdx = Math.max(0, dailyEndIdx - daysAgo);
+                                symbolList.forEach(sym => {
+                                    const sPrices = rawDaily.prices[sym];
+                                    if (!sPrices) return;
+                                    const sStart = sPrices[dailyBaseIdx];
+                                    const sCurrent = sPrices[dailyEndIdx];
+                                    if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
+                                        rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
+                                    }
+                                });
+                                if (timeSeries.length > 0) {
+                                    const lastPoint = timeSeries[timeSeries.length - 1];
+                                    symbolList.forEach(sym => {
+                                        const sPrices = rawDaily.prices[sym];
+                                        if (!sPrices) return;
+                                        const sStart = sPrices[dailyBaseIdx];
+                                        const sCurrent = sPrices[dailyEndIdx];
+                                        if (sStart && sCurrent && sStart !== 0) {
+                                            lastPoint[sym] = ((sCurrent / sStart) - 1) * 100;
+                                        }
+                                    });
+                                    const bPrices = rawDaily.prices[BENCHMARK_SYMBOL];
+                                    if (bPrices) {
+                                        const bStart = bPrices[dailyBaseIdx];
+                                        const bCurrent = bPrices[dailyEndIdx];
+                                        if (bStart && bCurrent && bStart !== 0) {
+                                            lastPoint[BENCHMARK_NAME] = ((bCurrent / bStart) - 1) * 100;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
+                    const endIdx = filteredIndices[filteredIndices.length - 1];
+                    return { ranking, timeSeries, startDate: toJST(dates[startIdx]), endDate: toJST(dates[endIdx]), isIntraday: true };
+                }
 
                 // ^GSPC が変化しない日（米国休場・forward-fill 日）を除外した実取引日インデックス配列を構築
                 const gspcPrices = prices[BENCHMARK_SYMBOL];
@@ -215,11 +321,12 @@
                 }
                 const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
                 const lastIdx = tradingIndices[TL - 1];
-                return { ranking, timeSeries, startDate: dates[baseIndex], endDate: dates[lastIdx] };
-            }, [rawDaily, period, symbolList]);
+                return { ranking, timeSeries, startDate: dates[baseIndex], endDate: dates[lastIdx], isIntraday: false };
+            }, [rawDaily, rawIntraday, period, symbolList]);
 
             const catRanking = computedData ? computedData.ranking : [];
             const activeTimeSeries = computedData ? computedData.timeSeries : [];
+            const activeIsIntraday = computedData ? computedData.isIntraday : false;
 
             const maxAbsPerf = useMemo(() => {
                 if (!catRanking.length) return 1;
@@ -314,7 +421,9 @@
                                         xaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
-                                            rangebreaks: [{ bounds: ["sat","mon"] }],
+                                            rangebreaks: activeIsIntraday
+                                                ? [{ bounds: ["sat","mon"] }, { bounds: [5, 22], pattern: "hour" }]
+                                                : [{ bounds: ["sat","mon"] }],
                                         },
                                         yaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
@@ -400,6 +509,7 @@
         const App = () => {
             const [period, setPeriod] = useState('1d');
             const [rawDaily, setRawDaily] = useState(null);
+            const [rawIntraday, setRawIntraday] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const fetchingRef = useRef(false);
@@ -412,7 +522,10 @@
                 try {
                     const headers = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
                     const ts = Date.now();
-                    const resDaily = await fetch(`./data/etf_data.json?t=${ts}`, { headers, cache: 'no-store' });
+                    const [resDaily, resIntraday] = await Promise.all([
+                        fetch(`./data/etf_data.json?t=${ts}`, { headers, cache: 'no-store' }),
+                        fetch(`./data/etf_intraday.json?t=${ts}`, { headers, cache: 'no-store' }).catch(() => null)
+                    ]);
 
                     if (!resDaily.ok) {
                         if (resDaily.status === 404) {
@@ -428,6 +541,16 @@
                         throw new Error("us_individual データが存在しません。etf_data_manager.py を最新化してください。");
                     }
                     setRawDaily(jsonDaily);
+                    if (resIntraday && resIntraday.ok) {
+                        try {
+                            const jsonIntraday = await resIntraday.json();
+                            if (jsonIntraday.dates && jsonIntraday.dates.length > 1 && jsonIntraday.us_individual) {
+                                setRawIntraday(jsonIntraday);
+                            }
+                        } catch (intradayErr) {
+                            console.warn('etf_intraday.json parse failed', intradayErr.message);
+                        }
+                    }
                 } catch (err) {
                     if (!rawDaily) setError(err.message);
                     else console.warn('データ更新失敗（前回データを維持）:', err.message);
@@ -468,6 +591,31 @@
             }, [rawDaily]);
 
             const dateRange = useMemo(() => {
+                const wantIntraday = INTRADAY_PERIODS.has(period);
+                const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
+                    && rawIntraday.dates[0].includes(' ');
+                if (wantIntraday && intradayAvailable) {
+                    const dates = rawIntraday.dates;
+                    const usTradingIndices = [];
+                    dates.forEach((d, i) => {
+                        const parts = String(d).split(' ');
+                        if (parts.length < 2) return;
+                        const hour = parseInt(parts[1].split(':')[0], 10);
+                        if (hour >= 13 && hour < 21) usTradingIndices.push(i);
+                    });
+                    if (usTradingIndices.length > 0) {
+                        const sessionDates = [...new Set(usTradingIndices.map(i => dates[i].split(' ')[0]))];
+                        const daysAgo = parseInt(period.replace('d', ''), 10) || 1;
+                        const targetDateStr = sessionDates[Math.max(0, sessionDates.length - daysAgo)];
+                        const filteredIndices = usTradingIndices.filter(i => dates[i] >= targetDateStr);
+                        if (filteredIndices.length > 0) {
+                            return {
+                                startDate: toJST(dates[filteredIndices[0]]),
+                                endDate: toJST(dates[filteredIndices[filteredIndices.length - 1]])
+                            };
+                        }
+                    }
+                }
                 if (!rawDaily || !rawDaily.dates || rawDaily.dates.length === 0) return null;
                 const dates = rawDaily.dates;
                 const L = dates.length;
@@ -491,7 +639,7 @@
                     }
                 }
                 return { startDate: dates[tradingIndices[startPos]], endDate: dates[tradingIndices[TL - 1]] };
-            }, [rawDaily, period]);
+            }, [rawDaily, rawIntraday, period]);
 
             return (
                 <div className="flex flex-col min-h-screen bg-[#f8fafc]">
@@ -500,7 +648,6 @@
                             <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-2">
                                 <div className="flex items-center gap-3">
                                     <h1 className="text-xs font-bold text-[#7C4DFF]">US個別分析</h1>
-                                    <span className="text-slate-400 text-xs">finviz treemap準拠・セクター別米国個別銘柄の相対パフォーマンス（S&amp;P500基準）</span>
                                 </div>
                                 <div className="flex items-center gap-4 text-xs mt-3 md:mt-0 flex-wrap">
                                     {dateRange && (
@@ -549,11 +696,18 @@
 
                             {!loading && rawDaily && allSymbols.length > 0 && (
                                 <div className="flex flex-col gap-4 animate-fade-in">
+                                    <iframe
+                                        title="米国セクター パフォーマンス推移"
+                                        src={`sector_category.html?embed=us-sector&period=${encodeURIComponent(period)}#full-sector-flow`}
+                                        className="w-full h-[612px] rounded-xl border-0"
+                                        loading="lazy"
+                                    />
                                     {/* 全銘柄統合セクション */}
                                     <StockSection
                                         title="US個別全銘柄パフォーマンス"
                                         symbolList={allSymbols}
                                         rawDaily={rawDaily}
+                                        rawIntraday={rawIntraday}
                                         period={period}
                                     />
                                     {/* セクター別カード */}
@@ -563,6 +717,7 @@
                                             title={sectorName}
                                             symbolList={tickers}
                                             rawDaily={rawDaily}
+                                            rawIntraday={rawIntraday}
                                             period={period}
                                         />
                                     ))}
