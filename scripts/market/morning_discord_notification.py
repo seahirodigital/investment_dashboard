@@ -365,7 +365,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             "nikkei_vi": NIKKEI_WEEK_URL,
             "finviz": FINVIZ_URL,
         },
-        "screenshots": [str(fear_greed_path), str(nikkei_vi_path), str(finviz_path)],
+        "screenshots": [str(finviz_path), str(fear_greed_path), str(nikkei_vi_path)],
         "message_file": str(message_path),
     }
     (output_dir / "metadata.json").write_text(
@@ -377,7 +377,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
         fear_greed_value=fear_greed_value,
         nikkei_vi_value=nikkei_vi_value,
         message=message,
-        screenshot_paths=[fear_greed_path, nikkei_vi_path, finviz_path],
+        screenshot_paths=[finviz_path, fear_greed_path, nikkei_vi_path],
     )
 
 
