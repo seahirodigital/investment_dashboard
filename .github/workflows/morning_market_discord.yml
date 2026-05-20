@@ -2,8 +2,8 @@ name: 朝の市況Discord通知
 
 on:
   schedule:
-    # JST平日07:00 = UTC前日22:00
-    - cron: '0 22 * * 0-4'
+    # JST平日06:33 = UTC前日21:33
+    - cron: '33 21 * * 0-4'
   workflow_dispatch:
 
 permissions:
