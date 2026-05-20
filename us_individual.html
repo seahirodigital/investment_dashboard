@@ -33,8 +33,18 @@
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        .page-scroll { scrollbar-gutter: stable; }
+        .page-scroll::-webkit-scrollbar { width: 14px; height: 14px; }
+        .page-scroll::-webkit-scrollbar-track { background: #eef2f7; border-radius: 8px; }
+        .page-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; border: 3px solid #eef2f7; }
+        .chart-scrollbar { scrollbar-width: auto; scrollbar-color: #94a3b8 #eef2f7; }
+        .chart-scrollbar::-webkit-scrollbar { width: 12px; height: 14px; }
+        .chart-scrollbar::-webkit-scrollbar-track { background: #eef2f7; border-radius: 8px; }
+        .chart-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; border: 3px solid #eef2f7; }
+        .custom-scrollbar { scrollbar-width: auto; scrollbar-color: #94a3b8 #eef2f7; scrollbar-gutter: stable; }
+        .custom-scrollbar::-webkit-scrollbar { width: 12px; height: 12px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #eef2f7; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; border: 3px solid #eef2f7; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .header-hp { background: white; color: #7C4DFF; border-bottom: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
@@ -80,6 +90,8 @@
             const icons = {
                 RefreshCw: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>,
                 PieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>,
+                ChevronLeft: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"></path></svg>,
+                ChevronRight: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"></path></svg>,
             };
             return <span className={className}>{icons[name] || null}</span>;
         };
@@ -104,7 +116,7 @@
             return (
                 <div>
                     <div ref={ref}
-                        className={`flex flex-row gap-3 md:gap-4 overflow-x-scroll md:overflow-visible snap-x snap-mandatory md:snap-none scrollbar-hide ${className}`}
+                        className={`chart-scrollbar flex flex-row gap-3 md:gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none pb-2 md:pb-0 ${className}`}
                         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
                     >
                         {React.Children.map(children, (child) => (
@@ -150,9 +162,25 @@
             const p = n => String(n).padStart(2, '0');
             return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
         };
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        const fetchJsonWithRetry = async (url, options = {}, attempts = 3) => {
+            let lastError = null;
+            for (let attempt = 0; attempt < attempts; attempt++) {
+                try {
+                    const sep = url.includes('?') ? '&' : '?';
+                    const res = await fetch(`${url}${sep}retry=${attempt}`, options);
+                    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+                    return await res.json();
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < attempts - 1) await sleep(700 * (attempt + 1));
+                }
+            }
+            throw lastError;
+        };
 
         // 汎用: 米国個別株チャートセクション（タイトル+銘柄リスト可変）
-        const StockSection = ({ title, symbolList, rawDaily, rawIntraday, period }) => {
+        const StockSection = ({ title, symbolList, rawDaily, rawIntraday, period, className = '', bodyHeightClass = 'h-[600px]' }) => {
             // rawデータから独立計算
             const computedData = useMemo(() => {
                 const wantIntraday = INTRADAY_PERIODS.has(period);
@@ -388,8 +416,16 @@
                 return traces;
             }, [activeTimeSeries, displayRanking]);
 
+            const yAxisRange = useMemo(() => {
+                const values = chartTraces.flatMap(trace => trace.y).filter(v => Number.isFinite(v));
+                if (!values.length) return undefined;
+                const max = Math.max(...values.map(v => Math.abs(v)));
+                const padded = Math.max(max * 1.12, 0.5);
+                return [-padded, padded];
+            }, [chartTraces]);
+
             return (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                <div className={cn("bg-white rounded-xl shadow-sm border border-slate-200 p-4", className)}>
                     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                         <h3 className="text-[13px] font-bold text-[#7C4DFF] flex items-center gap-2">
                             <Icon name="PieChart" size={14} />
@@ -407,7 +443,7 @@
                         </div>
                     </div>
 
-                    <SwipeContainer className="h-[600px]">
+                    <SwipeContainer className={bodyHeightClass}>
                         <div className="md:w-1/2 h-full relative z-10">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
@@ -429,7 +465,8 @@
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
                                             ticksuffix: '%',
-                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 1.5,
+                                            range: yAxisRange,
+                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 2,
                                         },
                                         paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
                                         showlegend: false, hovermode: 'closest',
@@ -441,7 +478,7 @@
                             )}
                         </div>
 
-                        <div ref={rankingRef} className="md:w-1/2 h-full overflow-y-auto custom-scrollbar pr-1 relative z-0">
+                        <div ref={rankingRef} className="md:w-1/2 h-full overflow-y-auto custom-scrollbar pl-1 pr-3 relative z-0">
                             {noData ? (
                                 <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
                             ) : (
@@ -506,6 +543,126 @@
         };
 
         // メインAppコンポーネント
+        const SectorFrameCard = ({ period }) => (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 h-full flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-[13px] font-bold text-[#7C4DFF] flex items-center gap-2">
+                        <Icon name="PieChart" size={14} />
+                        米国セクター パフォーマンス推移（絶対値）
+                    </h3>
+                </div>
+                <iframe
+                    title="米国セクター パフォーマンス推移"
+                    src={`sector_category.html?embed=us-sector&period=${encodeURIComponent(period)}#full-sector-flow`}
+                    className="w-full flex-1 min-h-0 rounded-lg border-0"
+                    loading="lazy"
+                />
+            </div>
+        );
+
+        const CardCarousel = ({ period, cards, rawDaily, rawIntraday }) => {
+            const total = cards.length + 1;
+            const [activeIndex, setActiveIndex] = useState(1);
+            const trackRef = useRef(null);
+            const safeIndex = Math.min(activeIndex, Math.max(0, total - 1));
+
+            useEffect(() => {
+                if (activeIndex !== safeIndex) setActiveIndex(safeIndex);
+            }, [activeIndex, safeIndex]);
+
+            useEffect(() => {
+                requestAnimationFrame(() => {
+                    const el = trackRef.current;
+                    if (!el) return;
+                    el.scrollLeft = el.clientWidth * safeIndex;
+                });
+            }, [total]);
+
+            const scrollToIndex = useCallback((index) => {
+                const next = Math.max(0, Math.min(total - 1, index));
+                setActiveIndex(next);
+                requestAnimationFrame(() => {
+                    const el = trackRef.current;
+                    if (!el) return;
+                    el.scrollTo({ left: el.clientWidth * next, behavior: 'smooth' });
+                });
+            }, [total]);
+
+            const handleScroll = useCallback(() => {
+                const el = trackRef.current;
+                if (!el || !el.clientWidth) return;
+                const next = Math.round(el.scrollLeft / el.clientWidth);
+                if (next !== activeIndex) setActiveIndex(Math.max(0, Math.min(total - 1, next)));
+            }, [activeIndex, total]);
+
+            const renderSlide = (index) => {
+                if (index === 0) return <SectorFrameCard period={period} />;
+                const card = cards[index - 1];
+                if (!card) return null;
+                return (
+                    <StockSection
+                        title={card.title}
+                        symbolList={card.symbolList}
+                        rawDaily={rawDaily}
+                        rawIntraday={rawIntraday}
+                        period={period}
+                        className="h-full"
+                        bodyHeightClass="h-[620px]"
+                    />
+                );
+            };
+
+            return (
+                <div className="relative">
+                    <button
+                        type="button"
+                        aria-label="前のチャート"
+                        onClick={() => scrollToIndex(safeIndex - 1)}
+                        disabled={safeIndex === 0}
+                        className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full border border-slate-200 bg-white/95 shadow-sm flex items-center justify-center transition-all ${safeIndex === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-700 hover:text-[#7C4DFF] hover:border-[#7C4DFF]'}`}
+                    >
+                        <Icon name="ChevronLeft" size={24} />
+                    </button>
+                    <div
+                        ref={trackRef}
+                        onScroll={handleScroll}
+                        className="chart-scrollbar flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-3"
+                    >
+                        {Array.from({ length: total }).map((_, index) => (
+                            <div key={index === 0 ? 'us-sector-frame' : cards[index - 1]?.key}
+                                className="w-full shrink-0 snap-start px-12 md:px-14">
+                                <div className="h-[760px]">
+                                    {Math.abs(index - safeIndex) <= 1 ? renderSlide(index) : (
+                                        <div className="h-full rounded-xl border border-slate-200 bg-white" />
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        aria-label="次のチャート"
+                        onClick={() => scrollToIndex(safeIndex + 1)}
+                        disabled={safeIndex === total - 1}
+                        className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full border border-slate-200 bg-white/95 shadow-sm flex items-center justify-center transition-all ${safeIndex === total - 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-700 hover:text-[#7C4DFF] hover:border-[#7C4DFF]'}`}
+                    >
+                        <Icon name="ChevronRight" size={24} />
+                    </button>
+                    <div className="flex justify-center gap-1.5 pt-1">
+                        {Array.from({ length: total }).map((_, index) => (
+                            <button
+                                key={index === 0 ? 'dot-sector' : `dot-${cards[index - 1]?.key}`}
+                                type="button"
+                                aria-label={`${index + 1}番目のチャート`}
+                                onClick={() => scrollToIndex(index)}
+                                className={`h-1.5 rounded-full transition-all ${index === safeIndex ? 'w-6 bg-[#7C4DFF]' : 'w-1.5 bg-slate-300 hover:bg-slate-400'}`}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
             const [period, setPeriod] = useState('1d');
             const [rawDaily, setRawDaily] = useState(null);
@@ -522,10 +679,7 @@
                 try {
                     const headers = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' };
                     const ts = Date.now();
-                    const [resDaily, resIntraday] = await Promise.all([
-                        fetch(`./data/etf_data.json?t=${ts}`, { headers, cache: 'no-store' }),
-                        fetch(`./data/etf_intraday.json?t=${ts}`, { headers, cache: 'no-store' }).catch(() => null)
-                    ]);
+                    const resDaily = await fetch(`./data/etf_data.json?t=${ts}`, { headers, cache: 'no-store' });
 
                     if (!resDaily.ok) {
                         if (resDaily.status === 404) {
@@ -540,17 +694,17 @@
                     if (!jsonDaily.us_individual) {
                         throw new Error("us_individual データが存在しません。etf_data_manager.py を最新化してください。");
                     }
-                    setRawDaily(jsonDaily);
-                    if (resIntraday && resIntraday.ok) {
-                        try {
-                            const jsonIntraday = await resIntraday.json();
-                            if (jsonIntraday.dates && jsonIntraday.dates.length > 1 && jsonIntraday.us_individual) {
-                                setRawIntraday(jsonIntraday);
-                            }
-                        } catch (intradayErr) {
-                            console.warn('etf_intraday.json parse failed', intradayErr.message);
+                    let jsonIntraday = null;
+                    try {
+                        const parsedIntraday = await fetchJsonWithRetry(`./data/etf_intraday.json?t=${ts}`, { headers, cache: 'no-store' }, 3);
+                        if (parsedIntraday.dates && parsedIntraday.dates.length > 1 && parsedIntraday.us_individual) {
+                            jsonIntraday = parsedIntraday;
                         }
+                    } catch (intradayErr) {
+                        console.warn('etf_intraday.json parse failed', intradayErr.message);
                     }
+                    setRawDaily(jsonDaily);
+                    if (jsonIntraday) setRawIntraday(jsonIntraday);
                 } catch (err) {
                     if (!rawDaily) setError(err.message);
                     else console.warn('データ更新失敗（前回データを維持）:', err.message);
@@ -641,10 +795,26 @@
                 return { startDate: dates[tradingIndices[startPos]], endDate: dates[tradingIndices[TL - 1]] };
             }, [rawDaily, rawIntraday, period]);
 
+            const stockCards = useMemo(() => {
+                const cards = [{
+                    key: 'us-all',
+                    title: 'US個別全銘柄パフォーマンス',
+                    symbolList: allSymbols,
+                }];
+                Object.entries(sectorMap).forEach(([sectorName, tickers]) => {
+                    cards.push({
+                        key: `sector-${sectorName}`,
+                        title: sectorName,
+                        symbolList: tickers,
+                    });
+                });
+                return cards;
+            }, [sectorMap, allSymbols]);
+
             return (
                 <div className="flex flex-col min-h-screen bg-[#f8fafc]">
-                    <main className="flex-1 overflow-auto p-4 md:p-6">
-                        <div className="max-w-full mx-auto space-y-4">
+                    <main className="page-scroll flex-1 overflow-auto p-2 md:p-3">
+                        <div className="w-full max-w-none mx-0 space-y-4 pr-1 md:pr-2">
                             <header className="header-hp flex flex-col md:flex-row justify-between items-center py-3 px-6 mb-2">
                                 <div className="flex items-center gap-3">
                                     <h1 className="text-xs font-bold text-[#7C4DFF]">US個別分析</h1>
@@ -696,6 +866,12 @@
 
                             {!loading && rawDaily && allSymbols.length > 0 && (
                                 <div className="flex flex-col gap-4 animate-fade-in">
+                                    <CardCarousel
+                                        period={period}
+                                        cards={stockCards}
+                                        rawDaily={rawDaily}
+                                        rawIntraday={rawIntraday}
+                                    />
                                     <iframe
                                         title="米国セクター パフォーマンス推移"
                                         src={`sector_category.html?embed=us-sector&period=${encodeURIComponent(period)}#full-sector-flow`}
