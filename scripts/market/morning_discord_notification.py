@@ -25,7 +25,17 @@ CNN_URL = "https://edition.cnn.com/markets/fear-and-greed"
 NIKKEI_WEEK_URL = (
     "https://indexes.nikkei.co.jp/nkave/index/profile?cid=1&idx=nk225vi#section-gist"
 )
+NIKKEI_WEEK_SCREENSHOT_URL = (
+    "https://indexes.nikkei.co.jp/nkave/index/profile?cid=1&idx=nk225vi"
+)
 FINVIZ_URL = "https://finviz.com/map"
+FINVIZ_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=d1"
+
+DESKTOP_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
 
 
 @dataclass(frozen=True)
@@ -55,6 +65,75 @@ def _click_optional_text(page, text_patterns: Iterable[str]) -> None:
             continue
 
 
+def _dismiss_consent_and_overlays(page) -> None:
+    _click_optional_text(
+        page,
+        [
+            "Agree",
+            "Accept All",
+            "Accept",
+            "I Agree",
+            "同意",
+            "OK",
+        ],
+    )
+    page.wait_for_timeout(1000)
+    page.evaluate(
+        """() => {
+          if (!document.body) return;
+          const body = document.body;
+
+          const selectors = [
+            '[role="dialog"]',
+            '[aria-modal="true"]',
+            '#onetrust-banner-sdk',
+            '#onetrust-consent-sdk',
+            '.fc-consent-root',
+            '[id*="consent" i]',
+            '[class*="consent" i]',
+            '[id*="privacy" i]',
+            '[class*="privacy" i]'
+          ];
+
+          for (const selector of selectors) {
+            for (const element of document.querySelectorAll(selector)) {
+              if (element === body || element === document.documentElement) continue;
+              const rect = element.getBoundingClientRect();
+              const text = (element.innerText || element.textContent || '').toLowerCase();
+              const isLikelyConsent =
+                text.includes('agree') ||
+                text.includes('accept') ||
+                text.includes('consent') ||
+                text.includes('privacy') ||
+                text.includes('cookie') ||
+                rect.width * rect.height > window.innerWidth * 80;
+              if (isLikelyConsent) element.remove();
+            }
+          }
+
+          for (const element of Array.from(body.querySelectorAll('*'))) {
+            const style = window.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            const zIndex = Number.parseInt(style.zIndex || '0', 10);
+            const coversMuchOfScreen =
+              rect.width > window.innerWidth * 0.45 &&
+              rect.height > window.innerHeight * 0.08;
+            if (
+              (style.position === 'fixed' || style.position === 'sticky') &&
+              Number.isFinite(zIndex) &&
+              zIndex >= 1000 &&
+              coversMuchOfScreen
+            ) {
+              element.remove();
+            }
+          }
+
+          document.documentElement.style.overflow = 'auto';
+          document.body.style.overflow = 'auto';
+        }"""
+    )
+
+
 def _largest_visible_locator(page, selector: str):
     best_index = None
     best_area = 0.0
@@ -79,6 +158,20 @@ def _largest_visible_locator(page, selector: str):
     return locator.nth(best_index)
 
 
+def _page_clip_from_boxes(page, boxes, padding: int = 16) -> dict[str, float]:
+    viewport = page.viewport_size or {"width": 1366, "height": 1200}
+    left = max(0, min(box["x"] for box in boxes) - padding)
+    top = max(0, min(box["y"] for box in boxes) - padding)
+    right = min(viewport["width"], max(box["x"] + box["width"] for box in boxes) + padding)
+    bottom = min(viewport["height"], max(box["y"] + box["height"] for box in boxes) + padding)
+    return {
+        "x": left,
+        "y": top,
+        "width": max(1, right - left),
+        "height": max(1, bottom - top),
+    }
+
+
 def _extract_fear_greed_value(page) -> str:
     selectors = [
         ".market-fng-gauge__meter-container",
@@ -101,12 +194,32 @@ def _extract_fear_greed_value(page) -> str:
 
 
 def _capture_fear_greed(page, output_dir: Path) -> tuple[str, Path]:
+    page.set_viewport_size({"width": 1024, "height": 1150})
     page.goto(CNN_URL, wait_until="domcontentloaded", timeout=90000)
-    _click_optional_text(page, ["Accept", "I Agree", "同意"])
+    _dismiss_consent_and_overlays(page)
     page.wait_for_timeout(7000)
+    _dismiss_consent_and_overlays(page)
 
     value = _extract_fear_greed_value(page)
     screenshot_path = output_dir / "fear_greed_index.png"
+
+    try:
+        title = page.locator(".headline_section-banner").first
+        gauge = _largest_visible_locator(page, ".layout__main .market-fng-gauge")
+        title.wait_for(state="visible", timeout=15000)
+        gauge.wait_for(state="visible", timeout=15000)
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(1000)
+        title_box = title.bounding_box(timeout=10000)
+        gauge_box = gauge.bounding_box(timeout=10000)
+        if title_box and gauge_box:
+            clip = _page_clip_from_boxes(page, [title_box, gauge_box], padding=18)
+            clip["x"] = 0
+            clip["width"] = min(page.viewport_size["width"], gauge_box["x"] + gauge_box["width"] + 32)
+            page.screenshot(path=str(screenshot_path), clip=clip)
+            return value, screenshot_path
+    except Exception:
+        pass
 
     for selector in [".layout__main .market-fng-gauge", ".market-tabbed-container"]:
         try:
@@ -124,7 +237,8 @@ def _capture_fear_greed(page, output_dir: Path) -> tuple[str, Path]:
 
 
 def _capture_nikkei_vi(page, output_dir: Path) -> tuple[str, Path]:
-    page.goto(NIKKEI_WEEK_URL, wait_until="networkidle", timeout=90000)
+    page.set_viewport_size({"width": 1366, "height": 1050})
+    page.goto(NIKKEI_WEEK_SCREENSHOT_URL, wait_until="networkidle", timeout=90000)
     page.wait_for_timeout(3000)
 
     value = _clean_number(page.locator("#price").inner_text(timeout=15000))
@@ -145,12 +259,59 @@ def _capture_nikkei_vi(page, output_dir: Path) -> tuple[str, Path]:
         "() => Array.from(document.images).every((image) => image.complete)",
         timeout=15000,
     )
-    chart.scroll_into_view_if_needed(timeout=10000)
+    page.evaluate("window.scrollTo(0, 0)")
     page.wait_for_timeout(1000)
 
     screenshot_path = output_dir / "nikkei_vi_1w_chart.png"
+    try:
+        header = page.locator(".idx-header-pagetitle").first
+        header.wait_for(state="visible", timeout=15000)
+        header_box = header.bounding_box(timeout=10000)
+        chart_box = chart.bounding_box(timeout=10000)
+        if header_box and chart_box:
+            clip = _page_clip_from_boxes(page, [header_box, chart_box], padding=24)
+            page.screenshot(path=str(screenshot_path), clip=clip)
+            return value, screenshot_path
+    except Exception:
+        pass
+
     chart.screenshot(path=str(screenshot_path))
     return value, screenshot_path
+
+
+def _capture_finviz_heatmap(page, output_dir: Path) -> Path:
+    page.set_viewport_size({"width": 1840, "height": 1100})
+
+    response = page.context.request.get(
+        FINVIZ_RENDER_URL,
+        headers={"User-Agent": DESKTOP_USER_AGENT},
+        timeout=60000,
+    )
+    if response.status != 200:
+        raise RuntimeError(f"FinvizヒートマップHTMLを取得できませんでした: HTTP {response.status}")
+    html = response.text()
+
+    def fulfill_finviz_map(route):
+        route.fulfill(
+            status=200,
+            headers={"content-type": "text/html; charset=utf-8"},
+            body=html,
+        )
+
+    page.context.route("https://finviz.com/map", fulfill_finviz_map)
+    page.context.route("https://finviz.com/map?**", fulfill_finviz_map)
+
+    page.goto(FINVIZ_URL, wait_until="domcontentloaded", timeout=90000)
+    page.wait_for_timeout(12000)
+    page.locator("#map canvas.chart").first.wait_for(state="visible", timeout=45000)
+
+    screenshot_path = output_dir / "finviz_heatmap.png"
+    map_area = page.locator("#map").first
+    try:
+        map_area.screenshot(path=str(screenshot_path))
+    except Exception:
+        page.screenshot(path=str(screenshot_path), full_page=False)
+    return screenshot_path
 
 
 def _build_message(fear_greed_value: str, nikkei_vi_value: str) -> str:
@@ -176,20 +337,20 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
-        page = browser.new_page(
+        context = browser.new_context(
+            ignore_https_errors=True,
             viewport={"width": 1366, "height": 1200},
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            ),
+            user_agent=DESKTOP_USER_AGENT,
             locale="ja-JP",
             timezone_id="Asia/Tokyo",
         )
+        page = context.new_page()
         try:
             fear_greed_value, fear_greed_path = _capture_fear_greed(page, output_dir)
             nikkei_vi_value, nikkei_vi_path = _capture_nikkei_vi(page, output_dir)
+            finviz_path = _capture_finviz_heatmap(page, output_dir)
         finally:
+            context.close()
             browser.close()
 
     message = _build_message(fear_greed_value, nikkei_vi_value)
@@ -204,7 +365,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             "nikkei_vi": NIKKEI_WEEK_URL,
             "finviz": FINVIZ_URL,
         },
-        "screenshots": [str(fear_greed_path), str(nikkei_vi_path)],
+        "screenshots": [str(fear_greed_path), str(nikkei_vi_path), str(finviz_path)],
         "message_file": str(message_path),
     }
     (output_dir / "metadata.json").write_text(
@@ -216,7 +377,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
         fear_greed_value=fear_greed_value,
         nikkei_vi_value=nikkei_vi_value,
         message=message,
-        screenshot_paths=[fear_greed_path, nikkei_vi_path],
+        screenshot_paths=[fear_greed_path, nikkei_vi_path, finviz_path],
     )
 
 
