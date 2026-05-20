@@ -2,7 +2,6 @@
 .vscode/
 .claude/
 __pycache__/
-docs/
 add_investment_dashboard
 history.csv
 trend.png
