@@ -8,3 +8,4 @@ history.csv
 trend.png
 firebase-key.json
 *.json.bak
+artifacts/

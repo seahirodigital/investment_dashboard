@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +31,7 @@ NIKKEI_WEEK_SCREENSHOT_URL = (
 )
 FINVIZ_URL = "https://finviz.com/map"
 FINVIZ_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=d1"
+BASE_DIR = Path(__file__).resolve().parents[2]
 
 DESKTOP_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -408,6 +410,22 @@ def send_to_discord(webhook_url: str, snapshot: MarketSnapshot) -> None:
             handle.close()
 
 
+def cleanup_output_dir(output_dir: Path) -> None:
+    """Discord送信後の一時スクリーンショットを削除する。"""
+    artifacts_dir = (BASE_DIR / "artifacts").resolve()
+    target_dir = output_dir.resolve()
+
+    try:
+        target_dir.relative_to(artifacts_dir)
+    except ValueError:
+        print(f"安全のため削除をスキップしました: {target_dir}", file=sys.stderr)
+        return
+
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+        print(f"一時スクリーンショットを削除しました: {target_dir}")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="朝の市況Discord通知を生成します。")
     parser.add_argument(
@@ -440,6 +458,7 @@ def main() -> None:
         webhook_url = os.environ.get(args.webhook_env) or os.environ.get("DISCORD_WEBHOOK_URL", "")
         send_to_discord(webhook_url, snapshot)
         print("Discordへの送信が完了しました。")
+        cleanup_output_dir(output_dir)
     else:
         print("Discord送信はスキップしました。")
 

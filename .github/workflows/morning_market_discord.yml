@@ -32,10 +32,3 @@ jobs:
         env:
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
         run: python scripts/market/morning_discord_notification.py --send --output-dir artifacts/morning_market_notification
-
-      - name: 生成物をアップロード
-        if: always()
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: morning-market-notification
-          path: artifacts/morning_market_notification
