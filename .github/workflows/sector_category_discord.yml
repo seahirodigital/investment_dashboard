@@ -273,7 +273,7 @@ jobs:
           else
             curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
               -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
-              -F "files[0]=@artifacts/sector_category_screenshots/sector_category_top7_with_ranking.png" \
-              -F "files[1]=@artifacts/sector_category_screenshots/sector_category_bottom7_with_ranking.png" \
-              -F "files[2]=@artifacts/sector_category_screenshots/sector_category_full_ranking.png"
+              -F "files[0]=@artifacts/sector_category_screenshots/sector_category_full_ranking.png" \
+              -F "files[1]=@artifacts/sector_category_screenshots/sector_category_top7_with_ranking.png" \
+              -F "files[2]=@artifacts/sector_category_screenshots/sector_category_bottom7_with_ranking.png"
           fi
