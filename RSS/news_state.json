@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-21T14:54:00+00:00"
+      "last_fetch_at": "2026-05-21T15:04:02+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-21T14:54:00+00:00"
+      "last_fetch_at": "2026-05-21T15:04:02+00:00"
     }
   },
   "seen_ids": [
@@ -39,7 +39,17 @@
     "ロイター:849b9476f7ed2b9101b1e2d7b8ce2358",
     "ロイター:55653c7178e685f9929d2d1dbe5bb7c5",
     "ロイター:22f92810a9e42c00c67c0ee845b71d8a",
-    "ブルームバーグ:81aed3b0035fae98977b990b4fa284d2"
+    "ブルームバーグ:81aed3b0035fae98977b990b4fa284d2",
+    "ブルームバーグ:434bdad612b63219b600bc00c061f4c1"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "ブルームバーグ:434bdad612b63219b600bc00c061f4c1",
+      "source": "ブルームバーグ",
+      "title": "米住宅着工件数は減少、一戸建ては昨年8月以来の大幅減",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE0BKKJH6V400?srnd=jp-markets",
+      "published_at": "2026-05-20T15:00:00+00:00",
+      "fetched_at": "2026-05-21T15:04:02+00:00"
+    }
+  ]
 }
