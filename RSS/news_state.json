@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-21T16:54:24+00:00"
+      "last_fetch_at": "2026-05-21T17:04:26+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-21T16:54:24+00:00"
+      "last_fetch_at": "2026-05-21T17:04:26+00:00"
     }
   },
   "seen_ids": [
@@ -46,7 +46,11 @@
     "ロイター:99bffaf5e24aa242b67493ccf5ee9cb5",
     "ロイター:1cdb7177e00ed8f57f3e0468f9b8c2cd",
     "ロイター:5dcb8230f92cd7969ae238f3bebe292c",
-    "ロイター:227e0a34a3d6ca070fb16755549e52e9"
+    "ロイター:227e0a34a3d6ca070fb16755549e52e9",
+    "ブルームバーグ:7053211c340fc55de5198d6e7e761827",
+    "ブルームバーグ:768e4192b7b3251fd03a3000bce1e627",
+    "ブルームバーグ:95becbc2f76c0b49b7e9aa92a30236de",
+    "ブルームバーグ:d271921872452754c7abcfdeffbc5387"
   ],
   "pending_items": [
     {
@@ -104,6 +108,38 @@
       "link": "https://jp.reuters.com/world/security/Y3AE4HXQZVI37KVG2DGUTPDKLY-2026-05-21/",
       "published_at": "2026-05-21T14:29:48+00:00",
       "fetched_at": "2026-05-21T16:04:13+00:00"
+    },
+    {
+      "id": "ブルームバーグ:7053211c340fc55de5198d6e7e761827",
+      "source": "ブルームバーグ",
+      "title": "米製造業PMI拡大、4年ぶり高水準－イラン戦争で価格指数も急上昇",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE42IT9NJLT00?srnd=jp-markets",
+      "published_at": "2026-05-21T15:00:00+00:00",
+      "fetched_at": "2026-05-21T17:04:26+00:00"
+    },
+    {
+      "id": "ブルームバーグ:768e4192b7b3251fd03a3000bce1e627",
+      "source": "ブルームバーグ",
+      "title": "S&P500種は反落、原油上昇でインフレ懸念再燃－国債利回り上昇",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE7NJKJH6V600?srnd=jp-markets",
+      "published_at": "2026-05-21T15:00:00+00:00",
+      "fetched_at": "2026-05-21T17:04:26+00:00"
+    },
+    {
+      "id": "ブルームバーグ:95becbc2f76c0b49b7e9aa92a30236de",
+      "source": "ブルームバーグ",
+      "title": "独自ブレバン・ハワードのマクロ戦略、金利で損失も株式の活況でカバー",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE6CKKJH6VE00?srnd=jp-markets",
+      "published_at": "2026-05-21T15:00:00+00:00",
+      "fetched_at": "2026-05-21T17:04:26+00:00"
+    },
+    {
+      "id": "ブルームバーグ:d271921872452754c7abcfdeffbc5387",
+      "source": "ブルームバーグ",
+      "title": "独自イランとオマーン、ホルムズ海峡の恒久的課金を協議－イラン大使",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE4Z0T96OSU00?srnd=jp-markets",
+      "published_at": "2026-05-21T15:00:00+00:00",
+      "fetched_at": "2026-05-21T17:04:26+00:00"
     }
   ]
 }
