@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-21T17:34:32+00:00"
+      "last_fetch_at": "2026-05-21T23:41:28+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-21T17:34:32+00:00"
+      "last_fetch_at": "2026-05-21T23:41:28+00:00"
     }
   },
   "seen_ids": [
@@ -50,96 +50,26 @@
     "ブルームバーグ:7053211c340fc55de5198d6e7e761827",
     "ブルームバーグ:768e4192b7b3251fd03a3000bce1e627",
     "ブルームバーグ:95becbc2f76c0b49b7e9aa92a30236de",
-    "ブルームバーグ:d271921872452754c7abcfdeffbc5387"
+    "ブルームバーグ:d271921872452754c7abcfdeffbc5387",
+    "ブルームバーグ:0512beb9f04b5676f649c5598fd26208",
+    "ブルームバーグ:4fa464f45e268b27e7ff89d277c5a446",
+    "ブルームバーグ:5abd022437f6cc1254994b28f4f07e81",
+    "ブルームバーグ:5f6df1c51822fdfefaf41b431be17578",
+    "ブルームバーグ:e12931d33b2b97833012ff3d1fe84237",
+    "ブルームバーグ:f5b43c3a04ae537d7fec8ad675a0b685",
+    "ロイター:c4e397ca915260fa02fbdbc06179e486",
+    "ロイター:841c9ff24e140c9d8682aa8d9bc502b9",
+    "ロイター:8fb4a90d4e57c3d5dac8c437baa758e8",
+    "ロイター:61e2f2f56bcd725dcdcc1e06674b0a9e",
+    "ロイター:e7a833115b1655cabefdf8c5926aabcb",
+    "ロイター:61723c7186dc543f39ea9b022be1a372",
+    "ロイター:c94bb0d636d0f3d1cbf18a56b32a5235",
+    "ロイター:3a6ade2f9cc93aa4b3fff4fb61bfd3de",
+    "ロイター:f8a74e0f21baf4d080c6d5d3aed84a1a",
+    "ロイター:3963b71cd348c0870eb20fc5249a8e46",
+    "ロイター:221b651bfe0b144f92c990b34bdc6f7c",
+    "ロイター:b252a0ad32b1a261c94c9c32d5543e83",
+    "ロイター:e51a455f6765274b8cab049f9bc43a60"
   ],
-  "pending_items": [
-    {
-      "id": "ブルームバーグ:434bdad612b63219b600bc00c061f4c1",
-      "source": "ブルームバーグ",
-      "title": "米住宅着工件数は減少、一戸建ては昨年8月以来の大幅減",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE0BKKJH6V400?srnd=jp-markets",
-      "published_at": "2026-05-20T15:00:00+00:00",
-      "fetched_at": "2026-05-21T15:04:02+00:00"
-    },
-    {
-      "id": "ロイター:faafa4c9e2838743d7dd9a6d8adb6448",
-      "source": "ロイター",
-      "title": "イラン最高指導者、濃縮ウランの国外搬出禁止と政府高官 協議不透明に",
-      "link": "https://jp.reuters.com/world/us/FHERGQWBJVPAZEH6L76DZ5RZGQ-2026-05-21/",
-      "published_at": "2026-05-21T11:11:04+00:00",
-      "fetched_at": "2026-05-21T16:04:13+00:00"
-    },
-    {
-      "id": "ロイター:ffd6717e2d32e1aa6bd1f235fff23cdc",
-      "source": "ロイター",
-      "title": "米週間新規失業保険申請3000件減、労働市場の底堅さ続く",
-      "link": "https://jp.reuters.com/markets/japan/NPS3WWFDOJIAPI5YNGOCNEXV6Y-2026-05-21/",
-      "published_at": "2026-05-21T13:33:42+00:00",
-      "fetched_at": "2026-05-21T16:04:13+00:00"
-    },
-    {
-      "id": "ロイター:99bffaf5e24aa242b67493ccf5ee9cb5",
-      "source": "ロイター",
-      "title": "米一戸建て住宅着工、4月は9.0％減の93万戸 建設許可も減少",
-      "link": "https://jp.reuters.com/markets/japan/RPVFBLNB6FK4HKTNESISYSCSKY-2026-05-21/",
-      "published_at": "2026-05-21T14:18:18+00:00",
-      "fetched_at": "2026-05-21T16:04:13+00:00"
-    },
-    {
-      "id": "ロイター:1cdb7177e00ed8f57f3e0468f9b8c2cd",
-      "source": "ロイター",
-      "title": "米ウォルマート、通期目標据え置き 第2四半期見通しは予想下回る",
-      "link": "https://jp.reuters.com/markets/world-indices/QILB4YGVXZOJPIENZRIUM4ZBSM-2026-05-21/",
-      "published_at": "2026-05-21T14:18:49+00:00",
-      "fetched_at": "2026-05-21T16:04:13+00:00"
-    },
-    {
-      "id": "ロイター:5dcb8230f92cd7969ae238f3bebe292c",
-      "source": "ロイター",
-      "title": "プーチン氏「核兵器は最後の手段」、 ベラルーシとの核演習視察",
-      "link": "https://jp.reuters.com/world/ukraine/XL6LJRSHLNOENA2MLQYCENYRQE-2026-05-21/",
-      "published_at": "2026-05-21T14:21:19+00:00",
-      "fetched_at": "2026-05-21T16:04:13+00:00"
-    },
-    {
-      "id": "ロイター:227e0a34a3d6ca070fb16755549e52e9",
-      "source": "ロイター",
-      "title": "フランス、ホルムズ海峡任務へのＮＡＴＯ関与に否定的",
-      "link": "https://jp.reuters.com/world/security/Y3AE4HXQZVI37KVG2DGUTPDKLY-2026-05-21/",
-      "published_at": "2026-05-21T14:29:48+00:00",
-      "fetched_at": "2026-05-21T16:04:13+00:00"
-    },
-    {
-      "id": "ブルームバーグ:7053211c340fc55de5198d6e7e761827",
-      "source": "ブルームバーグ",
-      "title": "米製造業PMI拡大、4年ぶり高水準－イラン戦争で価格指数も急上昇",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE42IT9NJLT00?srnd=jp-markets",
-      "published_at": "2026-05-21T15:00:00+00:00",
-      "fetched_at": "2026-05-21T17:04:26+00:00"
-    },
-    {
-      "id": "ブルームバーグ:768e4192b7b3251fd03a3000bce1e627",
-      "source": "ブルームバーグ",
-      "title": "S&P500種は反落、原油上昇でインフレ懸念再燃－国債利回り上昇",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE7NJKJH6V600?srnd=jp-markets",
-      "published_at": "2026-05-21T15:00:00+00:00",
-      "fetched_at": "2026-05-21T17:04:26+00:00"
-    },
-    {
-      "id": "ブルームバーグ:95becbc2f76c0b49b7e9aa92a30236de",
-      "source": "ブルームバーグ",
-      "title": "独自ブレバン・ハワードのマクロ戦略、金利で損失も株式の活況でカバー",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE6CKKJH6VE00?srnd=jp-markets",
-      "published_at": "2026-05-21T15:00:00+00:00",
-      "fetched_at": "2026-05-21T17:04:26+00:00"
-    },
-    {
-      "id": "ブルームバーグ:d271921872452754c7abcfdeffbc5387",
-      "source": "ブルームバーグ",
-      "title": "独自イランとオマーン、ホルムズ海峡の恒久的課金を協議－イラン大使",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE4Z0T96OSU00?srnd=jp-markets",
-      "published_at": "2026-05-21T15:00:00+00:00",
-      "fetched_at": "2026-05-21T17:04:26+00:00"
-    }
-  ]
+  "pending_items": []
 }
