@@ -1,47 +1,37 @@
 # RSS NEWS Discord配信 仕様書
 
-作成日: 2026-05-21  
-対象リポジトリ: `C:\Users\mahha\OneDrive\開発\investment_dashboard`  
-実装スクリプト: `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py`  
-状態管理ファイル: `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json`  
-GitHub Actions workflow: `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\rss_news_discord.yml`
+作成日: 2026-05-21
+
+対象リポジトリ: `C:\Users\mahha\OneDrive\開発\investment_dashboard`
+
+実装ファイル:
+
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\rss_news_discord.yml`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json`
 
 ## 目的
 
-ブルームバーグとロイターのRSSを定期監視し、新着NEWSをDiscordへ自動配信する。
+BloombergとReutersのRSSを定期監視し、新着NEWSがある場合だけDiscordへ配信する。
 
-RSS提供元に「クローラーによる各サイトページへのアクセスは1時間に1回以内」と記載があるため、記事ページ本文のクロールは行わず、指定されたRSSだけを監視対象にする。
+記事本文ページのクロールは行わない。RSS提供元に「各サイトページへのアクセスは1時間に1回以内」といった制限があるため、監視対象はRSS XMLだけに限定する。
 
 ## 対象RSS
 
 | 媒体 | RSS URL |
 |---|---|
-| ブルームバーグ | `https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf` |
-| ロイター | `https://assets.wor.jp/rss/rdf/reuters/top.rdf` |
+| Bloomberg | `https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf` |
+| Reuters | `https://assets.wor.jp/rss/rdf/reuters/top.rdf` |
 
-## Discord通知先
+## GitHub Actions起動仕様
 
-GitHub Actionsでは、Discord Webhook URLをコードへ直書きしない。
-
-使用Secret:
-
-`DISCORD_NEWS_WEBHOOK_URL`
-
-GitHubリポジトリのActions Secretに、通知先Webhook URLを登録する。
-
-ローカルテスト時のみ、ユーザーが提示したWebhook URLをPowerShellの一時変数として使った。Webhook URLは `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py` と `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\rss_news_discord.yml` には保存していない。
-
-## 監視方式
-
-### GitHub Actionsの起動
-
-`C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\rss_news_discord.yml` は、以下のcronで起動する。
+`C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\rss_news_discord.yml` は以下のcronで起動する。
 
 ```yaml
 cron: '55 2,8,14,20 * * *'
 ```
 
-これはUTC基準であり、日本時間では以下に相当する。
+GitHub ActionsのcronはUTC基準。日本時間では以下になる。
 
 | UTC | JST |
 |---:|---:|
@@ -50,60 +40,114 @@ cron: '55 2,8,14,20 * * *'
 | 14:55 | 23:55 |
 | 20:55 | 05:55 |
 
-GitHub Actionsのcron混雑を避けるため、毎時00分ぴったりではなく5分前倒しで起動する。
+毎時00分ぴったりはGitHub Actions側の混雑に当たりやすいため、5分前倒しにしている。
 
-### 1回の起動内での監視
+## 監視ループ仕様
 
-毎時cronで単発実行する方式ではなく、1回のActions起動内で監視を継続する。
-
-標準設定:
+1回のActions起動内で、RSS監視を継続する。
 
 | 項目 | 値 |
 |---|---:|
-| 監視間隔 | 10分 |
+| RSS確認間隔 | 10分 |
 | 1回の起動で監視する時間 | 360分 |
 | workflow timeout | 365分 |
+| concurrency group | `rss-news-discord` |
+| cancel-in-progress | `false` |
 
-これにより、1日4回のActions起動で、ほぼ連続的に10分おきのRSS監視を行う。
+`cancel-in-progress: false` により、前回ジョブが残っている場合でも新しいジョブで強制キャンセルしない。状態ファイルのpush競合が起きた場合は、workflow内の `git pull --rebase --autostash` で取り込みを試みる。
 
-GitHub Actionsは完全な永久常駐には向かないため、約6時間の長時間ジョブを1日4回つなぐ構成にしている。
+## GitHub Actions未起動リスク
 
-## 配信時間帯
+GitHub Actionsのscheduleは100%発火保証ではない。現在の設計は「1回起動したら6時間監視する」方式なので、起動失敗が起きた場合は次の起動予定まで空白が出る可能性がある。
 
-Discord配信は日本時間 `06:00` から `23:59` まで行う。
+ただし、起動時刻をJST `05:55 / 11:55 / 17:55 / 23:55` に分散し、00分ぴったりを避けることで、混雑による遅延や未起動のリスクを下げている。
 
-日本時間 `00:00` から `05:59` に取得したNEWSは、Discordへ送信せず `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json` に保留する。
+より堅くする場合は、30分おき起動か、バックアップcronを追加する必要がある。
 
-日本時間 `06:00` 以降の最初の監視タイミングで、夜間に保留したNEWSと新着NEWSを合わせてDiscordへ配信する。
+## Discord配信時間帯
+
+Discordへ送信する時間帯は日本時間 `06:00` から `23:59` まで。
+
+日本時間 `00:00` から `05:59` に取得したNEWSはDiscordへ送信せず、`C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json` の `pending_items` に保留する。
+
+日本時間 `06:00` 以降の最初の監視タイミングで、夜間に保留したNEWSと新着NEWSをまとめてDiscordへ送信する。
 
 ## RSS取得間隔
 
-実装上の最小取得間隔:
+実装上の最小取得間隔は10分。
 
 ```python
 MIN_FETCH_INTERVAL_SECONDS = 10 * 60
 ```
 
-対象ファイル:
-
-`C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py`
-
 同一RSS URLについて、前回取得から10分未満の場合は取得をスキップする。
 
-## 重複排除
+## 日時取得仕様
 
-NEWSごとに以下を元にIDを作成する。
+各RSS itemについて、以下の子要素を日時候補として読む。
 
-優先順:
+- `pubDate`
+- `date`
+- `updated`
+- `published`
+- `dc:date` はXML namespaceを除いたローカル名 `date` として読む
+
+日時文字列は以下の順でパースする。
+
+1. RFC 2822形式などを `email.utils.parsedate_to_datetime` で読む
+2. ISO 8601形式を `datetime.fromisoformat` で読む
+3. タイムゾーンが無い場合はUTCとして扱う
+4. 内部保存時はUTC ISO形式へ変換する
+5. Discord表示時はJSTへ変換する
+
+## Bloomberg RSSの日時注意点
+
+BloombergのRSSでは、channel全体の更新時刻には実時刻が入る場合がある。
+
+例:
+
+```xml
+<dc:date>2026-05-21T20:15:13+09:00</dc:date>
+```
+
+一方で、各itemの `dc:date` は日付だけを表す目的で `00:00:00+09:00` になっている場合がある。
+
+例:
+
+```xml
+<dc:date>2026-05-21T00:00:00+09:00</dc:date>
+```
+
+この場合、Discordに `2026/05/21/00:00` と表示すると「深夜0時に公開された記事」と誤解しやすい。そのため、JST変換後の時刻が `00:00:00` の場合は、時刻を信用せず日付だけ表示する。
+
+表示例:
+
+```text
+2026/05/21
+独自シタデル・セキュリティーズ、アジアで約60人増員－半数近くが香港
+https://www.bloomberg.com/jp/news/articles/2026-05-21/-60-mpew008z?srnd=jp-markets
+```
+
+時刻が `00:00:00` 以外の場合は、従来どおり分まで表示する。
+
+```text
+2026/05/21/20:15
+タイトル
+URL
+```
+
+## 重複排除仕様
+
+NEWSごとにIDを作り、同じNEWSを再送しない。
+
+ID生成に使う値の優先順:
 
 1. RSS itemの `guid` または `id`
 2. RSS itemの `rdf:about`
 3. RSS itemの `link`
 4. 媒体名とタイトル
 
-生成したIDは `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json` の `seen_ids` に保存する。
-
-同じNEWS IDが `seen_ids` または `pending_items` に存在する場合、再配信しない。
+最終的なIDはSHA-256でハッシュ化し、媒体名と先頭32文字のdigestを組み合わせる。
 
 保持する既読ID数:
 
@@ -111,7 +155,9 @@ NEWSごとに以下を元にIDを作成する。
 MAX_SEEN_IDS = 800
 ```
 
-## 状態管理
+同じIDが `seen_ids` または `pending_items` に存在する場合、そのNEWSは追加しない。
+
+## 状態管理仕様
 
 状態管理ファイル:
 
@@ -122,17 +168,36 @@ MAX_SEEN_IDS = 800
 | 項目 | 内容 |
 |---|---|
 | `version` | 状態ファイルのバージョン |
-| `feeds` | RSS URLごとの最終取得時刻とエラー |
+| `feeds` | RSS URLごとの最終取得時刻と直近エラー |
 | `seen_ids` | 配信済みまたは保留済みNEWSのID |
 | `pending_items` | 夜間保留中、または送信失敗で未配信のNEWS |
 
-GitHub Actionsでは、監視ループの各回ごとに `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json` をコミットし、pushする。
+GitHub Actionsでは、監視ループの各回ごとに `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json` をコミットしてpushする。これにより、次回Actions起動時にも既読・保留状態を引き継ぐ。
 
-これにより、Actionsの次回起動でも既読・保留状態を引き継ぐ。
+## Discord通知先
 
-## Discord配信フォーマット
+Discord Webhook URLはコードへ直書きしない。
 
-各NEWSは以下の3行構成にする。
+GitHub Actions Secret:
+
+```text
+DISCORD_NEWS_WEBHOOK_URL
+```
+
+送信時に `https://discordapp.com/api/webhooks/` が指定されていた場合は、`https://discord.com/api/webhooks/` へ正規化する。
+
+## Discord投稿仕様
+
+Discord投稿の先頭にはヘッダーを付ける。
+
+```text
+NEWS配信
+YYYY-MM-DD HH:mm JST
+```
+
+各NEWSは以下の形式で投稿する。
+
+時刻が信頼できる場合:
 
 ```text
 YYYY/MM/DD/HH:mm
@@ -140,34 +205,25 @@ YYYY/MM/DD/HH:mm
 URL
 ```
 
-例:
+RSS itemの時刻がJST `00:00:00` の場合:
 
 ```text
-2026/05/21/00:00
-独自インド中銀、ルピー安阻止へ利上げ検討－海外からドル調達策も選択肢
-https://www.bloomberg.com/jp/news/articles/2026-05-21/TFDBJZT9NJLT00?srnd=jp-markets
-```
-
-Discord投稿の先頭には、以下のヘッダーを付ける。
-
-```text
-NEWS配信
-YYYY-MM-DD HH:mm JST
+YYYY/MM/DD
+タイトル
+URL
 ```
 
 Discordの1投稿あたりの文字数上限を避けるため、本文は約1900文字以内で分割する。
-
-実装上の上限:
 
 ```python
 DISCORD_CONTENT_LIMIT = 1900
 ```
 
+タイトルは220文字で切り詰める。
+
 ## 文字化け対策
 
-Windows環境で日本語を扱うため、以下の対策を行う。
-
-`C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py` では、Windows実行時に標準出力と標準エラーをUTF-8へ設定する。
+Windows実行時は標準出力と標準エラーをUTF-8へ設定する。
 
 ```python
 if sys.platform == "win32":
@@ -175,68 +231,17 @@ if sys.platform == "win32":
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 ```
 
-PowerShellでRSS取得テストを行う場合は、`Invoke-WebRequest` の `.Content` をそのまま使うと文字化けする場合がある。
-
-テスト時はRSSをバイト列として取得し、明示的にUTF-8として復元した。
-
-```powershell
-[byte[]]$bytes = $client.DownloadData($feed.Url)
-$content = [System.Text.Encoding]::UTF8.GetString($bytes)
-```
-
-Discord送信時も、JSON本文をUTF-8バイト列にしてPOSTした。
-
-```powershell
-$bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
-Invoke-RestMethod -Method Post -Uri $webhookUrl -ContentType 'application/json; charset=utf-8' -Body $bodyBytes
-```
-
-## Discord Webhook URLの正規化
-
-ユーザー提示URLが `https://discordapp.com/api/webhooks/` の場合でも、送信時に `https://discord.com/api/webhooks/` へ正規化する。
-
-対象関数:
-
-`C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py` の `_normalize_webhook_url`
-
-## テスト結果
-
-2026-05-21に以下を確認した。
-
-| テスト | 結果 |
-|---|---|
-| PowerShellからのWebhook疎通確認 | 成功 |
-| RSS取得テスト通知 | 成功 |
-| 文字化け修正版RSS取得テスト通知 | 成功 |
-| 3行フォーマットRSS取得テスト通知 | 成功 |
-| ブルームバーグRSS実取得 | 10件パース成功 |
-| ロイターRSS実取得 | RSS自体は取得成功。ただし取得時点では `<item>` が0件 |
-| Python構文チェック | 成功 |
-| UTF-8確認 | 成功 |
-| 05:59 JSTの配信判定 | 配信しない |
-| 06:00 JSTの配信判定 | 配信する |
-
-ローカルPythonでは、Discord送信とRSS取得のHTTPS通信時にSSL証明書検証エラーが発生した。
-
-エラー内容:
-
-```text
-SSLCertVerificationError
-```
-
-PowerShellのHTTPS通信では同じWebhookとRSS URLにアクセスできたため、ローカルPython環境の証明書設定に起因する問題と判断した。
-
-GitHub Actionsの `ubuntu-latest` では標準CA証明書が利用できるため、Python実行での成功を想定している。
+日本語を含むファイルはUTF-8として保存する。Windows Bashの `echo`、`printf`、heredocでは日本語ファイルを作成・更新しない。
 
 ## 手動実行
 
-RSS監視スクリプトを手動でドライランする。
+ドライラン:
 
 ```powershell
 python -B C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py
 ```
 
-Discordへ送信する。
+Discord送信あり:
 
 ```powershell
 $env:DISCORD_NEWS_WEBHOOK_URL = "<Discord Webhook URL>"
@@ -244,7 +249,7 @@ python -B C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_ne
 $env:DISCORD_NEWS_WEBHOOK_URL = ""
 ```
 
-テストメッセージだけを送る。
+テストメッセージ送信:
 
 ```powershell
 $env:DISCORD_NEWS_WEBHOOK_URL = "<Discord Webhook URL>"
@@ -252,7 +257,7 @@ python -B C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_ne
 $env:DISCORD_NEWS_WEBHOOK_URL = ""
 ```
 
-一時状態ファイルでテストする。
+一時状態ファイルを使ったテスト:
 
 ```powershell
 python -B C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py --state-path C:\Users\mahha\OneDrive\開発\investment_dashboard\artifacts\rss_news_test_state.json
@@ -260,9 +265,9 @@ python -B C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_ne
 
 ## GitHub Actions手動実行
 
-GitHub Actionsの `RSS NEWS Discord配信` workflowは、`workflow_dispatch` に対応している。
+`RSS NEWS Discord配信` workflowは `workflow_dispatch` に対応している。
 
-手動実行時に指定できる入力:
+入力:
 
 | 入力 | 既定値 | 内容 |
 |---|---:|---|
@@ -278,40 +283,21 @@ GitHub Actionsの `RSS NEWS Discord配信` workflowは、`workflow_dispatch` に
 
 この設定では、約3分間だけRSS監視を行う。
 
+## テスト観点
+
+変更時は以下を確認する。
+
+- Python構文チェックが通ること
+- `2026-05-21T00:00:00+09:00` が `2026/05/21` と表示されること
+- `2026-05-21T20:15:13+09:00` が `2026/05/21/20:15` と表示されること
+- `05:59 JST` は配信せず保留すること
+- `06:00 JST` は配信対象になること
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json` がUTF-8 JSONとして保存されること
+
 ## 注意事項
 
-### 「毎時間通知」ではない
+この仕組みは「毎時間必ず通知」ではない。10分おきにRSSを確認し、新着NEWSがある場合だけDiscordへ通知する。新着NEWSがない場合は通知しない。
 
-この仕組みは、毎時間必ず通知するものではない。
+Reuters RSSは、取得できても `<item>` が0件の場合がある。その場合、取得成功でも配信対象NEWSは0件になる。
 
-10分おきにRSSを確認し、新着NEWSがある場合だけDiscordへ通知する。
-
-新着NEWSがない場合は通知しない。
-
-夜間の日本時間 `00:00` から `05:59` は、取得しても通知せず保留する。
-
-### ロイターRSSが空の場合
-
-2026-05-21のテスト時点では、`https://assets.wor.jp/rss/rdf/reuters/top.rdf` のRSS内に `<item>` が存在しなかった。
-
-この場合、取得自体は成功しても配信対象NEWSは0件になる。
-
-### Git push不可の現状
-
-2026-05-21時点で、`C:\Users\mahha\OneDrive\開発\investment_dashboard\.git` は以下を指している。
-
-```text
-gitdir: /Users/user/LocalGit/investment_dashboard.git
-```
-
-これはMac側の絶対パスであり、Windows上の現在環境では通常の `git status`、`git remote -v`、`git branch --show-current` が失敗する。
-
-実際のエラー:
-
-```text
-fatal: not a git repository: /Users/user/LocalGit/investment_dashboard.git
-```
-
-そのため、現時点のWindows環境からは通常の `git push` を実行できない。
-
-pushするには、Windows上で有効なGitメタデータへ接続し直すか、Mac側の `/Users/user/LocalGit/investment_dashboard.git` が見える環境でpushする必要がある。
+GitHub Actions scheduleは遅延または未起動の可能性がある。通知が来ない場合は、GitHub Actionsの `RSS NEWS Discord配信` workflow実行履歴、`C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json` の `feeds`、`pending_items`、`seen_ids` を確認する。

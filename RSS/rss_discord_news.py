@@ -150,7 +150,15 @@ def _format_datetime_for_message(value: str | None) -> str:
     parsed = _parse_datetime(value)
     if parsed is None:
         return ""
-    return parsed.astimezone(JST).strftime("%Y/%m/%d/%H:%M")
+    parsed_jst = parsed.astimezone(JST)
+    if (
+        parsed_jst.hour == 0
+        and parsed_jst.minute == 0
+        and parsed_jst.second == 0
+        and parsed_jst.microsecond == 0
+    ):
+        return parsed_jst.strftime("%Y/%m/%d")
+    return parsed_jst.strftime("%Y/%m/%d/%H:%M")
 
 
 def _truncate(value: str, limit: int) -> str:
