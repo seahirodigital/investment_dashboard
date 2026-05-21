@@ -2,9 +2,9 @@ name: RSS NEWS Discord配信
 
 on:
   schedule:
-    # GitHub Actionsの1ジョブ内で約6時間、10分おきに監視します。
-    # UTC 03/09/15/21時 = JST 12/18/00/06時に起動します。
-    - cron: '0 3,9,15,21 * * *'
+    # GitHub Actionsの1ジョブ内で6時間、10分おきに監視します。
+    # UTC 02:55/08:55/14:55/20:55 = JST 11:55/17:55/23:55/05:55 に起動します。
+    - cron: '55 2,8,14,20 * * *'
   workflow_dispatch:
     inputs:
       interval_minutes:
@@ -14,7 +14,7 @@ on:
       duration_minutes:
         description: '1回の起動で監視し続ける時間（分）'
         required: false
-        default: '355'
+        default: '360'
 
 permissions:
   contents: write
@@ -27,7 +27,7 @@ jobs:
   notify-rss-news:
     name: RSS NEWSをDiscordへ配信
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 365
 
     steps:
       - name: リポジトリを取得
@@ -51,7 +51,7 @@ jobs:
           set -u
 
           interval_minutes="${RSS_MONITOR_INTERVAL_MINUTES:-10}"
-          duration_minutes="${RSS_MONITOR_DURATION_MINUTES:-355}"
+          duration_minutes="${RSS_MONITOR_DURATION_MINUTES:-360}"
           interval_seconds=$((interval_minutes * 60))
           end_time=$((SECONDS + duration_minutes * 60))
           iteration=1
