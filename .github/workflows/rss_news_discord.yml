@@ -1,0 +1,105 @@
+name: RSS NEWS Discord配信
+
+on:
+  schedule:
+    # GitHub Actionsの1ジョブ内で約6時間、10分おきに監視します。
+    # UTC 03/09/15/21時 = JST 12/18/00/06時に起動します。
+    - cron: '0 3,9,15,21 * * *'
+  workflow_dispatch:
+    inputs:
+      interval_minutes:
+        description: 'RSS監視間隔（分）'
+        required: false
+        default: '10'
+      duration_minutes:
+        description: '1回の起動で監視し続ける時間（分）'
+        required: false
+        default: '355'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rss-news-discord
+  cancel-in-progress: false
+
+jobs:
+  notify-rss-news:
+    name: RSS NEWSをDiscordへ配信
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Pythonを準備
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 依存関係をインストール
+        run: python -m pip install requests
+
+      - name: RSS NEWSを10分おきに監視してDiscordへ配信
+        id: rss_news
+        env:
+          DISCORD_NEWS_WEBHOOK_URL: ${{ secrets.DISCORD_NEWS_WEBHOOK_URL }}
+          RSS_MONITOR_INTERVAL_MINUTES: ${{ github.event.inputs.interval_minutes }}
+          RSS_MONITOR_DURATION_MINUTES: ${{ github.event.inputs.duration_minutes }}
+        run: |
+          set -u
+
+          interval_minutes="${RSS_MONITOR_INTERVAL_MINUTES:-10}"
+          duration_minutes="${RSS_MONITOR_DURATION_MINUTES:-355}"
+          interval_seconds=$((interval_minutes * 60))
+          end_time=$((SECONDS + duration_minutes * 60))
+          iteration=1
+          had_failure=0
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          commit_state() {
+            git add RSS/news_state.json || return 1
+            if git diff --cached --quiet; then
+              echo "RSS状態JSONに変更はありません。"
+              return 0
+            fi
+
+            git commit -m "chore: update rss news state" || return 1
+            git pull --rebase --autostash || return 1
+            git push || return 1
+          }
+
+          while [ "$SECONDS" -lt "$end_time" ]; do
+            echo "RSS NEWS監視 ${iteration} 回目を開始します。"
+
+            if python RSS/rss_discord_news.py --send; then
+              echo "RSS NEWS監視 ${iteration} 回目が完了しました。"
+            else
+              echo "RSS NEWS監視 ${iteration} 回目でエラーが発生しました。監視は継続します。"
+              had_failure=1
+            fi
+
+            if ! commit_state; then
+              echo "RSS状態JSONのコミットまたはpushに失敗しました。監視は継続します。"
+              had_failure=1
+            fi
+
+            remaining_seconds=$((end_time - SECONDS))
+            if [ "$remaining_seconds" -le 0 ]; then
+              break
+            fi
+
+            sleep_seconds="$interval_seconds"
+            if [ "$remaining_seconds" -lt "$sleep_seconds" ]; then
+              sleep_seconds="$remaining_seconds"
+            fi
+
+            echo "${sleep_seconds} 秒後に次のRSS NEWS監視を行います。"
+            sleep "$sleep_seconds"
+            iteration=$((iteration + 1))
+          done
+
+          exit "$had_failure"
