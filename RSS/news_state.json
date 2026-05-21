@@ -1,6 +1,24 @@
 {
   "version": 1,
-  "feeds": {},
-  "seen_ids": [],
+  "feeds": {
+    "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
+      "last_fetch_at": "2026-05-21T11:41:02+00:00"
+    },
+    "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
+      "last_fetch_at": "2026-05-21T11:41:02+00:00"
+    }
+  },
+  "seen_ids": [
+    "ブルームバーグ:0162b1331dcf9042ee09b4bf740332bf",
+    "ブルームバーグ:0a16033fad554556827b8cb3ed6afc86",
+    "ブルームバーグ:2f3516c5cf6d18dc44779fe240b5e905",
+    "ブルームバーグ:4d05788fae510ef9df1040df29d368ac",
+    "ブルームバーグ:552dadba90d8236ad78e8e0e3187a04c",
+    "ブルームバーグ:66d87fb22c8a5a7c2cb2aec9839f7afa",
+    "ブルームバーグ:737207e04c96da485c8e3a7d3dc34627",
+    "ブルームバーグ:7403109e4b3241d54c3b6107b3277df5",
+    "ブルームバーグ:afff0a11034289459a3770391c57f546",
+    "ブルームバーグ:ca1d073d3b28333928277e123a5c0516"
+  ],
   "pending_items": []
 }
