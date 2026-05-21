@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-21T15:54:11+00:00"
+      "last_fetch_at": "2026-05-21T16:04:13+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-21T15:54:11+00:00"
+      "last_fetch_at": "2026-05-21T16:04:13+00:00"
     }
   },
   "seen_ids": [
@@ -40,7 +40,13 @@
     "ロイター:55653c7178e685f9929d2d1dbe5bb7c5",
     "ロイター:22f92810a9e42c00c67c0ee845b71d8a",
     "ブルームバーグ:81aed3b0035fae98977b990b4fa284d2",
-    "ブルームバーグ:434bdad612b63219b600bc00c061f4c1"
+    "ブルームバーグ:434bdad612b63219b600bc00c061f4c1",
+    "ロイター:faafa4c9e2838743d7dd9a6d8adb6448",
+    "ロイター:ffd6717e2d32e1aa6bd1f235fff23cdc",
+    "ロイター:99bffaf5e24aa242b67493ccf5ee9cb5",
+    "ロイター:1cdb7177e00ed8f57f3e0468f9b8c2cd",
+    "ロイター:5dcb8230f92cd7969ae238f3bebe292c",
+    "ロイター:227e0a34a3d6ca070fb16755549e52e9"
   ],
   "pending_items": [
     {
@@ -50,6 +56,54 @@
       "link": "https://www.bloomberg.com/jp/news/articles/2026-05-21/TFE0BKKJH6V400?srnd=jp-markets",
       "published_at": "2026-05-20T15:00:00+00:00",
       "fetched_at": "2026-05-21T15:04:02+00:00"
+    },
+    {
+      "id": "ロイター:faafa4c9e2838743d7dd9a6d8adb6448",
+      "source": "ロイター",
+      "title": "イラン最高指導者、濃縮ウランの国外搬出禁止と政府高官 協議不透明に",
+      "link": "https://jp.reuters.com/world/us/FHERGQWBJVPAZEH6L76DZ5RZGQ-2026-05-21/",
+      "published_at": "2026-05-21T11:11:04+00:00",
+      "fetched_at": "2026-05-21T16:04:13+00:00"
+    },
+    {
+      "id": "ロイター:ffd6717e2d32e1aa6bd1f235fff23cdc",
+      "source": "ロイター",
+      "title": "米週間新規失業保険申請3000件減、労働市場の底堅さ続く",
+      "link": "https://jp.reuters.com/markets/japan/NPS3WWFDOJIAPI5YNGOCNEXV6Y-2026-05-21/",
+      "published_at": "2026-05-21T13:33:42+00:00",
+      "fetched_at": "2026-05-21T16:04:13+00:00"
+    },
+    {
+      "id": "ロイター:99bffaf5e24aa242b67493ccf5ee9cb5",
+      "source": "ロイター",
+      "title": "米一戸建て住宅着工、4月は9.0％減の93万戸 建設許可も減少",
+      "link": "https://jp.reuters.com/markets/japan/RPVFBLNB6FK4HKTNESISYSCSKY-2026-05-21/",
+      "published_at": "2026-05-21T14:18:18+00:00",
+      "fetched_at": "2026-05-21T16:04:13+00:00"
+    },
+    {
+      "id": "ロイター:1cdb7177e00ed8f57f3e0468f9b8c2cd",
+      "source": "ロイター",
+      "title": "米ウォルマート、通期目標据え置き 第2四半期見通しは予想下回る",
+      "link": "https://jp.reuters.com/markets/world-indices/QILB4YGVXZOJPIENZRIUM4ZBSM-2026-05-21/",
+      "published_at": "2026-05-21T14:18:49+00:00",
+      "fetched_at": "2026-05-21T16:04:13+00:00"
+    },
+    {
+      "id": "ロイター:5dcb8230f92cd7969ae238f3bebe292c",
+      "source": "ロイター",
+      "title": "プーチン氏「核兵器は最後の手段」、 ベラルーシとの核演習視察",
+      "link": "https://jp.reuters.com/world/ukraine/XL6LJRSHLNOENA2MLQYCENYRQE-2026-05-21/",
+      "published_at": "2026-05-21T14:21:19+00:00",
+      "fetched_at": "2026-05-21T16:04:13+00:00"
+    },
+    {
+      "id": "ロイター:227e0a34a3d6ca070fb16755549e52e9",
+      "source": "ロイター",
+      "title": "フランス、ホルムズ海峡任務へのＮＡＴＯ関与に否定的",
+      "link": "https://jp.reuters.com/world/security/Y3AE4HXQZVI37KVG2DGUTPDKLY-2026-05-21/",
+      "published_at": "2026-05-21T14:29:48+00:00",
+      "fetched_at": "2026-05-21T16:04:13+00:00"
     }
   ]
 }
