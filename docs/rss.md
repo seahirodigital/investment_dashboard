@@ -9,6 +9,7 @@
 - `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\rss_discord_news.py`
 - `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\rss_news_discord.yml`
 - `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_delivery_log.jsonl`
 
 ## 目的
 
@@ -173,6 +174,60 @@ MAX_SEEN_IDS = 800
 | `pending_items` | 夜間保留中、または送信失敗で未配信のNEWS |
 
 GitHub Actionsでは、監視ループの各回ごとに `C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_state.json` をコミットしてpushする。これにより、次回Actions起動時にも既読・保留状態を引き継ぐ。
+
+## 配信ログ保存仕様
+
+Discordへ実際に送信できたNEWSだけを、分類仕様作成用の素材として永続保存する。
+
+保存先:
+
+`C:\Users\mahha\OneDrive\開発\investment_dashboard\RSS\news_delivery_log.jsonl`
+
+形式はJSONL。1行が1NEWSを表す。CSVではなくJSONLにする理由は、後から分類結果、判定理由、複数候補、関連キーワードなどを追加しやすいため。
+
+保存タイミング:
+
+- Discord送信成功後に追記する
+- 夜間保留中のNEWSはまだ保存しない
+- Discord送信失敗時のNEWSは保存しない
+- 同じNEWSが後続の再送で成功した場合、その成功時点で保存する
+
+保存する主な項目:
+
+| 項目 | 内容 |
+|---|---|
+| `id` | NEWSの重複排除ID |
+| `delivered_at` | Discord送信成功時刻。UTC ISO形式 |
+| `delivered_at_jst` | Discord送信成功時刻。JST表示 |
+| `source` | RSS媒体名 |
+| `title` | NEWSタイトル |
+| `link` | NEWS URL |
+| `published_at` | RSS itemから読んだ公開日時。UTC ISO形式または `null` |
+| `published_display` | Discordに表示した日付または日時 |
+| `fetched_at` | RSS取得時刻。UTC ISO形式 |
+| `classification` | 後で分類するための初期フィールド |
+
+`classification` の初期値:
+
+```json
+{
+  "status": "unclassified",
+  "primary": null,
+  "candidates": ["米国株", "日本株", "海外市況", "日本市況"],
+  "reason": ""
+}
+```
+
+分類予定カテゴリ:
+
+| カテゴリ | 想定内容 |
+|---|---|
+| `米国株` | 米国個別株、米国株セクター、米国企業決算、米国株式市場に直接関係するNEWS |
+| `日本株` | 日本個別株、日本株セクター、日本企業決算、日本株式市場に直接関係するNEWS |
+| `海外市況` | 米国以外も含む海外マクロ、為替、金利、商品、地政学、海外中央銀行など |
+| `日本市況` | 日本の金利、為替、日銀、財政、国内マクロ、日本市場全体に関係するNEWS |
+
+この時点では自動分類は行わない。分類ルールを作る前に、実際に通知されたNEWSを蓄積して、人間が分類仕様を検討しやすい状態を作る。
 
 ## Discord通知先
 

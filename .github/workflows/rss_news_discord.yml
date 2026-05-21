@@ -62,6 +62,9 @@ jobs:
 
           commit_state() {
             git add RSS/news_state.json || return 1
+            if [ -f RSS/news_delivery_log.jsonl ]; then
+              git add RSS/news_delivery_log.jsonl || return 1
+            fi
             if git diff --cached --quiet; then
               echo "RSS状態JSONに変更はありません。"
               return 0

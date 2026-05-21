@@ -35,6 +35,7 @@ STATE_VERSION = 1
 MIN_FETCH_INTERVAL_SECONDS = 10 * 60
 MAX_SEEN_IDS = 800
 DISCORD_CONTENT_LIMIT = 1900
+CLASSIFICATION_CANDIDATES = ["米国株", "日本株", "海外市況", "日本市況"]
 
 FEEDS = [
     {
@@ -159,6 +160,41 @@ def _format_datetime_for_message(value: str | None) -> str:
     ):
         return parsed_jst.strftime("%Y/%m/%d")
     return parsed_jst.strftime("%Y/%m/%d/%H:%M")
+
+
+def _default_delivery_log_path(state_path: Path) -> Path:
+    return state_path.with_name("news_delivery_log.jsonl")
+
+
+def append_delivery_log(path: Path, items: list[NewsItem], delivered_at: datetime) -> None:
+    if not items:
+        return
+
+    delivered_at_utc = _isoformat_utc(delivered_at)
+    delivered_at_jst = delivered_at.astimezone(JST).strftime("%Y-%m-%d %H:%M:%S JST")
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        for item in items:
+            record = {
+                "id": item.item_id,
+                "delivered_at": delivered_at_utc,
+                "delivered_at_jst": delivered_at_jst,
+                "source": item.source,
+                "title": item.title,
+                "link": item.link,
+                "published_at": item.published_at,
+                "published_display": _format_datetime_for_message(item.published_at),
+                "fetched_at": item.fetched_at,
+                "classification": {
+                    "status": "unclassified",
+                    "primary": None,
+                    "candidates": CLASSIFICATION_CANDIDATES,
+                    "reason": "",
+                },
+            }
+            handle.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
+            handle.write("\n")
 
 
 def _truncate(value: str, limit: int) -> str:
@@ -386,6 +422,11 @@ def parse_args() -> argparse.Namespace:
         help="状態JSONの保存先です。",
     )
     parser.add_argument(
+        "--delivery-log-path",
+        default="",
+        help="Discord送信成功NEWSのJSONLログ保存先です。未指定時は状態JSONと同じディレクトリに保存します。",
+    )
+    parser.add_argument(
         "--send",
         action="store_true",
         help="配信可能時間帯にDiscordへ送信します。",
@@ -420,6 +461,7 @@ def resolve_now(value: str) -> datetime:
 def main() -> int:
     args = parse_args()
     state_path = Path(args.state_path)
+    delivery_log_path = Path(args.delivery_log_path) if args.delivery_log_path else _default_delivery_log_path(state_path)
     now = resolve_now(args.now)
 
     if args.test_message:
@@ -482,8 +524,10 @@ def main() -> int:
         webhook_url = os.environ.get(args.webhook_env, "")
         try:
             send_to_discord(webhook_url, messages)
+            append_delivery_log(delivery_log_path, pending_items, now)
             state["pending_items"] = []
             print(f"DiscordへのNEWS配信が完了しました: {len(pending_items)} 件")
+            print(f"NEWS配信ログを保存しました: {delivery_log_path.resolve()}")
         except Exception as exc:
             exit_code = 1
             print(f"DiscordへのNEWS配信に失敗しました。未配信NEWSを保持します: {exc}", file=sys.stderr)
