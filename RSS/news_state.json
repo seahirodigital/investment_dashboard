@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-22T21:18:58+00:00"
+      "last_fetch_at": "2026-05-22T21:29:00+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-22T21:18:58+00:00"
+      "last_fetch_at": "2026-05-22T21:29:00+00:00"
     }
   },
   "seen_ids": [
