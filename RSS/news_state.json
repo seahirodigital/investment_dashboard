@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-22T19:58:45+00:00"
+      "last_fetch_at": "2026-05-22T20:08:46+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-22T19:58:45+00:00"
+      "last_fetch_at": "2026-05-22T20:08:46+00:00"
     }
   },
   "seen_ids": [
@@ -137,7 +137,8 @@
     "ブルームバーグ:74dcc0e09db0878a9561eda145914ddd",
     "ブルームバーグ:79a4a1826f5dda689a7d0a709b633ace",
     "ブルームバーグ:b2a3ece2df83aac6b9fd719515703386",
-    "ブルームバーグ:db656c77ba9415cfe1518ce2e8c992db"
+    "ブルームバーグ:db656c77ba9415cfe1518ce2e8c992db",
+    "ブルームバーグ:971b92909223ebc801bd87c12bc36a3c"
   ],
   "pending_items": [
     {
@@ -195,6 +196,14 @@
       "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFFZ0PKJH6V800?srnd=jp-markets",
       "published_at": "2026-05-22T15:00:00+00:00",
       "fetched_at": "2026-05-22T18:36:21+00:00"
+    },
+    {
+      "id": "ブルームバーグ:971b92909223ebc801bd87c12bc36a3c",
+      "source": "ブルームバーグ",
+      "title": "独自UAEなど湾岸3カ国、トランプ氏に水面下で圧力－イラン再攻撃回避促す",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFFUYBT9NJLT00?srnd=jp-markets",
+      "published_at": "2026-05-22T15:00:00+00:00",
+      "fetched_at": "2026-05-22T20:08:46+00:00"
     }
   ]
 }
