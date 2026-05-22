@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-22T20:58:54+00:00"
+      "last_fetch_at": "2026-05-22T21:08:55+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-22T20:58:54+00:00"
+      "last_fetch_at": "2026-05-22T21:08:55+00:00"
     }
   },
   "seen_ids": [
@@ -140,70 +140,5 @@
     "ブルームバーグ:db656c77ba9415cfe1518ce2e8c992db",
     "ブルームバーグ:971b92909223ebc801bd87c12bc36a3c"
   ],
-  "pending_items": [
-    {
-      "id": "ブルームバーグ:5e7f3098bd25aa6060bc25597fe40755",
-      "source": "ブルームバーグ",
-      "title": "かつて話題の英超長期債、歴史的安値継続でトレーダー身動き取れず",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFFMFWKJH6V500?srnd=jp-markets",
-      "published_at": "2026-05-22T15:00:00+00:00",
-      "fetched_at": "2026-05-22T18:36:21+00:00"
-    },
-    {
-      "id": "ブルームバーグ:6386e1d9deea7fd4b5aaddb52218faba",
-      "source": "ブルームバーグ",
-      "title": "米消費者マインド指数、5月確報値は過去最低－イラン戦争が影響",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFFZ3DT9NJLX00?srnd=jp-markets",
-      "published_at": "2026-05-22T15:00:00+00:00",
-      "fetched_at": "2026-05-22T18:36:21+00:00"
-    },
-    {
-      "id": "ブルームバーグ:73ebb98c20eb4b8629790ef703848cec",
-      "source": "ブルームバーグ",
-      "title": "OpenAIなどの大型IPO、テック株の市場集中度がバブル期並みに－BofA",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFFVAQT96OSG00?srnd=jp-markets",
-      "published_at": "2026-05-22T15:00:00+00:00",
-      "fetched_at": "2026-05-22T18:36:21+00:00"
-    },
-    {
-      "id": "ブルームバーグ:74dcc0e09db0878a9561eda145914ddd",
-      "source": "ブルームバーグ",
-      "title": "ウォーシュFRB議長は「自分のやり方で」仕事を－就任式でトランプ氏",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFG4I6T9NJLZ00?srnd=jp-markets",
-      "published_at": "2026-05-22T15:00:00+00:00",
-      "fetched_at": "2026-05-22T18:36:21+00:00"
-    },
-    {
-      "id": "ブルームバーグ:79a4a1826f5dda689a7d0a709b633ace",
-      "source": "ブルームバーグ",
-      "title": "S&P500は続伸、週間で2023年以来最長の連騰へ－米イラン交渉進展期待",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFG2ASKJH6V500?srnd=jp-markets",
-      "published_at": "2026-05-22T15:00:00+00:00",
-      "fetched_at": "2026-05-22T18:36:21+00:00"
-    },
-    {
-      "id": "ブルームバーグ:b2a3ece2df83aac6b9fd719515703386",
-      "source": "ブルームバーグ",
-      "title": "米イラン交渉、仲介役のパキスタン陸軍トップがテヘラン入り",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFFUMWT9NJLS00?srnd=jp-markets",
-      "published_at": "2026-05-22T15:00:00+00:00",
-      "fetched_at": "2026-05-22T18:36:21+00:00"
-    },
-    {
-      "id": "ブルームバーグ:db656c77ba9415cfe1518ce2e8c992db",
-      "source": "ブルームバーグ",
-      "title": "ウォラーFRB理事、利上げの可能性排除せず－緩和バイアス削除支持",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFFZ0PKJH6V800?srnd=jp-markets",
-      "published_at": "2026-05-22T15:00:00+00:00",
-      "fetched_at": "2026-05-22T18:36:21+00:00"
-    },
-    {
-      "id": "ブルームバーグ:971b92909223ebc801bd87c12bc36a3c",
-      "source": "ブルームバーグ",
-      "title": "独自UAEなど湾岸3カ国、トランプ氏に水面下で圧力－イラン再攻撃回避促す",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-22/TFFUYBT9NJLT00?srnd=jp-markets",
-      "published_at": "2026-05-22T15:00:00+00:00",
-      "fetched_at": "2026-05-22T20:08:46+00:00"
-    }
-  ]
+  "pending_items": []
 }
