@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-23T12:29:56+00:00"
+      "last_fetch_at": "2026-05-23T18:37:08+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-23T12:29:56+00:00"
+      "last_fetch_at": "2026-05-23T18:37:08+00:00"
     }
   },
   "seen_ids": [
@@ -141,7 +141,17 @@
     "ブルームバーグ:971b92909223ebc801bd87c12bc36a3c",
     "ブルームバーグ:5886f5560e82803700dcd6e1aeccd86b",
     "ブルームバーグ:63c0527eb9b060f316ea2bf157bb6538",
-    "ブルームバーグ:8d8bae558cfab3df73854a591c5eab54"
+    "ブルームバーグ:8d8bae558cfab3df73854a591c5eab54",
+    "ブルームバーグ:ca11efc190124203bbd9bb870ca5d957"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "ブルームバーグ:ca11efc190124203bbd9bb870ca5d957",
+      "source": "ブルームバーグ",
+      "title": "イランと米国、いずれも和平への進展を示唆ー未解決問題は後回しも",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-23/TFHX6ET96OSG00?srnd=jp-markets",
+      "published_at": "2026-05-23T15:00:00+00:00",
+      "fetched_at": "2026-05-23T18:37:08+00:00"
+    }
+  ]
 }
