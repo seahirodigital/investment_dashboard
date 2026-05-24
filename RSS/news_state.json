@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-24T17:10:25+00:00"
+      "last_fetch_at": "2026-05-24T17:20:26+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-24T17:10:25+00:00"
+      "last_fetch_at": "2026-05-24T17:20:26+00:00"
     }
   },
   "seen_ids": [
@@ -165,7 +165,8 @@
     "ロイター:f7afc35da3d364d7b59e21119647d144",
     "ロイター:3d19ce6edbc4a239a0333540035ec09c",
     "ブルームバーグ:066ca28261241da06b239a8a77df96f2",
-    "ブルームバーグ:61aeda066fc4ef3403a2e59b8ac6d8ba"
+    "ブルームバーグ:61aeda066fc4ef3403a2e59b8ac6d8ba",
+    "ロイター:6bc97cd60298e9eb9600f47be6beb748"
   ],
   "pending_items": [
     {
@@ -175,6 +176,14 @@
       "link": "https://www.bloomberg.com/jp/news/articles/2026-05-24/TFJP18T96OSG00?srnd=jp-markets",
       "published_at": "2026-05-24T15:00:00+00:00",
       "fetched_at": "2026-05-24T16:00:16+00:00"
+    },
+    {
+      "id": "ロイター:6bc97cd60298e9eb9600f47be6beb748",
+      "source": "ロイター",
+      "title": "トランプ氏、イランとの合意「急がず」と指示 和平期待に水差す",
+      "link": "https://jp.reuters.com/world/security/JZ6NWXT5LBOJ3HFALEUXHZ2EE4-2026-05-24/",
+      "published_at": "2026-05-24T16:51:04+00:00",
+      "fetched_at": "2026-05-24T17:20:26+00:00"
     }
   ]
 }
