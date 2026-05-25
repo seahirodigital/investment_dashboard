@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-25T12:51:25+00:00"
+      "last_fetch_at": "2026-05-25T18:58:23+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-25T12:51:25+00:00"
+      "last_fetch_at": "2026-05-25T18:58:23+00:00"
     }
   },
   "seen_ids": [
@@ -199,7 +199,26 @@
     "ロイター:d89f7c84628f8d4ba7e9529572dd1262",
     "ロイター:40c51b93697d302cd38c90af2f5fd4b8",
     "ロイター:8600f366d91e3acc13316569e431974a",
-    "ブルームバーグ:936f1a815c6c69eea2c6ea5af25b9504"
+    "ブルームバーグ:936f1a815c6c69eea2c6ea5af25b9504",
+    "ブルームバーグ:bd953ac5476de567507033e5186f81dc",
+    "ブルームバーグ:dffaf22c8cc87449a765229a1341998e"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "ブルームバーグ:bd953ac5476de567507033e5186f81dc",
+      "source": "ブルームバーグ",
+      "title": "トランプ氏、イランとの協議「順調に進んでいる」－合意への前進示唆",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-25/TFLK22KIJH9G00?srnd=jp-markets",
+      "published_at": "2026-05-25T15:00:00+00:00",
+      "fetched_at": "2026-05-25T18:58:23+00:00"
+    },
+    {
+      "id": "ブルームバーグ:dffaf22c8cc87449a765229a1341998e",
+      "source": "ブルームバーグ",
+      "title": "中国ネット証券創業者、1日で資産2700億円喪失－取り締まり強化で",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-25/TFLGUWKGCTG400?srnd=jp-markets",
+      "published_at": "2026-05-25T15:00:00+00:00",
+      "fetched_at": "2026-05-25T18:58:23+00:00"
+    }
+  ]
 }
