@@ -69,7 +69,13 @@
             const divRef = useRef(null);
 
             useEffect(() => {
-                if (divRef.current && window.Plotly) Plotly.react(divRef.current, data, layout, config);
+                if (divRef.current && window.Plotly) {
+                    Promise.resolve(Plotly.react(divRef.current, data, layout, config)).then(() => {
+                        requestAnimationFrame(() => {
+                            if (divRef.current && window.Plotly) Plotly.Plots.resize(divRef.current);
+                        });
+                    });
+                }
             }, [data, layout, config]);
 
             useEffect(() => {
@@ -372,7 +378,7 @@
         };
 
         // 米国セクター構成銘柄モーダル（? アイコン）
-        const USSectorLegend = () => {
+        const USSectorLegend = ({ mode = 'absolute', benchmarkLabel = 'S&P500' }) => {
             const [open, setOpen] = React.useState(false);
             useEffect(() => {
                 document.body.style.overflow = open ? 'hidden' : '';
@@ -445,7 +451,11 @@
                                     </table>
                                 </div>
                                 <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
-                                    <p className="text-xs text-slate-400">SPDR Select Sector / Industry ETFs　—　TOPIXで割り返しなし・絶対値表示 / 基準線: NASDAQ100(^NDX)・S&amp;P500(^GSPC)・NYダウ(^DJI)　／　背景クリックで閉じる</p>
+                                    <p className="text-xs text-slate-400">
+                                        {mode === 'relative'
+                                            ? `SPDR Select Sector / Industry ETFs　—　${benchmarkLabel}に対する相対超過リターン(%)として表示　／　背景クリックで閉じる`
+                                            : 'SPDR Select Sector / Industry ETFs　—　ベンチマークで割り返しなし・絶対値表示 / 基準線: NASDAQ100(^NDX)・S&P500(^GSPC)・NYダウ(^DJI)　／　背景クリックで閉じる'}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -562,8 +572,19 @@
         };
 
         // 全セクター相対パフォーマンス + ランキング（etf.html から移植）
-        const FullSectorChart = ({ processedData, period, rawIntraday, rawDaily, initialMarket = 'jp', lockMarket = false }) => {
+        const FullSectorChart = ({
+            processedData,
+            period,
+            rawIntraday,
+            rawDaily,
+            initialMarket = 'jp',
+            lockMarket = false,
+            initialUsMode = 'absolute',
+            lockUsMode = false,
+            cardId = 'full-sector-flow'
+        }) => {
             const [market, setMarket] = useState(initialMarket);
+            const [usMode, setUsMode] = useState(initialUsMode);
 
             // === JP モード: 既存の processedData を使用 ===
             const filteredRanking = useMemo(() => {
@@ -579,10 +600,53 @@
                     && rawIntraday.dates[0].includes(' ');
                 const isIntraday = wantIntraday && intradayAvailable;
                 const rawData = isIntraday ? rawIntraday : rawDaily;
-                if (!rawData) return null;
+                if (!rawData || !rawData.dates || !rawData.prices || rawData.dates.length === 0) return null;
 
                 const { dates, prices } = rawData;
                 const usSymbols = Object.keys(US_SECTORS);
+                const isRelative = usMode === 'relative';
+                const sp500Candidates = [
+                    { code: 'SPY', name: 'SPY' },
+                    { code: 'VOO', name: 'VOO' },
+                    { code: '^GSPC', name: 'S&P500' },
+                ];
+                const findBenchmark = (priceMap) => sp500Candidates.find(ref =>
+                    Array.isArray(priceMap?.[ref.code]) && priceMap[ref.code].some(v => Number.isFinite(Number(v)) && Number(v) > 0)
+                );
+                const benchmark = findBenchmark(prices);
+                if (isRelative && !benchmark) {
+                    return { ranking: [], timeSeries: [], isIntraday, benchmark: null, mode: usMode };
+                }
+                const calcReturn = (priceMap, sym, startIdx, endIdx) => {
+                    const series = priceMap?.[sym];
+                    if (!series) return null;
+                    const startRaw = series[startIdx];
+                    const currentRaw = series[endIdx];
+                    if (startRaw === null || startRaw === undefined || currentRaw === null || currentRaw === undefined) return null;
+                    const start = Number(startRaw);
+                    const current = Number(currentRaw);
+                    if (!Number.isFinite(start) || !Number.isFinite(current) || start === 0) return null;
+                    return (current / start) - 1;
+                };
+                const calcPerformance = (priceMap, sym, startIdx, endIdx, bench = benchmark) => {
+                    const sectorReturn = calcReturn(priceMap, sym, startIdx, endIdx);
+                    if (sectorReturn === null) return null;
+                    if (!isRelative) return sectorReturn * 100;
+                    const benchmarkReturn = bench ? calcReturn(priceMap, bench.code, startIdx, endIdx) : null;
+                    if (benchmarkReturn === null) return null;
+                    return (sectorReturn - benchmarkReturn) * 100;
+                };
+                const buildRefSymbols = () => {
+                    const refs = [
+                        { code: '^NDX', name: 'NASDAQ100' },
+                        { code: '^GSPC', name: 'S&P500' },
+                        { code: '^DJI', name: 'NYダウ' },
+                    ];
+                    if (benchmark && !refs.some(ref => ref.code === benchmark.code)) {
+                        refs.splice(1, 0, benchmark);
+                    }
+                    return refs;
+                };
 
                 if (isIntraday) {
                     // UTC時刻のまま処理（米国取引時間: UTC 13:00-20:00）
@@ -593,26 +657,21 @@
                         const hour = parseInt(parts[1].split(':')[0], 10);
                         if (hour >= 13 && hour < 21) usTradingIndices.push(i);
                     });
-                    if (usTradingIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+                    if (usTradingIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true, benchmark, mode: usMode };
 
                     const sessionDates = [...new Set(usTradingIndices.map(i => dates[i].split(' ')[0]))];
                     const daysAgo = parseInt(period.replace('d', '')) || 1;
                     const targetDateStr = sessionDates[Math.max(0, sessionDates.length - daysAgo)];
                     const filteredIndices = usTradingIndices.filter(i => dates[i] >= targetDateStr);
-                    if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+                    if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true, benchmark, mode: usMode };
 
                     const startIdx = filteredIndices[0];
                     // 前日終値基準: セッション開始の1つ前のデータ点（ffillで前日終値が入っている）
                     const baseIdx = startIdx > 0 ? startIdx - 1 : startIdx;
                     const timeSeries = [];
                     const rankingMap = {};
+                    const refSymbols = buildRefSymbols();
 
-                    // 基準ライン用シンボル（米国主要指数）
-                    const refSymbols = [
-                        { code: '^NDX', name: 'NASDAQ100' },
-                        { code: '^GSPC', name: 'S&P500' },
-                        { code: '^DJI', name: 'NYダウ' },
-                    ];
                     // categoryモード用: 短いJSTラベル（例: "3/20 22:00"）
                     const toJSTShort = (utcStr) => {
                         const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
@@ -624,26 +683,17 @@
                         const point = { date: toJSTShort(dates[i]) };
                         usSymbols.forEach(sym => {
                             const name = US_SECTORS[sym];
-                            const sPrices = prices[sym];
-                            if (!sPrices) return;
-                            const sStart = sPrices[baseIdx];
-                            const sCurrent = sPrices[i];
-                            if (sStart && sCurrent && sStart !== 0) {
-                                const ret = ((sCurrent / sStart) - 1) * 100;
-                                point[name] = ret;
-                                rankingMap[sym] = { symbol: sym, name, performance: ret };
-                            }
+                            const perf = calcPerformance(prices, sym, baseIdx, i);
+                            if (perf === null) return;
+                            point[name] = perf;
+                            rankingMap[sym] = { symbol: sym, name, performance: perf };
                         });
-                        refSymbols.forEach(ref => {
-                            const rPrices = prices[ref.code];
-                            if (!rPrices) return;
-                            const rStart = rPrices[baseIdx];
-                            const rCurrent = rPrices[i];
-                            if (rStart && rCurrent && rStart !== 0) {
-                                const ret = ((rCurrent / rStart) - 1) * 100;
-                                point[ref.name] = ret;
-                            }
-                        });
+                        if (!isRelative) {
+                            refSymbols.forEach(ref => {
+                                const perf = calcPerformance(prices, ref.code, baseIdx, i);
+                                if (perf !== null) point[ref.name] = perf;
+                            });
+                        }
                         timeSeries.push(point);
                     });
                     // ── 終値補正: 日次データにUS最終セッション日が含まれている場合のみ補正 ──
@@ -652,52 +702,38 @@
                         const lastSessionDate = sessionDates[sessionDates.length - 1];
                         const dailyDates = rawDaily.dates;
                         const latestDailyDate = dailyDates[dailyDates.length - 1];
-                        if (latestDailyDate >= lastSessionDate) {
+                        const dailyBenchmark = findBenchmark(rawDaily.prices);
+                        if (latestDailyDate >= lastSessionDate && (!isRelative || dailyBenchmark)) {
                             let dailyEndIdx = -1;
                             for (let di = dailyDates.length - 1; di >= 0; di--) {
                                 if (dailyDates[di] <= lastSessionDate) { dailyEndIdx = di; break; }
                             }
                             if (dailyEndIdx >= 0) {
                                 const dailyBaseIdx = Math.max(0, dailyEndIdx - daysAgo);
-                                const overrideWithClose = (sym) => {
-                                    const sPrices = rawDaily.prices[sym];
-                                    if (!sPrices) return;
-                                    const sStart = sPrices[dailyBaseIdx];
-                                    const sCurrent = sPrices[dailyEndIdx];
-                                    if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
-                                        rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
-                                    }
-                                };
-                                usSymbols.forEach(sym => overrideWithClose(sym));
-                                refSymbols.forEach(ref => overrideWithClose(ref.code));
+                                usSymbols.forEach(sym => {
+                                    const perf = calcPerformance(rawDaily.prices, sym, dailyBaseIdx, dailyEndIdx, dailyBenchmark || benchmark);
+                                    if (perf !== null && rankingMap[sym]) rankingMap[sym].performance = perf;
+                                });
                                 // チャート時系列の最終ポイントも終値で補正
                                 if (timeSeries.length > 0) {
                                     const lastPoint = timeSeries[timeSeries.length - 1];
                                     usSymbols.forEach(sym => {
                                         const name = US_SECTORS[sym];
-                                        const sPrices = rawDaily.prices[sym];
-                                        if (!sPrices) return;
-                                        const sStart = sPrices[dailyBaseIdx];
-                                        const sCurrent = sPrices[dailyEndIdx];
-                                        if (sStart && sCurrent && sStart !== 0) {
-                                            lastPoint[name] = ((sCurrent / sStart) - 1) * 100;
-                                        }
+                                        const perf = calcPerformance(rawDaily.prices, sym, dailyBaseIdx, dailyEndIdx, dailyBenchmark || benchmark);
+                                        if (perf !== null) lastPoint[name] = perf;
                                     });
-                                    refSymbols.forEach(ref => {
-                                        const rPrices = rawDaily.prices[ref.code];
-                                        if (!rPrices) return;
-                                        const rStart = rPrices[dailyBaseIdx];
-                                        const rCurrent = rPrices[dailyEndIdx];
-                                        if (rStart && rCurrent && rStart !== 0) {
-                                            lastPoint[ref.name] = ((rCurrent / rStart) - 1) * 100;
-                                        }
-                                    });
+                                    if (!isRelative) {
+                                        refSymbols.forEach(ref => {
+                                            const perf = calcPerformance(rawDaily.prices, ref.code, dailyBaseIdx, dailyEndIdx, dailyBenchmark || benchmark);
+                                            if (perf !== null) lastPoint[ref.name] = perf;
+                                        });
+                                    }
                                 }
                             }
                         }
                     }
                     const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
-                    return { ranking, timeSeries, isIntraday: true };
+                    return { ranking, timeSeries, isIntraday: true, benchmark, mode: usMode };
                 } else {
                     // 日次データ
                     const L = dates.length;
@@ -713,43 +749,30 @@
                             if (new Date(dates[i]).getTime() <= target) { startIndex = i; break; }
                         }
                     }
-                    const refSymbolsD = [
-                        { code: '^NDX', name: 'NASDAQ100' },
-                        { code: '^GSPC', name: 'S&P500' },
-                        { code: '^DJI', name: 'NYダウ' },
-                    ];
+                    const refSymbolsD = buildRefSymbols();
                     const timeSeries = [];
                     const rankingMap = {};
                     for (let i = startIndex; i < L; i++) {
                         const point = { date: dates[i] };
                         usSymbols.forEach(sym => {
                             const name = US_SECTORS[sym];
-                            const sPrices = prices[sym];
-                            if (!sPrices) return;
-                            const sStart = sPrices[startIndex];
-                            const sCurrent = sPrices[i];
-                            if (sStart && sCurrent && sStart !== 0) {
-                                const ret = ((sCurrent / sStart) - 1) * 100;
-                                point[name] = ret;
-                                rankingMap[sym] = { symbol: sym, name, performance: ret };
-                            }
+                            const perf = calcPerformance(prices, sym, startIndex, i);
+                            if (perf === null) return;
+                            point[name] = perf;
+                            rankingMap[sym] = { symbol: sym, name, performance: perf };
                         });
-                        refSymbolsD.forEach(ref => {
-                            const rPrices = prices[ref.code];
-                            if (!rPrices) return;
-                            const rStart = rPrices[startIndex];
-                            const rCurrent = rPrices[i];
-                            if (rStart && rCurrent && rStart !== 0) {
-                                const ret = ((rCurrent / rStart) - 1) * 100;
-                                point[ref.name] = ret;
-                            }
-                        });
+                        if (!isRelative) {
+                            refSymbolsD.forEach(ref => {
+                                const perf = calcPerformance(prices, ref.code, startIndex, i);
+                                if (perf !== null) point[ref.name] = perf;
+                            });
+                        }
                         timeSeries.push(point);
                     }
                     const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
-                    return { ranking, timeSeries, isIntraday: false };
+                    return { ranking, timeSeries, isIntraday: false, benchmark, mode: usMode };
                 }
-            }, [rawIntraday, rawDaily, period, market]);
+            }, [rawIntraday, rawDaily, period, market, usMode]);
 
             // 統合: JP/US共通のランキング・時系列
             const activeRanking = market === 'jp' ? filteredRanking : (usData ? usData.ranking : []);
@@ -772,6 +795,14 @@
                     setVisibleSectors(FULL_RANKING_DEFAULT_VISIBLE);
                 }
             }, [market, usData]);
+
+            const effectiveVisibleSectors = useMemo(() => {
+                if (!activeRanking.length) return visibleSectors;
+                const hasVisible = activeRanking.some(item => visibleSectors.has(item.name));
+                if (hasVisible) return visibleSectors;
+                const top7 = activeRanking.slice(0, 7).map(r => r.name);
+                return new Set(market === 'jp' ? [...top7, NIKKEI_NAME] : top7);
+            }, [activeRanking, visibleSectors, market]);
 
             const toggleSector = useCallback((name) => {
                 setVisibleSectors(prev => {
@@ -826,15 +857,18 @@
                 const dateLabel = market === 'jp'
                     ? formatDate(processedData?.endDate)
                     : (formatDate(activeTimeSeries[activeTimeSeries.length - 1]?.date) || formatTodayJST());
+                const benchmarkLabel = usData?.benchmark?.name || 'S&P500';
                 const title = market === 'jp'
                     ? `${dateLabel}のセクター毎 / TOPIX相対化 資金注入割合`
-                    : `${dateLabel}の米国株各セクター資金流入`;
+                    : (usMode === 'relative'
+                        ? `${dateLabel}の米国株各セクター / ${benchmarkLabel}相対`
+                        : `${dateLabel}の米国株各セクター資金流入`);
                 const tags = market === 'jp'
                     ? '#日経平均 #株式投資 #デイトレ #TOPIX #N225 #オプション #CFD'
                     : '#米国株 #株式投資 #デイトレ #オプション #FX';
                 const text = `${title}\n\n▼上位${itemCount}件\n${topItems}\n\n▼下位${itemCount}件\n${bottomItems}\n\n${tags}`;
                 navigator.clipboard.writeText(text).then(() => alert('サマリーをクリップボードにコピーしました。'));
-            }, [activeRanking, activeTimeSeries, market, processedData]);
+            }, [activeRanking, activeTimeSeries, market, processedData, usData, usMode]);
 
             // US用: 日本語名(ティッカー) の表示
             const formatUSTicker = (symbol) => String(symbol || '').replace(/^\^/, '');
@@ -865,7 +899,7 @@
                             x: activeTimeSeries.map(d => d.date),
                             y: activeTimeSeries.map(d => d[item.name] ?? null),
                             type: 'scatter', mode: 'lines', name: item.name,
-                            visible: visibleSectors.has(item.name),
+                            visible: effectiveVisibleSectors.has(item.name),
                             line: {
                                 color: isNikkei ? NIKKEI_COLOR : COLORS[i % COLORS.length],
                                 width: 2,
@@ -883,13 +917,16 @@
                             x: activeTimeSeries.map(d => d.date),
                             y: activeTimeSeries.map(d => d[item.name] ?? null),
                             type: 'scatter', mode: 'lines', name: chartName,
-                            visible: visibleSectors.has(item.name),
+                            visible: effectiveVisibleSectors.has(item.name),
                             line: { color: COLORS[i % COLORS.length], width: 2 },
                             hovertemplate: `<b>${chartName}</b> <span style="color:white;font-size:10px">(${item.symbol})</span><br>%{y:.2f}%<extra></extra>`,
                         });
                     });
                     // 米国主要指数 基準ライン追加
                     const refLines = [
+                        ...(usData?.benchmark && usData.benchmark.code !== '^GSPC'
+                            ? [{ key: usData.benchmark.name, code: usData.benchmark.code, color: '#f59e0b', dash: 'solid' }]
+                            : []),
                         { key: 'NASDAQ100', code: '^NDX', color: '#2563eb', dash: 'dot' },
                         { key: 'S&P500', code: '^GSPC', color: '#dc2626', dash: 'dashdot' },
                         { key: 'NYダウ', code: '^DJI', color: '#16a34a', dash: 'longdash' },
@@ -908,7 +945,7 @@
                     });
                 }
                 return traces;
-            }, [activeRanking, activeTimeSeries, visibleSectors, market, processedData]);
+            }, [activeRanking, activeTimeSeries, effectiveVisibleSectors, market, processedData, usData]);
 
             // Rangebreaks
             // US市場イントラデイ: JST変換で金曜深夜→土曜早朝になるため、
@@ -932,15 +969,23 @@
             if (!processedData && market === 'jp') return null;
             if (market === 'jp' && !filteredRanking.length) return null;
 
+            const usBenchmarkLabel = usData?.benchmark?.name || 'S&P500';
             const titleLabel = market === 'jp'
-                ? '相対パフォーマンス推移（全セクター / vs TOPIX）'
-                : '米国セクター パフォーマンス推移（絶対値）';
+                ? '【JP】相対パフォーマンス推移（全セクターvs TOPIX）'
+                : (usMode === 'relative'
+                    ? `【US】相対パフォーマンス推移（全セクターvs ${usBenchmarkLabel}）`
+                    : '【US】米国セクター パフォーマンス推移（絶対値）');
+            const noData = !activeRanking.length || !activeTimeSeries.length;
+            const noDataMessage = market === 'us' && usMode === 'relative' && !usData?.benchmark
+                ? 'S&P500連動系列（SPY / VOO / S&P500指数）が未取得です'
+                : 'データなし';
 
             return (
                 <div
-                    id="full-sector-flow"
+                    id={cardId}
                     data-capture="full-sector-card"
                     data-market={market}
+                    data-us-mode={market === 'us' ? usMode : undefined}
                     className="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
                 >
                     <h3 className="text-[13px] font-bold text-[#7C4DFF] mb-3 flex flex-wrap md:flex-nowrap items-center gap-2">
@@ -948,7 +993,7 @@
                             <Icon name="PieChart" className="text-[#7C4DFF]" size={14} />
                             {titleLabel}
                         </span>
-                        {market === 'jp' ? <FullSectorLegend /> : <USSectorLegend />}
+                        {market === 'jp' ? <FullSectorLegend /> : <USSectorLegend mode={usMode} benchmarkLabel={usBenchmarkLabel} />}
                         <div className="flex items-center gap-1.5 ml-auto">
                             <span className="cursor-pointer text-slate-300 hover:text-[#7C4DFF] transition-colors" onClick={copySummary} title="サマリーをコピー">
                                 <Icon name="Copy" size={14} />
@@ -975,6 +1020,28 @@
                                     >US</button>
                                 </>
                             )}
+                            {market === 'us' && !lockUsMode && (
+                                <>
+                                    <button
+                                        data-capture="us-mode-relative"
+                                        onClick={() => setUsMode('relative')}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                            usMode === 'relative'
+                                                ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                        }`}
+                                    >相対</button>
+                                    <button
+                                        data-capture="us-mode-absolute"
+                                        onClick={() => setUsMode('absolute')}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                            usMode === 'absolute'
+                                                ? 'bg-[#7C4DFF] text-white shadow-sm'
+                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                        }`}
+                                    >絶対</button>
+                                </>
+                            )}
                             <button data-capture="show-top7" onClick={showTop7} className="text-xs px-2 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▲ 上7</button>
                             <button data-capture="show-bottom7" onClick={showBottom7} className="text-xs px-2 py-1 rounded-full bg-white border border-[#7C4DFF] text-[#7C4DFF] hover:bg-[#7C4DFF] hover:text-white font-bold transition-colors shadow-sm">▼ 下7</button>
                         </div>
@@ -983,41 +1050,48 @@
                         {/* 左列：チャート + 凡例 */}
                         <div data-capture="full-sector-chart" className="md:w-[58%] h-full flex flex-col">
                             <div className="flex-1 min-h-0 relative z-10">
-                                <Plot
-                                    data={chartTraces}
-                                    layout={{
-                                        autosize: true,
-                                        margin: { t: 5, r: 5, l: 40, b: 35 },
-                                        dragmode: isMobileGlobal ? false : 'pan',
-                                        xaxis: {
-                                            showgrid: true, gridcolor: '#e2e8f0',
-                                            tickfont: { color: '#64748b', size: 9 },
-                                            rangebreaks: rangebreaks,
-                                            // US intraday: categoryモードで日付またぎの週末非表示問題を回避
-                                            ...(isUSIntraday ? { type: 'category', nticks: 12, tickangle: -30 } : {}),
-                                        },
-                                        yaxis: {
-                                            showgrid: true, gridcolor: '#e2e8f0',
-                                            tickfont: { color: '#64748b', size: 9 },
-                                            ticksuffix: '%',
-                                            zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 2,
-                                        },
-                                        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-                                        showlegend: false,
-                                        hovermode: 'closest',
-                                    }}
-                                    config={{ responsive: true, scrollZoom: !isMobileGlobal, displayModeBar: false, staticPlot: isMobileGlobal }}
-                                    style={{ width: '100%', height: '100%' }}
-                                    useResizeHandler={true}
-                                />
+                                {noData ? (
+                                    <div className="flex items-center justify-center h-full text-xs text-slate-400">
+                                        {noDataMessage}
+                                    </div>
+                                ) : (
+                                    <Plot
+                                        data={chartTraces}
+                                        layout={{
+                                            autosize: true,
+                                            margin: { t: 5, r: 5, l: 40, b: 35 },
+                                            dragmode: isMobileGlobal ? false : 'pan',
+                                            xaxis: {
+                                                showgrid: true, gridcolor: '#e2e8f0',
+                                                tickfont: { color: '#64748b', size: 9 },
+                                                rangebreaks: rangebreaks,
+                                                // US intraday: categoryモードで日付またぎの週末非表示問題を回避
+                                                ...(isUSIntraday ? { type: 'category', nticks: 12, tickangle: -30 } : {}),
+                                            },
+                                            yaxis: {
+                                                showgrid: true, gridcolor: '#e2e8f0',
+                                                tickfont: { color: '#64748b', size: 9 },
+                                                ticksuffix: '%',
+                                                zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 2,
+                                            },
+                                            paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                            showlegend: false,
+                                            hovermode: 'closest',
+                                            uirevision: `${market}-${usMode}-${period}`,
+                                        }}
+                                        config={{ responsive: true, scrollZoom: !isMobileGlobal, displayModeBar: false, staticPlot: isMobileGlobal }}
+                                        style={{ width: '100%', height: '100%' }}
+                                        useResizeHandler={true}
+                                    />
+                                )}
                             </div>
                             {/* 凡例 */}
-                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 justify-start mt-2 pt-2 border-t border-slate-100">
+                            {!noData && <div className="flex flex-wrap gap-x-2 gap-y-0.5 justify-start mt-2 pt-2 border-t border-slate-100">
                                 {activeRanking.map((item, i) => {
                                     const displayName = market === 'us' ? getDisplayName(item) : item.name;
                                     return (
                                         <div key={item.symbol || item.name}
-                                            className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${visibleSectors.has(market === 'us' ? item.name : item.name) ? 'hover:opacity-70' : 'opacity-25'}`}
+                                            className={`flex items-center gap-1 cursor-pointer select-none transition-opacity ${effectiveVisibleSectors.has(item.name) ? 'hover:opacity-70' : 'opacity-25'}`}
                                             onClick={() => toggleSector(item.name)}
                                         >
                                             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: (market === 'jp' && item.name === NIKKEI_NAME) ? NIKKEI_COLOR : COLORS[i % COLORS.length] }} />
@@ -1025,13 +1099,17 @@
                                         </div>
                                     );
                                 })}
-                            </div>
+                            </div>}
                         </div>
 
                         {/* 右列：セクターランキング */}
                         <div data-capture="full-sector-ranking" className="md:w-[42%] h-full flex flex-col">
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1 min-h-0">
-                                {activeRanking.map((item, index) => {
+                                {noData ? (
+                                    <div className="flex items-center justify-center h-full text-xs text-slate-400">
+                                        {noDataMessage}
+                                    </div>
+                                ) : activeRanking.map((item, index) => {
                                     const isPositive = item.performance >= 0;
                                     const displayName = market === 'us' ? getDisplayName(item) : item.name;
                                     return (
@@ -2697,6 +2775,7 @@
                                 rawDaily={rawDaily}
                                 initialMarket="us"
                                 lockMarket={true}
+                                lockUsMode={true}
                             />
                         )}
                     </div>
@@ -2792,7 +2871,18 @@
                             {/* 全チャート一覧 */}
                             {!loading && processedData && processedData.timeSeries.length > 0 && (
                                 <div className="flex flex-col gap-4 animate-fade-in">
-                                    {/* 規模別指数（絶対値・最上部固定） */}
+                                    {/* 米国全セクター相対パフォーマンス（ヘッダー直下） */}
+                                    <FullSectorChart
+                                        processedData={processedData}
+                                        period={period}
+                                        rawIntraday={rawIntraday}
+                                        rawDaily={rawDaily}
+                                        initialMarket="us"
+                                        lockMarket={true}
+                                        initialUsMode="relative"
+                                        cardId="full-sector-us-sp500"
+                                    />
+                                    {/* 規模別指数（絶対値） */}
                                     {CATEGORIES.filter(c => c.id === 'scale').map(category => (
                                         <CategorySection
                                             key={category.id}
