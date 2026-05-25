@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-24T18:30:35+00:00"
+      "last_fetch_at": "2026-05-25T00:38:08+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-24T18:30:35+00:00"
+      "last_fetch_at": "2026-05-25T00:38:08+00:00"
     }
   },
   "seen_ids": [
@@ -167,32 +167,11 @@
     "ブルームバーグ:066ca28261241da06b239a8a77df96f2",
     "ブルームバーグ:61aeda066fc4ef3403a2e59b8ac6d8ba",
     "ロイター:6bc97cd60298e9eb9600f47be6beb748",
-    "ブルームバーグ:64578576139bcec5a273cc763abd12ce"
+    "ブルームバーグ:64578576139bcec5a273cc763abd12ce",
+    "ブルームバーグ:2ad8e838d56f9f07c88a3544662896c3",
+    "ブルームバーグ:9f5885c726c7ce81ce7d4c2888c9ec87",
+    "ブルームバーグ:f083302f04e165330d1f09fc632927f3",
+    "ブルームバーグ:ff0ccbd459c0f1dffdaf9e65e75855de"
   ],
-  "pending_items": [
-    {
-      "id": "ブルームバーグ:61aeda066fc4ef3403a2e59b8ac6d8ba",
-      "source": "ブルームバーグ",
-      "title": "トランプ米大統領、イランとの合意を急ぐつもりはない",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-24/TFJP18T96OSG00?srnd=jp-markets",
-      "published_at": "2026-05-24T15:00:00+00:00",
-      "fetched_at": "2026-05-24T16:00:16+00:00"
-    },
-    {
-      "id": "ロイター:6bc97cd60298e9eb9600f47be6beb748",
-      "source": "ロイター",
-      "title": "トランプ氏、イランとの合意「急がず」と指示 和平期待に水差す",
-      "link": "https://jp.reuters.com/world/security/JZ6NWXT5LBOJ3HFALEUXHZ2EE4-2026-05-24/",
-      "published_at": "2026-05-24T16:51:04+00:00",
-      "fetched_at": "2026-05-24T17:20:26+00:00"
-    },
-    {
-      "id": "ブルームバーグ:64578576139bcec5a273cc763abd12ce",
-      "source": "ブルームバーグ",
-      "title": "トランプ氏の運用手法を専門家分析、戦争前に｢顧客主導の買い」急増",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-24/TFHUN3T96OSG00?srnd=jp-markets",
-      "published_at": "2026-05-24T15:00:00+00:00",
-      "fetched_at": "2026-05-24T18:00:31+00:00"
-    }
-  ]
+  "pending_items": []
 }
