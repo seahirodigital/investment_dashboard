@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import requests
 import json
 import os
 from datetime import datetime, timedelta, timezone
@@ -289,7 +290,6 @@ US_SECTORS = {
 # ── 米国相対パフォーマンス用ベンチマーク（S&P500連動）───────────────
 US_SP500_BENCHMARKS = {
   'SPY': 'SPY',
-  'VOO': 'VOO',
 }
 
 # ── バスケットセクター（時価総額上位銘柄で構成）─────────────────────────
@@ -577,6 +577,125 @@ ALL_SYMBOLS = list(set(
 FETCH_DAYS = 400
 
 
+def extract_close_series(downloaded, symbol):
+    if downloaded is None or downloaded.empty:
+        return None
+
+    close = downloaded
+    if isinstance(downloaded.columns, pd.MultiIndex):
+        if 'Close' in downloaded.columns.get_level_values(0):
+            close = downloaded['Close']
+        elif 'Adj Close' in downloaded.columns.get_level_values(0):
+            close = downloaded['Adj Close']
+        else:
+            return None
+
+        if isinstance(close, pd.DataFrame):
+            if symbol in close.columns:
+                series = close[symbol]
+            elif len(close.columns) == 1:
+                series = close.iloc[:, 0]
+            else:
+                return None
+        else:
+            series = close
+    else:
+        if 'Close' in downloaded.columns:
+            series = downloaded['Close']
+        elif 'Adj Close' in downloaded.columns:
+            series = downloaded['Adj Close']
+        elif symbol in downloaded.columns:
+            series = downloaded[symbol]
+        elif len(downloaded.columns) == 1:
+            series = downloaded.iloc[:, 0]
+        else:
+            return None
+
+    series = pd.to_numeric(series, errors='coerce')
+    series.index = pd.to_datetime(series.index).tz_localize(None)
+    return series.ffill().bfill()
+
+
+def fetch_spy_from_yahoo_chart(period, interval):
+    chart_range = '2y' if interval == '1d' else ('60d' if interval.endswith('m') else period)
+    params = {
+        'range': chart_range,
+        'interval': interval,
+        'includePrePost': 'true',
+    }
+    headers = {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json,text/plain,*/*',
+    }
+    response = requests.get(
+        'https://query1.finance.yahoo.com/v8/finance/chart/SPY',
+        params=params,
+        headers=headers,
+        timeout=30,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    chart = payload.get('chart', {})
+    if chart.get('error'):
+        raise RuntimeError(f"Yahoo chart API returned an error for SPY: {chart['error']}")
+    result = (chart.get('result') or [None])[0]
+    if not result or not result.get('timestamp'):
+        raise RuntimeError(f"Yahoo chart API returned no SPY timestamps for period={period}, interval={interval}")
+
+    closes = result.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+    index = pd.to_datetime(result['timestamp'], unit='s', utc=True).tz_convert(None)
+    series = pd.Series(closes, index=index)
+    series = pd.to_numeric(series, errors='coerce')
+    if interval == '1d':
+        series.index = series.index.normalize()
+        series = series.groupby(series.index).last()
+    return series.ffill().bfill()
+
+
+def has_valid_prices(series):
+    if series is None:
+        return False
+    numeric = pd.to_numeric(series, errors='coerce').dropna()
+    return not numeric.empty and (numeric > 0).any()
+
+
+def ensure_spy_column(df, period, interval):
+    if 'SPY' in df.columns and has_valid_prices(df['SPY']):
+        return df
+
+    print("  SPY missing from batch download. Fetching SPY separately...")
+    spy_series = None
+    try:
+        spy_raw = yf.download('SPY', period=period, interval=interval, auto_adjust=False, progress=False)
+        spy_series = extract_close_series(spy_raw, 'SPY')
+    except Exception as exc:
+        print(f"  yfinance SPY fallback failed: {exc}")
+    if not has_valid_prices(spy_series):
+        print("  Fetching SPY from Yahoo chart API...")
+        spy_series = fetch_spy_from_yahoo_chart(period, interval)
+    if not has_valid_prices(spy_series):
+        raise RuntimeError(f"SPY data could not be fetched for period={period}, interval={interval}")
+
+    aligned = spy_series.reindex(df.index).ffill().bfill()
+    if not has_valid_prices(aligned):
+        raise RuntimeError(f"SPY data could not be aligned to output dates for period={period}, interval={interval}")
+
+    df = df.copy()
+    df['SPY'] = aligned
+    return df
+
+
+def validate_spy_output(data, label):
+    spy = data.get('prices', {}).get('SPY')
+    dates = data.get('dates', [])
+    if not spy or len(spy) != len(dates):
+        raise RuntimeError(f"SPY is missing or length mismatch in {label}: spy={len(spy) if spy else 0}, dates={len(dates)}")
+    valid_count = sum(1 for value in spy if value is not None and float(value) > 0)
+    if valid_count == 0:
+        raise RuntimeError(f"SPY has no valid prices in {label}")
+    print(f"  SPY validated in {label}: {valid_count}/{len(dates)} points")
+
+
 def fetch_data(period="400d", interval="1d"):
     # sectors 定義はSECTORSのみ（半導体個別株は混入させない）
     sectors_def = dict(SECTORS)
@@ -620,6 +739,9 @@ def fetch_data(period="400d", interval="1d"):
     # ベンチマーク行のみ保持
     if BENCHMARK in df.columns:
         df = df[df[BENCHMARK].notna()]
+
+    # 米国相対チャートはSPYだけを基準にするため、SPY欠損は別取得で補完する
+    df = ensure_spy_column(df, period, interval)
 
     # ── ETFセクター・半導体銘柄価格の保存──
     etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys()) + list(US_SP500_BENCHMARKS.keys()) + list(TOPIX100.keys()) + ALL_US_INDIVIDUAL_SYMBOLS
@@ -685,13 +807,18 @@ def main():
     data_daily = fetch_data(period="400d", interval="1d")
     data_daily['generated_at'] = ts_utc
     data_daily['generated_at_jst'] = ts_jst
-    with open('data/etf_data.json', 'w', encoding='utf-8') as f:
-        json.dump(data_daily, f, ensure_ascii=False)
 
     # イントラデイ 5分足（14日）
     data_intraday = fetch_data(period="14d", interval="5m")
     data_intraday['generated_at'] = ts_utc
     data_intraday['generated_at_jst'] = ts_jst
+
+    validate_spy_output(data_daily, 'data/etf_data.json')
+    validate_spy_output(data_intraday, 'data/etf_intraday.json')
+
+    with open('data/etf_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data_daily, f, ensure_ascii=False)
+
     with open('data/etf_intraday.json', 'w', encoding='utf-8') as f:
         json.dump(data_intraday, f, ensure_ascii=False)
 
