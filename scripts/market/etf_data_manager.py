@@ -286,6 +286,12 @@ US_SECTORS = {
   'PAVE': 'インフラ',
 }
 
+# ── 米国相対パフォーマンス用ベンチマーク（S&P500連動）───────────────
+US_SP500_BENCHMARKS = {
+  'SPY': 'SPY',
+  'VOO': 'VOO',
+}
+
 # ── バスケットセクター（時価総額上位銘柄で構成）─────────────────────────
 # 同一ETFコードに複数業種が混在しているため、代表銘柄の等加重平均で分離
 BASKET_SECTORS = {
@@ -563,6 +569,7 @@ ALL_SYMBOLS = list(set(
     + list(SEMICONDUCTOR_JP.keys())
     + list(SEMICONDUCTOR_US.keys())
     + list(US_SECTORS.keys())
+    + list(US_SP500_BENCHMARKS.keys())
     + list(TOPIX100.keys())
     + ALL_US_INDIVIDUAL_SYMBOLS
     + ALL_BASKET_SYMBOLS
@@ -581,6 +588,7 @@ def fetch_data(period="400d", interval="1d"):
         "semiconductor_us": SEMICONDUCTOR_US,
         "topix100": TOPIX100,
         "us_sectors": US_SECTORS,
+        "us_sp500_benchmarks": US_SP500_BENCHMARKS,
         "us_individual": US_INDIVIDUAL,
         "dates": [],
         "prices": {}
@@ -614,7 +622,7 @@ def fetch_data(period="400d", interval="1d"):
         df = df[df[BENCHMARK].notna()]
 
     # ── ETFセクター・半導体銘柄価格の保存──
-    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys()) + list(TOPIX100.keys()) + ALL_US_INDIVIDUAL_SYMBOLS
+    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys()) + list(US_SP500_BENCHMARKS.keys()) + list(TOPIX100.keys()) + ALL_US_INDIVIDUAL_SYMBOLS
     for symbol in etf_symbols:
         if symbol in df.columns:
             output["prices"][symbol] = [
