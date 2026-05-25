@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-25T20:50:47+00:00"
+      "last_fetch_at": "2026-05-25T21:00:49+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-25T20:50:47+00:00"
+      "last_fetch_at": "2026-05-25T21:00:49+00:00"
     }
   },
   "seen_ids": [
@@ -212,94 +212,5 @@
     "ロイター:3dd632e07c553cde7b2701d90c896557",
     "ロイター:5236843519e68bc195f7e1ce2c4256fc"
   ],
-  "pending_items": [
-    {
-      "id": "ブルームバーグ:bd953ac5476de567507033e5186f81dc",
-      "source": "ブルームバーグ",
-      "title": "トランプ氏、イランとの協議「順調に進んでいる」－合意への前進示唆",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-25/TFLK22KIJH9G00?srnd=jp-markets",
-      "published_at": "2026-05-25T15:00:00+00:00",
-      "fetched_at": "2026-05-25T18:58:23+00:00"
-    },
-    {
-      "id": "ブルームバーグ:dffaf22c8cc87449a765229a1341998e",
-      "source": "ブルームバーグ",
-      "title": "中国ネット証券創業者、1日で資産2700億円喪失－取り締まり強化で",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-25/TFLGUWKGCTG400?srnd=jp-markets",
-      "published_at": "2026-05-25T15:00:00+00:00",
-      "fetched_at": "2026-05-25T18:58:23+00:00"
-    },
-    {
-      "id": "ロイター:f64229616af4839443827cd8880f676e",
-      "source": "ロイター",
-      "title": "ミャンマー国軍、レアアース産地や越境道路で攻勢強化 密輸イラン燃料が支えか",
-      "link": "https://jp.reuters.com/world/china/W7BTFCBPRVNYPL4HQROXWFTEKI-2026-05-25/",
-      "published_at": "2026-05-25T08:26:24+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    },
-    {
-      "id": "ロイター:6f590cce7b94bd7748587c24d360b68d",
-      "source": "ロイター",
-      "title": "補正予算3兆円強、国債市中発行増やさず 節約要請の段階ではない＝高市首相",
-      "link": "https://jp.reuters.com/markets/japan/YODHSY3L2JJWTHNIRV22NFRI2E-2026-05-25/",
-      "published_at": "2026-05-25T09:10:19+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    },
-    {
-      "id": "ロイター:ad33aedb49c659800ff5aa1bfe2e8522",
-      "source": "ロイター",
-      "title": "ＥＣＢ、インフレ率が目標上回れば一段と引き締め必要＝ギリシャ中銀総裁",
-      "link": "https://jp.reuters.com/markets/japan/W2PMX2XSTNPT7BDIEAS7XILYME-2026-05-25/",
-      "published_at": "2026-05-25T09:18:29+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    },
-    {
-      "id": "ロイター:0a0af76149a3a8bea1c6d5381e92b34b",
-      "source": "ロイター",
-      "title": "マクロスコープ：補正予算「3兆円強」の舞台裏、高市氏の思惑と政府内の危惧",
-      "link": "https://jp.reuters.com/markets/treasury/7DMCVE6YPVNI5AXFYMOMYQ74XQ-2026-05-25/",
-      "published_at": "2026-05-25T09:28:48+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    },
-    {
-      "id": "ロイター:9872349117cbbc60016ab1ed63d9bb8a",
-      "source": "ロイター",
-      "title": "ヘッジファンドがハイテク株買い積極化、保有記録的水準＝ゴールドマン",
-      "link": "https://jp.reuters.com/opinion/4KUCTHEOIRNVRKMNK23WKYZVUE-2026-05-25/",
-      "published_at": "2026-05-25T09:36:36+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    },
-    {
-      "id": "ロイター:90e079c3110c0da914bb807d875cbe4b",
-      "source": "ロイター",
-      "title": "ネタニヤフ氏、イラン和平交渉巡り「トランプ氏に影響与える余地なし」＝関係筋",
-      "link": "https://jp.reuters.com/world/security/XQ42TKGZQZLBNPWZHZXOG5HMKU-2026-05-25/",
-      "published_at": "2026-05-25T14:00:34+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    },
-    {
-      "id": "ロイター:f2c4a10a1672a65a97687e680b5be635",
-      "source": "ロイター",
-      "title": "ロシアがキーウの防衛施設に攻撃予告 意思決定中枢も標的 外国人に退避勧告",
-      "link": "https://jp.reuters.com/world/ukraine/RCHVYNCCRZMNDO4AVID67ATIFM-2026-05-25/",
-      "published_at": "2026-05-25T14:01:48+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    },
-    {
-      "id": "ロイター:3dd632e07c553cde7b2701d90c896557",
-      "source": "ロイター",
-      "title": "トランプ氏がアブラハム合意拡大を要請、イラン合意と連動 パキスタン拒否",
-      "link": "https://jp.reuters.com/world/us/SP5A2MIG2JKKVLKBFYDAX3TMNQ-2026-05-25/",
-      "published_at": "2026-05-25T14:04:08+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    },
-    {
-      "id": "ロイター:5236843519e68bc195f7e1ce2c4256fc",
-      "source": "ロイター",
-      "title": "中国・パキスタン首脳が会談、「全天候型」関係深化へ",
-      "link": "https://jp.reuters.com/world/us/OKWZ4WIVIFMBVHUSTSLY3HXZZY-2026-05-25/",
-      "published_at": "2026-05-25T14:21:09+00:00",
-      "fetched_at": "2026-05-25T19:20:34+00:00"
-    }
-  ]
+  "pending_items": []
 }
