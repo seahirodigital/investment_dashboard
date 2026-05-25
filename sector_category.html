@@ -605,14 +605,10 @@
                 const { dates, prices } = rawData;
                 const usSymbols = Object.keys(US_SECTORS);
                 const isRelative = usMode === 'relative';
-                const sp500Candidates = [
-                    { code: 'SPY', name: 'SPY' },
-                    { code: 'VOO', name: 'VOO' },
-                    { code: '^GSPC', name: 'S&P500' },
-                ];
-                const findBenchmark = (priceMap) => sp500Candidates.find(ref =>
-                    Array.isArray(priceMap?.[ref.code]) && priceMap[ref.code].some(v => Number.isFinite(Number(v)) && Number(v) > 0)
-                );
+                const spyBenchmark = { code: 'SPY', name: 'SPY' };
+                const findBenchmark = (priceMap) => (
+                    Array.isArray(priceMap?.SPY) && priceMap.SPY.some(v => Number.isFinite(Number(v)) && Number(v) > 0)
+                ) ? spyBenchmark : null;
                 const benchmark = findBenchmark(prices);
                 if (isRelative && !benchmark) {
                     return { ranking: [], timeSeries: [], isIntraday, benchmark: null, mode: usMode };
@@ -654,6 +650,8 @@
                     dates.forEach((d, i) => {
                         const parts = d.split(' ');
                         if (parts.length < 2) return;
+                        const day = new Date(d.replace(' ', 'T') + ':00Z').getUTCDay();
+                        if (day === 0 || day === 6) return;
                         const hour = parseInt(parts[1].split(':')[0], 10);
                         if (hour >= 13 && hour < 21) usTradingIndices.push(i);
                     });
@@ -969,7 +967,7 @@
             if (!processedData && market === 'jp') return null;
             if (market === 'jp' && !filteredRanking.length) return null;
 
-            const usBenchmarkLabel = usData?.benchmark?.name || 'S&P500';
+            const usBenchmarkLabel = usData?.benchmark?.name || 'SPY';
             const titleLabel = market === 'jp'
                 ? '【JP】相対パフォーマンス推移（全セクターvs TOPIX）'
                 : (usMode === 'relative'
@@ -977,7 +975,7 @@
                     : '【US】米国セクター パフォーマンス推移（絶対値）');
             const noData = !activeRanking.length || !activeTimeSeries.length;
             const noDataMessage = market === 'us' && usMode === 'relative' && !usData?.benchmark
-                ? 'S&P500連動系列（SPY / VOO / S&P500指数）が未取得です'
+                ? 'SPYが未取得です。基準の連続性を守るため、他のS&P500連動系列には切り替えません。'
                 : 'データなし';
 
             return (
