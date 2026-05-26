@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-26T00:51:22+00:00"
+      "last_fetch_at": "2026-05-26T06:58:43+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-26T00:51:22+00:00"
+      "last_fetch_at": "2026-05-26T06:58:43+00:00"
     }
   },
   "seen_ids": [
@@ -231,7 +231,37 @@
     "ロイター:1356efdc6fc42fbd8c5a8bd4509193ff",
     "ロイター:3cba756c6b85e95cec2a5737680e7c1d",
     "ロイター:480feef5bdf4a2c28629ae4895b17977",
-    "ロイター:279f25796b755bdc3940e45eed1828ba"
+    "ロイター:279f25796b755bdc3940e45eed1828ba",
+    "ブルームバーグ:1d144116878b20f20e4b36c2a2dc4216",
+    "ブルームバーグ:34dae2795627e3fc299c4c4866fb06a7",
+    "ブルームバーグ:445b7bfade0238c2fc1b36ae09999e4e",
+    "ブルームバーグ:559279cc21a69631cb330107f57a03ef",
+    "ブルームバーグ:6654c55775455116fa76ecf80b233038",
+    "ブルームバーグ:77e68fe79e404551cd60ac49821d82b3",
+    "ブルームバーグ:b1757586fe5b2ba0907ae3778a97bd57",
+    "ブルームバーグ:cda04a419cda32a2c3ecce0c95255179",
+    "ブルームバーグ:d87dcf0391d61e2c3639185abde5af67",
+    "ブルームバーグ:da0ad87f83589b440e532ecce17412af",
+    "ロイター:286c3109a3b460767c74658d7c5ea20b",
+    "ロイター:f0f9543ceaacd5759d7444d0c36b1d94",
+    "ロイター:aafcfbacfc0d11eab104a70c93d6479f",
+    "ロイター:c0c579d0a3773d7cca9b2ac855a432a6",
+    "ロイター:1beddc5fe99e2ab7d2966b3366904c8a",
+    "ロイター:10a34c10819cc48ecab0fc4da6b34233",
+    "ロイター:f7f6d05ee70cff2810f42b96d1e64854",
+    "ロイター:0a10a2a8ef3827373c4778b969fbbdb2",
+    "ロイター:7db6238524be6a7c5c871b28c53e09e2",
+    "ロイター:daebc476b6a3fde523bb2b4c7f356c51",
+    "ロイター:a27ac9900aa1b526b4792b1358bd6b0a",
+    "ロイター:c349771b97cc3956c581a0e6cb5ababd",
+    "ロイター:f14e06e332aac6f9efa3006768bd3d2d",
+    "ロイター:67b63410dfdbf583d8c3248728324899",
+    "ロイター:dacbfc658d84d646b8543be45af277ea",
+    "ロイター:24fc336100129a2b387d3109f8f12d41",
+    "ロイター:4228860c4eb3e4f55fe9ef3ac9501f78",
+    "ロイター:1dfd1e703e770c5079292e0122d4a792",
+    "ロイター:5d6ebf5b74d0a0483f0e327a5d17ef5e",
+    "ロイター:4779a816728a781a6ff498e8578d84ac"
   ],
   "pending_items": []
 }
