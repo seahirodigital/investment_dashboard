@@ -162,6 +162,79 @@
             const p = n => String(n).padStart(2, '0');
             return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
         };
+        const NEW_YORK_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            weekday: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hourCycle: 'h23',
+        });
+        const getNewYorkMarketTime = (utcStr) => {
+            const source = String(utcStr || '').replace(' ', 'T') + ':00Z';
+            const d = new Date(source);
+            if (Number.isNaN(d.getTime())) return null;
+            const parts = {};
+            NEW_YORK_TIME_FORMATTER.formatToParts(d).forEach(part => {
+                if (part.type !== 'literal') parts[part.type] = part.value;
+            });
+            const hour = Number(parts.hour);
+            const minute = Number(parts.minute);
+            if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+            return {
+                date: `${parts.year}-${parts.month}-${parts.day}`,
+                label: `${Number(parts.month)}/${Number(parts.day)} ${parts.hour}:${parts.minute}`,
+                weekday: parts.weekday,
+                minutes: hour * 60 + minute,
+            };
+        };
+        const isNewYorkRegularSession = (marketTime) => {
+            if (!marketTime || marketTime.weekday === 'Sat' || marketTime.weekday === 'Sun') return false;
+            return marketTime.minutes >= 570 && marketTime.minutes <= 960;
+        };
+        const getNewYorkSessionItems = (dates) => {
+            const items = [];
+            dates.forEach((date, index) => {
+                const marketTime = getNewYorkMarketTime(date);
+                if (isNewYorkRegularSession(marketTime)) {
+                    items.push({ index, ...marketTime });
+                }
+            });
+            return items;
+        };
+        const hasValidNewYorkSession = (items, prices, symbols = []) => {
+            if (!items || items.length < 2) return false;
+            if (!prices || !symbols.length) return true;
+            return symbols.some(symbol => {
+                const series = prices[symbol];
+                if (!Array.isArray(series)) return false;
+                const values = items
+                    .map(item => Number(series[item.index]))
+                    .filter(value => Number.isFinite(value) && value > 0);
+                if (values.length < 2) return false;
+                return new Set(values.map(value => value.toFixed(6))).size > 1;
+            });
+        };
+        const getRecentNewYorkSessionItems = (dates, period, prices = null, symbols = []) => {
+            const sessionItems = getNewYorkSessionItems(dates);
+            const sessionMap = new Map();
+            sessionItems.forEach(item => {
+                if (!sessionMap.has(item.date)) sessionMap.set(item.date, []);
+                sessionMap.get(item.date).push(item);
+            });
+            const sessionDates = [...sessionMap.keys()].filter(date =>
+                hasValidNewYorkSession(sessionMap.get(date), prices, symbols)
+            );
+            const daysAgo = parseInt(String(period).replace('d', ''), 10) || 1;
+            const selectedDates = new Set(sessionDates.slice(Math.max(0, sessionDates.length - daysAgo)));
+            return {
+                sessionItems,
+                filteredItems: sessionItems.filter(item => selectedDates.has(item.date)),
+                sessionDates,
+            };
+        };
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
         const fetchJsonWithRetry = async (url, options = {}, attempts = 3) => {
             let lastError = null;
@@ -194,21 +267,12 @@
                 if (!L) return null;
 
                 if (isIntraday) {
-                    const usTradingIndices = [];
-                    dates.forEach((d, i) => {
-                        const parts = String(d).split(' ');
-                        if (parts.length < 2) return;
-                        const hour = parseInt(parts[1].split(':')[0], 10);
-                        if (hour >= 13 && hour < 21) usTradingIndices.push(i);
-                    });
-                    if (usTradingIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
-
-                    const sessionDates = [...new Set(usTradingIndices.map(i => dates[i].split(' ')[0]))];
-                    const daysAgo = parseInt(period.replace('d', ''), 10) || 1;
-                    const targetDateStr = sessionDates[Math.max(0, sessionDates.length - daysAgo)];
-                    const filteredIndices = usTradingIndices.filter(i => dates[i] >= targetDateStr);
+                    const sessionCheckSymbols = [...symbolList, BENCHMARK_SYMBOL];
+                    const { filteredItems, sessionDates } = getRecentNewYorkSessionItems(dates, period, prices, sessionCheckSymbols);
+                    const filteredIndices = filteredItems.map(item => item.index);
                     if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
 
+                    const daysAgo = parseInt(String(period).replace('d', ''), 10) || 1;
                     const startIdx = filteredIndices[0];
                     const baseIdx = startIdx > 0 ? startIdx - 1 : startIdx;
                     const gspcPrices = prices[BENCHMARK_SYMBOL];
@@ -749,25 +813,14 @@
                 const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
                     && rawIntraday.dates[0].includes(' ');
                 if (wantIntraday && intradayAvailable) {
-                    const dates = rawIntraday.dates;
-                    const usTradingIndices = [];
-                    dates.forEach((d, i) => {
-                        const parts = String(d).split(' ');
-                        if (parts.length < 2) return;
-                        const hour = parseInt(parts[1].split(':')[0], 10);
-                        if (hour >= 13 && hour < 21) usTradingIndices.push(i);
-                    });
-                    if (usTradingIndices.length > 0) {
-                        const sessionDates = [...new Set(usTradingIndices.map(i => dates[i].split(' ')[0]))];
-                        const daysAgo = parseInt(period.replace('d', ''), 10) || 1;
-                        const targetDateStr = sessionDates[Math.max(0, sessionDates.length - daysAgo)];
-                        const filteredIndices = usTradingIndices.filter(i => dates[i] >= targetDateStr);
-                        if (filteredIndices.length > 0) {
-                            return {
-                                startDate: toJST(dates[filteredIndices[0]]),
-                                endDate: toJST(dates[filteredIndices[filteredIndices.length - 1]])
-                            };
-                        }
+                    const { dates, prices } = rawIntraday;
+                    const sessionCheckSymbols = [...allSymbols, BENCHMARK_SYMBOL];
+                    const { filteredItems } = getRecentNewYorkSessionItems(dates, period, prices, sessionCheckSymbols);
+                    if (filteredItems.length > 0) {
+                        return {
+                            startDate: toJST(dates[filteredItems[0].index]),
+                            endDate: toJST(dates[filteredItems[filteredItems.length - 1].index])
+                        };
                     }
                 }
                 if (!rawDaily || !rawDaily.dates || rawDaily.dates.length === 0) return null;
@@ -793,7 +846,7 @@
                     }
                 }
                 return { startDate: dates[tradingIndices[startPos]], endDate: dates[tradingIndices[TL - 1]] };
-            }, [rawDaily, rawIntraday, period]);
+            }, [rawDaily, rawIntraday, period, allSymbols]);
 
             const stockCards = useMemo(() => {
                 const cards = [{

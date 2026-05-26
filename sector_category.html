@@ -592,7 +592,7 @@
                 return processedData.ranking.filter(r => !FULL_RANKING_HIDDEN.has(r.symbol));
             }, [processedData, market]);
 
-            // === US モード: rawデータからUTCベースで独立計算 ===
+            // === US モード: rawデータからNY市場時間ベースで独立計算 ===
             const usData = useMemo(() => {
                 if (market !== 'us') return null;
                 const wantIntraday = ['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d'].includes(period);
@@ -645,7 +645,8 @@
                 };
 
                 if (isIntraday) {
-                    const { filteredItems } = getRecentNewYorkSessionItems(dates, period);
+                    const sessionCheckSymbols = [...usSymbols, 'SPY', '^GSPC', '^NDX', '^DJI'];
+                    const { filteredItems } = getRecentNewYorkSessionItems(dates, period, prices, sessionCheckSymbols);
                     if (filteredItems.length === 0) return { ranking: [], timeSeries: [], isIntraday: true, benchmark, mode: usMode };
 
                     const daysAgo = parseInt(period.replace('d', ''), 10) || 1;
@@ -1498,9 +1499,29 @@
             });
             return items;
         };
-        const getRecentNewYorkSessionItems = (dates, period) => {
+        const hasValidNewYorkSession = (items, prices, symbols = []) => {
+            if (!items || items.length < 2) return false;
+            if (!prices || !symbols.length) return true;
+            return symbols.some(symbol => {
+                const series = prices[symbol];
+                if (!Array.isArray(series)) return false;
+                const values = items
+                    .map(item => Number(series[item.index]))
+                    .filter(value => Number.isFinite(value) && value > 0);
+                if (values.length < 2) return false;
+                return new Set(values.map(value => value.toFixed(6))).size > 1;
+            });
+        };
+        const getRecentNewYorkSessionItems = (dates, period, prices = null, symbols = []) => {
             const sessionItems = getNewYorkSessionItems(dates);
-            const sessionDates = [...new Set(sessionItems.map(item => item.date))];
+            const sessionMap = new Map();
+            sessionItems.forEach(item => {
+                if (!sessionMap.has(item.date)) sessionMap.set(item.date, []);
+                sessionMap.get(item.date).push(item);
+            });
+            const sessionDates = [...sessionMap.keys()].filter(date =>
+                hasValidNewYorkSession(sessionMap.get(date), prices, symbols)
+            );
             const daysAgo = parseInt(String(period).replace('d', ''), 10) || 1;
             const selectedDates = new Set(sessionDates.slice(Math.max(0, sessionDates.length - daysAgo)));
             return {
@@ -2015,7 +2036,8 @@
                 const usSymbols = Object.keys(SEMICONDUCTOR_US);
 
                 if (isIntraday) {
-                    const { filteredItems } = getRecentNewYorkSessionItems(dates, period);
+                    const sessionCheckSymbols = [...usSymbols, '^SOX'];
+                    const { filteredItems } = getRecentNewYorkSessionItems(dates, period, prices, sessionCheckSymbols);
                     if (filteredItems.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
 
                     const filteredIndices = filteredItems.map(item => item.index);
