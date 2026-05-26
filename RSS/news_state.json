@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-26T12:01:45+00:00"
+      "last_fetch_at": "2026-05-26T12:11:46+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-26T12:01:45+00:00"
+      "last_fetch_at": "2026-05-26T12:11:46+00:00"
     }
   },
   "seen_ids": [
@@ -267,7 +267,27 @@
     "ブルームバーグ:4f1a4bfb9c96be5bd0466fb84e4ab921",
     "ブルームバーグ:c53f7aa2e0c809ce476a70622891e636",
     "ブルームバーグ:55258970123d602428afe8edb80cd0d9",
-    "ブルームバーグ:ad39e3b8904552b9c1072b98c38312e0"
+    "ブルームバーグ:ad39e3b8904552b9c1072b98c38312e0",
+    "ロイター:eb1e85b787dc0dbb5d1d3258b3b2935e",
+    "ロイター:31a6b1f29d100a0c165f6f2125c4934b",
+    "ロイター:e335f4b830b9398f63e9c09c9f40f318",
+    "ロイター:41271900e90973fd8089b251c9ad6d02",
+    "ロイター:1d63d5a43258ac9d5922f9dc928d4b22",
+    "ロイター:e48c30a375cd5470fc1495254576e450",
+    "ロイター:cb59aaba7fa7d098b6e12d8b0e3dd9df",
+    "ロイター:c1be2b632195fb5e61c2507ffd7a05df",
+    "ロイター:46f91dea60619861dbda65d4a8ae3d66",
+    "ロイター:68b7f1ee3b255b8a9e1607882d4dca3d",
+    "ロイター:b11d2ca471f7419dc0f2a8a38f864ea8",
+    "ロイター:49a4f609f0c832f1c17238f211a7d368",
+    "ロイター:c8e71b4bf3a58d7a9c7555bc41231a0b",
+    "ロイター:a1e5d5de72168505c440402c4a1d2472",
+    "ロイター:aa49f6d4b9eace693df7b39cca1ff2bd",
+    "ロイター:bc120323f460d73ee83d0a88f4143c09",
+    "ロイター:ccd0808fafaad4e62efd7c54c2452e8e",
+    "ロイター:5ad955bb20778071835a25a55629ef09",
+    "ロイター:fc3b3999264f307103132e6208f9937e",
+    "ロイター:b12a1f64ca256584ae89e5c368eec2d7"
   ],
   "pending_items": []
 }
