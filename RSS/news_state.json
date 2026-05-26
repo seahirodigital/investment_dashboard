@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-26T12:51:51+00:00"
+      "last_fetch_at": "2026-05-26T17:49:05+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-26T12:51:51+00:00"
+      "last_fetch_at": "2026-05-26T17:49:05+00:00"
     }
   },
   "seen_ids": [
@@ -287,7 +287,161 @@
     "ロイター:ccd0808fafaad4e62efd7c54c2452e8e",
     "ロイター:5ad955bb20778071835a25a55629ef09",
     "ロイター:fc3b3999264f307103132e6208f9937e",
-    "ロイター:b12a1f64ca256584ae89e5c368eec2d7"
+    "ロイター:b12a1f64ca256584ae89e5c368eec2d7",
+    "ブルームバーグ:10ffc20464192572fd2ff251ee20e3a4",
+    "ブルームバーグ:601ab97a348f21e3524fd2463a724e52",
+    "ブルームバーグ:6728aaafa290c08bd596091d7137fcbc",
+    "ブルームバーグ:a2c042fafc3ccc46d5c130d19ab6a31a",
+    "ブルームバーグ:fbfa567b1a3fc65b2d5dd470c5857aa4",
+    "ロイター:821159a5d2c95ad8daaa6bab88baae76",
+    "ロイター:b09ac39bf83a6e3a5d4dfb48f5b9efd6",
+    "ロイター:9bb7f1ee7834058e6fd36f2219742d70",
+    "ロイター:e5a44d3eb3c0338f593adf9f344cb10a",
+    "ロイター:e171edfd32ddc56547c165427811c3bc",
+    "ロイター:1afbea38df8878074c318f2c369b9941",
+    "ロイター:27ad7341528c3517f4cc2b809e1b9d4f",
+    "ロイター:348d72aa11756b52a4c39169b2d2adb7",
+    "ロイター:bcdaf149440204c272835dfdc1e24ee3",
+    "ロイター:36ab73752d1745a20e1790db69dccf88",
+    "ロイター:80e06afe493339b8e327a0fcf4fbdb63",
+    "ロイター:9a207c3f31a41121fc310520eab3711c"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "ブルームバーグ:10ffc20464192572fd2ff251ee20e3a4",
+      "source": "ブルームバーグ",
+      "title": "「ベッセント・プット」に限界論、米長期金利上昇への打開策見えず",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-26/TFNBB3T96OSK00?srnd=jp-markets",
+      "published_at": "2026-05-26T15:00:00+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ブルームバーグ:601ab97a348f21e3524fd2463a724e52",
+      "source": "ブルームバーグ",
+      "title": "米国市況：株は過去最高値に接近する勢い、イラン和平への期待根強く",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-26/TFN9AGT96OSG00?srnd=jp-markets",
+      "published_at": "2026-05-26T15:00:00+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ブルームバーグ:6728aaafa290c08bd596091d7137fcbc",
+      "source": "ブルームバーグ",
+      "title": "米国とイラン、ホルムズ海峡付近で衝突－和平交渉は一進一退",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-26/TFMZPXKJH6V900?srnd=jp-markets",
+      "published_at": "2026-05-26T15:00:00+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ブルームバーグ:a2c042fafc3ccc46d5c130d19ab6a31a",
+      "source": "ブルームバーグ",
+      "title": "低ボラティリティー株、利上げ可能性受け上昇の機運－JPモルガン",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-26/TFN6JKKK3NY800?srnd=jp-markets",
+      "published_at": "2026-05-26T15:00:00+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ブルームバーグ:fbfa567b1a3fc65b2d5dd470c5857aa4",
+      "source": "ブルームバーグ",
+      "title": "三井物産出資のクオンティニュアム、IPOで1670億円調達目指す",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-26/TFN5XZKK3NY800?srnd=jp-markets",
+      "published_at": "2026-05-26T15:00:00+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:821159a5d2c95ad8daaa6bab88baae76",
+      "source": "ロイター",
+      "title": "イラン外務省「米が停戦違反」 中東は米軍の盾ではないとハメ​ネイ師",
+      "link": "https://jp.reuters.com/world/security/4VQKR5T3R5JSTIBZTJBGEZASOU-2026-05-26/",
+      "published_at": "2026-05-26T10:58:03+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:b09ac39bf83a6e3a5d4dfb48f5b9efd6",
+      "source": "ロイター",
+      "title": "イランのハッカー、ＬＡ交通網へのサイバー攻撃に関与＝イスラエル研究者",
+      "link": "https://jp.reuters.com/world/us/KSJ6XVKIBZIJTD2CXWXYCDOVUQ-2026-05-26/",
+      "published_at": "2026-05-26T11:50:14+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:9bb7f1ee7834058e6fd36f2219742d70",
+      "source": "ロイター",
+      "title": "米大手銀行、ＦＲＢに監督制度改革の恒久化働きかけ＝関係筋",
+      "link": "https://jp.reuters.com/markets/japan/3FRJPJS6NRLIVNBPTDJXD5SB3U-2026-05-26/",
+      "published_at": "2026-05-26T12:17:15+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:e5a44d3eb3c0338f593adf9f344cb10a",
+      "source": "ロイター",
+      "title": "米住宅価格指数、3月は前月比0.1％小幅上昇＝ＦＨＦＡ",
+      "link": "https://jp.reuters.com/markets/japan/J2QPEHSUEBMJ3K77EP2B4XUGPU-2026-05-26/",
+      "published_at": "2026-05-26T13:45:21+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:e171edfd32ddc56547c165427811c3bc",
+      "source": "ロイター",
+      "title": "米・アルメニアが戦略協定に署名、重要鉱物や「トランプ回廊」で協力",
+      "link": "https://jp.reuters.com/world/us/P5CTD2QCQZMZRMD6QKCWOAT5EQ-2026-05-26/",
+      "published_at": "2026-05-26T14:00:35+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:1afbea38df8878074c318f2c369b9941",
+      "source": "ロイター",
+      "title": "ＥＣＢ次回政策判断、エネルギー価格の持続性が鍵＝オランダ中銀総裁",
+      "link": "https://jp.reuters.com/markets/japan/C6FVO7W7LJNXNJBPN3VUHOYQYM-2026-05-26/",
+      "published_at": "2026-05-26T14:12:19+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:27ad7341528c3517f4cc2b809e1b9d4f",
+      "source": "ロイター",
+      "title": "ルビオ氏側近のニーダム氏、国家安全保障担当の副補佐官に",
+      "link": "https://jp.reuters.com/world/security/64OPLYZEOFJ37AT3G6EAJOKJRM-2026-05-26/",
+      "published_at": "2026-05-26T14:46:56+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:348d72aa11756b52a4c39169b2d2adb7",
+      "source": "ロイター",
+      "title": "米マイクロン時価総額1兆ドル台、ＡＩブームでＵＢＳが目標株価引き上げ",
+      "link": "https://jp.reuters.com/markets/world-indices/QTQKU5FG5ZPBNHV2YHULPCEKZM-2026-05-26/",
+      "published_at": "2026-05-26T14:59:02+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:bcdaf149440204c272835dfdc1e24ee3",
+      "source": "ロイター",
+      "title": "ＮＡＴＯ、バルト防衛に独蘭軍団を配置へ 対ロシア東方態勢を強化＝関係筋",
+      "link": "https://jp.reuters.com/world/ukraine/ZTN56B5FTRM5RNOHSCWVFHLGNY-2026-05-26/",
+      "published_at": "2026-05-26T15:01:27+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:36ab73752d1745a20e1790db69dccf88",
+      "source": "ロイター",
+      "title": "米、ＮＡＴＯ向け軍事支援を大幅削減へ＝独誌",
+      "link": "https://jp.reuters.com/world/us/C5HZTDWM4ZPB3GVZUL7ZAF4MII-2026-05-26/",
+      "published_at": "2026-05-26T15:04:35+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:80e06afe493339b8e327a0fcf4fbdb63",
+      "source": "ロイター",
+      "title": "トランプ氏、難民上限1万人引き上げ 南ア白人の受け入れ拡大へ＝文書",
+      "link": "https://jp.reuters.com/world/us/OM5DIX2BAZIZVJQ5JQFY2RCHJI-2026-05-26/",
+      "published_at": "2026-05-26T15:24:42+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:9a207c3f31a41121fc310520eab3711c",
+      "source": "ロイター",
+      "title": "米5月ＣＢ消費者信頼感、93.1に低下 イラン戦争でインフレ懸念",
+      "link": "https://jp.reuters.com/markets/japan/XVDVQEGZEJMTVFOTBAPHO5AYAM-2026-05-26/",
+      "published_at": "2026-05-26T15:28:56+00:00",
+      "fetched_at": "2026-05-26T17:49:05+00:00"
+    }
+  ]
 }
