@@ -156,11 +156,23 @@
         const BENCHMARK_SYMBOL = '^GSPC';
         const BENCHMARK_NAME = 'S&P500';
         const INTRADAY_PERIODS = new Set(['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d']);
-        const toJST = (utcStr) => {
-            const d = new Date(String(utcStr).replace(' ', 'T') + ':00Z');
+        const formatJSTDateTime = (d) => {
             const j = new Date(d.getTime() + 9 * 3600 * 1000);
             const p = n => String(n).padStart(2, '0');
             return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+        };
+        const formatJSTChartLabel = (d) => {
+            const j = new Date(d.getTime() + 9 * 3600 * 1000);
+            const p = n => String(n).padStart(2, '0');
+            return `${j.getUTCMonth()+1}/${j.getUTCDate()} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+        };
+        const toJST = (utcStr) => {
+            const d = new Date(String(utcStr).replace(' ', 'T') + ':00Z');
+            return formatJSTDateTime(d);
+        };
+        const toJSTChartLabel = (utcStr) => {
+            const d = new Date(String(utcStr).replace(' ', 'T') + ':00Z');
+            return formatJSTChartLabel(d);
         };
         const NEW_YORK_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
             timeZone: 'America/New_York',
@@ -189,6 +201,12 @@
                 weekday: parts.weekday,
                 minutes: hour * 60 + minute,
             };
+        };
+        const getNewYorkCloseJSTLabel = (utcStr, marketTime, shortLabel = false) => {
+            const d = new Date(String(utcStr || '').replace(' ', 'T') + ':00Z');
+            if (!marketTime || Number.isNaN(d.getTime())) return null;
+            const closeUtc = new Date(d.getTime() + (960 - marketTime.minutes) * 60000);
+            return shortLabel ? formatJSTChartLabel(closeUtc) : formatJSTDateTime(closeUtc);
         };
         const isNewYorkRegularSession = (marketTime) => {
             if (!marketTime || marketTime.weekday === 'Sat' || marketTime.weekday === 'Sun') return false;
@@ -271,6 +289,7 @@
                     const { filteredItems, sessionDates } = getRecentNewYorkSessionItems(dates, period, prices, sessionCheckSymbols);
                     const filteredIndices = filteredItems.map(item => item.index);
                     if (filteredIndices.length === 0) return { ranking: [], timeSeries: [], isIntraday: true };
+                    const itemByIndex = new Map(filteredItems.map(item => [item.index, item]));
 
                     const daysAgo = parseInt(String(period).replace('d', ''), 10) || 1;
                     const startIdx = filteredIndices[0];
@@ -280,7 +299,8 @@
                     const rankingMap = {};
 
                     filteredIndices.forEach(i => {
-                        const point = { date: toJST(dates[i]) };
+                        const marketTime = itemByIndex.get(i);
+                        const point = { date: toJSTChartLabel(dates[i]), marketDate: marketTime?.date || '' };
                         symbolList.forEach(sym => {
                             const sPrices = prices[sym];
                             if (!sPrices) return;
@@ -302,8 +322,10 @@
                         timeSeries.push(point);
                     });
 
+                    let correctedEndDate = '';
                     if (rawDaily && rawDaily.dates && rawDaily.prices) {
                         const lastSessionDate = sessionDates[sessionDates.length - 1];
+                        const lastSessionItem = filteredItems[filteredItems.length - 1];
                         const dailyDates = rawDaily.dates;
                         const latestDailyDate = dailyDates[dailyDates.length - 1];
                         if (latestDailyDate >= lastSessionDate) {
@@ -324,6 +346,10 @@
                                 });
                                 if (timeSeries.length > 0) {
                                     const lastPoint = timeSeries[timeSeries.length - 1];
+                                    const closeShortLabel = getNewYorkCloseJSTLabel(dates[lastSessionItem.index], lastSessionItem, true);
+                                    const closeFullLabel = getNewYorkCloseJSTLabel(dates[lastSessionItem.index], lastSessionItem, false);
+                                    if (closeShortLabel) lastPoint.date = closeShortLabel;
+                                    if (closeFullLabel) correctedEndDate = closeFullLabel;
                                     symbolList.forEach(sym => {
                                         const sPrices = rawDaily.prices[sym];
                                         if (!sPrices) return;
@@ -348,7 +374,7 @@
 
                     const ranking = Object.values(rankingMap).sort((a, b) => b.performance - a.performance);
                     const endIdx = filteredIndices[filteredIndices.length - 1];
-                    return { ranking, timeSeries, startDate: toJST(dates[startIdx]), endDate: toJST(dates[endIdx]), isIntraday: true };
+                    return { ranking, timeSeries, startDate: toJST(dates[startIdx]), endDate: correctedEndDate || toJST(dates[endIdx]), isIntraday: true };
                 }
 
                 // ^GSPC が変化しない日（米国休場・forward-fill 日）を除外した実取引日インデックス配列を構築
@@ -817,9 +843,16 @@
                     const sessionCheckSymbols = [...allSymbols, BENCHMARK_SYMBOL];
                     const { filteredItems } = getRecentNewYorkSessionItems(dates, period, prices, sessionCheckSymbols);
                     if (filteredItems.length > 0) {
+                        const lastItem = filteredItems[filteredItems.length - 1];
+                        let endDate = toJST(dates[lastItem.index]);
+                        const dailyDates = rawDaily?.dates || [];
+                        const latestDailyDate = dailyDates[dailyDates.length - 1];
+                        if (latestDailyDate >= lastItem.date) {
+                            endDate = getNewYorkCloseJSTLabel(dates[lastItem.index], lastItem, false) || endDate;
+                        }
                         return {
                             startDate: toJST(dates[filteredItems[0].index]),
-                            endDate: toJST(dates[filteredItems[filteredItems.length - 1].index])
+                            endDate
                         };
                     }
                 }
