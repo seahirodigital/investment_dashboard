@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-26T18:21:23+00:00"
+      "last_fetch_at": "2026-05-26T18:31:25+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-26T18:21:23+00:00"
+      "last_fetch_at": "2026-05-26T18:31:25+00:00"
     }
   },
   "seen_ids": [
@@ -304,7 +304,9 @@
     "ロイター:bcdaf149440204c272835dfdc1e24ee3",
     "ロイター:36ab73752d1745a20e1790db69dccf88",
     "ロイター:80e06afe493339b8e327a0fcf4fbdb63",
-    "ロイター:9a207c3f31a41121fc310520eab3711c"
+    "ロイター:9a207c3f31a41121fc310520eab3711c",
+    "ロイター:d8f4e6f1177ca0d2c749da50f5b79ff6",
+    "ロイター:c3dce808abe1e27a9a8274266a5df511"
   ],
   "pending_items": [
     {
@@ -442,6 +444,22 @@
       "link": "https://jp.reuters.com/markets/japan/XVDVQEGZEJMTVFOTBAPHO5AYAM-2026-05-26/",
       "published_at": "2026-05-26T15:28:56+00:00",
       "fetched_at": "2026-05-26T17:49:05+00:00"
+    },
+    {
+      "id": "ロイター:d8f4e6f1177ca0d2c749da50f5b79ff6",
+      "source": "ロイター",
+      "title": "ロシア、ＧＰＳ妨害の設備増強 欧州広域が対象範囲に",
+      "link": "https://jp.reuters.com/world/ukraine/2UZSED7X4FKIRKAKWJFWUON5PM-2026-05-26/",
+      "published_at": "2026-05-26T15:33:00+00:00",
+      "fetched_at": "2026-05-26T18:31:25+00:00"
+    },
+    {
+      "id": "ロイター:c3dce808abe1e27a9a8274266a5df511",
+      "source": "ロイター",
+      "title": "イスラエル軍、レバノン南部の地上作戦拡大 「停戦ライン」越え進軍",
+      "link": "https://jp.reuters.com/world/security/PTU5B7UF5NJKLAAWE2YJYWSNH4-2026-05-26/",
+      "published_at": "2026-05-26T16:07:10+00:00",
+      "fetched_at": "2026-05-26T18:31:25+00:00"
     }
   ]
 }
