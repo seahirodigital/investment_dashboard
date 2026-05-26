@@ -62,8 +62,8 @@ jobs:
           mode = dispatch_mode if dispatch_mode in {'jp', 'us'} else ('us' if schedule == '25 21 * * 1-5' else 'jp')
           (output_dir / 'mode.txt').write_text(mode, encoding='utf-8')
 
-          page_url = 'http://127.0.0.1:8000/sector_category.html#full-sector-flow'
-          card_selector = '[data-capture="full-sector-card"]'
+          page_url = 'http://127.0.0.1:8000/sector_category.html?period=1d#full-sector-flow'
+          card_selector = '#full-sector-flow[data-capture="full-sector-card"]'
           chart_selector = '[data-capture="full-sector-chart"]'
           ranking_selector = '[data-capture="full-sector-ranking"]'
 
@@ -81,7 +81,12 @@ jobs:
                   if mode == 'us':
                       card.locator('[data-capture="market-us"]').click()
                       page.wait_for_function(
-                          """() => document.querySelector('[data-capture="full-sector-card"]')?.dataset.market === 'us'""",
+                          """() => document.querySelector('#full-sector-flow[data-capture="full-sector-card"]')?.dataset.market === 'us'""",
+                          timeout=30000,
+                      )
+                      card.locator('[data-capture="us-mode-relative"]').click()
+                      page.wait_for_function(
+                          """() => document.querySelector('#full-sector-flow[data-capture="full-sector-card"]')?.dataset.usMode === 'relative'""",
                           timeout=30000,
                       )
                       page.wait_for_timeout(5000)
@@ -91,7 +96,7 @@ jobs:
                   ranking = card.locator(ranking_selector).first
                   ranking.wait_for(state='visible', timeout=45000)
                   page.wait_for_function(
-                      """() => document.querySelectorAll('[data-capture="full-sector-ranking"] .relative.group.h-8').length > 0""",
+                      """() => document.querySelectorAll('#full-sector-flow [data-capture="full-sector-ranking"] .relative.group.h-8').length > 0""",
                       timeout=45000,
                   )
 
