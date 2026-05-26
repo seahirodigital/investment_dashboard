@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-26T19:21:35+00:00"
+      "last_fetch_at": "2026-05-26T19:31:37+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-26T19:21:35+00:00"
+      "last_fetch_at": "2026-05-26T19:31:37+00:00"
     }
   },
   "seen_ids": [
@@ -306,7 +306,9 @@
     "ロイター:80e06afe493339b8e327a0fcf4fbdb63",
     "ロイター:9a207c3f31a41121fc310520eab3711c",
     "ロイター:d8f4e6f1177ca0d2c749da50f5b79ff6",
-    "ロイター:c3dce808abe1e27a9a8274266a5df511"
+    "ロイター:c3dce808abe1e27a9a8274266a5df511",
+    "ブルームバーグ:2745598f6cdcec13e692f29a061ccbc1",
+    "ブルームバーグ:a5a85a3e97595200b885753fbdf026d7"
   ],
   "pending_items": [
     {
@@ -460,6 +462,22 @@
       "link": "https://jp.reuters.com/world/security/PTU5B7UF5NJKLAAWE2YJYWSNH4-2026-05-26/",
       "published_at": "2026-05-26T16:07:10+00:00",
       "fetched_at": "2026-05-26T18:31:25+00:00"
+    },
+    {
+      "id": "ブルームバーグ:2745598f6cdcec13e692f29a061ccbc1",
+      "source": "ブルームバーグ",
+      "title": "シタデル・セキュリティーズ、FRBは利上げ方向に軸足移すべきと指摘",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-26/TFNKAJT96OSH00?srnd=jp-markets",
+      "published_at": "2026-05-26T15:00:00+00:00",
+      "fetched_at": "2026-05-26T19:31:37+00:00"
+    },
+    {
+      "id": "ブルームバーグ:a5a85a3e97595200b885753fbdf026d7",
+      "source": "ブルームバーグ",
+      "title": "AI銘柄に浮上した味の素、年初来60%高－ウォール街が実力見いだす",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-26/TFNDAPKK3NY900?srnd=jp-markets",
+      "published_at": "2026-05-26T15:00:00+00:00",
+      "fetched_at": "2026-05-26T19:31:37+00:00"
     }
   ]
 }
