@@ -695,21 +695,6 @@
                                     const perf = calcPerformance(rawDaily.prices, sym, dailyBaseIdx, dailyEndIdx, dailyBenchmark || benchmark);
                                     if (perf !== null && rankingMap[sym]) rankingMap[sym].performance = perf;
                                 });
-                                // チャート時系列の最終ポイントも終値で補正
-                                if (timeSeries.length > 0) {
-                                    const lastPoint = timeSeries[timeSeries.length - 1];
-                                    usSymbols.forEach(sym => {
-                                        const name = US_SECTORS[sym];
-                                        const perf = calcPerformance(rawDaily.prices, sym, dailyBaseIdx, dailyEndIdx, dailyBenchmark || benchmark);
-                                        if (perf !== null) lastPoint[name] = perf;
-                                    });
-                                    if (!isRelative) {
-                                        refSymbols.forEach(ref => {
-                                            const perf = calcPerformance(rawDaily.prices, ref.code, dailyBaseIdx, dailyEndIdx, dailyBenchmark || benchmark);
-                                            if (perf !== null) lastPoint[ref.name] = perf;
-                                        });
-                                    }
-                                }
                             }
                         }
                     }
@@ -936,7 +921,8 @@
                 if (market === 'jp') {
                     return [
                         { bounds: ["sat","mon"] },
-                        { bounds: [2.5, 3.5], pattern: "hour" }
+                        { bounds: [15.5, 9], pattern: "hour" },
+                        { bounds: [11.5, 12.5], pattern: "hour" }
                     ];
                 } else {
                     // US intraday: categoryモードなのでrangebreaks不要
@@ -1336,7 +1322,8 @@
                                             tickfont: { color: '#64748b', size: 9 },
                                             rangebreaks: processedData.isIntraday ? [
                                                 { bounds: ["sat","mon"] },
-                                                { bounds: [2.5,3.5], pattern:"hour" }
+                                                { bounds: [15.5,9], pattern:"hour" },
+                                                { bounds: [11.5,12.5], pattern:"hour" }
                                             ] : [{ bounds: ["sat","mon"] }],
                                         },
                                         yaxis: {
@@ -1802,7 +1789,8 @@
                                             tickfont: { color: '#64748b', size: 9 },
                                             rangebreaks: processedData.isIntraday ? [
                                                 { bounds: ["sat","mon"] },
-                                                { bounds: [2.5,3.5], pattern:"hour" }
+                                                { bounds: [15.5,9], pattern:"hour" },
+                                                { bounds: [11.5,12.5], pattern:"hour" }
                                             ] : [{ bounds: ["sat","mon"] }],
                                         },
                                         yaxis: {
@@ -2109,29 +2097,6 @@
                                         rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
                                     }
                                 });
-                                // チャート時系列の最終ポイントも終値で補正
-                                if (timeSeries.length > 0) {
-                                    const lastPoint = timeSeries[timeSeries.length - 1];
-                                    usSymbols.forEach(sym => {
-                                        const name = SEMICONDUCTOR_US[sym];
-                                        const sPrices = rawDaily.prices[sym];
-                                        if (!sPrices) return;
-                                        const sStart = sPrices[dailyBaseIdx];
-                                        const sCurrent = sPrices[dailyEndIdx];
-                                        if (sStart && sCurrent && sStart !== 0) {
-                                            lastPoint[name] = ((sCurrent / sStart) - 1) * 100;
-                                        }
-                                    });
-                                    // SOX指数も終値補正
-                                    const soxPrices = rawDaily.prices['^SOX'];
-                                    if (soxPrices) {
-                                        const soxStart = soxPrices[dailyBaseIdx];
-                                        const soxCurrent = soxPrices[dailyEndIdx];
-                                        if (soxStart && soxCurrent && soxStart !== 0) {
-                                            lastPoint['SOX指数'] = ((soxCurrent / soxStart) - 1) * 100;
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
@@ -2243,7 +2208,8 @@
                 if (market === 'jp') {
                     return [
                         { bounds: ["sat","mon"] },
-                        { bounds: [2.5, 3.5], pattern: "hour" }
+                        { bounds: [15.5, 9], pattern: "hour" },
+                        { bounds: [11.5, 12.5], pattern: "hour" }
                     ];
                 } else {
                     return [];
