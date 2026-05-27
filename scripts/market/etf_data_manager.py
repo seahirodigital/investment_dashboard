@@ -606,19 +606,24 @@ def fetch_data(period="400d", interval="1d"):
     # タイムゾーン除去
     df.index = pd.to_datetime(df.index).tz_localize(None)
 
-    # 欠損値補完
-    df = df.ffill().bfill()
+    is_intraday = interval != "1d"
 
-    # ベンチマーク行のみ保持
-    if BENCHMARK in df.columns:
-        df = df[df[BENCHMARK].notna()]
+    if is_intraday:
+        # 複数市場の5分足は時刻が混在するため、全体ffillするとJP銘柄が
+        # US時間や未来時刻まで横に伸びる。イントラデイは欠損を欠損のまま保持する。
+        df_for_prices = df
+    else:
+        # 日次は従来どおり、長期比較の連続性を優先する。
+        df_for_prices = df.ffill().bfill()
+        if BENCHMARK in df_for_prices.columns:
+            df_for_prices = df_for_prices[df_for_prices[BENCHMARK].notna()]
 
     # ── ETFセクター・半導体銘柄価格の保存──
     etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys()) + list(TOPIX100.keys()) + ALL_US_INDIVIDUAL_SYMBOLS
     for symbol in etf_symbols:
-        if symbol in df.columns:
+        if symbol in df_for_prices.columns:
             output["prices"][symbol] = [
-                round(float(x), 2) if pd.notna(x) else None for x in df[symbol].tolist()
+                round(float(x), 2) if pd.notna(x) else None for x in df_for_prices[symbol].tolist()
             ]
 
     # ── バスケットセクター価格の計算（等加重平均）──
@@ -626,25 +631,29 @@ def fetch_data(period="400d", interval="1d"):
     basket_ok = 0
     for basket_name, basket_symbols in BASKET_SECTORS.items():
         # 取得できた銘柄のみ抽出
-        valid = [s for s in basket_symbols if s in df.columns]
+        valid = [s for s in basket_symbols if s in df_for_prices.columns]
         if not valid:
             print(f"    Skip '{basket_name}': no valid stocks found")
             continue
 
-        subset = df[valid]
-        first_row = subset.iloc[0]
+        subset = df_for_prices[valid]
 
-        # 初値が0またはNaNの銘柄を除外
-        valid = [s for s in valid if pd.notna(first_row[s]) and first_row[s] > 0]
+        # 初値が0またはNaNの銘柄を除外。イントラデイは最初の有効価格を基準にする。
+        first_prices = {}
+        for symbol in valid:
+            valid_prices = subset[symbol].dropna()
+            valid_prices = valid_prices[valid_prices > 0]
+            if not valid_prices.empty:
+                first_prices[symbol] = valid_prices.iloc[0]
+        valid = list(first_prices.keys())
         if not valid:
             print(f"    Skip '{basket_name}': all first prices are NaN/0")
             continue
 
-        subset = df[valid]
-        first_row = subset.iloc[0]
+        subset = df_for_prices[valid]
 
         # 各銘柄を初値=100に正規化して等加重平均
-        normalized = subset.div(first_row) * 100
+        normalized = subset.div(pd.Series(first_prices)) * 100
         basket_price = normalized.mean(axis=1)
 
         output["prices"][basket_name] = [
@@ -657,9 +666,9 @@ def fetch_data(period="400d", interval="1d"):
 
     # 日付出力
     if interval == "1d":
-        output["dates"] = [d.strftime('%Y-%m-%d') for d in df.index]
+        output["dates"] = [d.strftime('%Y-%m-%d') for d in df_for_prices.index]
     else:
-        output["dates"] = [d.strftime('%Y-%m-%d %H:%M') for d in df.index]
+        output["dates"] = [d.strftime('%Y-%m-%d %H:%M') for d in df_for_prices.index]
 
     return output
 
