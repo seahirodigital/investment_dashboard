@@ -1399,6 +1399,98 @@
             return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
         };
 
+        const INTRADAY_PERIOD_VALUES = new Set(['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d']);
+        const isIntradayPeriodValue = (value) => INTRADAY_PERIOD_VALUES.has(value);
+        const isFinitePrice = (value) => {
+            const n = Number(value);
+            return Number.isFinite(n) && n > 0;
+        };
+        const parseUtcTimestamp = (utcStr) => {
+            if (!utcStr || !utcStr.includes(' ')) return NaN;
+            return new Date(utcStr.replace(' ', 'T') + ':00Z').getTime();
+        };
+        const getJstPartsFromUtc = (utcStr) => {
+            const label = toJST(utcStr);
+            const hour = Number(label.slice(11, 13));
+            const minute = Number(label.slice(14, 16));
+            return { label, date: label.slice(0, 10), minutes: hour * 60 + minute };
+        };
+        const getCurrentJstParts = () => {
+            const d = new Date(Date.now() + 9 * 3600 * 1000);
+            const p = n => String(n).padStart(2, '0');
+            return {
+                date: `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}`,
+                weekday: d.getUTCDay(),
+                minutes: d.getUTCHours() * 60 + d.getUTCMinutes(),
+            };
+        };
+        const isJpMarketMinute = (minutes) => (
+            (minutes >= 540 && minutes <= 690) ||
+            (minutes >= 750 && minutes <= 930)
+        );
+        const shouldRequireTodayJpData = () => {
+            const now = getCurrentJstParts();
+            return now.weekday >= 1 && now.weekday <= 5 && now.minutes >= 540;
+        };
+        const getIntradayCutoffMs = (rawData) => {
+            const generatedMs = rawData?.generated_at ? new Date(rawData.generated_at).getTime() : NaN;
+            if (!Number.isFinite(generatedMs)) return Date.now();
+            return Math.min(Date.now(), generatedMs + 10 * 60 * 1000);
+        };
+        const findPreviousValidIndex = (series, beforeIndex) => {
+            if (!series) return -1;
+            for (let i = beforeIndex - 1; i >= 0; i--) {
+                if (isFinitePrice(series[i])) return i;
+            }
+            return -1;
+        };
+        const getSeriesBasePrice = (prices, symbol, startIndex, dailyBaseMap) => {
+            if (dailyBaseMap && isFinitePrice(dailyBaseMap[symbol])) return Number(dailyBaseMap[symbol]);
+            const series = prices?.[symbol];
+            if (!series) return null;
+            const prevIndex = findPreviousValidIndex(series, startIndex);
+            if (prevIndex >= 0) return Number(series[prevIndex]);
+            return isFinitePrice(series[startIndex]) ? Number(series[startIndex]) : null;
+        };
+        const getJpIntradayItems = (rawData, prices, benchmarkSymbol, period) => {
+            const dates = rawData?.dates || [];
+            const benchmarkPrices = benchmarkSymbol ? prices?.[benchmarkSymbol] : null;
+            const cutoffMs = getIntradayCutoffMs(rawData);
+            const items = [];
+
+            dates.forEach((date, index) => {
+                const utcMs = parseUtcTimestamp(date);
+                if (!Number.isFinite(utcMs) || utcMs > cutoffMs) return;
+                const jst = getJstPartsFromUtc(date);
+                if (!isJpMarketMinute(jst.minutes)) return;
+                if (benchmarkPrices && !isFinitePrice(benchmarkPrices[index])) return;
+                items.push({ index, label: jst.label, date: jst.date });
+            });
+
+            const sessionDates = [...new Set(items.map(item => item.date))];
+            if (sessionDates.length === 0) {
+                return { filteredItems: [], latestSessionDate: null, staleReason: null };
+            }
+
+            const latestSessionDate = sessionDates[sessionDates.length - 1];
+            const today = getCurrentJstParts().date;
+            if (shouldRequireTodayJpData() && latestSessionDate !== today) {
+                return {
+                    filteredItems: [],
+                    latestSessionDate,
+                    staleReason: `本日(${today})のJPイントラデイデータが未取得です。前営業日(${latestSessionDate})の値は表示しません。`,
+                };
+            }
+
+            const daysAgo = parseInt(period.replace('d', ''), 10) || 1;
+            const selectedDates = new Set(sessionDates.slice(-daysAgo));
+            return {
+                filteredItems: items.filter(item => selectedDates.has(item.date)),
+                latestSessionDate,
+                staleReason: null,
+            };
+        };
+
         const COLORS = [
             '#2563eb', '#db2777', '#d97706', '#059669', '#7c3aed', '#dc2626', '#0891b2',
             '#4f46e5', '#ea580c', '#16a34a', '#9333ea', '#e11d48', '#0284c7', '#ca8a04',
@@ -1768,7 +1860,7 @@
             // === 日本株モード: rawデータからJSTベースで独立計算 ===
             const jpData = useMemo(() => {
                 if (market !== 'jp') return null;
-                const wantIntraday = ['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d'].includes(period);
+                const wantIntraday = isIntradayPeriodValue(period);
                 const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
                     && rawIntraday.dates[0].includes(' ');
                 const isIntraday = wantIntraday && intradayAvailable;
@@ -1778,22 +1870,21 @@
                 const { dates, prices } = rawData;
                 const jpSymbols = Object.keys(SEMICONDUCTOR_JP);
                 const L = dates.length;
-
-                // JST変換
-                const toJST = (utcStr) => {
-                    const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
-                    const j = new Date(d.getTime() + 9 * 3600 * 1000);
-                    const p = n => String(n).padStart(2, '0');
-                    return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
-                };
-
                 let startIndex = 0;
+                let endIndex = L - 1;
+                let jpItems = null;
+
                 if (isIntraday) {
-                    const calendarDates = [...new Set(dates.map(d => d.split(' ')[0]))];
-                    const daysAgo = parseInt(period.replace('d', '')) || 1;
-                    const targetDateStr = calendarDates[Math.max(0, calendarDates.length - daysAgo)];
-                    startIndex = dates.findIndex(d => d.startsWith(targetDateStr));
-                    if (startIndex === -1) startIndex = 0;
+                    const selection = getJpIntradayItems(rawData, prices, '1306.T', period);
+                    if (selection.staleReason) {
+                        return { ranking: [], timeSeries: [], isIntraday, staleReason: selection.staleReason };
+                    }
+                    jpItems = selection.filteredItems;
+                    if (!jpItems.length) {
+                        return { ranking: [], timeSeries: [], isIntraday, staleReason: 'JP市場時間内の有効な半導体イントラデイデータがありません。' };
+                    }
+                    startIndex = jpItems[0].index;
+                    endIndex = jpItems[jpItems.length - 1].index;
                 } else if (period.endsWith('d')) {
                     const days = parseInt(period.replace('d', ''), 10);
                     startIndex = Math.max(0, L - Math.max(days + 1, 3));
@@ -1806,13 +1897,10 @@
                     }
                 }
 
-                // 基準価格: イントラデイは前日終値（startIndex - 1）、日次は期間開始日
-                const baseIndex = (isIntraday && startIndex > 0) ? startIndex - 1 : startIndex;
-
                 // 前日終値ベースマップを構築（TOPIX100と統一ロジック）
                 let dailyBaseMap = null;
-                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
-                    const startDateStr = dates[startIndex].split(' ')[0];
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && jpItems?.length) {
+                    const startDateStr = jpItems[0].date;
                     const dbDates = rawDaily.dates;
                     let prevDailyIdx = -1;
                     for (let di = dbDates.length - 1; di >= 0; di--) {
@@ -1827,29 +1915,43 @@
                     }
                 }
 
+                const getBasePrice = (symbol) => {
+                    if (isIntraday) return getSeriesBasePrice(prices, symbol, startIndex, dailyBaseMap);
+                    const series = prices[symbol];
+                    return series && isFinitePrice(series[startIndex]) ? Number(series[startIndex]) : null;
+                };
+
                 const timeSeries = [];
                 const rankingMap = {};
-                for (let i = startIndex; i < L; i++) {
-                    const date = isIntraday ? toJST(dates[i]) : dates[i];
-                    const point = { date };
+                const pointItems = isIntraday
+                    ? jpItems
+                    : dates.slice(startIndex, endIndex + 1).map((date, offset) => ({
+                        index: startIndex + offset,
+                        label: date,
+                        date,
+                    }));
+
+                pointItems.forEach(item => {
+                    const i = item.index;
+                    const point = { date: item.label };
                     jpSymbols.forEach(sym => {
                         const name = SEMICONDUCTOR_JP[sym];
                         const sPrices = prices[sym];
                         if (!sPrices) return;
-                        const sStart = (dailyBaseMap && dailyBaseMap[sym]) ? dailyBaseMap[sym] : sPrices[baseIndex];
+                        const sStart = getBasePrice(sym);
                         const sCurrent = sPrices[i];
-                        if (sStart && sCurrent && sStart !== 0) {
-                            const ret = ((sCurrent / sStart) - 1) * 100;
+                        if (isFinitePrice(sStart) && isFinitePrice(sCurrent)) {
+                            const ret = ((Number(sCurrent) / Number(sStart)) - 1) * 100;
                             point[name] = ret;
                             rankingMap[sym] = { symbol: sym, name, performance: ret };
                         }
                     });
                     timeSeries.push(point);
-                }
+                });
                 // ── 終値補正（半導体JP）: 日次データにイントラデイ最終日が含まれている場合のみ補正 ──
                 // （TOPIX100分析と統一ロジック: generated_atではなく日付包含で判定）
-                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
-                    const lastDate = dates[L - 1].split(' ')[0];
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && jpItems?.length) {
+                    const lastDate = jpItems[jpItems.length - 1].date;
                     const dailyDates = rawDaily.dates;
                     const latestDailyDate = dailyDates[dailyDates.length - 1];
                     if (latestDailyDate >= lastDate) {
@@ -1865,8 +1967,8 @@
                                 if (!sPrices) return;
                                 const sStart = sPrices[dailyBaseIdx];
                                 const sCurrent = sPrices[dailyEndIdx];
-                                if (sStart && sCurrent && sStart !== 0 && rankingMap[sym]) {
-                                    rankingMap[sym].performance = ((sCurrent / sStart) - 1) * 100;
+                                if (isFinitePrice(sStart) && isFinitePrice(sCurrent) && rankingMap[sym]) {
+                                    rankingMap[sym].performance = ((Number(sCurrent) / Number(sStart)) - 1) * 100;
                                 }
                             });
                             // チャート時系列の最終ポイントも終値で補正
@@ -1878,8 +1980,8 @@
                                     if (!sPrices) return;
                                     const sStart = sPrices[dailyBaseIdx];
                                     const sCurrent = sPrices[dailyEndIdx];
-                                    if (sStart && sCurrent && sStart !== 0) {
-                                        lastPoint[name] = ((sCurrent / sStart) - 1) * 100;
+                                    if (isFinitePrice(sStart) && isFinitePrice(sCurrent)) {
+                                        lastPoint[name] = ((Number(sCurrent) / Number(sStart)) - 1) * 100;
                                     }
                                 });
                             }
@@ -2166,7 +2268,9 @@
                         {/* 左：チャート */}
                         <div className="md:w-1/2 h-full relative z-10">
                             {noData ? (
-                                <div className="flex items-center justify-center h-full text-xs text-slate-400">データなし</div>
+                                <div className="flex items-center justify-center h-full px-4 text-center text-xs text-slate-400">
+                                    {activeData?.staleReason || 'データなし'}
+                                </div>
                             ) : (
                                 <Plot
                                     data={chartTraces.map(t => ({ ...t, visible: !hiddenTraces.has(t.name) }))}
@@ -2362,66 +2466,67 @@
 
             // データ加工
             const processedData = useMemo(() => {
-                const wantIntraday = ['1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d', '10d', '14d'].includes(period);
-                // イントラデイデータが利用可能かチェック（dates に時刻が含まれるか）
+                const wantIntraday = isIntradayPeriodValue(period);
                 const intradayAvailable = rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1
                     && rawIntraday.dates[0].includes(' ');
                 const isIntraday = wantIntraday && intradayAvailable;
-                // フォールバック: イントラデイ不可なら日次データを使用（期間は直近N営業日に変換）
                 const rawData = isIntraday ? rawIntraday : rawDaily;
                 if (!rawData) return null;
 
                 const { dates, prices, benchmark, sectors } = rawData;
                 const L = dates.length;
+                const nameToSymbol = {};
+                Object.keys(sectors || {}).forEach(sym => { nameToSymbol[sectors[sym]] = sym; });
+                const emptyProcessed = (staleReason = null) => ({
+                    period,
+                    isIntraday,
+                    startDate: null,
+                    endDate: null,
+                    timeSeries: [],
+                    absoluteTimeSeries: [],
+                    ranking: [],
+                    absoluteRanking: [],
+                    nameToSymbol,
+                    staleReason,
+                });
+
                 let startIndex = 0;
+                let endIndex = L - 1;
+                let jpItems = null;
 
                 if (isIntraday) {
-                    const calendarDates = [...new Set(dates.map(d => d.split(' ')[0]))];
-                    const daysAgo = parseInt(period.replace('d', '')) || 1;
-                    const targetDateStr = calendarDates[Math.max(0, calendarDates.length - daysAgo)];
-                    startIndex = dates.findIndex(d => d.startsWith(targetDateStr));
-                    if (startIndex === -1) startIndex = 0;
+                    const selection = getJpIntradayItems(rawData, prices, benchmark, period);
+                    if (selection.staleReason) return emptyProcessed(selection.staleReason);
+                    jpItems = selection.filteredItems;
+                    if (!jpItems.length) return emptyProcessed('JP市場時間内の有効なイントラデイデータがありません。');
+                    startIndex = jpItems[0].index;
+                    endIndex = jpItems[jpItems.length - 1].index;
                 } else if (wantIntraday && !intradayAvailable) {
-                    // イントラデイ期間が要求されたが日次データにフォールバック
-                    // N日分の日次データを表示（最低2ポイント確保）
-                    const daysAgo = parseInt(period.replace('d', '')) || 1;
+                    const daysAgo = parseInt(period.replace('d', ''), 10) || 1;
                     startIndex = Math.max(0, L - Math.max(daysAgo + 1, 3));
+                } else if (period.endsWith('d')) {
+                    const days = parseInt(period.replace('d', ''), 10);
+                    startIndex = Math.max(0, L - (days + 1));
                 } else {
-                    if (period.endsWith('d')) {
-                        const days = parseInt(period.replace('d', ''), 10);
-                        startIndex = Math.max(0, L - (days + 1));
-                    } else {
-                        const latestDateStr = dates[L - 1];
-                        const today = latestDateStr ? new Date(latestDateStr) : new Date();
-                        const targetDates = {
-                            '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365
-                        };
-                        const daysAgo = targetDates[period] || 30;
-                        const targetTimestamp = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000).getTime();
-
-                        for (let i = L - 1; i >= 0; i--) {
-                            const d = new Date(dates[i]).getTime();
-                            if (d <= targetTimestamp) {
-                                startIndex = i;
-                                break;
-                            }
+                    const latestDateStr = dates[L - 1];
+                    const today = latestDateStr ? new Date(latestDateStr) : new Date();
+                    const targetDates = { '1mo': 30, '2mo': 60, '3mo': 90, '6mo': 180, '1y': 365 };
+                    const daysAgo = targetDates[period] || 30;
+                    const targetTimestamp = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000).getTime();
+                    for (let i = L - 1; i >= 0; i--) {
+                        if (new Date(dates[i]).getTime() <= targetTimestamp) {
+                            startIndex = i;
+                            break;
                         }
                     }
                 }
 
-                const endIndex = L - 1;
                 const bPrices = prices[benchmark];
+                if (!bPrices) return emptyProcessed('TOPIX基準データがありません。');
 
-                // 基準価格のインデックス:
-                // イントラデイ: 前日終値（startIndex - 1）を基準にする（金融標準）
-                // 日次: 期間開始日を基準にする
-                const baseIndex = (isIntraday && startIndex > 0) ? startIndex - 1 : startIndex;
-
-                // 前日終値ベースマップを構築（イントラデイ時、日次終値のほうが正確）
-                // TOPIX100分析と統一ロジック
                 let dailyBaseMap = null;
-                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
-                    const startDateStr = dates[startIndex].split(' ')[0];
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && jpItems?.length) {
+                    const startDateStr = jpItems[0].date;
                     const dbDates = rawDaily.dates;
                     let prevDailyIdx = -1;
                     for (let di = dbDates.length - 1; di >= 0; di--) {
@@ -2430,148 +2535,118 @@
                     if (prevDailyIdx >= 0) {
                         dailyBaseMap = {};
                         const bpd = rawDaily.prices[benchmark];
-                        if (bpd && bpd[prevDailyIdx]) dailyBaseMap[benchmark] = bpd[prevDailyIdx];
-                        // バスケットセクター（ティッカーでないキー、例: '電線','鉱業'）は
-                        // 日次とイントラデイで正規化起点が異なりスケールが不一致のため除外
+                        if (bpd && isFinitePrice(bpd[prevDailyIdx])) dailyBaseMap[benchmark] = bpd[prevDailyIdx];
                         const isTickerSymbol = (s) => s.includes('.') || s.startsWith('^');
                         Object.keys(sectors).forEach(sym => {
                             if (!isTickerSymbol(sym)) return;
                             const dp = rawDaily.prices[sym];
-                            if (dp && dp[prevDailyIdx]) dailyBaseMap[sym] = dp[prevDailyIdx];
+                            if (dp && isFinitePrice(dp[prevDailyIdx])) dailyBaseMap[sym] = dp[prevDailyIdx];
                         });
                     }
                 }
 
-                // yfinanceはUTCタイムスタンプを出力（tz_localize(None)でラベル除去）
-                // 表示用にJSTへ+9h変換が必要
-                const toJST = (utcStr) => {
-                    const d = new Date(utcStr.replace(' ', 'T') + ':00Z');
-                    const j = new Date(d.getTime() + 9 * 3600 * 1000);
-                    const p = n => String(n).padStart(2, '0');
-                    return `${j.getUTCFullYear()}-${p(j.getUTCMonth()+1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+                const getBasePrice = (symbol) => {
+                    if (isIntraday) return getSeriesBasePrice(prices, symbol, startIndex, dailyBaseMap);
+                    const series = prices[symbol];
+                    return series && isFinitePrice(series[startIndex]) ? Number(series[startIndex]) : null;
                 };
+                const bStart = getBasePrice(benchmark);
+                if (!isFinitePrice(bStart)) return emptyProcessed('TOPIX基準価格が取得できません。');
 
                 const timeSeries = [];
                 const absoluteTimeSeries = [];
+                const pointItems = isIntraday
+                    ? jpItems
+                    : dates.slice(startIndex, endIndex + 1).map((date, offset) => ({
+                        index: startIndex + offset,
+                        label: date,
+                        date,
+                    }));
 
-                for (let i = startIndex; i <= endIndex; i++) {
-                    const date = isIntraday ? toJST(dates[i]) : dates[i];
-                    const bStart = (dailyBaseMap && dailyBaseMap[benchmark]) ? dailyBaseMap[benchmark] : bPrices[baseIndex];
+                pointItems.forEach(item => {
+                    const i = item.index;
                     const bCurrent = bPrices[i];
-
-                    if (!bStart || !bCurrent) continue;
-
-                    const bReturn = (bCurrent / bStart) - 1;
-
-                    // 相対リターン（TOPIX超過）
-                    const point = { date };
-                    point.TOPIX = bReturn * 100;
-
-                    // 絶対リターン（TOPIX割り返しなし）
-                    const absPoint = { date };
-                    absPoint.TOPIX = bReturn * 100;  // TOPIXも絶対値として追加
+                    if (!isFinitePrice(bCurrent)) return;
+                    const bReturn = (Number(bCurrent) / bStart) - 1;
+                    const point = { date: item.label, TOPIX: bReturn * 100 };
+                    const absPoint = { date: item.label, TOPIX: bReturn * 100 };
 
                     Object.keys(sectors).forEach(symbol => {
                         const name = sectors[symbol];
                         const sPrices = prices[symbol];
                         if (!sPrices) return;
-
-                        const sStart = (dailyBaseMap && dailyBaseMap[symbol]) ? dailyBaseMap[symbol] : sPrices[baseIndex];
+                        const sStart = getBasePrice(symbol);
                         const sCurrent = sPrices[i];
-
-                        if (sStart && sCurrent) {
-                            const sReturn = (sCurrent / sStart) - 1;
-                            point[name] = (sReturn - bReturn) * 100;  // 相対
-                            absPoint[name] = sReturn * 100;             // 絶対
-                        } else {
-                            point[name] = 0;
-                            absPoint[name] = 0;
-                        }
+                        if (!isFinitePrice(sStart) || !isFinitePrice(sCurrent)) return;
+                        const sReturn = (Number(sCurrent) / Number(sStart)) - 1;
+                        point[name] = (sReturn - bReturn) * 100;
+                        absPoint[name] = sReturn * 100;
                     });
 
-                    // US主要指数・先物のパフォーマンスも絶対値として計算（ランキング表示用）
                     const US_REF_SYMBOLS = {
                         '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数',
                         'NQM26.CME': 'NQmain(2606)', 'ESM26.CME': 'ESmain(2606)', 'YMM26.CBT': 'YMmain(2606)',
                     };
-                    // 先物シンボル判定（CME/CBT限月コード）
                     const isFuturesSymbol = (s) => /\.(CME|CBT|NYM)$/.test(s) || s.endsWith('=F');
                     Object.entries(US_REF_SYMBOLS).forEach(([sym, name]) => {
                         const rPrices = prices[sym];
                         if (!rPrices) return;
-                        // 先物は24h取引のため、baseIndex（JP寄付直前）ではなく
-                        // 米国市場引け（UTC 20:00付近）のティックを基準にする
-                        let refBase = baseIndex;
+                        let refBase = getSeriesBasePrice(prices, sym, startIndex, null);
                         if (isFuturesSymbol(sym) && isIntraday) {
-                            // 先物は24h取引のため、JP寄付直前（baseIndex）ではなく
-                            // 前営業日の米国市場引け = UTC 20:00（ET 16:00 = CME決済時刻）を基準にする
-                            // 逆順に探索し、hour===20 の最初のティック（=UTC 20:00）を見つける
                             let found20 = -1;
                             for (let k = startIndex - 1; k >= Math.max(0, startIndex - 200); k--) {
                                 const parts = dates[k].split(' ');
                                 if (parts.length < 2) continue;
                                 const hour = parseInt(parts[1].split(':')[0], 10);
-                                if (hour === 20) {
-                                    found20 = k; // 逆順なので最初のhitは20:55等、続けて20:00まで遡る
+                                if (hour === 20 && isFinitePrice(rPrices[k])) {
+                                    found20 = k;
                                 } else if (found20 !== -1) {
-                                    // hour !== 20 に到達 → found20 は 20:00 の最初のティック
                                     break;
                                 } else if (hour < 19) {
-                                    break; // 前日まで遡りすぎ
+                                    break;
                                 }
                             }
-                            if (found20 !== -1) refBase = found20;
+                            if (found20 !== -1) refBase = rPrices[found20];
                         }
-                        const rStart = rPrices[refBase];
                         const rCurrent = rPrices[i];
-                        if (rStart && rCurrent && rStart !== 0) {
-                            absPoint[name] = ((rCurrent / rStart) - 1) * 100;
+                        if (isFinitePrice(refBase) && isFinitePrice(rCurrent)) {
+                            absPoint[name] = ((Number(rCurrent) / Number(refBase)) - 1) * 100;
                         }
                     });
 
                     timeSeries.push(point);
                     absoluteTimeSeries.push(absPoint);
-                }
+                });
 
                 const ranking = [];
                 if (timeSeries.length > 0) {
                     const latest = timeSeries[timeSeries.length - 1];
                     Object.keys(sectors).forEach(symbol => {
                         const name = sectors[symbol];
-                        if (latest[name] !== undefined) {
-                            ranking.push({ symbol, name, performance: latest[name] });
-                        }
+                        if (latest[name] !== undefined) ranking.push({ symbol, name, performance: latest[name] });
                     });
                     ranking.sort((a, b) => b.performance - a.performance);
                 }
 
-                // 絶対値ランキング（規模別指数チャート用）
                 const absoluteRanking = [];
                 if (absoluteTimeSeries.length > 0) {
                     const latest = absoluteTimeSeries[absoluteTimeSeries.length - 1];
                     Object.keys(sectors).forEach(symbol => {
                         const name = sectors[symbol];
-                        if (latest[name] !== undefined) {
-                            absoluteRanking.push({ symbol, name, performance: latest[name] });
-                        }
+                        if (latest[name] !== undefined) absoluteRanking.push({ symbol, name, performance: latest[name] });
                     });
-                    // US主要指数もランキングに追加
                     const US_REF_SYMBOLS = {
                         '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数',
                         'NQM26.CME': 'NQmain(2606)', 'ESM26.CME': 'ESmain(2606)', 'YMM26.CBT': 'YMmain(2606)',
                     };
                     Object.entries(US_REF_SYMBOLS).forEach(([sym, name]) => {
-                        if (latest[name] !== undefined) {
-                            absoluteRanking.push({ symbol: sym, name, performance: latest[name] });
-                        }
+                        if (latest[name] !== undefined) absoluteRanking.push({ symbol: sym, name, performance: latest[name] });
                     });
                     absoluteRanking.sort((a, b) => b.performance - a.performance);
                 }
 
-                // ── 終値補正: 日次データにイントラデイ最終日が含まれている場合のみ補正 ──
-                // （TOPIX100分析と統一ロジック: generated_atではなく日付包含で判定）
-                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices) {
-                    const lastIntradayDate = dates[endIndex].split(' ')[0];
+                if (isIntraday && rawDaily && rawDaily.dates && rawDaily.prices && jpItems?.length) {
+                    const lastIntradayDate = jpItems[jpItems.length - 1].date;
                     const dailyDates = rawDaily.dates;
                     const latestDailyDate = dailyDates[dailyDates.length - 1];
                     if (latestDailyDate >= lastIntradayDate) {
@@ -2580,98 +2655,60 @@
                             if (dailyDates[di] <= lastIntradayDate) { dailyEndIdx = di; break; }
                         }
                         if (dailyEndIdx >= 0) {
-                            const closeDaysAgo = parseInt(period.replace('d', '')) || 1;
+                            const closeDaysAgo = parseInt(period.replace('d', ''), 10) || 1;
                             const dailyBaseIdx = Math.max(0, dailyEndIdx - closeDaysAgo);
-
-                            // バスケットセクター判定（ティッカーでないキー = 日次と正規化スケールが不一致）
                             const isTickerSym = (s) => s.includes('.') || s.startsWith('^');
 
-                            // 絶対値ランキングの終値補正
                             absoluteRanking.forEach(entry => {
                                 if (!isTickerSym(entry.symbol)) return;
                                 const sPrices = rawDaily.prices[entry.symbol];
-                                if (!sPrices) return;
-                                const sStart = sPrices[dailyBaseIdx];
-                                const sCurrent = sPrices[dailyEndIdx];
-                                if (sStart && sCurrent && sStart !== 0) {
-                                    entry.performance = ((sCurrent / sStart) - 1) * 100;
-                                }
+                                if (!sPrices || !isFinitePrice(sPrices[dailyBaseIdx]) || !isFinitePrice(sPrices[dailyEndIdx])) return;
+                                entry.performance = ((Number(sPrices[dailyEndIdx]) / Number(sPrices[dailyBaseIdx])) - 1) * 100;
                             });
                             absoluteRanking.sort((a, b) => b.performance - a.performance);
 
-                            // 相対ランキング（TOPIX基準）の終値補正
                             const bPricesDaily = rawDaily.prices[benchmark];
-                            if (bPricesDaily) {
-                                const bStartD = bPricesDaily[dailyBaseIdx];
-                                const bCurrentD = bPricesDaily[dailyEndIdx];
-                                if (bStartD && bCurrentD && bStartD !== 0) {
-                                    const bReturnD = (bCurrentD / bStartD) - 1;
-                                    ranking.forEach(entry => {
-                                        if (!isTickerSym(entry.symbol)) return;
-                                        const sPrices = rawDaily.prices[entry.symbol];
-                                        if (!sPrices) return;
-                                        const sStart = sPrices[dailyBaseIdx];
-                                        const sCurrent = sPrices[dailyEndIdx];
-                                        if (sStart && sCurrent && sStart !== 0) {
-                                            entry.performance = ((sCurrent / sStart) - 1 - bReturnD) * 100;
-                                        }
-                                    });
-                                    ranking.sort((a, b) => b.performance - a.performance);
+                            if (bPricesDaily && isFinitePrice(bPricesDaily[dailyBaseIdx]) && isFinitePrice(bPricesDaily[dailyEndIdx])) {
+                                const bReturnD = (Number(bPricesDaily[dailyEndIdx]) / Number(bPricesDaily[dailyBaseIdx])) - 1;
+                                ranking.forEach(entry => {
+                                    if (!isTickerSym(entry.symbol)) return;
+                                    const sPrices = rawDaily.prices[entry.symbol];
+                                    if (!sPrices || !isFinitePrice(sPrices[dailyBaseIdx]) || !isFinitePrice(sPrices[dailyEndIdx])) return;
+                                    entry.performance = ((Number(sPrices[dailyEndIdx]) / Number(sPrices[dailyBaseIdx])) - 1 - bReturnD) * 100;
+                                });
+                                ranking.sort((a, b) => b.performance - a.performance);
 
-                                    // チャート時系列の最終ポイントも終値で補正
-                                    if (timeSeries.length > 0) {
-                                        const lastPoint = timeSeries[timeSeries.length - 1];
-                                        const lastAbsPoint = absoluteTimeSeries[absoluteTimeSeries.length - 1];
-                                        lastPoint.TOPIX = bReturnD * 100;
-                                        lastAbsPoint.TOPIX = bReturnD * 100;
-                                        Object.keys(sectors).forEach(symbol => {
-                                            if (!isTickerSym(symbol)) return;
-                                            const name = sectors[symbol];
-                                            const sPricesD = rawDaily.prices[symbol];
-                                            if (!sPricesD) return;
-                                            const sStartD = sPricesD[dailyBaseIdx];
-                                            const sCurrentD = sPricesD[dailyEndIdx];
-                                            if (sStartD && sCurrentD && sStartD !== 0) {
-                                                const sReturnD = (sCurrentD / sStartD) - 1;
-                                                lastPoint[name] = (sReturnD - bReturnD) * 100;
-                                                lastAbsPoint[name] = sReturnD * 100;
-                                            }
-                                        });
-                                        // US主要指数も終値補正
-                                        const US_CLOSE_SYMS = {
-                                            '^NDX': 'NASDAQ100', '^GSPC': 'S&P500', '^DJI': 'NYダウ', '^SOX': 'SOX指数',
-                                            'NQM26.CME': 'NQmain(2606)', 'ESM26.CME': 'ESmain(2606)', 'YMM26.CBT': 'YMmain(2606)',
-                                        };
-                                        Object.entries(US_CLOSE_SYMS).forEach(([sym, name]) => {
-                                            const rPrices = rawDaily.prices[sym];
-                                            if (!rPrices) return;
-                                            const rStart = rPrices[dailyBaseIdx];
-                                            const rCurrent = rPrices[dailyEndIdx];
-                                            if (rStart && rCurrent && rStart !== 0) {
-                                                lastAbsPoint[name] = ((rCurrent / rStart) - 1) * 100;
-                                            }
-                                        });
-                                    }
+                                if (timeSeries.length > 0) {
+                                    const lastPoint = timeSeries[timeSeries.length - 1];
+                                    const lastAbsPoint = absoluteTimeSeries[absoluteTimeSeries.length - 1];
+                                    lastPoint.TOPIX = bReturnD * 100;
+                                    lastAbsPoint.TOPIX = bReturnD * 100;
+                                    Object.keys(sectors).forEach(symbol => {
+                                        if (!isTickerSym(symbol)) return;
+                                        const name = sectors[symbol];
+                                        const sPricesD = rawDaily.prices[symbol];
+                                        if (!sPricesD || !isFinitePrice(sPricesD[dailyBaseIdx]) || !isFinitePrice(sPricesD[dailyEndIdx])) return;
+                                        const sReturnD = (Number(sPricesD[dailyEndIdx]) / Number(sPricesD[dailyBaseIdx])) - 1;
+                                        lastPoint[name] = (sReturnD - bReturnD) * 100;
+                                        lastAbsPoint[name] = sReturnD * 100;
+                                    });
                                 }
                             }
                         }
                     }
                 }
 
-                // セクター名→シンボルの逆引きマップ（ランキングのホバー・バッジ表示用）
-                const nameToSymbol = {};
-                Object.keys(sectors).forEach(sym => { nameToSymbol[sectors[sym]] = sym; });
-
                 return {
                     period,
                     isIntraday,
-                    startDate: isIntraday ? toJST(dates[startIndex]) : dates[startIndex],
-                    endDate: isIntraday ? toJST(dates[endIndex]) : dates[endIndex],
+                    startDate: isIntraday ? jpItems[0].label : dates[startIndex],
+                    endDate: isIntraday ? jpItems[jpItems.length - 1].label : dates[endIndex],
                     timeSeries,
                     absoluteTimeSeries,
                     ranking,
                     absoluteRanking,
                     nameToSymbol,
+                    staleReason: null,
                 };
 
             }, [rawDaily, rawIntraday, period]);
@@ -2779,6 +2816,12 @@
                                 && !(rawIntraday && rawIntraday.dates && rawIntraday.dates.length > 1 && rawIntraday.dates[0].includes(' ')) && (
                                 <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl p-3 text-xs">
                                     5分足データが未取得のため、日次データで表示中です。GitHub Actionsのイントラデイ更新完了後、自動的に切り替わります。
+                                </div>
+                            )}
+
+                            {!loading && processedData?.staleReason && (
+                                <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl p-3 text-xs">
+                                    {processedData.staleReason}
                                 </div>
                             )}
 
