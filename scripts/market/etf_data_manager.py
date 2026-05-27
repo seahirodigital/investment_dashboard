@@ -4,6 +4,7 @@ import json
 import os
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 
 BENCHMARK = '1306.T'
@@ -604,7 +605,7 @@ def fetch_yahoo_chart_close(symbol, period="14d", interval="5m"):
     )
 
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=8) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except Exception as exc:
         print(f"    Yahoo chart skip {symbol}: {exc}")
@@ -672,13 +673,28 @@ def supplement_jp_intraday_with_chart_api(df, period, interval):
     else:
         df = df[~df.index.duplicated(keep="last")].copy()
 
-    fetched = 0
-    for symbol in JP_INTRADAY_SYMBOLS:
-        series = fetch_yahoo_chart_close(symbol, period=chart_period, interval=interval)
+    fetched_series = {}
+    max_workers = min(12, len(JP_INTRADAY_SYMBOLS))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_yahoo_chart_close, symbol, chart_period, interval): symbol
+            for symbol in JP_INTRADAY_SYMBOLS
+        }
+        for future in as_completed(futures):
+            symbol = futures[future]
+            try:
+                series = future.result()
+            except Exception as exc:
+                print(f"    Yahoo chart skip {symbol}: {exc}")
+                continue
+            if not series.empty:
+                fetched_series[symbol] = series
+
+    for symbol in sorted(fetched_series.keys()):
+        series = fetched_series[symbol]
         if series.empty:
             continue
 
-        fetched += 1
         if df.empty:
             df = pd.DataFrame(index=series.index)
         else:
@@ -688,7 +704,7 @@ def supplement_jp_intraday_with_chart_api(df, period, interval):
             df[symbol] = pd.NA
         df.loc[series.index, symbol] = series
 
-    print(f"  JP intraday chart API fetched: {fetched}/{len(JP_INTRADAY_SYMBOLS)}")
+    print(f"  JP intraday chart API fetched: {len(fetched_series)}/{len(JP_INTRADAY_SYMBOLS)}")
     return df.sort_index()
 
 
