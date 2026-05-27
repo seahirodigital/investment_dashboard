@@ -2,6 +2,8 @@ import yfinance as yf
 import pandas as pd
 import json
 import os
+import urllib.parse
+import urllib.request
 from datetime import datetime, timedelta, timezone
 
 BENCHMARK = '1306.T'
@@ -568,6 +570,126 @@ ALL_SYMBOLS = list(set(
     + ALL_BASKET_SYMBOLS
 ))
 FETCH_DAYS = 400
+YAHOO_CHART_BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart/"
+
+
+def is_jp_intraday_symbol(symbol):
+    return symbol.endswith('.T') or symbol == '^N225'
+
+
+JP_INTRADAY_SYMBOLS = sorted(set(
+    [BENCHMARK]
+    + [s for s in SECTORS.keys() if is_jp_intraday_symbol(s)]
+    + list(SEMICONDUCTOR_JP.keys())
+    + list(TOPIX100.keys())
+    + ALL_BASKET_SYMBOLS
+))
+
+
+def fetch_yahoo_chart_close(symbol, period="14d", interval="5m"):
+    query = urllib.parse.urlencode({
+        "range": period,
+        "interval": interval,
+        "includePrePost": "false",
+        "events": "history",
+    })
+    encoded_symbol = urllib.parse.quote(symbol, safe="")
+    url = f"{YAHOO_CHART_BASE_URL}{encoded_symbol}?{query}"
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json,text/plain,*/*",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        print(f"    Yahoo chart skip {symbol}: {exc}")
+        return pd.Series(dtype="float64")
+
+    result = payload.get("chart", {}).get("result") or []
+    if not result:
+        error = payload.get("chart", {}).get("error")
+        print(f"    Yahoo chart no result {symbol}: {error}")
+        return pd.Series(dtype="float64")
+
+    item = result[0]
+    timestamps = item.get("timestamp") or []
+    quote = (item.get("indicators", {}).get("quote") or [{}])[0]
+    closes = quote.get("close") or []
+    if not timestamps or not closes:
+        return pd.Series(dtype="float64")
+
+    rows = []
+    for ts, close in zip(timestamps, closes):
+        if close is None:
+            continue
+        try:
+            price = float(close)
+        except (TypeError, ValueError):
+            continue
+        if price <= 0:
+            continue
+        dt = normalize_intraday_timestamp(ts, interval)
+        rows.append((dt, price))
+
+    if not rows:
+        return pd.Series(dtype="float64")
+
+    series = pd.Series(
+        [price for _, price in rows],
+        index=pd.DatetimeIndex([dt for dt, _ in rows]),
+        dtype="float64",
+    )
+    return series[~series.index.duplicated(keep="last")].sort_index()
+
+
+def normalize_intraday_timestamp(ts, interval):
+    dt = datetime.fromtimestamp(int(ts), timezone.utc).replace(tzinfo=None, second=0, microsecond=0)
+    if isinstance(interval, str) and interval.endswith("m"):
+        try:
+            step = int(interval[:-1])
+        except ValueError:
+            step = 1
+        if step > 1:
+            minute = (dt.minute // step) * step
+            dt = dt.replace(minute=minute)
+    return dt
+
+
+def supplement_jp_intraday_with_chart_api(df, period, interval):
+    if interval == "1d":
+        return df
+
+    chart_period = period if isinstance(period, str) and period.endswith("d") else "14d"
+    print(f"  Supplementing JP intraday via Yahoo chart API: {len(JP_INTRADAY_SYMBOLS)} symbols")
+
+    if df is None or df.empty:
+        df = pd.DataFrame()
+    else:
+        df = df[~df.index.duplicated(keep="last")].copy()
+
+    fetched = 0
+    for symbol in JP_INTRADAY_SYMBOLS:
+        series = fetch_yahoo_chart_close(symbol, period=chart_period, interval=interval)
+        if series.empty:
+            continue
+
+        fetched += 1
+        if df.empty:
+            df = pd.DataFrame(index=series.index)
+        else:
+            df = df.reindex(df.index.union(series.index).sort_values())
+
+        if symbol not in df.columns:
+            df[symbol] = pd.NA
+        df.loc[series.index, symbol] = series
+
+    print(f"  JP intraday chart API fetched: {fetched}/{len(JP_INTRADAY_SYMBOLS)}")
+    return df.sort_index()
 
 
 def fetch_data(period="400d", interval="1d"):
@@ -592,9 +714,13 @@ def fetch_data(period="400d", interval="1d"):
     # 一括ダウンロード
     df = yf.download(ALL_SYMBOLS, period=period, interval=interval, auto_adjust=False, progress=False)
 
+    is_intraday = interval != "1d"
+
     if df.empty:
         print("Warning: No data fetched from Yahoo Finance.")
-        return output
+        if not is_intraday:
+            return output
+        df = pd.DataFrame()
 
     if isinstance(df.columns, pd.MultiIndex):
         # Close（生値）優先: 配当落ち調整で短期パフォーマンスが歪むため
@@ -606,12 +732,10 @@ def fetch_data(period="400d", interval="1d"):
     # タイムゾーン除去
     df.index = pd.to_datetime(df.index).tz_localize(None)
 
-    is_intraday = interval != "1d"
-
     if is_intraday:
         # 複数市場の5分足は時刻が混在するため、全体ffillするとJP銘柄が
         # US時間や未来時刻まで横に伸びる。イントラデイは欠損を欠損のまま保持する。
-        df_for_prices = df
+        df_for_prices = supplement_jp_intraday_with_chart_api(df, period, interval)
     else:
         # 日次は従来どおり、長期比較の連続性を優先する。
         df_for_prices = df.ffill().bfill()
