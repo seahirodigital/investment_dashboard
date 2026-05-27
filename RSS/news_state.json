@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-27T20:53:04+00:00"
+      "last_fetch_at": "2026-05-27T21:03:06+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-27T20:53:04+00:00"
+      "last_fetch_at": "2026-05-27T21:03:06+00:00"
     }
   },
   "seen_ids": [
@@ -333,46 +333,5 @@
     "ブルームバーグ:9adf057a7dc4efabe940cf8bb1f78501",
     "ブルームバーグ:fca60a901b13fa7ef490540cb89c156f"
   ],
-  "pending_items": [
-    {
-      "id": "ブルームバーグ:395ac370fb09a565394e48745554eea1",
-      "source": "ブルームバーグ",
-      "title": "米金融市場、S&P500種は最高値圏－原油安とAI熱狂が下支え",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-27/TFP492KK3NY800?srnd=jp-markets",
-      "published_at": "2026-05-27T15:00:00+00:00",
-      "fetched_at": "2026-05-27T18:50:28+00:00"
-    },
-    {
-      "id": "ブルームバーグ:48c56c14505c2bd74daa4f9429bf3858",
-      "source": "ブルームバーグ",
-      "title": "英中銀の年内利上げ見通しが後退、原油価格下落でインフレ期待も低下",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-27/TFP6YMKK3NYD00?srnd=jp-markets",
-      "published_at": "2026-05-27T15:00:00+00:00",
-      "fetched_at": "2026-05-27T18:50:28+00:00"
-    },
-    {
-      "id": "ブルームバーグ:62c43d3080752ef020795ccbfa6488e3",
-      "source": "ブルームバーグ",
-      "title": "イラン報道を米否定、ホルムズ再開含む暫定和平草案は「でっち上げ」",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-27/TFP582N3N0BN00?srnd=jp-markets",
-      "published_at": "2026-05-27T15:00:00+00:00",
-      "fetched_at": "2026-05-27T18:50:28+00:00"
-    },
-    {
-      "id": "ブルームバーグ:9adf057a7dc4efabe940cf8bb1f78501",
-      "source": "ブルームバーグ",
-      "title": "米住宅ローン金利、昨年8月以来の高水準－戦争開始後の上昇基調続く",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-27/TFP7V6KK3NYA00?srnd=jp-markets",
-      "published_at": "2026-05-27T15:00:00+00:00",
-      "fetched_at": "2026-05-27T18:50:28+00:00"
-    },
-    {
-      "id": "ブルームバーグ:fca60a901b13fa7ef490540cb89c156f",
-      "source": "ブルームバーグ",
-      "title": "独自ECB、6月判断で経済成長への悪影響を考慮すべきだ－デギンドス副総裁",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-27/TFOZZQKJH6V700?srnd=jp-markets",
-      "published_at": "2026-05-27T15:00:00+00:00",
-      "fetched_at": "2026-05-27T18:50:28+00:00"
-    }
-  ]
+  "pending_items": []
 }
