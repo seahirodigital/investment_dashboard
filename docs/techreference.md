@@ -472,3 +472,299 @@ concurrency: cancel-in-progress: false
   4. sleep 900（15分待機）
   5. 市場時間内なら繰り返し、15:45以降は終了
 ```
+
+---
+
+## 2026-05-27 セクター分類ページ修正失敗メモ
+
+### 目的
+
+`sector_category.html` のセクター分類ページで、以下2点を直そうとして失敗した。
+
+1. 【US】相対パフォーマンス推移（全セクターvs SPY）を、米国1セッションだけの相対チャートとして正しく表示する。
+2. 【JP】相対パフォーマンス推移（全セクターvs TOPIX）以下のJPチャートで、市場外のforward-fill横線を出さず、以前のように市場時間だけ連続表示する。
+
+### 失敗した変更と症状
+
+#### 失敗1: US最終点を米国引け時刻ラベルへ強制変更
+
+`sector_category.html` のUSイントラデイで、日次終値補正時にチャート最終点の `date` を `getNewYorkCloseJSTLabel(...)` で `5/27 05:00` などへ置き換えた。
+
+結果:
+
+- 【US】米国セクター パフォーマンス推移（絶対値）で、最終時刻だけ全系列が急騰して見えた。
+- 値は日次終値へ補正されているのに、直前のイントラデイ点からX軸だけ引け時刻へ飛ぶため、最後の線が不自然になった。
+- これは「ランキングの終値補正」と「チャート線のイントラデイ形状」を混ぜたのが原因。
+
+教訓:
+
+- USのランキング値を日次終値で補正しても、チャート時系列の最終点に日次終値を上書きしない。
+- チャート線はイントラデイの実測系列として保持する。
+- 終値補正が必要なら、ランキングやサマリーだけへ適用する。
+
+#### 失敗2: JP rangebreaksをREADME記載の `[2.5, 3.5]` に寄せた
+
+`docs/README.md` にはJPの昼休みrangebreaksとして `[{ bounds: [2.5, 3.5] }]` と書かれていたため、それに合わせた。
+
+結果:
+
+- JPチャートのX軸で、市場外時間が表示された。
+- `data/etf_intraday.json` は市場外のJP銘柄がforward-fillされるため、15:00以降や夜間に横一直線のデータが表示された。
+- 【JP】相対パフォーマンス推移（全セクターvs TOPIX）以下のチャートが、市場時間だけの連続表示に見えなくなった。
+
+教訓:
+
+- 現在の描画実装では、JPデータは `toJST()` でJST文字列に変換してPlotlyへ渡している。
+- そのため、実装上は以前動いていた以下のrangebreaksへ戻す必要があった。
+
+```js
+[
+  { bounds: ["sat", "mon"] },
+  { bounds: [15.5, 9], pattern: "hour" },
+  { bounds: [11.5, 12.5], pattern: "hour" }
+]
+```
+
+- `docs/README.md` の `[2.5, 3.5]` はUTC基準の説明だが、現行の描画データはJST表示後の値として扱われている。READMEを鵜呑みにして変更してはいけない。
+
+#### 失敗3: JP全体を昔のコミットへ雑に戻すと危険
+
+JPの軸だけを戻したい場合でも、`sector_category.html` 全体を1週間以上前へ戻すと、後続で追加したUS相対チャート、SPY基準、米国セッション抽出、データ取得補強まで巻き戻る。
+
+教訓:
+
+- JP復旧は、まず `buildProcessedData()` とJP用チャートの `rangebreaks` のみに限定して差分を見る。
+- US相対チャートの再実装は、JP復旧後に別差分として行う。
+- JPとUSの時刻処理を同じ関数や同じrangebreaksでまとめない。
+
+### 現状の【US】相対パフォーマンス推移（全セクターvs SPY）仕様
+
+#### 表示対象
+
+`sector_category.html` の `FullSectorChart` 内で、USモードかつ `usMode === 'relative'` のときに表示する。
+
+タイトル:
+
+```text
+【US】相対パフォーマンス推移（全セクターvs SPY）
+```
+
+対象銘柄:
+
+```js
+const US_SECTORS = {
+  XLK, XLF, XLC, XLV, XLI, XLB, XLU, XLE, XLP, XLRE, XLY,
+  ^SOX, XSD, XSW, XBI, XPH, XHE, XHS, XME, XRT, XHB, XTN,
+  XTL, XAR, KBE, KRE, XOP, XES, PAVE
+}
+```
+
+#### SPY基準の決定
+
+表示側では、SPYだけを基準にする。`^GSPC`、VOOなどへフォールバックしない。
+
+```js
+const spyBenchmark = { code: 'SPY', name: 'SPY' };
+const findBenchmark = (priceMap) => (
+  Array.isArray(priceMap?.SPY) &&
+  priceMap.SPY.some(v => Number.isFinite(Number(v)) && Number(v) > 0)
+) ? spyBenchmark : null;
+```
+
+SPYが無い場合:
+
+```text
+SPYが未取得です。基準の連続性を守るため、他のS&P500連動系列には切り替えません。
+```
+
+#### 相対パフォーマンス計算式
+
+セクターETFのリターン:
+
+```js
+sectorReturn = (sectorCurrent / sectorStart) - 1
+```
+
+SPYのリターン:
+
+```js
+benchmarkReturn = (spyCurrent / spyStart) - 1
+```
+
+US相対パフォーマンス:
+
+```js
+(sectorReturn - benchmarkReturn) * 100
+```
+
+つまり、チャート上の値は「各USセクターETFの騰落率 minus SPYの騰落率」。
+
+#### イントラデイ期間の抽出
+
+イントラデイ対象期間:
+
+```js
+['1d','2d','3d','4d','5d','6d','7d','8d','9d','10d','14d']
+```
+
+US市場時間は `America/New_York` 基準で判定する。
+
+```js
+const isNewYorkRegularSession = (marketTime) => {
+  if (!marketTime || marketTime.weekday === 'Sat' || marketTime.weekday === 'Sun') return false;
+  return marketTime.minutes >= 570 && marketTime.minutes <= 960;
+};
+```
+
+570分 = 9:30、960分 = 16:00。
+
+選択対象は `getRecentNewYorkSessionItems()` で、NY市場日ごとにまとめたうえで、実際に価格変化があるセッションだけを採用する。
+
+```js
+const sessionCheckSymbols = [...usSymbols, 'SPY', '^GSPC', '^NDX', '^DJI'];
+const { filteredItems } = getRecentNewYorkSessionItems(dates, period, prices, sessionCheckSymbols);
+```
+
+1dの場合、直近の有効な米国市場日だけを使う。
+
+#### X軸表示
+
+USイントラデイはPlotlyの `category` 軸を使う。
+
+理由:
+
+- JST変換後に金曜米国セッションが土曜早朝に見える。
+- datetime軸に `["sat", "mon"]` のrangebreaksを入れると、金曜夜から土曜早朝のUSデータが消えることがある。
+
+現行仕様:
+
+```js
+const point = { date: toJSTChartLabel(dates[i]), marketDate: marketTime.date };
+```
+
+`toJSTChartLabel()` はUTC文字列をJSTへ変換し、`5/26 22:30` のような短縮ラベルを返す。
+
+```js
+...(isUSIntraday ? { type: 'category', nticks: 12, tickangle: -30 } : {})
+```
+
+USイントラデイ時のrangebreaksは空。
+
+```js
+return [];
+```
+
+#### ランキング補正とチャート補正の扱い
+
+日次データにUS最終セッション日が含まれている場合、ランキング値は日次終値で補正する。
+
+```js
+const dailyBaseIdx = Math.max(0, dailyEndIdx - daysAgo);
+const perf = calcPerformance(rawDaily.prices, sym, dailyBaseIdx, dailyEndIdx, dailyBenchmark || benchmark);
+if (perf !== null && rankingMap[sym]) rankingMap[sym].performance = perf;
+```
+
+ただし、失敗事例から、チャート時系列の最終ポイントへ日次終値を上書きしてはいけない。
+
+NG:
+
+```js
+lastPoint[name] = perf;
+lastPoint.date = closeLabel;
+```
+
+OK:
+
+- ランキングだけ日次終値で補正する。
+- チャート線は `etf_intraday.json` の実測イントラデイ系列だけで描く。
+
+### SPY取得仕様
+
+取得側は `scripts/market/etf_data_manager.py` に実装されている。
+
+#### SPYは取得対象に明示追加
+
+```python
+US_SP500_BENCHMARKS = {
+  'SPY': 'SPY',
+}
+```
+
+`ALL_SYMBOLS` には `US_SP500_BENCHMARKS.keys()` が含まれる。
+
+```python
+ALL_SYMBOLS = list(set(
+    [BENCHMARK]
+    + list(SECTORS.keys())
+    + list(SEMICONDUCTOR_JP.keys())
+    + list(SEMICONDUCTOR_US.keys())
+    + list(US_SECTORS.keys())
+    + list(US_SP500_BENCHMARKS.keys())
+    + list(TOPIX100.keys())
+    + ALL_US_INDIVIDUAL_SYMBOLS
+    + ALL_BASKET_SYMBOLS
+))
+```
+
+#### SPY補完処理
+
+通常の一括 `yf.download(...)` でSPYが取れない場合、SPYだけを別取得する。
+
+```python
+df = ensure_spy_column(df, period, interval)
+```
+
+`ensure_spy_column()` の流れ:
+
+1. `df['SPY']` が存在し、有効価格があればそのまま使う。
+2. 無ければ `yf.download('SPY', period=period, interval=interval, auto_adjust=False, progress=False)` でSPY単独取得。
+3. それでも無ければ `https://query1.finance.yahoo.com/v8/finance/chart/SPY` を直接叩く。
+4. 取得したSPYを `df.index` に `reindex(...).ffill().bfill()` で合わせる。
+5. それでも有効価格が無ければ例外で落とす。
+
+Yahoo chart API取得では、イントラデイは `range=60d`、日次は `range=2y` を使う。
+
+```python
+chart_range = '2y' if interval == '1d' else ('60d' if interval.endswith('m') else period)
+params = {
+    'range': chart_range,
+    'interval': interval,
+    'includePrePost': 'true',
+}
+```
+
+#### SPY出力検証
+
+`data/etf_data.json` と `data/etf_intraday.json` の両方でSPYを検証する。
+
+```python
+validate_spy_output(data_daily, 'data/etf_data.json')
+validate_spy_output(data_intraday, 'data/etf_intraday.json')
+```
+
+検証内容:
+
+- `prices.SPY` が存在する。
+- `prices.SPY.length === dates.length`。
+- 有効な正の価格が1件以上ある。
+
+#### 再実装時の必須条件
+
+- SPYを基準にする相対チャートでは、`^GSPC` へ自動フォールバックしない。
+- `SPY` が無い場合は「データなし」として止める。
+- SPYは `etf_data.json` と `etf_intraday.json` の両方に必要。
+- イントラデイでは、US市場日を `America/New_York` で判定する。
+- X軸はUSのみ `category`、JPはdatetime + 市場時間外rangebreaks。
+- ランキング補正とチャート線補正を混ぜない。
+
+### 2週間前へ戻す前の注意
+
+2週間前へ戻すと、以下の変更は失われる可能性がある。
+
+- SPYを `US_SP500_BENCHMARKS` として取得対象に追加した変更。
+- `ensure_spy_column()` によるSPY単独取得、Yahoo chart API fallback、出力検証。
+- `FullSectorChart` の `usMode === 'relative'` とSPY割り返し表示。
+- USイントラデイのNY市場日抽出。
+- USイントラデイのcategory軸。
+
+戻した後にSPY相対を再追加する場合は、まず取得側のSPY保証だけを復元し、`data/etf_data.json` と `data/etf_intraday.json` に `prices.SPY` が入ることを確認する。その後、表示側でUS相対チャートを追加する。JP復旧とUS相対追加を同じ差分で行わない。
