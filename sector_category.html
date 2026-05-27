@@ -681,7 +681,6 @@
                     // （TOPIX100分析と統一ロジック: generated_atではなく日付包含で判定）
                     if (rawDaily && rawDaily.dates && rawDaily.prices) {
                         const lastSessionDate = filteredItems[filteredItems.length - 1].date;
-                        const lastSessionItem = filteredItems[filteredItems.length - 1];
                         const dailyDates = rawDaily.dates;
                         const latestDailyDate = dailyDates[dailyDates.length - 1];
                         const dailyBenchmark = findBenchmark(rawDaily.prices);
@@ -699,8 +698,6 @@
                                 // チャート時系列の最終ポイントも終値で補正
                                 if (timeSeries.length > 0) {
                                     const lastPoint = timeSeries[timeSeries.length - 1];
-                                    const closeLabel = getNewYorkCloseJSTLabel(dates[lastSessionItem.index], lastSessionItem, true);
-                                    if (closeLabel) lastPoint.date = closeLabel;
                                     usSymbols.forEach(sym => {
                                         const name = US_SECTORS[sym];
                                         const perf = calcPerformance(rawDaily.prices, sym, dailyBaseIdx, dailyEndIdx, dailyBenchmark || benchmark);
@@ -939,8 +936,7 @@
                 if (market === 'jp') {
                     return [
                         { bounds: ["sat","mon"] },
-                        { bounds: [15.5, 9], pattern: "hour" },
-                        { bounds: [11.5, 12.5], pattern: "hour" }
+                        { bounds: [2.5, 3.5], pattern: "hour" }
                     ];
                 } else {
                     // US intraday: categoryモードなのでrangebreaks不要
@@ -1340,8 +1336,7 @@
                                             tickfont: { color: '#64748b', size: 9 },
                                             rangebreaks: processedData.isIntraday ? [
                                                 { bounds: ["sat","mon"] },
-                                                { bounds: [15.5,9], pattern:"hour" },
-                                                { bounds: [11.5,12.5], pattern:"hour" }
+                                                { bounds: [2.5,3.5], pattern:"hour" }
                                             ] : [{ bounds: ["sat","mon"] }],
                                         },
                                         yaxis: {
@@ -1499,12 +1494,6 @@
                 weekday: parts.weekday,
                 minutes: hour * 60 + minute,
             };
-        };
-        const getNewYorkCloseJSTLabel = (utcStr, marketTime, shortLabel = false) => {
-            const d = new Date(String(utcStr || '').replace(' ', 'T') + ':00Z');
-            if (!marketTime || Number.isNaN(d.getTime())) return null;
-            const closeUtc = new Date(d.getTime() + (960 - marketTime.minutes) * 60000);
-            return shortLabel ? formatJSTChartLabel(closeUtc) : formatJSTDateTime(closeUtc);
         };
         const isNewYorkRegularSession = (marketTime) => {
             if (!marketTime || marketTime.weekday === 'Sat' || marketTime.weekday === 'Sun') return false;
@@ -1813,8 +1802,7 @@
                                             tickfont: { color: '#64748b', size: 9 },
                                             rangebreaks: processedData.isIntraday ? [
                                                 { bounds: ["sat","mon"] },
-                                                { bounds: [15.5,9], pattern:"hour" },
-                                                { bounds: [11.5,12.5], pattern:"hour" }
+                                                { bounds: [2.5,3.5], pattern:"hour" }
                                             ] : [{ bounds: ["sat","mon"] }],
                                         },
                                         yaxis: {
@@ -2102,7 +2090,6 @@
                     // （TOPIX100分析と統一ロジック: generated_atではなく日付包含で判定）
                     if (rawDaily && rawDaily.dates && rawDaily.prices) {
                         const lastSessionDate = filteredItems[filteredItems.length - 1].date;
-                        const lastSessionItem = filteredItems[filteredItems.length - 1];
                         const dailyDates = rawDaily.dates;
                         const latestDailyDate = dailyDates[dailyDates.length - 1];
                         if (latestDailyDate >= lastSessionDate) {
@@ -2125,8 +2112,6 @@
                                 // チャート時系列の最終ポイントも終値で補正
                                 if (timeSeries.length > 0) {
                                     const lastPoint = timeSeries[timeSeries.length - 1];
-                                    const closeLabel = getNewYorkCloseJSTLabel(dates[lastSessionItem.index], lastSessionItem, true);
-                                    if (closeLabel) lastPoint.date = closeLabel;
                                     usSymbols.forEach(sym => {
                                         const name = SEMICONDUCTOR_US[sym];
                                         const sPrices = rawDaily.prices[sym];
@@ -2250,20 +2235,18 @@
                 return traces;
             }, [activeTimeSeries, catRanking, market]);
 
+            const isUSIntraday = market === 'us' && isIntraday;
+
             // Rangebreaks設定
             const rangebreaks = useMemo(() => {
                 if (!isIntraday) return [{ bounds: ["sat","mon"] }];
                 if (market === 'jp') {
                     return [
                         { bounds: ["sat","mon"] },
-                        { bounds: [15.5, 9], pattern: "hour" },
-                        { bounds: [11.5, 12.5], pattern: "hour" }
+                        { bounds: [2.5, 3.5], pattern: "hour" }
                     ];
                 } else {
-                    return [
-                        { bounds: ["sat","mon"] },
-                        { bounds: [5, 22], pattern: "hour" }
-                    ];
+                    return [];
                 }
             }, [isIntraday, market]);
 
@@ -2317,6 +2300,7 @@
                                             showgrid: true, gridcolor: '#e2e8f0',
                                             tickfont: { color: '#64748b', size: 9 },
                                             rangebreaks: rangebreaks,
+                                            ...(isUSIntraday ? { type: 'category', nticks: 12, tickangle: -30 } : {}),
                                         },
                                         yaxis: {
                                             showgrid: true, gridcolor: '#e2e8f0',
