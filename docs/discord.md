@@ -34,7 +34,7 @@ https://finviz.com/map
 ### 米国株セクター資金流入通知
 
 ```text
-{YYYYMMDD}の米国株各セクター資金流入
+{YYYYMMDD} #米国株 各セクター資金流入
 
 ▼上位7件
 {セクター名}: {騰落率}
@@ -42,7 +42,7 @@ https://finviz.com/map
 ▼下位7件
 {セクター名}: {騰落率}
 
-#米国株 #株式投資 #デイトレ #オプション #FX
+#株式投資 #デイトレ #オプション #FX
 
 https://seahirodigital.github.io/investment_dashboard/sector_category.html#full-sector-flow
 ```
@@ -50,7 +50,7 @@ https://seahirodigital.github.io/investment_dashboard/sector_category.html#full-
 ### 日本株セクター資金流入通知
 
 ```text
-{YYYYMMDD} セクター資金流入割合分析
+{YYYYMMDD} #日本株 セクター資金流入割合分析
 
 ▼上位5件
 {セクター名}: {騰落率}
@@ -58,19 +58,17 @@ https://seahirodigital.github.io/investment_dashboard/sector_category.html#full-
 ▼下位5件
 {セクター名}: {騰落率}
 
-#日経平均 #株式投資 #デイトレ #TOPIX #N225 #オプション #CFD
+#日経平均 #株式投資 #デイトレ #オプション #CFD
 
-https://seahirodigital.github.io/investment_dashboard/sector_category.html#full-sector-flow
-https://seahirodigital.github.io/investment_dashboard/
 ```
 
 ### 日経225オプション分析通知
 
 ```text
-{YYYYMMDD}の日経225 オプション分析
+{YYYYMMDD} #日経225 オプション分析
 
 
-#日経平均 #株式投資 #デイトレ #N225 #オプション #CFD
+#日経平均 #株式投資 #デイトレ #オプション #CFD
 
 
 https://seahirodigital.github.io/investment_dashboard/option.html
