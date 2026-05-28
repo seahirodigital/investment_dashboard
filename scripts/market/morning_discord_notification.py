@@ -344,6 +344,8 @@ def _capture_sox_index(page, output_dir: Path) -> Path:
 
     page.evaluate("window.scrollTo(0, 0)")
     page.wait_for_timeout(1000)
+    page.get_by_text("5 days", exact=True).first.click(timeout=10000)
+    page.wait_for_timeout(4000)
     page.screenshot(
         path=str(screenshot_path),
         clip={"x": 32, "y": 160, "width": 1536, "height": 800},
