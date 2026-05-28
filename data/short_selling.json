@@ -1,6 +1,33 @@
 {
   "data": [
     {
+      "date": "2026-05-28",
+      "genbutsu_uri": 7117224,
+      "karauri": 4817716,
+      "karauri_kiseiari": 3848602,
+      "karauri_free": 969114,
+      "total": 11934940,
+      "karauri_ratio": 0.4037
+    },
+    {
+      "date": "2026-05-27",
+      "genbutsu_uri": 7332207,
+      "karauri": 4761518,
+      "karauri_kiseiari": 3730531,
+      "karauri_free": 1030987,
+      "total": 12093725,
+      "karauri_ratio": 0.3937
+    },
+    {
+      "date": "2026-05-26",
+      "genbutsu_uri": 6416344,
+      "karauri": 4302669,
+      "karauri_kiseiari": 3541461,
+      "karauri_free": 761208,
+      "total": 10719013,
+      "karauri_ratio": 0.4014
+    },
+    {
       "date": "2026-05-25",
       "genbutsu_uri": 7044640,
       "karauri": 4128169,
@@ -2692,6 +2719,6 @@
       "karauri_ratio": 0.3918
     }
   ],
-  "generated_at": "2026-05-25T11:58:39",
-  "generated_at_jst": "2026-05-25 11:58 JST"
+  "generated_at": "2026-05-28T11:46:51",
+  "generated_at_jst": "2026-05-28 11:46 JST"
 }
