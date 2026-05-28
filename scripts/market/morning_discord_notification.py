@@ -31,6 +31,7 @@ NIKKEI_WEEK_SCREENSHOT_URL = (
 )
 FINVIZ_URL = "https://finviz.com/map"
 FINVIZ_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=d1"
+SOX_URL = "https://www.tradingview.com/symbols/NASDAQ-SOX/"
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 DESKTOP_USER_AGENT = (
@@ -316,6 +317,40 @@ def _capture_finviz_heatmap(page, output_dir: Path) -> Path:
     return screenshot_path
 
 
+def _capture_sox_index(page, output_dir: Path) -> Path:
+    screenshot_path = output_dir / "sox_index_1w_chart.png"
+    page.set_viewport_size({"width": 1600, "height": 1000})
+    page.goto(SOX_URL, wait_until="domcontentloaded", timeout=90000)
+    page.wait_for_timeout(12000)
+    _click_optional_text(page, ["Accept all", "I agree", "同意する", "すべて同意"])
+
+    page_title = page.title()
+    body_text = page.locator("body").inner_text(timeout=8000)
+    page_text = f"{page_title}\n{body_text}"
+    blocked_markers = [
+        "Access Denied",
+        "セキュリティ検証",
+        "私はロボットではありません",
+        "Cloudflare",
+        "captcha",
+        "robot",
+        "permission to access",
+    ]
+    if any(marker.lower() in page_text.lower() for marker in blocked_markers):
+        raise RuntimeError("SOX指数ページがロボット判定またはアクセス制限画面になりました。")
+    has_sox_page = "Philadelphia Semiconductor" in page_text and "SOX" in page_text
+    if not has_sox_page:
+        raise RuntimeError("SOX指数ページの表示を確認できませんでした。")
+
+    page.evaluate("window.scrollTo(0, 0)")
+    page.wait_for_timeout(1000)
+    page.screenshot(
+        path=str(screenshot_path),
+        clip={"x": 32, "y": 160, "width": 1536, "height": 800},
+    )
+    return screenshot_path
+
+
 def _build_message(fear_greed_value: str, nikkei_vi_value: str) -> str:
     return "\n".join(
         [
@@ -327,6 +362,9 @@ def _build_message(fear_greed_value: str, nikkei_vi_value: str) -> str:
             "",
             "米株ヒートマップ",
             FINVIZ_URL,
+            "",
+            "SOX指数",
+            SOX_URL,
             "",
             "#デイトレ #米国株 #日本株 #日経平均 #FX  #CFD ",
             "",
@@ -351,6 +389,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             fear_greed_value, fear_greed_path = _capture_fear_greed(page, output_dir)
             nikkei_vi_value, nikkei_vi_path = _capture_nikkei_vi(page, output_dir)
             finviz_path = _capture_finviz_heatmap(page, output_dir)
+            sox_path = _capture_sox_index(page, output_dir)
         finally:
             context.close()
             browser.close()
@@ -366,8 +405,14 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             "fear_greed": CNN_URL,
             "nikkei_vi": NIKKEI_WEEK_URL,
             "finviz": FINVIZ_URL,
+            "sox": SOX_URL,
         },
-        "screenshots": [str(finviz_path), str(fear_greed_path), str(nikkei_vi_path)],
+        "screenshots": [
+            str(finviz_path),
+            str(fear_greed_path),
+            str(nikkei_vi_path),
+            str(sox_path),
+        ],
         "message_file": str(message_path),
     }
     (output_dir / "metadata.json").write_text(
@@ -379,7 +424,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
         fear_greed_value=fear_greed_value,
         nikkei_vi_value=nikkei_vi_value,
         message=message,
-        screenshot_paths=[finviz_path, fear_greed_path, nikkei_vi_path],
+        screenshot_paths=[finviz_path, fear_greed_path, nikkei_vi_path, sox_path],
     )
 
 
