@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-28T20:43:46+00:00"
+      "last_fetch_at": "2026-05-28T20:53:48+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-28T20:43:46+00:00"
+      "last_fetch_at": "2026-05-28T20:53:48+00:00"
     }
   },
   "seen_ids": [
@@ -372,7 +372,8 @@
     "ブルームバーグ:849298b506964534de09790bd57030b0",
     "ブルームバーグ:8ad7613fe45faf66ab0600d76c192693",
     "ブルームバーグ:d5ebc3f675e9994979feec872b783328",
-    "ブルームバーグ:ef2ab43c4604ec3e4f2c174b08176c24"
+    "ブルームバーグ:ef2ab43c4604ec3e4f2c174b08176c24",
+    "ブルームバーグ:91a2dfc80c22df9b7485fb1dd7c9e3bd"
   ],
   "pending_items": [
     {
@@ -414,6 +415,14 @@
       "link": "https://www.bloomberg.com/jp/news/articles/2026-05-28/TFR308T96OSL00?srnd=jp-markets",
       "published_at": "2026-05-28T15:00:00+00:00",
       "fetched_at": "2026-05-28T18:51:23+00:00"
+    },
+    {
+      "id": "ブルームバーグ:91a2dfc80c22df9b7485fb1dd7c9e3bd",
+      "source": "ブルームバーグ",
+      "title": "ECB、4月利上げでも反対しなかったと複数の委員が表明－議事要旨",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-28/TFQXHOT96OSH00?srnd=jp-markets",
+      "published_at": "2026-05-28T15:00:00+00:00",
+      "fetched_at": "2026-05-28T20:53:48+00:00"
     }
   ]
 }
