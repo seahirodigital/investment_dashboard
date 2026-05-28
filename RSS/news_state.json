@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-28T12:44:06+00:00"
+      "last_fetch_at": "2026-05-28T18:51:23+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-28T12:44:06+00:00"
+      "last_fetch_at": "2026-05-28T18:51:23+00:00"
     }
   },
   "seen_ids": [
@@ -367,7 +367,53 @@
     "ブルームバーグ:a5cebca60b4b2171778d1872e74f8076",
     "ブルームバーグ:64b58953d28a76e16f7c3456148613ba",
     "ブルームバーグ:2a511be90816e1501a4a0311dfef0f45",
-    "ブルームバーグ:a85ad4f3c94b7d887abe9eb0e0441524"
+    "ブルームバーグ:a85ad4f3c94b7d887abe9eb0e0441524",
+    "ブルームバーグ:3934d736df91486e0345873a187d1235",
+    "ブルームバーグ:849298b506964534de09790bd57030b0",
+    "ブルームバーグ:8ad7613fe45faf66ab0600d76c192693",
+    "ブルームバーグ:d5ebc3f675e9994979feec872b783328",
+    "ブルームバーグ:ef2ab43c4604ec3e4f2c174b08176c24"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "ブルームバーグ:3934d736df91486e0345873a187d1235",
+      "source": "ブルームバーグ",
+      "title": "米金融市場、株と米国債が上昇－米・イランが合意とのAXIOS報道で",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-28/TFQY4ST9NJLS00?srnd=jp-markets",
+      "published_at": "2026-05-28T15:00:00+00:00",
+      "fetched_at": "2026-05-28T18:51:23+00:00"
+    },
+    {
+      "id": "ブルームバーグ:849298b506964534de09790bd57030b0",
+      "source": "ブルームバーグ",
+      "title": "AI特需で急騰マイクロン、なお割安の謎－低PERは買いか警告サインか",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-28/TFR1S3KIUPV700?srnd=jp-markets",
+      "published_at": "2026-05-28T15:00:00+00:00",
+      "fetched_at": "2026-05-28T18:51:23+00:00"
+    },
+    {
+      "id": "ブルームバーグ:8ad7613fe45faf66ab0600d76c192693",
+      "source": "ブルームバーグ",
+      "title": "韓国国民年金、国内株の投資配分目標を大幅引き上げ－強制売り回避へ",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-28/TFQRF3T9NJLT00?srnd=jp-markets",
+      "published_at": "2026-05-28T15:00:00+00:00",
+      "fetched_at": "2026-05-28T18:51:23+00:00"
+    },
+    {
+      "id": "ブルームバーグ:d5ebc3f675e9994979feec872b783328",
+      "source": "ブルームバーグ",
+      "title": "ウォーシュFRB議長、利下げシナリオ転換局面で就任－問われる力量",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-28/TFR28TKK3NYI00?srnd=jp-markets",
+      "published_at": "2026-05-28T15:00:00+00:00",
+      "fetched_at": "2026-05-28T18:51:23+00:00"
+    },
+    {
+      "id": "ブルームバーグ:ef2ab43c4604ec3e4f2c174b08176c24",
+      "source": "ブルームバーグ",
+      "title": "米新築住宅販売、4月は予想以上の減少－販売促進策の効果薄く",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-28/TFR308T96OSL00?srnd=jp-markets",
+      "published_at": "2026-05-28T15:00:00+00:00",
+      "fetched_at": "2026-05-28T18:51:23+00:00"
+    }
+  ]
 }
