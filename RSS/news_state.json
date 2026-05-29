@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-29T20:34:38+00:00"
+      "last_fetch_at": "2026-05-29T20:44:39+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-29T20:34:38+00:00"
+      "last_fetch_at": "2026-05-29T20:44:39+00:00"
     }
   },
   "seen_ids": [
@@ -434,7 +434,8 @@
     "ブルームバーグ:713cc55904bbe03a93871b4bcb913216",
     "ブルームバーグ:7236cde1323c1157c7edf0834bf6d4a0",
     "ブルームバーグ:7f90b12556a184888bc513ddcd069ce9",
-    "ブルームバーグ:ab1a74c73e8d009966eb499099d59a9c"
+    "ブルームバーグ:ab1a74c73e8d009966eb499099d59a9c",
+    "ブルームバーグ:00edeeac9225e76118eaaadb0110c304"
   ],
   "pending_items": [
     {
@@ -500,6 +501,14 @@
       "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFSVMIT96OSI00?srnd=jp-markets",
       "published_at": "2026-05-29T15:00:00+00:00",
       "fetched_at": "2026-05-29T18:52:17+00:00"
+    },
+    {
+      "id": "ブルームバーグ:00edeeac9225e76118eaaadb0110c304",
+      "source": "ブルームバーグ",
+      "title": "FRB利下げ局面終了、米10年債利回り4.7%へ－ドイツ銀が予想引き上げ",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFT6IST96OSG00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T20:44:39+00:00"
     }
   ]
 }
