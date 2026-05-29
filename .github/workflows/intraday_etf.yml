@@ -3,14 +3,27 @@ name: Intraday ETF Update (JP/US市場時間中 15分ごとループ)
 on:
   schedule:
     # ── JP市場（東証）────────────────────────────────────────
+    # 寄り付き前待機（JST 8:45/8:50/8:55 = UTC 前日23:45/23:50/23:55）
+    # GitHub Actions のschedule遅延対策として、市場開始前に起動して09:05まで待機する。
+    - cron: '45 23 * * 0-4'
+    - cron: '50 23 * * 0-4'
+    - cron: '55 23 * * 0-4'
     # 前場起動（JST 9:00 = UTC 0:00）+ バックアップ2回
     - cron: '0 0 * * 1-5'
     - cron: '15 0 * * 1-5'
     - cron: '30 0 * * 1-5'
+    # 前場ウォッチドッグ（寄り付き直後のschedule未起動対策）
+    - cron: '45 0 * * 1-5'
+    - cron: '0 1 * * 1-5'
+    - cron: '30 1 * * 1-5'
     # 後場起動（JST 12:30 = UTC 3:30）+ バックアップ2回
     - cron: '30 3 * * 1-5'
     - cron: '45 3 * * 1-5'
     - cron: '0 4 * * 1-5'
+    # 後場ウォッチドッグ（後場開始後・大引け前の復旧起動）
+    - cron: '30 4 * * 1-5'
+    - cron: '30 5 * * 1-5'
+    - cron: '30 6 * * 1-5'
     # ── US市場（NYSE/NASDAQ）──────────────────────────────────
     # US市場起動（EDT 9:30 = UTC 13:30 = JST 22:30）+ バックアップ2回
     - cron: '30 13 * * 1-5'
@@ -80,13 +93,29 @@ jobs:
             echo "=========================================="
 
             # ── セッション判定 ──
+            # JP寄り付き前: 8:45-9:00 JST (525-540分) は09:05まで待機
             # JP市場: 9:00-15:45 JST (540-945分)
             # US市場: 22:00-翌05:30 JST (1320分-翌330分、日付またぎ)
             IN_SESSION=false
             SESSION_NAME=""
 
+            # JP寄り付き前チェック
+            if [ $TOTAL_MIN -ge 525 ] && [ $TOTAL_MIN -lt 540 ]; then
+              WAIT_SECONDS=$(( (545 - TOTAL_MIN) * 60 ))
+              echo "🌅 JP寄り付き前。初回ティック安定化のため09:05まで待機します（${WAIT_SECONDS}秒）..."
+              sleep $WAIT_SECONDS
+              continue
+            fi
+
             # JP市場チェック
             if [ $TOTAL_MIN -ge 540 ] && [ $TOTAL_MIN -lt 945 ]; then
+              # JP寄り付き直後 9:00-9:05 → 初回ティックがYahoo APIに反映されるまで待機
+              if [ $TOTAL_MIN -lt 545 ]; then
+                WAIT_SECONDS=$(( (545 - TOTAL_MIN) * 60 ))
+                echo "🌅 JP寄り付き直後。初回ティック安定化のため09:05まで待機します（${WAIT_SECONDS}秒）..."
+                sleep $WAIT_SECONDS
+                continue
+              fi
               # JP昼休み 11:30-12:30 → 5分待機
               if [ $TOTAL_MIN -ge 690 ] && [ $TOTAL_MIN -lt 750 ]; then
                 echo "🍱 JP昼休み中。5分後に再チェック..."
