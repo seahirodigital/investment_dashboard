@@ -2,10 +2,10 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-29T12:45:02+00:00"
+      "last_fetch_at": "2026-05-29T18:52:17+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-29T12:45:02+00:00"
+      "last_fetch_at": "2026-05-29T18:52:17+00:00"
     }
   },
   "seen_ids": [
@@ -426,7 +426,80 @@
     "ロイター:e21ce2d4a5b7f3bd45cb7e88cca790b9",
     "ロイター:bf56065461648d3ae543f57787ec8928",
     "ブルームバーグ:01cf00eeb34310ff076e01ddb209fb39",
-    "ブルームバーグ:22573ae883178aca2431f42cd5205005"
+    "ブルームバーグ:22573ae883178aca2431f42cd5205005",
+    "ブルームバーグ:094f6dbb3eb8829b874d3fec5d57bc94",
+    "ブルームバーグ:20f270fd2e2969171c394ec59e718909",
+    "ブルームバーグ:2f2a45a4a0c7d2034f15cf8015c47fa6",
+    "ブルームバーグ:326ea2d3e5607be5172d1cf182bd740c",
+    "ブルームバーグ:713cc55904bbe03a93871b4bcb913216",
+    "ブルームバーグ:7236cde1323c1157c7edf0834bf6d4a0",
+    "ブルームバーグ:7f90b12556a184888bc513ddcd069ce9",
+    "ブルームバーグ:ab1a74c73e8d009966eb499099d59a9c"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "ブルームバーグ:094f6dbb3eb8829b874d3fec5d57bc94",
+      "source": "ブルームバーグ",
+      "title": "フィラデルフィア連銀総裁、インフレに構造的変化は生じていない",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFT0M6T96OSJ00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T18:52:17+00:00"
+    },
+    {
+      "id": "ブルームバーグ:20f270fd2e2969171c394ec59e718909",
+      "source": "ブルームバーグ",
+      "title": "株価急騰の韓国2社に思わぬ逆風、ファンドがリバランスで強制売り",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFSJBQT96OSL00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T18:52:17+00:00"
+    },
+    {
+      "id": "ブルームバーグ:2f2a45a4a0c7d2034f15cf8015c47fa6",
+      "source": "ブルームバーグ",
+      "title": "米金融市場、株は堅調－トランプ氏はイラン合意｢最終判断｣へ会合入り",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFSWTWKK3NYA00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T18:52:17+00:00"
+    },
+    {
+      "id": "ブルームバーグ:326ea2d3e5607be5172d1cf182bd740c",
+      "source": "ブルームバーグ",
+      "title": "英中銀総裁、目標上回るインフレ率も一時的に容認－経済下支えを重視",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFSN25KK3NYB00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T18:52:17+00:00"
+    },
+    {
+      "id": "ブルームバーグ:713cc55904bbe03a93871b4bcb913216",
+      "source": "ブルームバーグ",
+      "title": "【欧州市況】国債続伸、株は小幅高－トランプ氏の「最終判断」に期待",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFT37HT96OSI00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T18:52:17+00:00"
+    },
+    {
+      "id": "ブルームバーグ:7236cde1323c1157c7edf0834bf6d4a0",
+      "source": "ブルームバーグ",
+      "title": "カナダ経済、コロナ禍以来の2四半期連続マイナス成長－米関税も逆風",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFSU3XR24U9T00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T18:52:17+00:00"
+    },
+    {
+      "id": "ブルームバーグ:7f90b12556a184888bc513ddcd069ce9",
+      "source": "ブルームバーグ",
+      "title": "注目のスペースX上場、仮想通貨市場でIPO前取引活況－実需手掛かりに",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFSXBJR24U8S00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T18:52:17+00:00"
+    },
+    {
+      "id": "ブルームバーグ:ab1a74c73e8d009966eb499099d59a9c",
+      "source": "ブルームバーグ",
+      "title": "ボウマンFRB副議長、一時的な価格ショックを過度に重視すべきでない",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-29/TFSVMIT96OSI00?srnd=jp-markets",
+      "published_at": "2026-05-29T15:00:00+00:00",
+      "fetched_at": "2026-05-29T18:52:17+00:00"
+    }
+  ]
 }
