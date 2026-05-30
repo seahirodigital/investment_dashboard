@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-30T19:14:55+00:00"
+      "last_fetch_at": "2026-05-30T19:24:58+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-30T19:14:55+00:00"
+      "last_fetch_at": "2026-05-30T19:24:58+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-05-30T19:14:55+00:00"
+      "last_fetch_at": "2026-05-30T19:24:58+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-05-30T19:14:55+00:00"
+      "last_fetch_at": "2026-05-30T19:24:58+00:00"
     }
   },
   "seen_ids": [
@@ -510,7 +510,8 @@
     "みんかぶ FX/為替 株式:7970db1ca5b2371ea265419fabe508a5",
     "みんかぶ FX/為替 株式:169edb5ba882f4076b440552b2dc0f5a",
     "みんかぶ FX/為替 株式:7011e7cc9d812f9e2f227e8f6ae17417",
-    "みんかぶ FX/為替 株式:cd058da3ce73d654fcd74e41e4cd27df"
+    "みんかぶ FX/為替 株式:cd058da3ce73d654fcd74e41e4cd27df",
+    "ブルームバーグ:2669d0215006449c5284b496a48088fb"
   ],
   "pending_items": [
     {
@@ -904,6 +905,14 @@
       "link": "https://fx.minkabu.jp/news/368680",
       "published_at": "2026-05-29T22:50:00+00:00",
       "fetched_at": "2026-05-30T18:53:03+00:00"
+    },
+    {
+      "id": "ブルームバーグ:2669d0215006449c5284b496a48088fb",
+      "source": "ブルームバーグ",
+      "title": "独自OpenAI、IPOに向けた準備でシティやJPモルガンと協議－関係者",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-30/TFTENET96OSN00?srnd=jp-markets",
+      "published_at": "2026-05-30T15:00:00+00:00",
+      "fetched_at": "2026-05-30T19:24:58+00:00"
     }
   ]
 }
