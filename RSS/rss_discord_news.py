@@ -46,6 +46,14 @@ FEEDS = [
         "name": "ロイター",
         "url": "https://assets.wor.jp/rss/rdf/reuters/top.rdf",
     },
+    {
+        "name": "みんかぶ FX/為替 要人発言",
+        "url": "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf",
+    },
+    {
+        "name": "みんかぶ FX/為替 株式",
+        "url": "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf",
+    },
 ]
 
 USER_AGENT = (
