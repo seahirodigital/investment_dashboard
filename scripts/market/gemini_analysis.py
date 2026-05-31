@@ -11,6 +11,7 @@
   GEMINI_API_KEY  — Gemini APIキー（必須）
   GIST_TOKEN      — GitHub Gist 読み書き用PAT（任意、カレンダー連携時）
   GIST_ID         — 投資カレンダーデータのGist ID（任意、カレンダー連携時）
+  DISCORD_OPTION_WEBHOOK_URL — Discord通知用Webhook（任意、Discord連携時）
 """
 
 import json
@@ -36,6 +37,7 @@ GEMINI_ENDPOINT = (
 )
 
 JST = timezone(timedelta(hours=9))
+DISCORD_CONTENT_LIMIT = 1900
 
 
 # ── データ読み込みユーティリティ ───────────────────────────────────
@@ -298,6 +300,108 @@ def save_report(report_text, today_str):
     return filepath
 
 
+# ── Discord 通知 ──────────────────────────────────────────────────
+def split_discord_messages(text, limit=DISCORD_CONTENT_LIMIT):
+    """Discordの本文制限に収まるよう、Markdownを行単位で分割する"""
+    chunks = []
+    current = ""
+
+    for line in text.splitlines():
+        next_line = f"{line}\n"
+        if len(next_line) > limit:
+            if current:
+                chunks.append(current.rstrip())
+                current = ""
+            for start in range(0, len(next_line), limit):
+                chunks.append(next_line[start:start + limit].rstrip())
+            continue
+
+        if len(current) + len(next_line) > limit:
+            chunks.append(current.rstrip())
+            current = next_line
+        else:
+            current += next_line
+
+    if current.strip():
+        chunks.append(current.rstrip())
+
+    return chunks or [text[:limit]]
+
+
+def post_discord_message(webhook_url, content, files=None, max_retries=3):
+    """Discord Webhookへ送信する。レート制限時はDiscordの指示秒数だけ待つ"""
+    for attempt in range(1, max_retries + 1):
+        response = requests.post(
+            webhook_url,
+            data={"content": content},
+            files=files,
+            timeout=60,
+        )
+
+        if response.status_code in (200, 204):
+            return True
+
+        if response.status_code == 429 and attempt < max_retries:
+            try:
+                retry_after = float(response.json().get("retry_after", 1.0))
+            except (ValueError, json.JSONDecodeError):
+                retry_after = 1.0
+            wait = max(retry_after, 1.0)
+            print(f"⏳ Discordレート制限 — {wait:.1f}秒待機してリトライ...")
+            time.sleep(wait)
+            continue
+
+        print(f"❌ Discord通知エラー: HTTP {response.status_code}", file=sys.stderr)
+        print(response.text[:500], file=sys.stderr)
+        return False
+
+    return False
+
+
+def send_discord_market_report(report_text, today_str, webhook_url):
+    """Geminiの投資戦略サマリーをDiscordへ全文通知する"""
+    if not webhook_url:
+        print("⏭️ Discord Webhook設定なし — Discord通知をスキップ")
+        return
+
+    compact_date = today_str.replace("-", "")
+    header = (
+        f"{compact_date} #日経225 オプション分析 Gemini投資戦略サマリー\n"
+        "#日経平均 #株式投資 #デイトレ #N225 #オプション #CFD\n"
+        "https://seahirodigital.github.io/investment_dashboard/option.html\n"
+        "https://seahirodigital.github.io/investment_dashboard/\n\n"
+        "以下、投資カレンダー「情報」タブと同じ内容です。"
+    )
+    chunks = split_discord_messages(report_text)
+
+    first_content = f"{header}\n\n---\n{chunks[0]}"
+    if len(first_content) > DISCORD_CONTENT_LIMIT:
+        first_content = f"{header}\n\n続きは分割メッセージと添付Markdownで確認してください。"
+
+    file_name = f"{compact_date}_gemini_option_strategy_summary.md"
+    files = {
+        "files[0]": (
+            file_name,
+            report_text.encode("utf-8"),
+            "text/markdown; charset=utf-8",
+        )
+    }
+
+    print(f"📣 DiscordへGemini投資戦略サマリーを送信中... ({len(chunks)}分割)")
+    if not post_discord_message(webhook_url, first_content, files=files):
+        return
+
+    remaining = chunks[1:] if first_content.endswith(chunks[0]) else chunks
+    for index, chunk in enumerate(remaining, start=2):
+        content = f"**Gemini投資戦略サマリー 続き {index}/{len(remaining) + 1}**\n{chunk}"
+        if len(content) > DISCORD_CONTENT_LIMIT:
+            content = chunk[:DISCORD_CONTENT_LIMIT]
+        if not post_discord_message(webhook_url, content):
+            return
+
+    print("✅ Discord通知完了")
+
+
 # ── Gist カレンダー更新 ────────────────────────────────────────────
 def update_gist_calendar(report_text, today_str, gist_token, gist_id):
     """投資カレンダーのGistデータの「情報」タブを更新（raw_url方式でデータ保護）"""
@@ -408,6 +512,10 @@ def main():
     gist_token = os.environ.get("GIST_TOKEN")
     gist_id = os.environ.get("GIST_ID")
     update_gist_calendar(report_text, today_str, gist_token, gist_id)
+
+    # Discord通知（環境変数が設定されている場合のみ）
+    discord_webhook_url = os.environ.get("DISCORD_OPTION_WEBHOOK_URL")
+    send_discord_market_report(report_text, today_str, discord_webhook_url)
 
     print("🎉 市場分析完了")
 
