@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-05-31T12:46:24+00:00"
+      "last_fetch_at": "2026-05-31T18:53:48+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-05-31T12:46:24+00:00"
+      "last_fetch_at": "2026-05-31T18:53:48+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-05-31T12:46:24+00:00"
+      "last_fetch_at": "2026-05-31T18:53:48+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-05-31T12:46:24+00:00"
+      "last_fetch_at": "2026-05-31T18:53:48+00:00"
     }
   },
   "seen_ids": [
@@ -512,7 +512,17 @@
     "みんかぶ FX/為替 株式:7011e7cc9d812f9e2f227e8f6ae17417",
     "みんかぶ FX/為替 株式:cd058da3ce73d654fcd74e41e4cd27df",
     "ブルームバーグ:2669d0215006449c5284b496a48088fb",
-    "ブルームバーグ:582646076e2a2b165d479a0fa1ede06f"
+    "ブルームバーグ:582646076e2a2b165d479a0fa1ede06f",
+    "ブルームバーグ:c2a9aa236f1924f0c9d7dad435c7b2d8"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "ブルームバーグ:c2a9aa236f1924f0c9d7dad435c7b2d8",
+      "source": "ブルームバーグ",
+      "title": "90年代の人気テック銘柄、AIの恩恵で大復活－7社の時価総額270兆円増",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-05-31/TFUPGST96OSH00?srnd=jp-markets",
+      "published_at": "2026-05-31T15:00:00+00:00",
+      "fetched_at": "2026-05-31T18:53:48+00:00"
+    }
+  ]
 }
