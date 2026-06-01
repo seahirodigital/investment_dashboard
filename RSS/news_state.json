@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-01T00:46:59+00:00"
+      "last_fetch_at": "2026-06-01T08:15:29+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-01T00:46:59+00:00"
+      "last_fetch_at": "2026-06-01T08:15:29+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-01T00:46:59+00:00"
+      "last_fetch_at": "2026-06-01T08:15:29+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-01T00:46:59+00:00"
+      "last_fetch_at": "2026-06-01T08:15:29+00:00"
     }
   },
   "seen_ids": [
@@ -513,7 +513,30 @@
     "みんかぶ FX/為替 株式:cd058da3ce73d654fcd74e41e4cd27df",
     "ブルームバーグ:2669d0215006449c5284b496a48088fb",
     "ブルームバーグ:582646076e2a2b165d479a0fa1ede06f",
-    "ブルームバーグ:c2a9aa236f1924f0c9d7dad435c7b2d8"
+    "ブルームバーグ:c2a9aa236f1924f0c9d7dad435c7b2d8",
+    "みんかぶ FX/為替 要人発言:32721904c3ada8940975608eb308f38b",
+    "みんかぶ FX/為替 要人発言:6ee88b6cbbfd7257df1ca776900dff3e",
+    "みんかぶ FX/為替 要人発言:6792f101e3a372ed6a37dc272b45497d",
+    "みんかぶ FX/為替 要人発言:212c5d58ed65e0b2153bef7531bed9cc",
+    "みんかぶ FX/為替 要人発言:c8a2a51afe54a06648d4fa2cc9512ba1",
+    "みんかぶ FX/為替 要人発言:088910b1eea7e0f8c479b84abb35ef1b",
+    "みんかぶ FX/為替 要人発言:7c47dbcb2739e8ea9b21ae1ab9bd8097",
+    "みんかぶ FX/為替 要人発言:a6d8c5cfcc4492128e5a2ea332d52658",
+    "みんかぶ FX/為替 株式:32721904c3ada8940975608eb308f38b",
+    "みんかぶ FX/為替 株式:6ee88b6cbbfd7257df1ca776900dff3e",
+    "みんかぶ FX/為替 株式:6e3c620831573157f97ec3ad6c3fc52a",
+    "みんかぶ FX/為替 株式:e392a94c7402080de1f6a5bef0d8ab72",
+    "みんかぶ FX/為替 株式:6792f101e3a372ed6a37dc272b45497d",
+    "みんかぶ FX/為替 株式:f6d7e0487821f1643135ac66c1d37ad6",
+    "みんかぶ FX/為替 株式:7b4ae9c6df99bc549e1f05a0f024619b",
+    "みんかぶ FX/為替 株式:cacc3b49a2f2165d676b797dee88641b",
+    "みんかぶ FX/為替 株式:a2ff0f260518bdd095a24b9178c99f68",
+    "みんかぶ FX/為替 株式:6785279056aaf302c8010455dce0576e",
+    "みんかぶ FX/為替 株式:4fa07220035687004306590e5dbc801c",
+    "みんかぶ FX/為替 株式:5c4449522243b0aad5b9307650455a19",
+    "みんかぶ FX/為替 株式:26e7b1826ecf80436a6e6b1ce454df9d",
+    "みんかぶ FX/為替 株式:7c47dbcb2739e8ea9b21ae1ab9bd8097",
+    "みんかぶ FX/為替 株式:d23bc1bf8cf5f9b29b0ccb8fff77f567"
   ],
   "pending_items": []
 }
