@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-01T17:24:55+00:00"
+      "last_fetch_at": "2026-06-01T17:34:57+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-01T17:24:55+00:00"
+      "last_fetch_at": "2026-06-01T17:34:57+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-01T17:24:55+00:00"
+      "last_fetch_at": "2026-06-01T17:34:57+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-01T17:24:55+00:00"
+      "last_fetch_at": "2026-06-01T17:34:57+00:00"
     }
   },
   "seen_ids": [
@@ -573,7 +573,26 @@
     "みんかぶ FX/為替 株式:057475805c7d14f0d54863ce788df195",
     "みんかぶ FX/為替 株式:45179f4667f40af5f4dc39d0d315410d",
     "みんかぶ FX/為替 株式:3066fd72cd96c501cf6d962dd83154c3",
-    "みんかぶ FX/為替 要人発言:3066fd72cd96c501cf6d962dd83154c3"
+    "みんかぶ FX/為替 要人発言:3066fd72cd96c501cf6d962dd83154c3",
+    "みんかぶ FX/為替 株式:50e589cefeb4876ea3699abb3d3ccf6c",
+    "みんかぶ FX/為替 株式:7825d4879ac28b372da4a1ace1bfb8a3"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "みんかぶ FX/為替 株式:50e589cefeb4876ea3699abb3d3ccf6c",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ０時台 ダウ平均は１４１ドル安 ナスダックはプラス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368815",
+      "published_at": "2026-06-01T15:32:00+00:00",
+      "fetched_at": "2026-06-01T17:34:57+00:00"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:7825d4879ac28b372da4a1ace1bfb8a3",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 １時台 ダウ平均は１４１ドル安 ナスダックはプラス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368818",
+      "published_at": "2026-06-01T16:14:00+00:00",
+      "fetched_at": "2026-06-01T17:34:57+00:00"
+    }
+  ]
 }
