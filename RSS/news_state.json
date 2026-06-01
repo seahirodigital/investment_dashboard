@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-01T19:55:28+00:00"
+      "last_fetch_at": "2026-06-01T20:05:31+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-01T19:55:28+00:00"
+      "last_fetch_at": "2026-06-01T20:05:31+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-01T19:55:28+00:00"
+      "last_fetch_at": "2026-06-01T20:05:31+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-01T19:55:28+00:00"
+      "last_fetch_at": "2026-06-01T20:05:31+00:00"
     }
   },
   "seen_ids": [
@@ -579,7 +579,26 @@
     "みんかぶ FX/為替 株式:420a3b245575522c15db54259d83a8d8",
     "みんかぶ FX/為替 株式:77bb74ece3a3118e22b52ec2a21b55a6",
     "みんかぶ FX/為替 株式:606f2c50b50ca89300df1559817dccfd",
-    "みんかぶ FX/為替 株式:e58b0129e2d295e62a1df48371dd63af"
+    "みんかぶ FX/為替 株式:e58b0129e2d295e62a1df48371dd63af",
+    "ロイター:a43f51c85588cfc40eaeecc29eaa58b9",
+    "ロイター:7aeae0f903dc3a47c37c73434764b899",
+    "ロイター:1c8d2573200a0a750db79538a4a5d556",
+    "ロイター:92e705f152908800494db2a4e3cfcfe4",
+    "ロイター:cde2cfa363043529819b52c6e86c79f3",
+    "ロイター:8bedc552b4112ee1e3eb38d35b9ac085",
+    "ロイター:d32897be7295b079da59bb2de63f24d9",
+    "ロイター:4860747fe9f6852c24ff42f133c88ca6",
+    "ロイター:7aa6b89a95d8911af539edf5867c1a3a",
+    "ロイター:168226d6c7cefe36441e7c84e0a20032",
+    "ロイター:fd275d438bbfeba99b0fc83d88949cc6",
+    "ロイター:8b302d17f0100741133ca2ad58b0d687",
+    "ロイター:b5621361e920dab17c04e6d5e22f2b16",
+    "ロイター:20bfc1ed8f9ed1890a584f1bdc5ed3b8",
+    "ロイター:e97e86d0031b829edea6dddc48be6e3f",
+    "ロイター:771f9615155c8fd803136369501670e0",
+    "ロイター:8ad562607acbf92b42c275c9ede8bfa8",
+    "ロイター:0be10ee7cf7c046a228de74cce79b417",
+    "ロイター:2a15f6dc764247823f4f8d89a58610d9"
   ],
   "pending_items": [
     {
@@ -629,6 +648,158 @@
       "link": "https://fx.minkabu.jp/news/368824",
       "published_at": "2026-06-01T18:42:00+00:00",
       "fetched_at": "2026-06-01T19:35:23+00:00"
+    },
+    {
+      "id": "ロイター:a43f51c85588cfc40eaeecc29eaa58b9",
+      "source": "ロイター",
+      "title": "米国の矛盾とイスラエルの攻撃、交渉停滞の原因 イランが非難",
+      "link": "https://jp.reuters.com/world/security/HVY3ECO4IFNQVIDS2MR7Z4KZZQ-2026-06-01/",
+      "published_at": "2026-06-01T10:56:05+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:7aeae0f903dc3a47c37c73434764b899",
+      "source": "ロイター",
+      "title": "日イラン首脳が電話会談、高市氏「最大限の柔軟性」期待と伝える",
+      "link": "https://jp.reuters.com/world/security/RXXUPM5WABJENPSVIMHMEJQRLY-2026-06-01/",
+      "published_at": "2026-06-01T11:10:17+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:1c8d2573200a0a750db79538a4a5d556",
+      "source": "ロイター",
+      "title": "イラン・米国が双方を攻撃、互いに非難 外交努力難航",
+      "link": "https://jp.reuters.com/world/us/5RVQMYNVL5PWDJEMERQGJNANFQ-2026-06-01/",
+      "published_at": "2026-06-01T11:48:38+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:92e705f152908800494db2a4e3cfcfe4",
+      "source": "ロイター",
+      "title": "イラン、米との協議停止 イスラエルのヒズボラ攻撃巡り＝タスニム通信",
+      "link": "https://jp.reuters.com/world/security/XW5Q522TCZIPPP4ECNAGOPFZOA-2026-06-01/",
+      "published_at": "2026-06-01T13:36:13+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:cde2cfa363043529819b52c6e86c79f3",
+      "source": "ロイター",
+      "title": "イラン大統領、日本船舶ホルムズ航行支援を表明 首脳電話会談＝国営メディア",
+      "link": "https://jp.reuters.com/world/japan/B2WBI5WZHJOGFM3ABGFFDZZNZA-2026-06-01/",
+      "published_at": "2026-06-01T13:58:56+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:8bedc552b4112ee1e3eb38d35b9ac085",
+      "source": "ロイター",
+      "title": "ソフトバンク、仏ＡＩデータセンターに投資へ 最大750億ユーロ",
+      "link": "https://jp.reuters.com/markets/japan/WWNTYV6JEJJOJHIPENA4P6RV5Y-2026-06-01/",
+      "published_at": "2026-06-01T14:05:24+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:d32897be7295b079da59bb2de63f24d9",
+      "source": "ロイター",
+      "title": "米ＩＳＭ製造業景気指数、5月は4年ぶり高水準 中東紛争受け発注前倒し",
+      "link": "https://jp.reuters.com/markets/japan/CZPNIO3GAJMNVPXG5WFDRYK7YU-2026-06-01/",
+      "published_at": "2026-06-01T14:21:13+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:4860747fe9f6852c24ff42f133c88ca6",
+      "source": "ロイター",
+      "title": "米建設支出、4月は前月比0.4％増と予想上回る 一戸建て住宅が寄与",
+      "link": "https://jp.reuters.com/markets/japan/A3UCMFO34VI6NJFHY5OJSDVZU4-2026-06-01/",
+      "published_at": "2026-06-01T15:05:10+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:7aa6b89a95d8911af539edf5867c1a3a",
+      "source": "ロイター",
+      "title": "ＣＥＰＩ、モデルナなどのエボラ新株ワクチンに6000万ドル拠出",
+      "link": "https://jp.reuters.com/world/us/ZBAO7KIDGNORJL7HWA2XC6QZQY-2026-06-01/",
+      "published_at": "2026-06-01T15:06:59+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:168226d6c7cefe36441e7c84e0a20032",
+      "source": "ロイター",
+      "title": "米イラン停戦、レバノンでの攻撃続けば崩壊の恐れ＝イラン国営テレビ",
+      "link": "https://jp.reuters.com/world/security/YJMS3HKDPJL7RLWN62KVBLNTXA-2026-06-01/",
+      "published_at": "2026-06-01T15:28:43+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:fd275d438bbfeba99b0fc83d88949cc6",
+      "source": "ロイター",
+      "title": "米中、ハワイで軍事海上協議 意思疎通の強化で一致＝中国海軍",
+      "link": "https://jp.reuters.com/world/security/Y32P5GDXWNM7XNIIAZP5P6WVG4-2026-06-01/",
+      "published_at": "2026-06-01T16:03:34+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:8b302d17f0100741133ca2ad58b0d687",
+      "source": "ロイター",
+      "title": "米メディア企業ピープル、ＭＧＭに買収提案 180億ドルと評価",
+      "link": "https://jp.reuters.com/markets/japan/TN6MBNP3CRP3JAOKB5IWWGBJGQ-2026-06-01/",
+      "published_at": "2026-06-01T16:05:25+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:b5621361e920dab17c04e6d5e22f2b16",
+      "source": "ロイター",
+      "title": "アンソロピック、米ＩＰＯを非公開で申請",
+      "link": "https://jp.reuters.com/markets/japan/IVXTV4UDZBITFFMYKGXYMTIZDU-2026-06-01/",
+      "published_at": "2026-06-01T16:25:33+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:20bfc1ed8f9ed1890a584f1bdc5ed3b8",
+      "source": "ロイター",
+      "title": "トランプ氏、イラン協議「急速なペース」で継続 終了構わないとも",
+      "link": "https://jp.reuters.com/world/security/LQ6A7CYX2FJ7VNC6A4LESXDEAM-2026-06-01/",
+      "published_at": "2026-06-01T16:36:48+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:e97e86d0031b829edea6dddc48be6e3f",
+      "source": "ロイター",
+      "title": "ネタニヤフ首相がトランプ氏と電話会談、詳細は不明＝イスラエルメディア",
+      "link": "https://jp.reuters.com/world/security/VWP75OZT7VM6XIKYANCHYXMQ3E-2026-06-01/",
+      "published_at": "2026-06-01T17:17:03+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:771f9615155c8fd803136369501670e0",
+      "source": "ロイター",
+      "title": "テスラ登録台数、欧州で回復続く 5月に主要市場で大幅増",
+      "link": "https://jp.reuters.com/markets/world-indices/LZAORVHQ6NKQJJR6CYU72DSVCM-2026-06-01/",
+      "published_at": "2026-06-01T17:22:18+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:8ad562607acbf92b42c275c9ede8bfa8",
+      "source": "ロイター",
+      "title": "米は停戦違反に「直接責任」、イラン外務省が非難",
+      "link": "https://jp.reuters.com/world/security/WRVCHAPKZ5NN3EISPT3RXJMUIA-2026-06-01/",
+      "published_at": "2026-06-01T17:36:10+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:0be10ee7cf7c046a228de74cce79b417",
+      "source": "ロイター",
+      "title": "トランプ氏、ヒズボラ・イスラエル双方と協議 攻撃停止を確約",
+      "link": "https://jp.reuters.com/world/us/P3CL6RDSVVIIZPIKHTLX52LZZ4-2026-06-01/",
+      "published_at": "2026-06-01T17:55:15+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
+    },
+    {
+      "id": "ロイター:2a15f6dc764247823f4f8d89a58610d9",
+      "source": "ロイター",
+      "title": "エヌビディアＣＥＯ、韓国ハイテク企業向け初の夕食会 台北で",
+      "link": "https://jp.reuters.com/markets/japan/ZRXIYZ5LIVNFTECMFXJ4XGHZB4-2026-06-01/",
+      "published_at": "2026-06-01T18:13:42+00:00",
+      "fetched_at": "2026-06-01T20:05:31+00:00"
     }
   ]
 }
