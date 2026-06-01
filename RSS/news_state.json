@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-01T19:25:21+00:00"
+      "last_fetch_at": "2026-06-01T19:35:23+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-01T19:25:21+00:00"
+      "last_fetch_at": "2026-06-01T19:35:23+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-01T19:25:21+00:00"
+      "last_fetch_at": "2026-06-01T19:35:23+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-01T19:25:21+00:00"
+      "last_fetch_at": "2026-06-01T19:35:23+00:00"
     }
   },
   "seen_ids": [
@@ -575,7 +575,11 @@
     "みんかぶ FX/為替 株式:3066fd72cd96c501cf6d962dd83154c3",
     "みんかぶ FX/為替 要人発言:3066fd72cd96c501cf6d962dd83154c3",
     "みんかぶ FX/為替 株式:50e589cefeb4876ea3699abb3d3ccf6c",
-    "みんかぶ FX/為替 株式:7825d4879ac28b372da4a1ace1bfb8a3"
+    "みんかぶ FX/為替 株式:7825d4879ac28b372da4a1ace1bfb8a3",
+    "みんかぶ FX/為替 株式:420a3b245575522c15db54259d83a8d8",
+    "みんかぶ FX/為替 株式:77bb74ece3a3118e22b52ec2a21b55a6",
+    "みんかぶ FX/為替 株式:606f2c50b50ca89300df1559817dccfd",
+    "みんかぶ FX/為替 株式:e58b0129e2d295e62a1df48371dd63af"
   ],
   "pending_items": [
     {
@@ -593,6 +597,38 @@
       "link": "https://fx.minkabu.jp/news/368818",
       "published_at": "2026-06-01T16:14:00+00:00",
       "fetched_at": "2026-06-01T17:34:57+00:00"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:420a3b245575522c15db54259d83a8d8",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ２時台 ダウ平均は１６３ドル安 ナスダックはプラス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368820",
+      "published_at": "2026-06-01T17:25:00+00:00",
+      "fetched_at": "2026-06-01T19:35:23+00:00"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:77bb74ece3a3118e22b52ec2a21b55a6",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "金は１．８９％安＝ＮＹ金終値",
+      "link": "https://fx.minkabu.jp/news/368822",
+      "published_at": "2026-06-01T18:06:00+00:00",
+      "fetched_at": "2026-06-01T19:35:23+00:00"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:606f2c50b50ca89300df1559817dccfd",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ３時台 ダウ平均は横ばい ナスダックはプラス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368823",
+      "published_at": "2026-06-01T18:24:00+00:00",
+      "fetched_at": "2026-06-01T19:35:23+00:00"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:e58b0129e2d295e62a1df48371dd63af",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "原油は５．４９％高＝ＮＹ原油終値",
+      "link": "https://fx.minkabu.jp/news/368824",
+      "published_at": "2026-06-01T18:42:00+00:00",
+      "fetched_at": "2026-06-01T19:35:23+00:00"
     }
   ]
 }
