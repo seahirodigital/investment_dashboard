@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-01T10:28:04+00:00"
+      "last_fetch_at": "2026-06-01T10:38:06+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-01T10:28:04+00:00"
+      "last_fetch_at": "2026-06-01T10:38:06+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-01T10:28:04+00:00"
+      "last_fetch_at": "2026-06-01T10:38:06+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-01T10:28:04+00:00"
+      "last_fetch_at": "2026-06-01T10:38:06+00:00"
     }
   },
   "seen_ids": [
@@ -547,7 +547,30 @@
     "みんかぶ FX/為替 株式:3e7e0ee9e76bef3cd0224611e6780c72",
     "みんかぶ FX/為替 要人発言:61a450f008c1658d3a795c33355ba716",
     "みんかぶ FX/為替 要人発言:14157af77ad5fd59c56e13eaefb10ca4",
-    "みんかぶ FX/為替 要人発言:de5166d3a871aaf5f26aa2b741e5e334"
+    "みんかぶ FX/為替 要人発言:de5166d3a871aaf5f26aa2b741e5e334",
+    "ロイター:a56b48813067082a4be1e75dda8dbfab",
+    "ロイター:45b91b1472293c6ef56e7279c0dec06b",
+    "ロイター:a9d0973c0b1553c7bca6f862e4bcd8fd",
+    "ロイター:371f32fe4d284db0d9343ac939a6a8bf",
+    "ロイター:599d22f30a45758dfe5967dde48e4e88",
+    "ロイター:782a4a2947c9a88b09c7ec50128bf2d5",
+    "ロイター:e77949be92912fc984e777f95215e7ec",
+    "ロイター:39fe30344a4063d735b9c6a3eb87ebd1",
+    "ロイター:d671ea1f25d5b685f1543ee684d819f3",
+    "ロイター:9598df056adca927f84e470933ef9b2d",
+    "ロイター:287d9c6f1c3cff4b715f7d6862fbdbb1",
+    "ロイター:85adac9c12294753b405177835bfdf78",
+    "ロイター:44643ec7a278fad48bddf987e4be6760",
+    "ロイター:2a19d51e61ebacaa95378f28ca6366e0",
+    "ロイター:d50d0a615a63c4f4de515f992fb589c9",
+    "ロイター:51beb8ab2d8add3e4c838e61e540de59",
+    "ロイター:89f93c79c6aaa3e17bc696140999848a",
+    "ロイター:e027c295fbcd3a4ff770051b5bafde2a",
+    "ロイター:8a6daf74dcb0e8823a1b53183e6587d4",
+    "ロイター:ce23df1e7a57487973b72fa17c7d088e",
+    "みんかぶ FX/為替 株式:62e412b63d244c5dad21dd8660978af7",
+    "みんかぶ FX/為替 株式:9de0c188a51e0268a6b7be8c6e37a533",
+    "みんかぶ FX/為替 株式:057475805c7d14f0d54863ce788df195"
   ],
   "pending_items": []
 }
