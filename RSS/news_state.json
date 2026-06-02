@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-02T07:45:44+00:00"
+      "last_fetch_at": "2026-06-02T07:55:46+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-02T07:45:44+00:00"
+      "last_fetch_at": "2026-06-02T07:55:46+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-02T07:45:44+00:00"
+      "last_fetch_at": "2026-06-02T07:55:46+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-02T07:45:44+00:00"
+      "last_fetch_at": "2026-06-02T07:55:46+00:00"
     }
   },
   "seen_ids": [
@@ -621,7 +621,18 @@
     "みんかぶ FX/為替 株式:2657b19acc7ae916fe53e575b7f1a9ff",
     "みんかぶ FX/為替 株式:2da600c38173910ba27f797f918b9928",
     "みんかぶ FX/為替 株式:ec0b8671dd62969a54d9d29d6aa0ce56",
-    "みんかぶ FX/為替 株式:4c010f275127cc6eb46a26bade674e83"
+    "みんかぶ FX/為替 株式:4c010f275127cc6eb46a26bade674e83",
+    "みんかぶ FX/為替 要人発言:82e4afc190a39539bdd8d9d57196a463",
+    "みんかぶ FX/為替 要人発言:ff8882e9d30ff85e306a98efd62bff6f",
+    "みんかぶ FX/為替 要人発言:b71c3d8d3b989938eb47fe77eda840e9",
+    "みんかぶ FX/為替 要人発言:70c014f83b98bb034c11bd854c828c73",
+    "みんかぶ FX/為替 要人発言:8c5e85bf5f57b1b35f825048e56a9509",
+    "みんかぶ FX/為替 株式:82e4afc190a39539bdd8d9d57196a463",
+    "みんかぶ FX/為替 株式:ff8882e9d30ff85e306a98efd62bff6f",
+    "みんかぶ FX/為替 株式:b71c3d8d3b989938eb47fe77eda840e9",
+    "みんかぶ FX/為替 株式:70c014f83b98bb034c11bd854c828c73",
+    "みんかぶ FX/為替 株式:5bca29c4be85ca10c95036f3028c1c37",
+    "みんかぶ FX/為替 株式:8c5e85bf5f57b1b35f825048e56a9509"
   ],
   "pending_items": []
 }
