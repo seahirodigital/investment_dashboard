@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-02T18:26:16+00:00"
+      "last_fetch_at": "2026-06-02T18:36:18+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-02T18:26:16+00:00"
+      "last_fetch_at": "2026-06-02T18:36:18+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-02T18:26:16+00:00"
+      "last_fetch_at": "2026-06-02T18:36:18+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-02T18:26:16+00:00"
+      "last_fetch_at": "2026-06-02T18:36:18+00:00"
     }
   },
   "seen_ids": [
@@ -663,7 +663,11 @@
     "ロイター:765b4232d519d801f6063503970efcc2",
     "ロイター:94da449d625e7c6c199bcd5ad364a27c",
     "みんかぶ FX/為替 要人発言:10544f9a3a6ba311ba1db8285be0c0cf",
-    "みんかぶ FX/為替 株式:cc44e6248091f8ad9a3da08e5476aa3a"
+    "みんかぶ FX/為替 株式:cc44e6248091f8ad9a3da08e5476aa3a",
+    "みんかぶ FX/為替 株式:2625b85f1259473851d7f9c874c812b5",
+    "みんかぶ FX/為替 株式:b23bb3ddfadf113b5787667cd442f359",
+    "みんかぶ FX/為替 株式:0b1c350a8a93a41a0a5aa0992091b3e1",
+    "みんかぶ FX/為替 株式:8891994323ef3ee82462eefe3edbd3ed"
   ],
   "pending_items": [
     {
@@ -975,6 +979,46 @@
       "published_at": "2026-06-02T15:45:00+00:00",
       "fetched_at": "2026-06-02T16:35:47+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:2625b85f1259473851d7f9c874c812b5",
+      "dedupe_key": "minkabu:2625b85f1259473851d7f9c874c812b5",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 １時台 ダウ平均は１０３ドル高 ナスダックもプラス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368950",
+      "published_at": "2026-06-02T16:27:00+00:00",
+      "fetched_at": "2026-06-02T18:36:18+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:b23bb3ddfadf113b5787667cd442f359",
+      "dedupe_key": "minkabu:b23bb3ddfadf113b5787667cd442f359",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "欧州株 終値 揃って上昇",
+      "link": "https://fx.minkabu.jp/news/368951",
+      "published_at": "2026-06-02T16:48:00+00:00",
+      "fetched_at": "2026-06-02T18:36:18+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:0b1c350a8a93a41a0a5aa0992091b3e1",
+      "dedupe_key": "minkabu:0b1c350a8a93a41a0a5aa0992091b3e1",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ２時台 ダウ平均は１３７ドル高 ナスダックもプラス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368953",
+      "published_at": "2026-06-02T17:24:00+00:00",
+      "fetched_at": "2026-06-02T18:36:18+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:8891994323ef3ee82462eefe3edbd3ed",
+      "dedupe_key": "minkabu:8891994323ef3ee82462eefe3edbd3ed",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "金は０．３０％高＝ＮＹ金終値",
+      "link": "https://fx.minkabu.jp/news/368954",
+      "published_at": "2026-06-02T17:54:00+00:00",
+      "fetched_at": "2026-06-02T18:36:18+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1008,6 +1052,10 @@
     "ロイター:765b4232d519d801f6063503970efcc2",
     "ロイター:94da449d625e7c6c199bcd5ad364a27c",
     "minkabu:10544f9a3a6ba311ba1db8285be0c0cf",
-    "minkabu:cc44e6248091f8ad9a3da08e5476aa3a"
+    "minkabu:cc44e6248091f8ad9a3da08e5476aa3a",
+    "minkabu:2625b85f1259473851d7f9c874c812b5",
+    "minkabu:b23bb3ddfadf113b5787667cd442f359",
+    "minkabu:0b1c350a8a93a41a0a5aa0992091b3e1",
+    "minkabu:8891994323ef3ee82462eefe3edbd3ed"
   ]
 }
