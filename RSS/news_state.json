@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-02T16:25:44+00:00"
+      "last_fetch_at": "2026-06-02T16:35:47+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-02T16:25:44+00:00"
+      "last_fetch_at": "2026-06-02T16:35:47+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-02T16:25:44+00:00"
+      "last_fetch_at": "2026-06-02T16:35:47+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-02T16:25:44+00:00"
+      "last_fetch_at": "2026-06-02T16:35:47+00:00"
     }
   },
   "seen_ids": [
@@ -662,7 +662,8 @@
     "ロイター:dceece00d7bd6d9160cc36fb2f510c92",
     "ロイター:765b4232d519d801f6063503970efcc2",
     "ロイター:94da449d625e7c6c199bcd5ad364a27c",
-    "みんかぶ FX/為替 要人発言:10544f9a3a6ba311ba1db8285be0c0cf"
+    "みんかぶ FX/為替 要人発言:10544f9a3a6ba311ba1db8285be0c0cf",
+    "みんかぶ FX/為替 株式:cc44e6248091f8ad9a3da08e5476aa3a"
   ],
   "pending_items": [
     {
@@ -964,6 +965,16 @@
       "published_at": "2026-06-02T14:44:00+00:00",
       "fetched_at": "2026-06-02T16:05:40+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:cc44e6248091f8ad9a3da08e5476aa3a",
+      "dedupe_key": "minkabu:cc44e6248091f8ad9a3da08e5476aa3a",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ０時台 ダウ平均は１３０ドル高 ナスダックもプラス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368948",
+      "published_at": "2026-06-02T15:45:00+00:00",
+      "fetched_at": "2026-06-02T16:35:47+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -996,6 +1007,7 @@
     "ロイター:dceece00d7bd6d9160cc36fb2f510c92",
     "ロイター:765b4232d519d801f6063503970efcc2",
     "ロイター:94da449d625e7c6c199bcd5ad364a27c",
-    "minkabu:10544f9a3a6ba311ba1db8285be0c0cf"
+    "minkabu:10544f9a3a6ba311ba1db8285be0c0cf",
+    "minkabu:cc44e6248091f8ad9a3da08e5476aa3a"
   ]
 }
