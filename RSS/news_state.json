@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-02T18:56:26+00:00"
+      "last_fetch_at": "2026-06-02T19:06:28+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-02T18:56:26+00:00"
+      "last_fetch_at": "2026-06-02T19:06:28+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-02T18:56:26+00:00"
+      "last_fetch_at": "2026-06-02T19:06:28+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-02T18:56:26+00:00"
+      "last_fetch_at": "2026-06-02T19:06:28+00:00"
     }
   },
   "seen_ids": [
@@ -667,7 +667,19 @@
     "みんかぶ FX/為替 株式:2625b85f1259473851d7f9c874c812b5",
     "みんかぶ FX/為替 株式:b23bb3ddfadf113b5787667cd442f359",
     "みんかぶ FX/為替 株式:0b1c350a8a93a41a0a5aa0992091b3e1",
-    "みんかぶ FX/為替 株式:8891994323ef3ee82462eefe3edbd3ed"
+    "みんかぶ FX/為替 株式:8891994323ef3ee82462eefe3edbd3ed",
+    "ロイター:a1c8c0fbcd415fc282356839c8123b9f",
+    "ロイター:d434ca527b535d6b1113cd2ea7c86470",
+    "ロイター:0dea7b14482ee237f366a21b917a3d89",
+    "ロイター:b0b1a0c9a668526c088ba7997aae9ed0",
+    "ロイター:e0b9f932f204338bf3ae030042dbe14b",
+    "ロイター:7e433c2ee716178452f0071e182019e8",
+    "ロイター:d6b18651f8c6f7e1a884a48f86a68228",
+    "ロイター:23eb8f674436ce61e5ae9a9e0a1e84e3",
+    "ロイター:48cea97c98b915d5d1cd9cf94de684e7",
+    "ロイター:e585f8d7bf2152df850294066e92ca08",
+    "ロイター:4c89654de400e27a8f4e4419971b1f0a",
+    "ロイター:53efe9adbc19ca499d02b0d865720bd9"
   ],
   "pending_items": [
     {
@@ -1019,6 +1031,126 @@
       "published_at": "2026-06-02T17:54:00+00:00",
       "fetched_at": "2026-06-02T18:36:18+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "ロイター:a1c8c0fbcd415fc282356839c8123b9f",
+      "dedupe_key": "ロイター:a1c8c0fbcd415fc282356839c8123b9f",
+      "source": "ロイター",
+      "title": "石油市場はリスク過小評価の可能性、製品需給は年内回復困難＝ビトル幹部",
+      "link": "https://jp.reuters.com/markets/oil/HZO3XW7VORL7VLVK3DDBMOU7IY-2026-06-02/",
+      "published_at": "2026-06-02T14:17:20+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:d434ca527b535d6b1113cd2ea7c86470",
+      "dedupe_key": "ロイター:d434ca527b535d6b1113cd2ea7c86470",
+      "source": "ロイター",
+      "title": "米代表団、ロシア経済フォーラム出席へ 数年ぶり＝大統領補佐官",
+      "link": "https://jp.reuters.com/world/us/4LSOYTVGJZIIZGDKGDTWEPFIMI-2026-06-02/",
+      "published_at": "2026-06-02T14:23:14+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:0dea7b14482ee237f366a21b917a3d89",
+      "dedupe_key": "ロイター:0dea7b14482ee237f366a21b917a3d89",
+      "source": "ロイター",
+      "title": "モーニングスター、スペースＸ評価額7800億ドルと算定 ＩＰＯ目標の半分以下",
+      "link": "https://jp.reuters.com/markets/japan/DZ7VIIKJTVJW3JQO6DCPBONCWQ-2026-06-02/",
+      "published_at": "2026-06-02T14:56:12+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:b0b1a0c9a668526c088ba7997aae9ed0",
+      "dedupe_key": "ロイター:b0b1a0c9a668526c088ba7997aae9ed0",
+      "source": "ロイター",
+      "title": "イラン制裁緩和は核放棄と連動、ホルムズ海峡開放は条件でない＝米国務長官",
+      "link": "https://jp.reuters.com/world/security/FCIA2H77ANMIHCC75BLGIWVM5Y-2026-06-02/",
+      "published_at": "2026-06-02T15:00:25+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:e0b9f932f204338bf3ae030042dbe14b",
+      "dedupe_key": "ロイター:e0b9f932f204338bf3ae030042dbe14b",
+      "source": "ロイター",
+      "title": "米求人件数、4月は約2年ぶり高水準 予想以上に増加",
+      "link": "https://jp.reuters.com/markets/japan/WM2PDEZA2ROXDNDZEYCU5BJZO4-2026-06-02/",
+      "published_at": "2026-06-02T15:06:21+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:7e433c2ee716178452f0071e182019e8",
+      "dedupe_key": "ロイター:7e433c2ee716178452f0071e182019e8",
+      "source": "ロイター",
+      "title": "テスラの中国製ＥＶ販売、5月は前年比39.4％増 欧州向けが復調",
+      "link": "https://jp.reuters.com/markets/world-indices/EBV4CLNEPFL4LF4K7L5VQKHVEU-2026-06-02/",
+      "published_at": "2026-06-02T15:07:27+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:d6b18651f8c6f7e1a884a48f86a68228",
+      "dedupe_key": "ロイター:d6b18651f8c6f7e1a884a48f86a68228",
+      "source": "ロイター",
+      "title": "イスラエル首相に内外圧力、トランプ氏が罵倒と報道 レバノン作戦巡り",
+      "link": "https://jp.reuters.com/world/us/PUTGLHR3K5L3LEU2I7RDVFSXUY-2026-06-02/",
+      "published_at": "2026-06-02T15:11:07+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:23eb8f674436ce61e5ae9a9e0a1e84e3",
+      "dedupe_key": "ロイター:23eb8f674436ce61e5ae9a9e0a1e84e3",
+      "source": "ロイター",
+      "title": "米国務長官「対台湾政策に変更なし」、現状維持を改めて強調",
+      "link": "https://jp.reuters.com/world/taiwan/5PYDM6RU25LXBGI2NLUQYYLJ6Y-2026-06-02/",
+      "published_at": "2026-06-02T15:54:27+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:48cea97c98b915d5d1cd9cf94de684e7",
+      "dedupe_key": "ロイター:48cea97c98b915d5d1cd9cf94de684e7",
+      "source": "ロイター",
+      "title": "トランプ氏、ＡＩ規制強化へ大統領令 新モデル審査義務付けへ",
+      "link": "https://jp.reuters.com/world/us/7CRVK2D4SJMP3LRJHXG5E2MTTE-2026-06-02/",
+      "published_at": "2026-06-02T15:55:42+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:e585f8d7bf2152df850294066e92ca08",
+      "dedupe_key": "ロイター:e585f8d7bf2152df850294066e92ca08",
+      "source": "ロイター",
+      "title": "米7州、政権と仏トタル提訴 ＮＹ州沖の洋上風力リース停止巡り",
+      "link": "https://jp.reuters.com/world/us/6QUD6SG6QNLBHGW5RFI6FHOBDY-2026-06-02/",
+      "published_at": "2026-06-02T16:33:38+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:4c89654de400e27a8f4e4419971b1f0a",
+      "dedupe_key": "ロイター:4c89654de400e27a8f4e4419971b1f0a",
+      "source": "ロイター",
+      "title": "インフレ目標への回帰と信認が重要＝英中銀総裁",
+      "link": "https://jp.reuters.com/opinion/A22CKCPTZRMGJIKKSRQVH2PUWY-2026-06-02/",
+      "published_at": "2026-06-02T17:06:14+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:53efe9adbc19ca499d02b0d865720bd9",
+      "dedupe_key": "ロイター:53efe9adbc19ca499d02b0d865720bd9",
+      "source": "ロイター",
+      "title": "トランプ氏「イランとの協議継続」、報道を否定",
+      "link": "https://jp.reuters.com/world/security/3WON33DUOBKIHMQZK5364F7QGE-2026-06-02/",
+      "published_at": "2026-06-02T17:29:58+00:00",
+      "fetched_at": "2026-06-02T19:06:28+00:00",
+      "delivery_route": "main"
     }
   ],
   "seen_keys": [
@@ -1056,6 +1188,18 @@
     "minkabu:2625b85f1259473851d7f9c874c812b5",
     "minkabu:b23bb3ddfadf113b5787667cd442f359",
     "minkabu:0b1c350a8a93a41a0a5aa0992091b3e1",
-    "minkabu:8891994323ef3ee82462eefe3edbd3ed"
+    "minkabu:8891994323ef3ee82462eefe3edbd3ed",
+    "ロイター:a1c8c0fbcd415fc282356839c8123b9f",
+    "ロイター:d434ca527b535d6b1113cd2ea7c86470",
+    "ロイター:0dea7b14482ee237f366a21b917a3d89",
+    "ロイター:b0b1a0c9a668526c088ba7997aae9ed0",
+    "ロイター:e0b9f932f204338bf3ae030042dbe14b",
+    "ロイター:7e433c2ee716178452f0071e182019e8",
+    "ロイター:d6b18651f8c6f7e1a884a48f86a68228",
+    "ロイター:23eb8f674436ce61e5ae9a9e0a1e84e3",
+    "ロイター:48cea97c98b915d5d1cd9cf94de684e7",
+    "ロイター:e585f8d7bf2152df850294066e92ca08",
+    "ロイター:4c89654de400e27a8f4e4419971b1f0a",
+    "ロイター:53efe9adbc19ca499d02b0d865720bd9"
   ]
 }
