@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-02T19:06:28+00:00"
+      "last_fetch_at": "2026-06-02T19:16:31+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-02T19:06:28+00:00"
+      "last_fetch_at": "2026-06-02T19:16:31+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-02T19:06:28+00:00"
+      "last_fetch_at": "2026-06-02T19:16:31+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-02T19:06:28+00:00"
+      "last_fetch_at": "2026-06-02T19:16:31+00:00"
     }
   },
   "seen_ids": [
@@ -679,7 +679,17 @@
     "ロイター:48cea97c98b915d5d1cd9cf94de684e7",
     "ロイター:e585f8d7bf2152df850294066e92ca08",
     "ロイター:4c89654de400e27a8f4e4419971b1f0a",
-    "ロイター:53efe9adbc19ca499d02b0d865720bd9"
+    "ロイター:53efe9adbc19ca499d02b0d865720bd9",
+    "ブルームバーグ:054ba00b094c81fabe58c67284e4a13d",
+    "ブルームバーグ:1d22ee20f33d9f30ed38b2a043c1fdc1",
+    "ブルームバーグ:20fe0f79db0d97e6a43349abd61c682a",
+    "ブルームバーグ:482c50987c950cd914c7765b87221046",
+    "ブルームバーグ:681ba06ede0752212ba3afd14a4c6008",
+    "ブルームバーグ:6ab3251f13e1b4bc831a1db7d9061806",
+    "ブルームバーグ:7c97e4d38a69c308d08542c5e76ed4c2",
+    "ブルームバーグ:d5f0ab6b115ddcecdc6f0020d89c4685",
+    "ブルームバーグ:d8d7a17e67a5da5d479aa6754b8edd78",
+    "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924"
   ],
   "pending_items": [
     {
@@ -1151,6 +1161,106 @@
       "published_at": "2026-06-02T17:29:58+00:00",
       "fetched_at": "2026-06-02T19:06:28+00:00",
       "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:054ba00b094c81fabe58c67284e4a13d",
+      "dedupe_key": "ブルームバーグ:054ba00b094c81fabe58c67284e4a13d",
+      "source": "ブルームバーグ",
+      "title": "ウォール街アナリスト、最高値更新でも慎重姿勢－熱狂なき株高の様相",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG06KNT9NJLT00?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:1d22ee20f33d9f30ed38b2a043c1fdc1",
+      "dedupe_key": "ブルームバーグ:1d22ee20f33d9f30ed38b2a043c1fdc1",
+      "source": "ブルームバーグ",
+      "title": "独自ウニクレディト、独コメルツ銀の保有比率30%超へ－株式買い付けで",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TFZU8NKJH6V400?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:20fe0f79db0d97e6a43349abd61c682a",
+      "dedupe_key": "ブルームバーグ:20fe0f79db0d97e6a43349abd61c682a",
+      "source": "ブルームバーグ",
+      "title": "原油相場は小幅続伸、WTI先物93ドル台－イラン情勢巡り神経質な展開",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TFZZO0KK3NZ900?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:482c50987c950cd914c7765b87221046",
+      "dedupe_key": "ブルームバーグ:482c50987c950cd914c7765b87221046",
+      "source": "ブルームバーグ",
+      "title": "トランプ氏、イスラエル抑制に腐心－イランとの合意へ楽観姿勢変えず",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG0FG6KK3NZX00?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:681ba06ede0752212ba3afd14a4c6008",
+      "dedupe_key": "ブルームバーグ:681ba06ede0752212ba3afd14a4c6008",
+      "source": "ブルームバーグ",
+      "title": "ユーロ圏インフレ率が3%突破、2023年以来－ECB利上げ観測後押し",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TFZYNMT9NJLV00?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:6ab3251f13e1b4bc831a1db7d9061806",
+      "dedupe_key": "ブルームバーグ:6ab3251f13e1b4bc831a1db7d9061806",
+      "source": "ブルームバーグ",
+      "title": "円が対ドルで下げ拡大、介入警戒水準の160円に接近",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG0NXWT9NJLV00?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:7c97e4d38a69c308d08542c5e76ed4c2",
+      "dedupe_key": "ブルームバーグ:7c97e4d38a69c308d08542c5e76ed4c2",
+      "source": "ブルームバーグ",
+      "title": "米国株が小幅高に転じる、AI銘柄に再び勢い－イラン戦争終結期待も",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG0AQ8KJH6V600?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:d5f0ab6b115ddcecdc6f0020d89c4685",
+      "dedupe_key": "ブルームバーグ:d5f0ab6b115ddcecdc6f0020d89c4685",
+      "source": "ブルームバーグ",
+      "title": "FRBウォーシュ新議長のバランスシート縮小方針、米経済学者が警鐘",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TFZZLJT96OT700?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:d8d7a17e67a5da5d479aa6754b8edd78",
+      "dedupe_key": "ブルームバーグ:d8d7a17e67a5da5d479aa6754b8edd78",
+      "source": "ブルームバーグ",
+      "title": "独自スペースX、異例に低いIPO手数料で交渉―なお銀行に800億円の収入",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG08C3KK3NY800?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924",
+      "dedupe_key": "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924",
+      "source": "ブルームバーグ",
+      "title": "米求人件数、予想外に増加して2年ぶり高水準－レイオフは減少",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG0CD0KJH6V800?srnd=jp-markets",
+      "published_at": "2026-06-02T15:00:00+00:00",
+      "fetched_at": "2026-06-02T19:16:31+00:00",
+      "delivery_route": "main"
     }
   ],
   "seen_keys": [
@@ -1200,6 +1310,16 @@
     "ロイター:48cea97c98b915d5d1cd9cf94de684e7",
     "ロイター:e585f8d7bf2152df850294066e92ca08",
     "ロイター:4c89654de400e27a8f4e4419971b1f0a",
-    "ロイター:53efe9adbc19ca499d02b0d865720bd9"
+    "ロイター:53efe9adbc19ca499d02b0d865720bd9",
+    "ブルームバーグ:054ba00b094c81fabe58c67284e4a13d",
+    "ブルームバーグ:1d22ee20f33d9f30ed38b2a043c1fdc1",
+    "ブルームバーグ:20fe0f79db0d97e6a43349abd61c682a",
+    "ブルームバーグ:482c50987c950cd914c7765b87221046",
+    "ブルームバーグ:681ba06ede0752212ba3afd14a4c6008",
+    "ブルームバーグ:6ab3251f13e1b4bc831a1db7d9061806",
+    "ブルームバーグ:7c97e4d38a69c308d08542c5e76ed4c2",
+    "ブルームバーグ:d5f0ab6b115ddcecdc6f0020d89c4685",
+    "ブルームバーグ:d8d7a17e67a5da5d479aa6754b8edd78",
+    "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924"
   ]
 }
