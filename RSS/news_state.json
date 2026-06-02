@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-02T20:26:48+00:00"
+      "last_fetch_at": "2026-06-02T20:36:53+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-02T20:26:48+00:00"
+      "last_fetch_at": "2026-06-02T20:36:53+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-02T20:26:48+00:00"
+      "last_fetch_at": "2026-06-02T20:36:53+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-02T20:26:48+00:00"
+      "last_fetch_at": "2026-06-02T20:36:53+00:00"
     }
   },
   "seen_ids": [
@@ -689,7 +689,10 @@
     "ブルームバーグ:7c97e4d38a69c308d08542c5e76ed4c2",
     "ブルームバーグ:d5f0ab6b115ddcecdc6f0020d89c4685",
     "ブルームバーグ:d8d7a17e67a5da5d479aa6754b8edd78",
-    "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924"
+    "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924",
+    "みんかぶ FX/為替 株式:85c45c065786de46fb421a6233ecfab2",
+    "みんかぶ FX/為替 株式:c4a9b5df8050d2034b105564eb69df58",
+    "みんかぶ FX/為替 株式:17026025d9f7c7f481b9150c4a1962a2"
   ],
   "pending_items": [
     {
@@ -1261,6 +1264,36 @@
       "published_at": "2026-06-02T15:00:00+00:00",
       "fetched_at": "2026-06-02T19:16:31+00:00",
       "delivery_route": "main"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:85c45c065786de46fb421a6233ecfab2",
+      "dedupe_key": "minkabu:85c45c065786de46fb421a6233ecfab2",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ３時台 ダウ平均は１６７ドル高 ナスダックもプラス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368955",
+      "published_at": "2026-06-02T18:19:00+00:00",
+      "fetched_at": "2026-06-02T20:36:53+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:c4a9b5df8050d2034b105564eb69df58",
+      "dedupe_key": "minkabu:c4a9b5df8050d2034b105564eb69df58",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "原油は１．７４％高＝ＮＹ原油終値",
+      "link": "https://fx.minkabu.jp/news/368956",
+      "published_at": "2026-06-02T18:45:00+00:00",
+      "fetched_at": "2026-06-02T20:36:53+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:17026025d9f7c7f481b9150c4a1962a2",
+      "dedupe_key": "minkabu:17026025d9f7c7f481b9150c4a1962a2",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ４時台 ダウ平均は２３８ドル高 ナスダックもマイナス圏での推移",
+      "link": "https://fx.minkabu.jp/news/368957",
+      "published_at": "2026-06-02T19:16:00+00:00",
+      "fetched_at": "2026-06-02T20:36:53+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1320,6 +1353,9 @@
     "ブルームバーグ:7c97e4d38a69c308d08542c5e76ed4c2",
     "ブルームバーグ:d5f0ab6b115ddcecdc6f0020d89c4685",
     "ブルームバーグ:d8d7a17e67a5da5d479aa6754b8edd78",
-    "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924"
+    "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924",
+    "minkabu:85c45c065786de46fb421a6233ecfab2",
+    "minkabu:c4a9b5df8050d2034b105564eb69df58",
+    "minkabu:17026025d9f7c7f481b9150c4a1962a2"
   ]
 }
