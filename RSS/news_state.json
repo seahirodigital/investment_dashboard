@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-02T08:35:56+00:00"
+      "last_fetch_at": "2026-06-02T14:43:10+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-02T08:35:56+00:00"
+      "last_fetch_at": "2026-06-02T14:43:10+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-02T08:35:56+00:00"
+      "last_fetch_at": "2026-06-02T14:43:10+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-02T08:35:56+00:00"
+      "last_fetch_at": "2026-06-02T14:43:10+00:00"
     }
   },
   "seen_ids": [
@@ -632,7 +632,118 @@
     "みんかぶ FX/為替 株式:b71c3d8d3b989938eb47fe77eda840e9",
     "みんかぶ FX/為替 株式:70c014f83b98bb034c11bd854c828c73",
     "みんかぶ FX/為替 株式:5bca29c4be85ca10c95036f3028c1c37",
-    "みんかぶ FX/為替 株式:8c5e85bf5f57b1b35f825048e56a9509"
+    "みんかぶ FX/為替 株式:8c5e85bf5f57b1b35f825048e56a9509",
+    "みんかぶ FX/為替 要人発言:5bd96acd2d1b49eb770979e4810a13c0",
+    "みんかぶ FX/為替 要人発言:ed576d51e27a22dc4f65dd25bbb614c7",
+    "みんかぶ FX/為替 要人発言:8093139ed0c201892fd702695938e590",
+    "みんかぶ FX/為替 要人発言:69f23164020de3fdc130d07a8fec5c77",
+    "みんかぶ FX/為替 株式:7f0532e3f857a85bbaed921361859a2f",
+    "みんかぶ FX/為替 株式:980f78e0f220d16a7d5c9ba022867f56",
+    "みんかぶ FX/為替 株式:34b0421bef7fe87f9f90efe1acdad22a",
+    "みんかぶ FX/為替 株式:35dabbfc16c7d565676ed96d3f51d0b8",
+    "みんかぶ FX/為替 株式:6eafea6dde6c6c93e7cdf4ce27d2c8d6"
   ],
-  "pending_items": []
+  "pending_items": [
+    {
+      "id": "みんかぶ FX/為替 株式:7f0532e3f857a85bbaed921361859a2f",
+      "dedupe_key": "minkabu:7f0532e3f857a85bbaed921361859a2f",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "欧州株 英ＦＴ指数は０．２５％高、独ＤＡＸ指数は０．８％高で取引開始",
+      "link": "https://fx.minkabu.jp/news/368906",
+      "published_at": "2026-06-02T07:14:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:980f78e0f220d16a7d5c9ba022867f56",
+      "dedupe_key": "minkabu:980f78e0f220d16a7d5c9ba022867f56",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "中国株式市場 上海総合指数は０．４３％高の４０７５．１０で取引終了",
+      "link": "https://fx.minkabu.jp/news/368907",
+      "published_at": "2026-06-02T07:16:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:34b0421bef7fe87f9f90efe1acdad22a",
+      "dedupe_key": "minkabu:34b0421bef7fe87f9f90efe1acdad22a",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "東京株式（大引け）＝２００円安と反落、利益確定売り優勢も後半は急速に下げ渋る",
+      "link": "https://fx.minkabu.jp/news/368910",
+      "published_at": "2026-06-02T07:32:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:35dabbfc16c7d565676ed96d3f51d0b8",
+      "dedupe_key": "minkabu:35dabbfc16c7d565676ed96d3f51d0b8",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "香港株 ハンセン指数は２．５２％高の２６０３８．３２で取引終了",
+      "link": "https://fx.minkabu.jp/news/368915",
+      "published_at": "2026-06-02T08:21:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:6eafea6dde6c6c93e7cdf4ce27d2c8d6",
+      "dedupe_key": "minkabu:6eafea6dde6c6c93e7cdf4ce27d2c8d6",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "欧州株 堅調、引き続きＩＴ半導体関連株がけん引役",
+      "link": "https://fx.minkabu.jp/news/368918",
+      "published_at": "2026-06-02T08:31:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:5bd96acd2d1b49eb770979e4810a13c0",
+      "dedupe_key": "minkabu:5bd96acd2d1b49eb770979e4810a13c0",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "シムカス・リトアニア中銀総裁 消費者の短期的な物価見通し（期待インフレ率）は2022年を想起させる",
+      "link": "https://fx.minkabu.jp/news/368923",
+      "published_at": "2026-06-02T08:54:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:ed576d51e27a22dc4f65dd25bbb614c7",
+      "dedupe_key": "minkabu:ed576d51e27a22dc4f65dd25bbb614c7",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "レーン・フィンランド中銀総裁 6月利上げ、「保険的な措置」に",
+      "link": "https://fx.minkabu.jp/news/368931",
+      "published_at": "2026-06-02T10:24:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:8093139ed0c201892fd702695938e590",
+      "dedupe_key": "minkabu:8093139ed0c201892fd702695938e590",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "ドル円１５９円台後半で小動き、円安とドル安が交錯しての揉み合い＝ロンドン為替概況",
+      "link": "https://fx.minkabu.jp/news/368933",
+      "published_at": "2026-06-02T11:15:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:69f23164020de3fdc130d07a8fec5c77",
+      "dedupe_key": "minkabu:69f23164020de3fdc130d07a8fec5c77",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "トランプ米大統領、イスラエルの立場を守るのは困難と発言＝N１２",
+      "link": "https://fx.minkabu.jp/news/368936",
+      "published_at": "2026-06-02T11:48:00+00:00",
+      "fetched_at": "2026-06-02T14:43:10+00:00",
+      "delivery_route": "minkabu"
+    }
+  ],
+  "seen_keys": [
+    "minkabu:5bd96acd2d1b49eb770979e4810a13c0",
+    "minkabu:ed576d51e27a22dc4f65dd25bbb614c7",
+    "minkabu:8093139ed0c201892fd702695938e590",
+    "minkabu:69f23164020de3fdc130d07a8fec5c77",
+    "minkabu:7f0532e3f857a85bbaed921361859a2f",
+    "minkabu:980f78e0f220d16a7d5c9ba022867f56",
+    "minkabu:34b0421bef7fe87f9f90efe1acdad22a",
+    "minkabu:35dabbfc16c7d565676ed96d3f51d0b8",
+    "minkabu:6eafea6dde6c6c93e7cdf4ce27d2c8d6"
+  ]
 }
