@@ -45,6 +45,7 @@ jobs:
         id: rss_news
         env:
           DISCORD_NEWS_WEBHOOK_URL: ${{ secrets.DISCORD_NEWS_WEBHOOK_URL }}
+          DISCORD_MINKABU_RSS_NEWS_WEBHOOK_URL: ${{ secrets.MINKABU_RSS_NEWS }}
           RSS_MONITOR_INTERVAL_MINUTES: ${{ github.event.inputs.interval_minutes }}
           RSS_MONITOR_DURATION_MINUTES: ${{ github.event.inputs.duration_minutes }}
         run: |

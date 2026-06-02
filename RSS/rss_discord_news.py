@@ -36,15 +36,30 @@ MIN_FETCH_INTERVAL_SECONDS = 10 * 60
 MAX_SEEN_IDS = 800
 DISCORD_CONTENT_LIMIT = 1900
 CLASSIFICATION_CANDIDATES = ["米国株", "日本株", "海外市況", "日本市況"]
+DEFAULT_DELIVERY_ROUTE = "main"
+MINKABU_DELIVERY_ROUTE = "minkabu"
+MINKABU_WEBHOOK_ENV = "DISCORD_MINKABU_RSS_NEWS_WEBHOOK_URL"
 
 FEEDS = [
     {
         "name": "ブルームバーグ",
         "url": "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf",
+        "delivery_route": DEFAULT_DELIVERY_ROUTE,
     },
     {
         "name": "ロイター",
         "url": "https://assets.wor.jp/rss/rdf/reuters/top.rdf",
+        "delivery_route": DEFAULT_DELIVERY_ROUTE,
+    },
+    {
+        "name": "みんかぶ FX/為替 要人発言",
+        "url": "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf",
+        "delivery_route": MINKABU_DELIVERY_ROUTE,
+    },
+    {
+        "name": "みんかぶ FX/為替 株式",
+        "url": "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf",
+        "delivery_route": MINKABU_DELIVERY_ROUTE,
     },
     {
         "name": "みんかぶ FX/為替 要人発言",
@@ -65,20 +80,24 @@ USER_AGENT = (
 @dataclass(frozen=True)
 class NewsItem:
     item_id: str
+    dedupe_key: str
     source: str
     title: str
     link: str
     published_at: str | None
     fetched_at: str
+    delivery_route: str = DEFAULT_DELIVERY_ROUTE
 
     def to_dict(self) -> dict[str, str | None]:
         return {
             "id": self.item_id,
+            "dedupe_key": self.dedupe_key,
             "source": self.source,
             "title": self.title,
             "link": self.link,
             "published_at": self.published_at,
             "fetched_at": self.fetched_at,
+            "delivery_route": self.delivery_route,
         }
 
 
@@ -148,6 +167,31 @@ def _make_item_id(source: str, raw_id: str, title: str, link: str) -> str:
     return f"{source}:{digest[:32]}"
 
 
+def _normalize_link_for_key(link: str) -> str:
+    normalized = _normalize_text(link)
+    if not normalized:
+        return ""
+    return normalized.split("#", 1)[0].rstrip("/")
+
+
+def _feed_delivery_route(feed: dict[str, str]) -> str:
+    return feed.get("delivery_route") or DEFAULT_DELIVERY_ROUTE
+
+
+def _delivery_route_from_source(source: str) -> str:
+    if source.startswith("みんかぶ"):
+        return MINKABU_DELIVERY_ROUTE
+    return DEFAULT_DELIVERY_ROUTE
+
+
+def _make_dedupe_key(delivery_route: str, raw_id: str, title: str, link: str, item_id: str) -> str:
+    if delivery_route == MINKABU_DELIVERY_ROUTE:
+        base = _normalize_link_for_key(link) or raw_id or title or item_id
+        digest = hashlib.sha256(base.encode("utf-8")).hexdigest()
+        return f"{MINKABU_DELIVERY_ROUTE}:{digest[:32]}"
+    return item_id
+
+
 def _sort_key(item: NewsItem) -> tuple[datetime, str]:
     parsed = _parse_datetime(item.published_at) or _parse_datetime(item.fetched_at)
     if parsed is None:
@@ -186,8 +230,10 @@ def append_delivery_log(path: Path, items: list[NewsItem], delivered_at: datetim
         for item in items:
             record = {
                 "id": item.item_id,
+                "dedupe_key": item.dedupe_key,
                 "delivered_at": delivered_at_utc,
                 "delivered_at_jst": delivered_at_jst,
+                "delivery_route": item.delivery_route,
                 "source": item.source,
                 "title": item.title,
                 "link": item.link,
@@ -217,6 +263,7 @@ def load_state(path: Path) -> dict[str, Any]:
             "version": STATE_VERSION,
             "feeds": {},
             "seen_ids": [],
+            "seen_keys": [],
             "pending_items": [],
         }
 
@@ -226,6 +273,7 @@ def load_state(path: Path) -> dict[str, Any]:
     state.setdefault("version", STATE_VERSION)
     state.setdefault("feeds", {})
     state.setdefault("seen_ids", [])
+    state.setdefault("seen_keys", [])
     state.setdefault("pending_items", [])
     return state
 
@@ -233,6 +281,7 @@ def load_state(path: Path) -> dict[str, Any]:
 def save_state(path: Path, state: dict[str, Any]) -> None:
     state["version"] = STATE_VERSION
     state["seen_ids"] = list(dict.fromkeys(state.get("seen_ids", [])))[-MAX_SEEN_IDS:]
+    state["seen_keys"] = list(dict.fromkeys(state.get("seen_keys", [])))[-MAX_SEEN_IDS:]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(state, handle, ensure_ascii=False, indent=2)
@@ -250,6 +299,7 @@ def should_fetch(feed_state: dict[str, Any], now: datetime) -> bool:
 def parse_feed_content(feed: dict[str, str], content: bytes, now: datetime) -> list[NewsItem]:
     root = ET.fromstring(content)
     fetched_at = _isoformat_utc(now)
+    delivery_route = _feed_delivery_route(feed)
     items: list[NewsItem] = []
 
     for node in root.findall(".//{*}item"):
@@ -270,14 +320,19 @@ def parse_feed_content(feed: dict[str, str], content: bytes, now: datetime) -> l
         if published_datetime is not None:
             published_at = _isoformat_utc(published_datetime)
 
+        item_id = _make_item_id(feed["name"], raw_id, title, link)
+        dedupe_key = _make_dedupe_key(delivery_route, raw_id, title, link, item_id)
+
         items.append(
             NewsItem(
-                item_id=_make_item_id(feed["name"], raw_id, title, link),
+                item_id=item_id,
+                dedupe_key=dedupe_key,
                 source=feed["name"],
                 title=title,
                 link=link,
                 published_at=published_at,
                 fetched_at=fetched_at,
+                delivery_route=delivery_route,
             )
         )
 
@@ -304,21 +359,30 @@ def is_delivery_time(now: datetime) -> bool:
 
 def add_pending_items(state: dict[str, Any], items: list[NewsItem]) -> int:
     seen_id_list = list(dict.fromkeys(state.get("seen_ids", [])))
+    seen_key_list = list(dict.fromkeys(state.get("seen_keys", [])))
     seen_ids = set(seen_id_list)
+    seen_keys = set(seen_key_list)
     pending_items = state.setdefault("pending_items", [])
     pending_ids = {item.get("id") for item in pending_items}
+    pending_keys = {item.get("dedupe_key") or item.get("id") for item in pending_items}
     added = 0
 
     for item in items:
-        if item.item_id in seen_ids or item.item_id in pending_ids:
+        if item.item_id in seen_ids or item.dedupe_key in seen_keys:
+            continue
+        if item.item_id in pending_ids or item.dedupe_key in pending_keys:
             continue
         pending_items.append(item.to_dict())
         seen_ids.add(item.item_id)
+        seen_keys.add(item.dedupe_key)
         seen_id_list.append(item.item_id)
+        seen_key_list.append(item.dedupe_key)
         pending_ids.add(item.item_id)
+        pending_keys.add(item.dedupe_key)
         added += 1
 
     state["seen_ids"] = list(dict.fromkeys(seen_id_list))[-MAX_SEEN_IDS:]
+    state["seen_keys"] = list(dict.fromkeys(seen_key_list))[-MAX_SEEN_IDS:]
     return added
 
 
@@ -327,17 +391,40 @@ def _pending_to_items(state: dict[str, Any]) -> list[NewsItem]:
     for item in state.get("pending_items", []):
         if not isinstance(item, dict):
             continue
+        item_id = str(item.get("id", ""))
+        source = str(item.get("source", ""))
+        title = str(item.get("title", ""))
+        link = str(item.get("link", ""))
+        delivery_route = str(item.get("delivery_route") or _delivery_route_from_source(source))
+        dedupe_key = str(
+            item.get("dedupe_key")
+            or _make_dedupe_key(delivery_route, "", title, link, item_id)
+        )
         result.append(
             NewsItem(
-                item_id=str(item.get("id", "")),
-                source=str(item.get("source", "")),
-                title=str(item.get("title", "")),
-                link=str(item.get("link", "")),
+                item_id=item_id,
+                dedupe_key=dedupe_key,
+                source=source,
+                title=title,
+                link=link,
                 published_at=item.get("published_at"),
                 fetched_at=str(item.get("fetched_at", "")),
+                delivery_route=delivery_route,
             )
         )
-    return sorted(result, key=_sort_key)
+    return _dedupe_items(sorted(result, key=_sort_key))
+
+
+def _dedupe_items(items: list[NewsItem]) -> list[NewsItem]:
+    deduped: list[NewsItem] = []
+    seen_keys: set[str] = set()
+    for item in items:
+        key = item.dedupe_key or item.item_id
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        deduped.append(item)
+    return deduped
 
 
 def build_discord_messages(items: list[NewsItem], now: datetime) -> list[str]:
@@ -422,6 +509,26 @@ def send_to_discord(webhook_url: str, messages: list[str]) -> None:
         time.sleep(0.8)
 
 
+def _group_items_by_delivery_route(items: list[NewsItem]) -> dict[str, list[NewsItem]]:
+    grouped: dict[str, list[NewsItem]] = {}
+    for item in items:
+        delivery_route = item.delivery_route or DEFAULT_DELIVERY_ROUTE
+        grouped.setdefault(delivery_route, []).append(item)
+    return grouped
+
+
+def _webhook_env_for_route(args: argparse.Namespace, delivery_route: str) -> str:
+    if delivery_route == MINKABU_DELIVERY_ROUTE:
+        return args.minkabu_webhook_env
+    return args.webhook_env
+
+
+def _delivery_route_label(delivery_route: str) -> str:
+    if delivery_route == MINKABU_DELIVERY_ROUTE:
+        return "みんかぶRSS NEWS"
+    return "Reuters/Bloomberg NEWS"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="RSSニュースをDiscordへ配信します。")
     parser.add_argument(
@@ -443,6 +550,11 @@ def parse_args() -> argparse.Namespace:
         "--webhook-env",
         default="DISCORD_NEWS_WEBHOOK_URL",
         help="Discord Webhook URLを読む環境変数名です。",
+    )
+    parser.add_argument(
+        "--minkabu-webhook-env",
+        default=MINKABU_WEBHOOK_ENV,
+        help="みんかぶRSS NEWS用Discord Webhook URLを読む環境変数名です。",
     )
     parser.add_argument(
         "--now",
@@ -524,21 +636,48 @@ def main() -> int:
             print("配信対象のNEWSはありません。")
             return exit_code
 
-        messages = build_discord_messages(pending_items, now)
+        grouped_items = _group_items_by_delivery_route(pending_items)
+        message_count = sum(
+            len(build_discord_messages(route_items, now))
+            for route_items in grouped_items.values()
+        )
         if not args.send:
-            print(f"Discord送信は未指定です。配信予定メッセージ {len(messages)} 件を作成しました。")
+            print(f"Discord送信は未指定です。配信予定メッセージ {message_count} 件を作成しました。")
             return exit_code
 
-        webhook_url = os.environ.get(args.webhook_env, "")
-        try:
-            send_to_discord(webhook_url, messages)
-            append_delivery_log(delivery_log_path, pending_items, now)
-            state["pending_items"] = []
-            print(f"DiscordへのNEWS配信が完了しました: {len(pending_items)} 件")
+        delivered_items: list[NewsItem] = []
+        for delivery_route, route_items in grouped_items.items():
+            messages = build_discord_messages(route_items, now)
+            webhook_env = _webhook_env_for_route(args, delivery_route)
+            webhook_url = os.environ.get(webhook_env, "")
+            route_label = _delivery_route_label(delivery_route)
+
+            try:
+                send_to_discord(webhook_url, messages)
+                append_delivery_log(delivery_log_path, route_items, now)
+                delivered_items.extend(route_items)
+                print(f"{route_label} の配信が完了しました: {len(route_items)} 件")
+            except Exception as exc:
+                exit_code = 1
+                print(
+                    f"{route_label} の配信に失敗しました。未配信NEWSを保持します: "
+                    f"{webhook_env} {exc}",
+                    file=sys.stderr,
+                )
+
+        delivered_keys = {item.dedupe_key or item.item_id for item in delivered_items}
+        remaining_items = [
+            item
+            for item in pending_items
+            if (item.dedupe_key or item.item_id) not in delivered_keys
+        ]
+        state["pending_items"] = [item.to_dict() for item in remaining_items]
+
+        if delivered_items:
+            print(f"DiscordへのNEWS配信が完了しました: {len(delivered_items)} 件")
             print(f"NEWS配信ログを保存しました: {delivery_log_path.resolve()}")
-        except Exception as exc:
-            exit_code = 1
-            print(f"DiscordへのNEWS配信に失敗しました。未配信NEWSを保持します: {exc}", file=sys.stderr)
+        if remaining_items:
+            print(f"未配信NEWSを保持しました: {len(remaining_items)} 件")
 
         return exit_code
     finally:
