@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T05:06:02+00:00"
+      "last_fetch_at": "2026-06-03T05:16:04+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T05:06:02+00:00"
+      "last_fetch_at": "2026-06-03T05:16:04+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T05:06:02+00:00"
+      "last_fetch_at": "2026-06-03T05:16:04+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T05:06:02+00:00"
+      "last_fetch_at": "2026-06-03T05:16:04+00:00"
     }
   },
   "seen_ids": [
@@ -706,7 +706,9 @@
     "みんかぶ FX/為替 株式:19118e1353196300628ebd6e103a3e7d",
     "みんかぶ FX/為替 株式:556ae8c885e4de9bee1320f4224e989a",
     "みんかぶ FX/為替 株式:0dd8c345ad85e785c2f0a5f44067d10c",
-    "みんかぶ FX/為替 株式:aaf915f53adda1bf921677f2f1945143"
+    "みんかぶ FX/為替 株式:aaf915f53adda1bf921677f2f1945143",
+    "みんかぶ FX/為替 株式:41a25feeed826da2b4cb4a9aba6fcc4c",
+    "みんかぶ FX/為替 株式:1a4a9ece5edb402e62e50bf8b71f39df"
   ],
   "pending_items": [
     {
@@ -1028,6 +1030,26 @@
       "published_at": "2026-06-03T01:35:00+00:00",
       "fetched_at": "2026-06-03T03:15:38+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:41a25feeed826da2b4cb4a9aba6fcc4c",
+      "dedupe_key": "minkabu:41a25feeed826da2b4cb4a9aba6fcc4c",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "アジア株 米イスラエル対立で戦争泥沼化もAI熱が下支え 韓国休場",
+      "link": "https://fx.minkabu.jp/news/369018",
+      "published_at": "2026-06-03T02:30:00+00:00",
+      "fetched_at": "2026-06-03T05:16:04+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:1a4a9ece5edb402e62e50bf8b71f39df",
+      "dedupe_key": "minkabu:1a4a9ece5edb402e62e50bf8b71f39df",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "東京株式（前引け）＝急反発、半導体関連など買われ初の６万８０００円台乗せ",
+      "link": "https://fx.minkabu.jp/news/369020",
+      "published_at": "2026-06-03T03:00:00+00:00",
+      "fetched_at": "2026-06-03T05:16:04+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1104,6 +1126,8 @@
     "minkabu:19118e1353196300628ebd6e103a3e7d",
     "minkabu:556ae8c885e4de9bee1320f4224e989a",
     "minkabu:0dd8c345ad85e785c2f0a5f44067d10c",
-    "minkabu:aaf915f53adda1bf921677f2f1945143"
+    "minkabu:aaf915f53adda1bf921677f2f1945143",
+    "minkabu:41a25feeed826da2b4cb4a9aba6fcc4c",
+    "minkabu:1a4a9ece5edb402e62e50bf8b71f39df"
   ]
 }
