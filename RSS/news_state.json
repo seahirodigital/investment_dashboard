@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T17:57:06+00:00"
+      "last_fetch_at": "2026-06-03T18:07:09+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T17:57:06+00:00"
+      "last_fetch_at": "2026-06-03T18:07:09+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T17:57:06+00:00"
+      "last_fetch_at": "2026-06-03T18:07:09+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T17:57:06+00:00"
+      "last_fetch_at": "2026-06-03T18:07:09+00:00"
     }
   },
   "seen_ids": [
@@ -754,7 +754,14 @@
     "みんかぶ FX/為替 株式:723fceb97fb517433778fdf80d030690",
     "みんかぶ FX/為替 株式:1d256a5b799f0151f3e7c0c492d7eb68",
     "みんかぶ FX/為替 株式:13c7acbd93652a13969e04fbf8f749d4",
-    "みんかぶ FX/為替 株式:acfc303cd629616ad89d36a4fcd73b9f"
+    "みんかぶ FX/為替 株式:acfc303cd629616ad89d36a4fcd73b9f",
+    "ロイター:0053940cfd6f195ec84daf0652c510f4",
+    "ロイター:8fa2be1735a91a6b37a4bbba7beed18d",
+    "ロイター:d97e28b16f264cdfb2f112b1effaaf6b",
+    "ロイター:dce866363401609bbd118581b3fc3772",
+    "ロイター:62063625d8a5aaef595014ab3998646b",
+    "ロイター:fca71f9babd32a40c6753399bb8cf56f",
+    "ロイター:7fc141cec5f3f2a7d3168674393521ed"
   ],
   "pending_items": [
     {
@@ -1356,6 +1363,76 @@
       "published_at": "2026-06-03T16:15:00+00:00",
       "fetched_at": "2026-06-03T17:57:06+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "ロイター:0053940cfd6f195ec84daf0652c510f4",
+      "dedupe_key": "ロイター:0053940cfd6f195ec84daf0652c510f4",
+      "source": "ロイター",
+      "title": "トランプ氏、ネタニヤフ氏非難認める 電話会談で「クレイジー」と発言",
+      "link": "https://jp.reuters.com/world/security/P7WCIJ5DN5N4ZIFYL2FZFB2TBY-2026-06-03/",
+      "published_at": "2026-06-03T14:27:17+00:00",
+      "fetched_at": "2026-06-03T18:07:09+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:8fa2be1735a91a6b37a4bbba7beed18d",
+      "dedupe_key": "ロイター:8fa2be1735a91a6b37a4bbba7beed18d",
+      "source": "ロイター",
+      "title": "イスラエル首相、イラン弱体化と認識 トランプ氏との関係は良好",
+      "link": "https://jp.reuters.com/world/security/BDY4EQG6TZPQRGPBN6DWGG327I-2026-06-03/",
+      "published_at": "2026-06-03T14:49:33+00:00",
+      "fetched_at": "2026-06-03T18:07:09+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:d97e28b16f264cdfb2f112b1effaaf6b",
+      "dedupe_key": "ロイター:d97e28b16f264cdfb2f112b1effaaf6b",
+      "source": "ロイター",
+      "title": "レバノン・イスラエル協議、声明や行動計画につながること期待＝米国務長官",
+      "link": "https://jp.reuters.com/world/security/63CHQCBEDFLTDAGN7UYZPAXTDQ-2026-06-03/",
+      "published_at": "2026-06-03T15:14:10+00:00",
+      "fetched_at": "2026-06-03T18:07:09+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:dce866363401609bbd118581b3fc3772",
+      "dedupe_key": "ロイター:dce866363401609bbd118581b3fc3772",
+      "source": "ロイター",
+      "title": "4月米製造業新規受注、前月比4.8％増 約1年ぶりの大きな伸び",
+      "link": "https://jp.reuters.com/markets/japan/XINU4FFX75IWZF5DQODJ6FOQVQ-2026-06-03/",
+      "published_at": "2026-06-03T15:16:06+00:00",
+      "fetched_at": "2026-06-03T18:07:09+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:62063625d8a5aaef595014ab3998646b",
+      "dedupe_key": "ロイター:62063625d8a5aaef595014ab3998646b",
+      "source": "ロイター",
+      "title": "米政権高官10人がスペースＸ株保有、計4000万ドル超か＝報道",
+      "link": "https://jp.reuters.com/markets/world-indices/MKYRXD5NMJKOPA7AU57KTXGBXU-2026-06-03/",
+      "published_at": "2026-06-03T15:36:27+00:00",
+      "fetched_at": "2026-06-03T18:07:09+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:fca71f9babd32a40c6753399bb8cf56f",
+      "dedupe_key": "ロイター:fca71f9babd32a40c6753399bb8cf56f",
+      "source": "ロイター",
+      "title": "米5月ＩＳＭ非製造業指数、54.5に上昇 イラン紛争で発注・在庫積み増し",
+      "link": "https://jp.reuters.com/markets/japan/XB6XM3TD3RNBJKZJJRJQIOPITQ-2026-06-03/",
+      "published_at": "2026-06-03T15:49:37+00:00",
+      "fetched_at": "2026-06-03T18:07:09+00:00",
+      "delivery_route": "main"
+    },
+    {
+      "id": "ロイター:7fc141cec5f3f2a7d3168674393521ed",
+      "dedupe_key": "ロイター:7fc141cec5f3f2a7d3168674393521ed",
+      "source": "ロイター",
+      "title": "現行政策は適切、金利変更不要 インフレ上振れリスクも＝ＮＹ連銀総裁",
+      "link": "https://jp.reuters.com/markets/japan/VARCEHDEKJLNTDW4546W2OESR4-2026-06-03/",
+      "published_at": "2026-06-03T15:49:55+00:00",
+      "fetched_at": "2026-06-03T18:07:09+00:00",
+      "delivery_route": "main"
     }
   ],
   "seen_keys": [
@@ -1480,6 +1557,13 @@
     "minkabu:723fceb97fb517433778fdf80d030690",
     "minkabu:1d256a5b799f0151f3e7c0c492d7eb68",
     "minkabu:13c7acbd93652a13969e04fbf8f749d4",
-    "minkabu:acfc303cd629616ad89d36a4fcd73b9f"
+    "minkabu:acfc303cd629616ad89d36a4fcd73b9f",
+    "ロイター:0053940cfd6f195ec84daf0652c510f4",
+    "ロイター:8fa2be1735a91a6b37a4bbba7beed18d",
+    "ロイター:d97e28b16f264cdfb2f112b1effaaf6b",
+    "ロイター:dce866363401609bbd118581b3fc3772",
+    "ロイター:62063625d8a5aaef595014ab3998646b",
+    "ロイター:fca71f9babd32a40c6753399bb8cf56f",
+    "ロイター:7fc141cec5f3f2a7d3168674393521ed"
   ]
 }
