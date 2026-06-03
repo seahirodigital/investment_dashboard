@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T03:05:36+00:00"
+      "last_fetch_at": "2026-06-03T03:15:38+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T03:05:36+00:00"
+      "last_fetch_at": "2026-06-03T03:15:38+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T03:05:36+00:00"
+      "last_fetch_at": "2026-06-03T03:15:38+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T03:05:36+00:00"
+      "last_fetch_at": "2026-06-03T03:15:38+00:00"
     }
   },
   "seen_ids": [
@@ -703,7 +703,10 @@
     "みんかぶ FX/為替 株式:0e2c21099e676b95f9e5f6ff627fee0f",
     "みんかぶ FX/為替 株式:d75ab82e488ccd038ed013135914a3f1",
     "みんかぶ FX/為替 株式:879e88928c180cef3d69cfa62fa76357",
-    "みんかぶ FX/為替 株式:19118e1353196300628ebd6e103a3e7d"
+    "みんかぶ FX/為替 株式:19118e1353196300628ebd6e103a3e7d",
+    "みんかぶ FX/為替 株式:556ae8c885e4de9bee1320f4224e989a",
+    "みんかぶ FX/為替 株式:0dd8c345ad85e785c2f0a5f44067d10c",
+    "みんかぶ FX/為替 株式:aaf915f53adda1bf921677f2f1945143"
   ],
   "pending_items": [
     {
@@ -995,6 +998,36 @@
       "published_at": "2026-06-03T00:10:00+00:00",
       "fetched_at": "2026-06-03T02:43:32+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:556ae8c885e4de9bee1320f4224e989a",
+      "dedupe_key": "minkabu:556ae8c885e4de9bee1320f4224e989a",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "東京株式（寄り付き）＝大きく買い先行、世界同時株高でリバウンド局面に",
+      "link": "https://fx.minkabu.jp/news/369004",
+      "published_at": "2026-06-03T00:15:00+00:00",
+      "fetched_at": "2026-06-03T03:15:38+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:0dd8c345ad85e785c2f0a5f44067d10c",
+      "dedupe_key": "minkabu:0dd8c345ad85e785c2f0a5f44067d10c",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "香港株は0.34%安で取引を開始",
+      "link": "https://fx.minkabu.jp/news/369010",
+      "published_at": "2026-06-03T01:30:00+00:00",
+      "fetched_at": "2026-06-03T03:15:38+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:aaf915f53adda1bf921677f2f1945143",
+      "dedupe_key": "minkabu:aaf915f53adda1bf921677f2f1945143",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "上海株は0.17%安で取引を開始",
+      "link": "https://fx.minkabu.jp/news/369011",
+      "published_at": "2026-06-03T01:35:00+00:00",
+      "fetched_at": "2026-06-03T03:15:38+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1068,6 +1101,9 @@
     "minkabu:0e2c21099e676b95f9e5f6ff627fee0f",
     "minkabu:d75ab82e488ccd038ed013135914a3f1",
     "minkabu:879e88928c180cef3d69cfa62fa76357",
-    "minkabu:19118e1353196300628ebd6e103a3e7d"
+    "minkabu:19118e1353196300628ebd6e103a3e7d",
+    "minkabu:556ae8c885e4de9bee1320f4224e989a",
+    "minkabu:0dd8c345ad85e785c2f0a5f44067d10c",
+    "minkabu:aaf915f53adda1bf921677f2f1945143"
   ]
 }
