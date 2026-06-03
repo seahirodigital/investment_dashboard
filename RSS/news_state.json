@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T08:16:40+00:00"
+      "last_fetch_at": "2026-06-03T08:26:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T08:16:40+00:00"
+      "last_fetch_at": "2026-06-03T08:26:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T08:16:40+00:00"
+      "last_fetch_at": "2026-06-03T08:26:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T08:16:40+00:00"
+      "last_fetch_at": "2026-06-03T08:26:42+00:00"
     }
   },
   "seen_ids": [
@@ -711,7 +711,13 @@
     "みんかぶ FX/為替 株式:1a4a9ece5edb402e62e50bf8b71f39df",
     "みんかぶ FX/為替 要人発言:d4ca4bd4a1497555995080b1844346b0",
     "みんかぶ FX/為替 株式:c9070945a663267a3788e0ef83f2d9fa",
-    "みんかぶ FX/為替 株式:5145ffc60ebc3866ad87a404c98ba0ce"
+    "みんかぶ FX/為替 株式:5145ffc60ebc3866ad87a404c98ba0ce",
+    "みんかぶ FX/為替 要人発言:23e6a23ffb0573e5174940d2d114e4ed",
+    "みんかぶ FX/為替 要人発言:3e00d76cee799920661addc642bcc85e",
+    "みんかぶ FX/為替 要人発言:114bcce944b8f778f1ad83e26398c416",
+    "みんかぶ FX/為替 要人発言:c6b519bda32d52fd7d1593ea87b5c485",
+    "みんかぶ FX/為替 要人発言:fc870bf4d600913331e4ee55d0f2c9bc",
+    "みんかぶ FX/為替 要人発言:a3cc3e3965bf943efb052f09cc7c970c"
   ],
   "pending_items": [
     {
@@ -1075,6 +1081,16 @@
       "delivery_route": "minkabu"
     },
     {
+      "id": "みんかぶ FX/為替 要人発言:23e6a23ffb0573e5174940d2d114e4ed",
+      "dedupe_key": "minkabu:23e6a23ffb0573e5174940d2d114e4ed",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "これからの予定【発言・イベント】",
+      "link": "https://fx.minkabu.jp/news/369032",
+      "published_at": "2026-06-03T06:28:00+00:00",
+      "fetched_at": "2026-06-03T08:26:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
       "id": "みんかぶ FX/為替 株式:5145ffc60ebc3866ad87a404c98ba0ce",
       "dedupe_key": "minkabu:5145ffc60ebc3866ad87a404c98ba0ce",
       "source": "みんかぶ FX/為替 株式",
@@ -1082,6 +1098,56 @@
       "link": "https://fx.minkabu.jp/news/369037",
       "published_at": "2026-06-03T07:00:00+00:00",
       "fetched_at": "2026-06-03T07:16:29+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:3e00d76cee799920661addc642bcc85e",
+      "dedupe_key": "minkabu:3e00d76cee799920661addc642bcc85e",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "OECD、中東戦争の影響を背景に2026年の世界経済成長率見通しを下方修正",
+      "link": "https://fx.minkabu.jp/news/369040",
+      "published_at": "2026-06-03T07:19:00+00:00",
+      "fetched_at": "2026-06-03T08:26:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:114bcce944b8f778f1ad83e26398c416",
+      "dedupe_key": "minkabu:114bcce944b8f778f1ad83e26398c416",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "OECD世界経済及び各国の成長見通し 日本の成長率、2026年は0.6％（従来予想0.9％）",
+      "link": "https://fx.minkabu.jp/news/369049",
+      "published_at": "2026-06-03T07:39:00+00:00",
+      "fetched_at": "2026-06-03T08:26:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:c6b519bda32d52fd7d1593ea87b5c485",
+      "dedupe_key": "minkabu:c6b519bda32d52fd7d1593ea87b5c485",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "高市首相 為替政策は経済支える上で重要だ",
+      "link": "https://fx.minkabu.jp/news/369050",
+      "published_at": "2026-06-03T07:42:00+00:00",
+      "fetched_at": "2026-06-03T08:26:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:fc870bf4d600913331e4ee55d0f2c9bc",
+      "dedupe_key": "minkabu:fc870bf4d600913331e4ee55d0f2c9bc",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "高市首相 投機含む実需基づかない取引が為替相場に大きな影響",
+      "link": "https://fx.minkabu.jp/news/369051",
+      "published_at": "2026-06-03T07:43:00+00:00",
+      "fetched_at": "2026-06-03T08:26:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:a3cc3e3965bf943efb052f09cc7c970c",
+      "dedupe_key": "minkabu:a3cc3e3965bf943efb052f09cc7c970c",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "高市首相 日米はじめ国際的な連携を深化させていきたい－為替",
+      "link": "https://fx.minkabu.jp/news/369054",
+      "published_at": "2026-06-03T07:45:00+00:00",
+      "fetched_at": "2026-06-03T08:26:42+00:00",
       "delivery_route": "minkabu"
     }
   ],
@@ -1164,6 +1230,12 @@
     "minkabu:1a4a9ece5edb402e62e50bf8b71f39df",
     "minkabu:d4ca4bd4a1497555995080b1844346b0",
     "minkabu:c9070945a663267a3788e0ef83f2d9fa",
-    "minkabu:5145ffc60ebc3866ad87a404c98ba0ce"
+    "minkabu:5145ffc60ebc3866ad87a404c98ba0ce",
+    "minkabu:23e6a23ffb0573e5174940d2d114e4ed",
+    "minkabu:3e00d76cee799920661addc642bcc85e",
+    "minkabu:114bcce944b8f778f1ad83e26398c416",
+    "minkabu:c6b519bda32d52fd7d1593ea87b5c485",
+    "minkabu:fc870bf4d600913331e4ee55d0f2c9bc",
+    "minkabu:a3cc3e3965bf943efb052f09cc7c970c"
   ]
 }
