@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T06:16:16+00:00"
+      "last_fetch_at": "2026-06-03T06:26:18+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T06:16:16+00:00"
+      "last_fetch_at": "2026-06-03T06:26:18+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T06:16:16+00:00"
+      "last_fetch_at": "2026-06-03T06:26:18+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T06:16:16+00:00"
+      "last_fetch_at": "2026-06-03T06:26:18+00:00"
     }
   },
   "seen_ids": [
@@ -708,7 +708,8 @@
     "みんかぶ FX/為替 株式:0dd8c345ad85e785c2f0a5f44067d10c",
     "みんかぶ FX/為替 株式:aaf915f53adda1bf921677f2f1945143",
     "みんかぶ FX/為替 株式:41a25feeed826da2b4cb4a9aba6fcc4c",
-    "みんかぶ FX/為替 株式:1a4a9ece5edb402e62e50bf8b71f39df"
+    "みんかぶ FX/為替 株式:1a4a9ece5edb402e62e50bf8b71f39df",
+    "みんかぶ FX/為替 要人発言:d4ca4bd4a1497555995080b1844346b0"
   ],
   "pending_items": [
     {
@@ -1050,6 +1051,16 @@
       "published_at": "2026-06-03T03:00:00+00:00",
       "fetched_at": "2026-06-03T05:16:04+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:d4ca4bd4a1497555995080b1844346b0",
+      "dedupe_key": "minkabu:d4ca4bd4a1497555995080b1844346b0",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "【海外市場の注目ポイント】５月の米ＡＤＰ雇用統計など",
+      "link": "https://fx.minkabu.jp/news/369029",
+      "published_at": "2026-06-03T05:20:00+00:00",
+      "fetched_at": "2026-06-03T06:26:18+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1128,6 +1139,7 @@
     "minkabu:0dd8c345ad85e785c2f0a5f44067d10c",
     "minkabu:aaf915f53adda1bf921677f2f1945143",
     "minkabu:41a25feeed826da2b4cb4a9aba6fcc4c",
-    "minkabu:1a4a9ece5edb402e62e50bf8b71f39df"
+    "minkabu:1a4a9ece5edb402e62e50bf8b71f39df",
+    "minkabu:d4ca4bd4a1497555995080b1844346b0"
   ]
 }
