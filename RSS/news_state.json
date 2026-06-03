@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T19:47:33+00:00"
+      "last_fetch_at": "2026-06-03T19:57:36+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T19:47:33+00:00"
+      "last_fetch_at": "2026-06-03T19:57:36+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T19:47:33+00:00"
+      "last_fetch_at": "2026-06-03T19:57:36+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T19:47:33+00:00"
+      "last_fetch_at": "2026-06-03T19:57:36+00:00"
     }
   },
   "seen_ids": [
@@ -761,7 +761,11 @@
     "ロイター:dce866363401609bbd118581b3fc3772",
     "ロイター:62063625d8a5aaef595014ab3998646b",
     "ロイター:fca71f9babd32a40c6753399bb8cf56f",
-    "ロイター:7fc141cec5f3f2a7d3168674393521ed"
+    "ロイター:7fc141cec5f3f2a7d3168674393521ed",
+    "みんかぶ FX/為替 株式:1c74c1a532fccdbf203518c1258dc8a7",
+    "みんかぶ FX/為替 株式:434381c90f5bde9c1f27d367bc87f063",
+    "みんかぶ FX/為替 株式:c1ad576923b3d464c9e14c3bee8aa1fe",
+    "みんかぶ FX/為替 株式:b895672338dbabbc344983e80d539959"
   ],
   "pending_items": [
     {
@@ -1433,6 +1437,46 @@
       "published_at": "2026-06-03T15:49:55+00:00",
       "fetched_at": "2026-06-03T18:07:09+00:00",
       "delivery_route": "main"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:1c74c1a532fccdbf203518c1258dc8a7",
+      "dedupe_key": "minkabu:1c74c1a532fccdbf203518c1258dc8a7",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ２時台 ダウ平均は４１８ドル安 ナスダックも大幅安",
+      "link": "https://fx.minkabu.jp/news/369109",
+      "published_at": "2026-06-03T17:23:00+00:00",
+      "fetched_at": "2026-06-03T19:57:36+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:434381c90f5bde9c1f27d367bc87f063",
+      "dedupe_key": "minkabu:434381c90f5bde9c1f27d367bc87f063",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "金は１．１７％安＝ＮＹ金終値",
+      "link": "https://fx.minkabu.jp/news/369111",
+      "published_at": "2026-06-03T17:59:00+00:00",
+      "fetched_at": "2026-06-03T19:57:36+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:c1ad576923b3d464c9e14c3bee8aa1fe",
+      "dedupe_key": "minkabu:c1ad576923b3d464c9e14c3bee8aa1fe",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ３時台 ダウ平均は４２６ドル安 ナスダックもマイナス圏での推移",
+      "link": "https://fx.minkabu.jp/news/369112",
+      "published_at": "2026-06-03T18:26:00+00:00",
+      "fetched_at": "2026-06-03T19:57:36+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:b895672338dbabbc344983e80d539959",
+      "dedupe_key": "minkabu:b895672338dbabbc344983e80d539959",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "原油は２．４１％高＝ＮＹ原油終値",
+      "link": "https://fx.minkabu.jp/news/369114",
+      "published_at": "2026-06-03T18:45:00+00:00",
+      "fetched_at": "2026-06-03T19:57:36+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1564,6 +1608,10 @@
     "ロイター:dce866363401609bbd118581b3fc3772",
     "ロイター:62063625d8a5aaef595014ab3998646b",
     "ロイター:fca71f9babd32a40c6753399bb8cf56f",
-    "ロイター:7fc141cec5f3f2a7d3168674393521ed"
+    "ロイター:7fc141cec5f3f2a7d3168674393521ed",
+    "minkabu:1c74c1a532fccdbf203518c1258dc8a7",
+    "minkabu:434381c90f5bde9c1f27d367bc87f063",
+    "minkabu:c1ad576923b3d464c9e14c3bee8aa1fe",
+    "minkabu:b895672338dbabbc344983e80d539959"
   ]
 }
