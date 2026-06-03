@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T17:47:04+00:00"
+      "last_fetch_at": "2026-06-03T17:57:06+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T17:47:04+00:00"
+      "last_fetch_at": "2026-06-03T17:57:06+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T17:47:04+00:00"
+      "last_fetch_at": "2026-06-03T17:57:06+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T17:47:04+00:00"
+      "last_fetch_at": "2026-06-03T17:57:06+00:00"
     }
   },
   "seen_ids": [
@@ -752,7 +752,9 @@
     "みんかぶ FX/為替 株式:e79ac258b76c39468221a39844acdc4d",
     "みんかぶ FX/為替 株式:497c3074f0a87ca8bc3d6ad98e21c8b7",
     "みんかぶ FX/為替 株式:723fceb97fb517433778fdf80d030690",
-    "みんかぶ FX/為替 株式:1d256a5b799f0151f3e7c0c492d7eb68"
+    "みんかぶ FX/為替 株式:1d256a5b799f0151f3e7c0c492d7eb68",
+    "みんかぶ FX/為替 株式:13c7acbd93652a13969e04fbf8f749d4",
+    "みんかぶ FX/為替 株式:acfc303cd629616ad89d36a4fcd73b9f"
   ],
   "pending_items": [
     {
@@ -1334,6 +1336,26 @@
       "published_at": "2026-06-03T11:54:00+00:00",
       "fetched_at": "2026-06-03T14:44:17+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:13c7acbd93652a13969e04fbf8f749d4",
+      "dedupe_key": "minkabu:13c7acbd93652a13969e04fbf8f749d4",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ０時台 ダウ平均は４０９ドル安 ナスダックもマイナス圏での推移",
+      "link": "https://fx.minkabu.jp/news/369105",
+      "published_at": "2026-06-03T15:22:00+00:00",
+      "fetched_at": "2026-06-03T17:57:06+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:acfc303cd629616ad89d36a4fcd73b9f",
+      "dedupe_key": "minkabu:acfc303cd629616ad89d36a4fcd73b9f",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 １時台 ダウ平均は４０５ドル安 ナスダックもマイナス圏での推移",
+      "link": "https://fx.minkabu.jp/news/369107",
+      "published_at": "2026-06-03T16:15:00+00:00",
+      "fetched_at": "2026-06-03T17:57:06+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1456,6 +1478,8 @@
     "minkabu:e79ac258b76c39468221a39844acdc4d",
     "minkabu:497c3074f0a87ca8bc3d6ad98e21c8b7",
     "minkabu:723fceb97fb517433778fdf80d030690",
-    "minkabu:1d256a5b799f0151f3e7c0c492d7eb68"
+    "minkabu:1d256a5b799f0151f3e7c0c492d7eb68",
+    "minkabu:13c7acbd93652a13969e04fbf8f749d4",
+    "minkabu:acfc303cd629616ad89d36a4fcd73b9f"
   ]
 }
