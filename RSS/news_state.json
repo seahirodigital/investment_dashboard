@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-02T20:36:53+00:00"
+      "last_fetch_at": "2026-06-03T02:43:32+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-02T20:36:53+00:00"
+      "last_fetch_at": "2026-06-03T02:43:32+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-02T20:36:53+00:00"
+      "last_fetch_at": "2026-06-03T02:43:32+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-02T20:36:53+00:00"
+      "last_fetch_at": "2026-06-03T02:43:32+00:00"
     }
   },
   "seen_ids": [
@@ -692,7 +692,18 @@
     "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924",
     "みんかぶ FX/為替 株式:85c45c065786de46fb421a6233ecfab2",
     "みんかぶ FX/為替 株式:c4a9b5df8050d2034b105564eb69df58",
-    "みんかぶ FX/為替 株式:17026025d9f7c7f481b9150c4a1962a2"
+    "みんかぶ FX/為替 株式:17026025d9f7c7f481b9150c4a1962a2",
+    "みんかぶ FX/為替 要人発言:c67fa936827d3e80d0a4280603330bb6",
+    "みんかぶ FX/為替 要人発言:2d3ea7a219769be182240a90ec4b3e2f",
+    "みんかぶ FX/為替 要人発言:bf03fb37606e5ffaca899011cdb3f7bd",
+    "みんかぶ FX/為替 要人発言:7565a1fe2fce5ca5eb77b50823d9c613",
+    "みんかぶ FX/為替 要人発言:b028fa6892fac3c43e1a3f19d5d84d9f",
+    "みんかぶ FX/為替 要人発言:be340b98b498ffb1697fbc191b95f04f",
+    "みんかぶ FX/為替 要人発言:dad577bc7735d361a49a5602796b6a75",
+    "みんかぶ FX/為替 株式:0e2c21099e676b95f9e5f6ff627fee0f",
+    "みんかぶ FX/為替 株式:d75ab82e488ccd038ed013135914a3f1",
+    "みんかぶ FX/為替 株式:879e88928c180cef3d69cfa62fa76357",
+    "みんかぶ FX/為替 株式:19118e1353196300628ebd6e103a3e7d"
   ],
   "pending_items": [
     {
@@ -786,206 +797,6 @@
       "delivery_route": "minkabu"
     },
     {
-      "id": "ロイター:d6dcbe34005d6f4a58a31d9f429fb364",
-      "dedupe_key": "ロイター:d6dcbe34005d6f4a58a31d9f429fb364",
-      "source": "ロイター",
-      "title": "ウクライナ各地に大規模攻撃、極超音速ミサイル使用最多 戦争「新たなパラダイム」",
-      "link": "https://jp.reuters.com/world/ukraine/I6IYFO6OD5IU3CHAVVUBA23LSY-2026-06-02/",
-      "published_at": "2026-06-02T00:24:09+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:4371fdbffca4812b91e0d5974a91e20a",
-      "dedupe_key": "ロイター:4371fdbffca4812b91e0d5974a91e20a",
-      "source": "ロイター",
-      "title": "中国とブラジル、外圧に「共同で対抗」を 両外相が戦略対話",
-      "link": "https://jp.reuters.com/world/china/BSGGURZWFZOH5AO4LHIG7LDCUQ-2026-06-02/",
-      "published_at": "2026-06-02T04:50:41+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:97ded2f654946989790f2d480cfe6644",
-      "dedupe_key": "ロイター:97ded2f654946989790f2d480cfe6644",
-      "source": "ロイター",
-      "title": "バークシャーが2日間で168億ドル投資 アベルＣＥＯの独自戦略反映か",
-      "link": "https://jp.reuters.com/markets/japan/NOM4QKKDHZIEPELGLWXIIXKXNY-2026-06-02/",
-      "published_at": "2026-06-02T04:56:16+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:dd1bb98493ffbfbff6bd88ea643d22f8",
-      "dedupe_key": "ロイター:dd1bb98493ffbfbff6bd88ea643d22f8",
-      "source": "ロイター",
-      "title": "イスラエル、当局者の兵器見本市参加を仏が禁止と非難 「恥ずべき」",
-      "link": "https://jp.reuters.com/world/security/V6GAAY3N3VJIFP3ELIQCY3EKRQ-2026-06-02/",
-      "published_at": "2026-06-02T05:04:38+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:48613220b1d4b2904fd7afb0ddf1e5be",
-      "dedupe_key": "ロイター:48613220b1d4b2904fd7afb0ddf1e5be",
-      "source": "ロイター",
-      "title": "著名空売り投資家のレフト被告、証券詐欺で有罪評決",
-      "link": "https://jp.reuters.com/world/us/KZJVBAPQFFONBP74L5WDMUJ5LQ-2026-06-02/",
-      "published_at": "2026-06-02T05:07:45+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:d19396eab4b048ed5a36ffcdf7ac9e3b",
-      "dedupe_key": "ロイター:d19396eab4b048ed5a36ffcdf7ac9e3b",
-      "source": "ロイター",
-      "title": "ペルシャ湾内船員、停戦でも移動になお過大なリスク＝ＩＭＯ事務局長",
-      "link": "https://jp.reuters.com/world/security/YEYL6VK5JNMY3NGUZIE6FIBDYM-2026-06-02/",
-      "published_at": "2026-06-02T05:28:17+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:a1c11ff21cdbb1744694826ec4dc6521",
-      "dedupe_key": "ロイター:a1c11ff21cdbb1744694826ec4dc6521",
-      "source": "ロイター",
-      "title": "焦点：ロシア戦争犯罪の追及が暗礁に、トランプ政権の支援縮小が打撃",
-      "link": "https://jp.reuters.com/world/ukraine/JGFK7DYTIZMK5LPQE3UHRI7MDQ-2026-06-02/",
-      "published_at": "2026-06-02T05:58:56+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:d9af4c3e3f64fb4bb3ac9e8aa375d2cc",
-      "dedupe_key": "ロイター:d9af4c3e3f64fb4bb3ac9e8aa375d2cc",
-      "source": "ロイター",
-      "title": "日経平均は反落、短期過熱感で反動売り ＡＩ期待根強く下げ渋りも",
-      "link": "https://jp.reuters.com/markets/japan/W6VHN6GZ7FPFRPMEO24575YAVE-2026-06-02/",
-      "published_at": "2026-06-02T07:12:31+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:ae99a52cf5b5a1fa2167e1f77aa6ed28",
-      "dedupe_key": "ロイター:ae99a52cf5b5a1fa2167e1f77aa6ed28",
-      "source": "ロイター",
-      "title": "中国、ドイツ開発特許を1万1000件超保有＝調査",
-      "link": "https://jp.reuters.com/business/technology/UGMZKSIUBFNJRNANASYEX4THLA-2026-06-02/",
-      "published_at": "2026-06-02T07:33:29+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:ca513230c3dc3ca1c2922b0d8c076af5",
-      "dedupe_key": "ロイター:ca513230c3dc3ca1c2922b0d8c076af5",
-      "source": "ロイター",
-      "title": "ウクライナ各地での大規模攻撃、テロへの報復＝ロシア国防省",
-      "link": "https://jp.reuters.com/world/ukraine/YBOBPFTC3JIDNHP6WALKK3O2X4-2026-06-02/",
-      "published_at": "2026-06-02T07:39:07+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:f35adee404d09a41b1817f4b3c6fc216",
-      "dedupe_key": "ロイター:f35adee404d09a41b1817f4b3c6fc216",
-      "source": "ロイター",
-      "title": "キオクシア、社長「株価は資本市場の評価」 27年度に配当開始予定",
-      "link": "https://jp.reuters.com/world/japan/DY2H3E2QMVOMNMYKVTO2UTC2AQ-2026-06-02/",
-      "published_at": "2026-06-02T07:49:12+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:0f9a2066bb67eae4109a827f5fd4457d",
-      "dedupe_key": "ロイター:0f9a2066bb67eae4109a827f5fd4457d",
-      "source": "ロイター",
-      "title": "消費減税、方向性決まったものではない＝一部報道で官房長官",
-      "link": "https://jp.reuters.com/world/japan/Z6622JJTHFMO7HIXWK6KE4FW5A-2026-06-02/",
-      "published_at": "2026-06-02T07:58:15+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:eb8d395631afb627065b9fb8e55746df",
-      "dedupe_key": "ロイター:eb8d395631afb627065b9fb8e55746df",
-      "source": "ロイター",
-      "title": "国債買入れ、27年4月以降の減額継続意見6つ 停止主張3つ＝日銀債券会合要旨",
-      "link": "https://jp.reuters.com/economy/bank-of-japan/D2FJJOKEQBIGLESB5RSSW6NKZU-2026-06-02/",
-      "published_at": "2026-06-02T08:05:24+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:5574f0a37c2d21b5f316baf190339461",
-      "dedupe_key": "ロイター:5574f0a37c2d21b5f316baf190339461",
-      "source": "ロイター",
-      "title": "ロシア南部の製油所、ウクライナのドローン攻撃で火災発生",
-      "link": "https://jp.reuters.com/world/ukraine/JVP3M4BZOVJMTLNOUQPQ5WWOL4-2026-06-02/",
-      "published_at": "2026-06-02T08:39:19+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:7b294cfff5aef418c22811184b3e1dcf",
-      "dedupe_key": "ロイター:7b294cfff5aef418c22811184b3e1dcf",
-      "source": "ロイター",
-      "title": "マクロスコープ：消費減税は「ゼロ％か1％か」 高市首相を待つ財政・政治両面の課題",
-      "link": "https://jp.reuters.com/economy/YVEHR3J53BI47AC4TQK6Z3LRFE-2026-06-02/",
-      "published_at": "2026-06-02T08:49:04+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:dba87cab8c6a52c2a9708de5e2ce1dd8",
-      "dedupe_key": "ロイター:dba87cab8c6a52c2a9708de5e2ce1dd8",
-      "source": "ロイター",
-      "title": "ナフサ由来の化学製品、年度を超えて供給可能＝高市首相",
-      "link": "https://jp.reuters.com/world/us/O3QAEI6Z7ROLVAM4FMT7OGXNX4-2026-06-02/",
-      "published_at": "2026-06-02T09:51:50+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:55dbddf79965088610a90c7c4d172c03",
-      "dedupe_key": "ロイター:55dbddf79965088610a90c7c4d172c03",
-      "source": "ロイター",
-      "title": "米マーベルは次の1兆ドル企業、エヌビディアＣＥＯが評価",
-      "link": "https://jp.reuters.com/markets/japan/OIEZWQQK2VMJBF4LG7ZQUAXB7A-2026-06-02/",
-      "published_at": "2026-06-02T09:56:49+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:dceece00d7bd6d9160cc36fb2f510c92",
-      "dedupe_key": "ロイター:dceece00d7bd6d9160cc36fb2f510c92",
-      "source": "ロイター",
-      "title": "イスラエル、レバノン南部攻撃継続 ヒズボラは攻撃全面停止を要求",
-      "link": "https://jp.reuters.com/world/security/TNOZXPW2BRLPPOBX3M5G5QVFXM-2026-06-02/",
-      "published_at": "2026-06-02T12:27:44+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:765b4232d519d801f6063503970efcc2",
-      "dedupe_key": "ロイター:765b4232d519d801f6063503970efcc2",
-      "source": "ロイター",
-      "title": "トランプ氏、ＦＨＦＡ局長を国家情報長官代行に任命 安保経験乏しい側近起用",
-      "link": "https://jp.reuters.com/world/us/G3FBH773QJJT7HJ6H4SZG6NAIY-2026-06-02/",
-      "published_at": "2026-06-02T13:50:58+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:94da449d625e7c6c199bcd5ad364a27c",
-      "dedupe_key": "ロイター:94da449d625e7c6c199bcd5ad364a27c",
-      "source": "ロイター",
-      "title": "日本政府と一部金融機関、新型ＡＩ「クロード・ミュトス」のアクセス権取得",
-      "link": "https://jp.reuters.com/markets/japan/F2UTSCBRCNPFTOJ4Q7C3OQVM74-2026-06-02/",
-      "published_at": "2026-06-02T14:07:44+00:00",
-      "fetched_at": "2026-06-02T15:05:26+00:00",
-      "delivery_route": "main"
-    },
-    {
       "id": "みんかぶ FX/為替 要人発言:10544f9a3a6ba311ba1db8285be0c0cf",
       "dedupe_key": "minkabu:10544f9a3a6ba311ba1db8285be0c0cf",
       "source": "みんかぶ FX/為替 要人発言",
@@ -1046,226 +857,6 @@
       "delivery_route": "minkabu"
     },
     {
-      "id": "ロイター:a1c8c0fbcd415fc282356839c8123b9f",
-      "dedupe_key": "ロイター:a1c8c0fbcd415fc282356839c8123b9f",
-      "source": "ロイター",
-      "title": "石油市場はリスク過小評価の可能性、製品需給は年内回復困難＝ビトル幹部",
-      "link": "https://jp.reuters.com/markets/oil/HZO3XW7VORL7VLVK3DDBMOU7IY-2026-06-02/",
-      "published_at": "2026-06-02T14:17:20+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:d434ca527b535d6b1113cd2ea7c86470",
-      "dedupe_key": "ロイター:d434ca527b535d6b1113cd2ea7c86470",
-      "source": "ロイター",
-      "title": "米代表団、ロシア経済フォーラム出席へ 数年ぶり＝大統領補佐官",
-      "link": "https://jp.reuters.com/world/us/4LSOYTVGJZIIZGDKGDTWEPFIMI-2026-06-02/",
-      "published_at": "2026-06-02T14:23:14+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:0dea7b14482ee237f366a21b917a3d89",
-      "dedupe_key": "ロイター:0dea7b14482ee237f366a21b917a3d89",
-      "source": "ロイター",
-      "title": "モーニングスター、スペースＸ評価額7800億ドルと算定 ＩＰＯ目標の半分以下",
-      "link": "https://jp.reuters.com/markets/japan/DZ7VIIKJTVJW3JQO6DCPBONCWQ-2026-06-02/",
-      "published_at": "2026-06-02T14:56:12+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:b0b1a0c9a668526c088ba7997aae9ed0",
-      "dedupe_key": "ロイター:b0b1a0c9a668526c088ba7997aae9ed0",
-      "source": "ロイター",
-      "title": "イラン制裁緩和は核放棄と連動、ホルムズ海峡開放は条件でない＝米国務長官",
-      "link": "https://jp.reuters.com/world/security/FCIA2H77ANMIHCC75BLGIWVM5Y-2026-06-02/",
-      "published_at": "2026-06-02T15:00:25+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:e0b9f932f204338bf3ae030042dbe14b",
-      "dedupe_key": "ロイター:e0b9f932f204338bf3ae030042dbe14b",
-      "source": "ロイター",
-      "title": "米求人件数、4月は約2年ぶり高水準 予想以上に増加",
-      "link": "https://jp.reuters.com/markets/japan/WM2PDEZA2ROXDNDZEYCU5BJZO4-2026-06-02/",
-      "published_at": "2026-06-02T15:06:21+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:7e433c2ee716178452f0071e182019e8",
-      "dedupe_key": "ロイター:7e433c2ee716178452f0071e182019e8",
-      "source": "ロイター",
-      "title": "テスラの中国製ＥＶ販売、5月は前年比39.4％増 欧州向けが復調",
-      "link": "https://jp.reuters.com/markets/world-indices/EBV4CLNEPFL4LF4K7L5VQKHVEU-2026-06-02/",
-      "published_at": "2026-06-02T15:07:27+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:d6b18651f8c6f7e1a884a48f86a68228",
-      "dedupe_key": "ロイター:d6b18651f8c6f7e1a884a48f86a68228",
-      "source": "ロイター",
-      "title": "イスラエル首相に内外圧力、トランプ氏が罵倒と報道 レバノン作戦巡り",
-      "link": "https://jp.reuters.com/world/us/PUTGLHR3K5L3LEU2I7RDVFSXUY-2026-06-02/",
-      "published_at": "2026-06-02T15:11:07+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:23eb8f674436ce61e5ae9a9e0a1e84e3",
-      "dedupe_key": "ロイター:23eb8f674436ce61e5ae9a9e0a1e84e3",
-      "source": "ロイター",
-      "title": "米国務長官「対台湾政策に変更なし」、現状維持を改めて強調",
-      "link": "https://jp.reuters.com/world/taiwan/5PYDM6RU25LXBGI2NLUQYYLJ6Y-2026-06-02/",
-      "published_at": "2026-06-02T15:54:27+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:48cea97c98b915d5d1cd9cf94de684e7",
-      "dedupe_key": "ロイター:48cea97c98b915d5d1cd9cf94de684e7",
-      "source": "ロイター",
-      "title": "トランプ氏、ＡＩ規制強化へ大統領令 新モデル審査義務付けへ",
-      "link": "https://jp.reuters.com/world/us/7CRVK2D4SJMP3LRJHXG5E2MTTE-2026-06-02/",
-      "published_at": "2026-06-02T15:55:42+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:e585f8d7bf2152df850294066e92ca08",
-      "dedupe_key": "ロイター:e585f8d7bf2152df850294066e92ca08",
-      "source": "ロイター",
-      "title": "米7州、政権と仏トタル提訴 ＮＹ州沖の洋上風力リース停止巡り",
-      "link": "https://jp.reuters.com/world/us/6QUD6SG6QNLBHGW5RFI6FHOBDY-2026-06-02/",
-      "published_at": "2026-06-02T16:33:38+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:4c89654de400e27a8f4e4419971b1f0a",
-      "dedupe_key": "ロイター:4c89654de400e27a8f4e4419971b1f0a",
-      "source": "ロイター",
-      "title": "インフレ目標への回帰と信認が重要＝英中銀総裁",
-      "link": "https://jp.reuters.com/opinion/A22CKCPTZRMGJIKKSRQVH2PUWY-2026-06-02/",
-      "published_at": "2026-06-02T17:06:14+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:53efe9adbc19ca499d02b0d865720bd9",
-      "dedupe_key": "ロイター:53efe9adbc19ca499d02b0d865720bd9",
-      "source": "ロイター",
-      "title": "トランプ氏「イランとの協議継続」、報道を否定",
-      "link": "https://jp.reuters.com/world/security/3WON33DUOBKIHMQZK5364F7QGE-2026-06-02/",
-      "published_at": "2026-06-02T17:29:58+00:00",
-      "fetched_at": "2026-06-02T19:06:28+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:054ba00b094c81fabe58c67284e4a13d",
-      "dedupe_key": "ブルームバーグ:054ba00b094c81fabe58c67284e4a13d",
-      "source": "ブルームバーグ",
-      "title": "ウォール街アナリスト、最高値更新でも慎重姿勢－熱狂なき株高の様相",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG06KNT9NJLT00?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:1d22ee20f33d9f30ed38b2a043c1fdc1",
-      "dedupe_key": "ブルームバーグ:1d22ee20f33d9f30ed38b2a043c1fdc1",
-      "source": "ブルームバーグ",
-      "title": "独自ウニクレディト、独コメルツ銀の保有比率30%超へ－株式買い付けで",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TFZU8NKJH6V400?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:20fe0f79db0d97e6a43349abd61c682a",
-      "dedupe_key": "ブルームバーグ:20fe0f79db0d97e6a43349abd61c682a",
-      "source": "ブルームバーグ",
-      "title": "原油相場は小幅続伸、WTI先物93ドル台－イラン情勢巡り神経質な展開",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TFZZO0KK3NZ900?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:482c50987c950cd914c7765b87221046",
-      "dedupe_key": "ブルームバーグ:482c50987c950cd914c7765b87221046",
-      "source": "ブルームバーグ",
-      "title": "トランプ氏、イスラエル抑制に腐心－イランとの合意へ楽観姿勢変えず",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG0FG6KK3NZX00?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:681ba06ede0752212ba3afd14a4c6008",
-      "dedupe_key": "ブルームバーグ:681ba06ede0752212ba3afd14a4c6008",
-      "source": "ブルームバーグ",
-      "title": "ユーロ圏インフレ率が3%突破、2023年以来－ECB利上げ観測後押し",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TFZYNMT9NJLV00?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:6ab3251f13e1b4bc831a1db7d9061806",
-      "dedupe_key": "ブルームバーグ:6ab3251f13e1b4bc831a1db7d9061806",
-      "source": "ブルームバーグ",
-      "title": "円が対ドルで下げ拡大、介入警戒水準の160円に接近",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG0NXWT9NJLV00?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:7c97e4d38a69c308d08542c5e76ed4c2",
-      "dedupe_key": "ブルームバーグ:7c97e4d38a69c308d08542c5e76ed4c2",
-      "source": "ブルームバーグ",
-      "title": "米国株が小幅高に転じる、AI銘柄に再び勢い－イラン戦争終結期待も",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG0AQ8KJH6V600?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:d5f0ab6b115ddcecdc6f0020d89c4685",
-      "dedupe_key": "ブルームバーグ:d5f0ab6b115ddcecdc6f0020d89c4685",
-      "source": "ブルームバーグ",
-      "title": "FRBウォーシュ新議長のバランスシート縮小方針、米経済学者が警鐘",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TFZZLJT96OT700?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:d8d7a17e67a5da5d479aa6754b8edd78",
-      "dedupe_key": "ブルームバーグ:d8d7a17e67a5da5d479aa6754b8edd78",
-      "source": "ブルームバーグ",
-      "title": "独自スペースX、異例に低いIPO手数料で交渉―なお銀行に800億円の収入",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG08C3KK3NY800?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924",
-      "dedupe_key": "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924",
-      "source": "ブルームバーグ",
-      "title": "米求人件数、予想外に増加して2年ぶり高水準－レイオフは減少",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-02/TG0CD0KJH6V800?srnd=jp-markets",
-      "published_at": "2026-06-02T15:00:00+00:00",
-      "fetched_at": "2026-06-02T19:16:31+00:00",
-      "delivery_route": "main"
-    },
-    {
       "id": "みんかぶ FX/為替 株式:85c45c065786de46fb421a6233ecfab2",
       "dedupe_key": "minkabu:85c45c065786de46fb421a6233ecfab2",
       "source": "みんかぶ FX/為替 株式",
@@ -1293,6 +884,116 @@
       "link": "https://fx.minkabu.jp/news/368957",
       "published_at": "2026-06-02T19:16:00+00:00",
       "fetched_at": "2026-06-02T20:36:53+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:0e2c21099e676b95f9e5f6ff627fee0f",
+      "dedupe_key": "minkabu:0e2c21099e676b95f9e5f6ff627fee0f",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ダウ平均は５日続伸 アルファベットが下落しナスダックは横ばい＝米国株概況",
+      "link": "https://fx.minkabu.jp/news/368962",
+      "published_at": "2026-06-02T20:33:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:d75ab82e488ccd038ed013135914a3f1",
+      "dedupe_key": "minkabu:d75ab82e488ccd038ed013135914a3f1",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "【恐怖指数】警戒感は低下",
+      "link": "https://fx.minkabu.jp/news/368963",
+      "published_at": "2026-06-02T20:35:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:c67fa936827d3e80d0a4280603330bb6",
+      "dedupe_key": "minkabu:c67fa936827d3e80d0a4280603330bb6",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "ドル円、１６０円に急接近 米求人件数が予想外に強い内容＝ＮＹ為替概況",
+      "link": "https://fx.minkabu.jp/news/368966",
+      "published_at": "2026-06-02T20:53:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:2d3ea7a219769be182240a90ec4b3e2f",
+      "dedupe_key": "minkabu:2d3ea7a219769be182240a90ec4b3e2f",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "本日の予定【経済指標】",
+      "link": "https://fx.minkabu.jp/news/368972",
+      "published_at": "2026-06-02T22:20:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:bf03fb37606e5ffaca899011cdb3f7bd",
+      "dedupe_key": "minkabu:bf03fb37606e5ffaca899011cdb3f7bd",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "本日の予定【発言・イベント】",
+      "link": "https://fx.minkabu.jp/news/368973",
+      "published_at": "2026-06-02T22:21:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:879e88928c180cef3d69cfa62fa76357",
+      "dedupe_key": "minkabu:879e88928c180cef3d69cfa62fa76357",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "日本株ＡＤＲ・円換算終値",
+      "link": "https://fx.minkabu.jp/news/368975",
+      "published_at": "2026-06-02T22:50:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:7565a1fe2fce5ca5eb77b50823d9c613",
+      "dedupe_key": "minkabu:7565a1fe2fce5ca5eb77b50823d9c613",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "【本日の見通し】ドル円は堅調地合いを維持か",
+      "link": "https://fx.minkabu.jp/news/368976",
+      "published_at": "2026-06-02T22:55:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:b028fa6892fac3c43e1a3f19d5d84d9f",
+      "dedupe_key": "minkabu:b028fa6892fac3c43e1a3f19d5d84d9f",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "片山財務相 植田日銀総裁とは色んなものの見方が一致",
+      "link": "https://fx.minkabu.jp/news/368997",
+      "published_at": "2026-06-03T00:02:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:be340b98b498ffb1697fbc191b95f04f",
+      "dedupe_key": "minkabu:be340b98b498ffb1697fbc191b95f04f",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "片山財務相 日銀には政府の経済政策についても理解いただいている",
+      "link": "https://fx.minkabu.jp/news/368998",
+      "published_at": "2026-06-03T00:02:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:dad577bc7735d361a49a5602796b6a75",
+      "dedupe_key": "minkabu:dad577bc7735d361a49a5602796b6a75",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "片山財務相 必要に応じいつでも適切に対応",
+      "link": "https://fx.minkabu.jp/news/369001",
+      "published_at": "2026-06-03T00:07:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:19118e1353196300628ebd6e103a3e7d",
+      "dedupe_key": "minkabu:19118e1353196300628ebd6e103a3e7d",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "米株価指数先物 下げ縮小、米がイランのミサイルを撃退",
+      "link": "https://fx.minkabu.jp/news/369003",
+      "published_at": "2026-06-03T00:10:00+00:00",
+      "fetched_at": "2026-06-03T02:43:32+00:00",
       "delivery_route": "minkabu"
     }
   ],
@@ -1356,6 +1057,17 @@
     "ブルームバーグ:d935b6183c88df90c58beb6aeadc1924",
     "minkabu:85c45c065786de46fb421a6233ecfab2",
     "minkabu:c4a9b5df8050d2034b105564eb69df58",
-    "minkabu:17026025d9f7c7f481b9150c4a1962a2"
+    "minkabu:17026025d9f7c7f481b9150c4a1962a2",
+    "minkabu:c67fa936827d3e80d0a4280603330bb6",
+    "minkabu:2d3ea7a219769be182240a90ec4b3e2f",
+    "minkabu:bf03fb37606e5ffaca899011cdb3f7bd",
+    "minkabu:7565a1fe2fce5ca5eb77b50823d9c613",
+    "minkabu:b028fa6892fac3c43e1a3f19d5d84d9f",
+    "minkabu:be340b98b498ffb1697fbc191b95f04f",
+    "minkabu:dad577bc7735d361a49a5602796b6a75",
+    "minkabu:0e2c21099e676b95f9e5f6ff627fee0f",
+    "minkabu:d75ab82e488ccd038ed013135914a3f1",
+    "minkabu:879e88928c180cef3d69cfa62fa76357",
+    "minkabu:19118e1353196300628ebd6e103a3e7d"
   ]
 }
