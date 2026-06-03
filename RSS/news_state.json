@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T07:06:27+00:00"
+      "last_fetch_at": "2026-06-03T07:16:29+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T07:06:27+00:00"
+      "last_fetch_at": "2026-06-03T07:16:29+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T07:06:27+00:00"
+      "last_fetch_at": "2026-06-03T07:16:29+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T07:06:27+00:00"
+      "last_fetch_at": "2026-06-03T07:16:29+00:00"
     }
   },
   "seen_ids": [
@@ -709,7 +709,9 @@
     "みんかぶ FX/為替 株式:aaf915f53adda1bf921677f2f1945143",
     "みんかぶ FX/為替 株式:41a25feeed826da2b4cb4a9aba6fcc4c",
     "みんかぶ FX/為替 株式:1a4a9ece5edb402e62e50bf8b71f39df",
-    "みんかぶ FX/為替 要人発言:d4ca4bd4a1497555995080b1844346b0"
+    "みんかぶ FX/為替 要人発言:d4ca4bd4a1497555995080b1844346b0",
+    "みんかぶ FX/為替 株式:c9070945a663267a3788e0ef83f2d9fa",
+    "みんかぶ FX/為替 株式:5145ffc60ebc3866ad87a404c98ba0ce"
   ],
   "pending_items": [
     {
@@ -1053,6 +1055,16 @@
       "delivery_route": "minkabu"
     },
     {
+      "id": "みんかぶ FX/為替 株式:c9070945a663267a3788e0ef83f2d9fa",
+      "dedupe_key": "minkabu:c9070945a663267a3788e0ef83f2d9fa",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "アジア株 米イスラエル対立で泥沼化も関係なし、半導体が下支え",
+      "link": "https://fx.minkabu.jp/news/369028",
+      "published_at": "2026-06-03T05:20:00+00:00",
+      "fetched_at": "2026-06-03T07:16:29+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
       "id": "みんかぶ FX/為替 要人発言:d4ca4bd4a1497555995080b1844346b0",
       "dedupe_key": "minkabu:d4ca4bd4a1497555995080b1844346b0",
       "source": "みんかぶ FX/為替 要人発言",
@@ -1060,6 +1072,16 @@
       "link": "https://fx.minkabu.jp/news/369029",
       "published_at": "2026-06-03T05:20:00+00:00",
       "fetched_at": "2026-06-03T06:26:18+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:5145ffc60ebc3866ad87a404c98ba0ce",
+      "dedupe_key": "minkabu:5145ffc60ebc3866ad87a404c98ba0ce",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "欧州株 ユーロストックス５０先物は０．３９％安、中東リスク受け反落で取引開始へ",
+      "link": "https://fx.minkabu.jp/news/369037",
+      "published_at": "2026-06-03T07:00:00+00:00",
+      "fetched_at": "2026-06-03T07:16:29+00:00",
       "delivery_route": "minkabu"
     }
   ],
@@ -1140,6 +1162,8 @@
     "minkabu:aaf915f53adda1bf921677f2f1945143",
     "minkabu:41a25feeed826da2b4cb4a9aba6fcc4c",
     "minkabu:1a4a9ece5edb402e62e50bf8b71f39df",
-    "minkabu:d4ca4bd4a1497555995080b1844346b0"
+    "minkabu:d4ca4bd4a1497555995080b1844346b0",
+    "minkabu:c9070945a663267a3788e0ef83f2d9fa",
+    "minkabu:5145ffc60ebc3866ad87a404c98ba0ce"
   ]
 }
