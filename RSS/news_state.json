@@ -2,39 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-04T10:44:27+00:00"
+      "last_fetch_at": "2026-06-04T10:54:30+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-04T10:44:27+00:00"
+      "last_fetch_at": "2026-06-04T10:54:30+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-04T10:44:27+00:00"
+      "last_fetch_at": "2026-06-04T10:54:30+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-04T10:44:27+00:00"
+      "last_fetch_at": "2026-06-04T10:54:30+00:00"
     }
   },
   "seen_ids": [
-    "ロイター:7bb27522fc9b7e8d8ca66cbc65e7ee72",
-    "ロイター:d2a6952eb66e928145ba8d7ef0cc7761",
-    "ロイター:8c9901ce51e49eb90bf80a7c61e098e6",
-    "ロイター:9f0eddfa0a2fe67680b096f56559fead",
-    "ロイター:24cfdb444f17914b2df9bb6a05c48c61",
-    "ロイター:bd02b36a51a54c25bf201a963debd7f1",
-    "ロイター:b08f79e70f7b639eb88019a66f39c686",
-    "ロイター:08bab93a79d59ddc3d87884c21394b53",
-    "ロイター:1b1ec970f1ec87523b7e382c11d446f4",
-    "ロイター:70bdc03b301bdc0e0d67775f08b29529",
-    "ロイター:0335c3ec1d41471a180056eea7631e41",
-    "ロイター:8e8ed95f3b83817b10dceb4d1f96602c",
-    "ロイター:b6e3a234ddf6824ed47175ad6ff66e14",
-    "ロイター:e649da1c3263277dbf045aff8871a5ed",
-    "ロイター:3e4e677c05471e9b88c6b2f4bdd76f56",
-    "ロイター:f57ed49b6baf5daefbdd7405a4248dc9",
-    "ロイター:849b9476f7ed2b9101b1e2d7b8ce2358",
-    "ロイター:55653c7178e685f9929d2d1dbe5bb7c5",
-    "ロイター:22f92810a9e42c00c67c0ee845b71d8a",
-    "ブルームバーグ:81aed3b0035fae98977b990b4fa284d2",
     "ブルームバーグ:434bdad612b63219b600bc00c061f4c1",
     "ロイター:faafa4c9e2838743d7dd9a6d8adb6448",
     "ロイター:ffd6717e2d32e1aa6bd1f235fff23cdc",
@@ -814,7 +794,27 @@
     "みんかぶ FX/為替 株式:bca82a164e833fc46f12588957416a85",
     "みんかぶ FX/為替 株式:a6720758f241f3ac33dec8e1dbf91f42",
     "みんかぶ FX/為替 株式:e990f520a7aa5f18bf7a2ee2ed582159",
-    "みんかぶ FX/為替 株式:d3cc9f94aa036bec32e72b6816d85d36"
+    "みんかぶ FX/為替 株式:d3cc9f94aa036bec32e72b6816d85d36",
+    "ロイター:7a6e8f2a31958330fbda24bf312db8b5",
+    "ロイター:5e8ebc7e0f50e529dd56bb609b64c69b",
+    "ロイター:361f35d4fc210a0b36adf063beec4234",
+    "ロイター:e12f136fb3b117942eb6588e349c3bd8",
+    "ロイター:9d8822f9a16bcaa86a1cec3bb643db34",
+    "ロイター:fe8cfd1153039a972f142aad510defa0",
+    "ロイター:9044fc86908dc20e5a50dfb51369b685",
+    "ロイター:8f2fb5a80b8bac1b5c815bf1d3f77b1f",
+    "ロイター:27b028eb384f598e6f8d25473b41eb68",
+    "ロイター:3932ece0a9fb8d9eed155fc10eac62e2",
+    "ロイター:54a6fe2ed7469696b0f46934b353ae2c",
+    "ロイター:bc16a2c355cf5789b0660a60df25ad27",
+    "ロイター:167e3d0885cbdb5dbc0c0e248f3f5fad",
+    "ロイター:7e71a9414e33e5963a36b84162a16b8c",
+    "ロイター:48411059b2b2364f7b07ae0410dd9d63",
+    "ロイター:9ed6b881922da14b0188e1ac09a0dca1",
+    "ロイター:8711e360d4a3e9e979f9e3d0e04be10e",
+    "ロイター:86a0cacfa50607fc2640da3cc4222fe2",
+    "ロイター:3203d80e411c94fb72290c270ae00a44",
+    "ロイター:1b65ce10d00658c0fea08890e7cab7e2"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -1010,6 +1010,26 @@
     "minkabu:bca82a164e833fc46f12588957416a85",
     "minkabu:a6720758f241f3ac33dec8e1dbf91f42",
     "minkabu:e990f520a7aa5f18bf7a2ee2ed582159",
-    "minkabu:d3cc9f94aa036bec32e72b6816d85d36"
+    "minkabu:d3cc9f94aa036bec32e72b6816d85d36",
+    "ロイター:7a6e8f2a31958330fbda24bf312db8b5",
+    "ロイター:5e8ebc7e0f50e529dd56bb609b64c69b",
+    "ロイター:361f35d4fc210a0b36adf063beec4234",
+    "ロイター:e12f136fb3b117942eb6588e349c3bd8",
+    "ロイター:9d8822f9a16bcaa86a1cec3bb643db34",
+    "ロイター:fe8cfd1153039a972f142aad510defa0",
+    "ロイター:9044fc86908dc20e5a50dfb51369b685",
+    "ロイター:8f2fb5a80b8bac1b5c815bf1d3f77b1f",
+    "ロイター:27b028eb384f598e6f8d25473b41eb68",
+    "ロイター:3932ece0a9fb8d9eed155fc10eac62e2",
+    "ロイター:54a6fe2ed7469696b0f46934b353ae2c",
+    "ロイター:bc16a2c355cf5789b0660a60df25ad27",
+    "ロイター:167e3d0885cbdb5dbc0c0e248f3f5fad",
+    "ロイター:7e71a9414e33e5963a36b84162a16b8c",
+    "ロイター:48411059b2b2364f7b07ae0410dd9d63",
+    "ロイター:9ed6b881922da14b0188e1ac09a0dca1",
+    "ロイター:8711e360d4a3e9e979f9e3d0e04be10e",
+    "ロイター:86a0cacfa50607fc2640da3cc4222fe2",
+    "ロイター:3203d80e411c94fb72290c270ae00a44",
+    "ロイター:1b65ce10d00658c0fea08890e7cab7e2"
   ]
 }
