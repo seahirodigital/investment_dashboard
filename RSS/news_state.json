@@ -2,23 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-04T08:13:50+00:00"
+      "last_fetch_at": "2026-06-04T08:23:52+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-04T08:13:50+00:00"
+      "last_fetch_at": "2026-06-04T08:23:52+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-04T08:13:50+00:00"
+      "last_fetch_at": "2026-06-04T08:23:52+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-04T08:13:50+00:00"
+      "last_fetch_at": "2026-06-04T08:23:52+00:00"
     }
   },
   "seen_ids": [
-    "ブルームバーグ:0162b1331dcf9042ee09b4bf740332bf",
-    "ブルームバーグ:0a16033fad554556827b8cb3ed6afc86",
-    "ブルームバーグ:2f3516c5cf6d18dc44779fe240b5e905",
-    "ブルームバーグ:4d05788fae510ef9df1040df29d368ac",
     "ブルームバーグ:552dadba90d8236ad78e8e0e3187a04c",
     "ブルームバーグ:66d87fb22c8a5a7c2cb2aec9839f7afa",
     "ブルームバーグ:737207e04c96da485c8e3a7d3dc34627",
@@ -813,7 +809,12 @@
     "みんかぶ FX/為替 株式:bf0f43b6bbeb57dce3b3b36a6ddc0267",
     "みんかぶ FX/為替 要人発言:e209cc6aa86e1d911ae47c64bd5f98a7",
     "ブルームバーグ:677e0222e8f2a2106a5a636994077c06",
-    "みんかぶ FX/為替 株式:d37213fe90162030027da6dd16e23f8d"
+    "みんかぶ FX/為替 株式:d37213fe90162030027da6dd16e23f8d",
+    "みんかぶ FX/為替 要人発言:292e85d26127345bff9ca4fe9e27322c",
+    "みんかぶ FX/為替 要人発言:bc3bb183e2d72c607f32346610979cb7",
+    "みんかぶ FX/為替 要人発言:b47df740a65979258a47e9ea2beb034d",
+    "みんかぶ FX/為替 要人発言:c99f0a5070656212bf83e97cd57df134",
+    "みんかぶ FX/為替 要人発言:9bc5ef66c4fc48e6e311c7fc8548bc5a"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -997,6 +998,11 @@
     "minkabu:bf0f43b6bbeb57dce3b3b36a6ddc0267",
     "minkabu:e209cc6aa86e1d911ae47c64bd5f98a7",
     "ブルームバーグ:677e0222e8f2a2106a5a636994077c06",
-    "minkabu:d37213fe90162030027da6dd16e23f8d"
+    "minkabu:d37213fe90162030027da6dd16e23f8d",
+    "minkabu:292e85d26127345bff9ca4fe9e27322c",
+    "minkabu:bc3bb183e2d72c607f32346610979cb7",
+    "minkabu:b47df740a65979258a47e9ea2beb034d",
+    "minkabu:c99f0a5070656212bf83e97cd57df134",
+    "minkabu:9bc5ef66c4fc48e6e311c7fc8548bc5a"
   ]
 }
