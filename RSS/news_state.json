@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-04T04:47:20+00:00"
+      "last_fetch_at": "2026-06-04T04:57:24+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-04T04:47:20+00:00"
+      "last_fetch_at": "2026-06-04T04:57:24+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-04T04:47:20+00:00"
+      "last_fetch_at": "2026-06-04T04:57:24+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-04T04:47:20+00:00"
+      "last_fetch_at": "2026-06-04T04:57:24+00:00"
     }
   },
   "seen_ids": [
@@ -808,7 +808,9 @@
     "ロイター:5895b89b3f1cbc383961492a0671e239",
     "ロイター:c4e6c0a6aca308859cc113cf867e802b",
     "ブルームバーグ:5ccb327b1216704a8f58b6acc54581e4",
-    "ブルームバーグ:815f58145853e1748cfba515312b320e"
+    "ブルームバーグ:815f58145853e1748cfba515312b320e",
+    "みんかぶ FX/為替 株式:f9120b044ce356f8904c617ac785d468",
+    "みんかぶ FX/為替 株式:bf0f43b6bbeb57dce3b3b36a6ddc0267"
   ],
   "pending_items": [
     {
@@ -1560,6 +1562,26 @@
       "published_at": "2026-06-04T01:35:00+00:00",
       "fetched_at": "2026-06-04T02:44:42+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:f9120b044ce356f8904c617ac785d468",
+      "dedupe_key": "minkabu:f9120b044ce356f8904c617ac785d468",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "アジア株 レバノン停戦合意に安堵もネタニヤフに不信感 韓国下落",
+      "link": "https://fx.minkabu.jp/news/369162",
+      "published_at": "2026-06-04T02:23:00+00:00",
+      "fetched_at": "2026-06-04T04:57:24+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:bf0f43b6bbeb57dce3b3b36a6ddc0267",
+      "dedupe_key": "minkabu:bf0f43b6bbeb57dce3b3b36a6ddc0267",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "東京株式（前引け）＝大幅反落、一転売り圧力強まり１３００円安",
+      "link": "https://fx.minkabu.jp/news/369166",
+      "published_at": "2026-06-04T03:03:00+00:00",
+      "fetched_at": "2026-06-04T04:57:24+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1738,6 +1760,8 @@
     "ロイター:5895b89b3f1cbc383961492a0671e239",
     "ロイター:c4e6c0a6aca308859cc113cf867e802b",
     "ブルームバーグ:5ccb327b1216704a8f58b6acc54581e4",
-    "ブルームバーグ:815f58145853e1748cfba515312b320e"
+    "ブルームバーグ:815f58145853e1748cfba515312b320e",
+    "minkabu:f9120b044ce356f8904c617ac785d468",
+    "minkabu:bf0f43b6bbeb57dce3b3b36a6ddc0267"
   ]
 }
