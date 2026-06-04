@@ -2,23 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-04T08:54:00+00:00"
+      "last_fetch_at": "2026-06-04T09:04:04+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-04T08:54:00+00:00"
+      "last_fetch_at": "2026-06-04T09:04:04+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-04T08:54:00+00:00"
+      "last_fetch_at": "2026-06-04T09:04:04+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-04T08:54:00+00:00"
+      "last_fetch_at": "2026-06-04T09:04:04+00:00"
     }
   },
   "seen_ids": [
-    "ブルームバーグ:737207e04c96da485c8e3a7d3dc34627",
-    "ブルームバーグ:7403109e4b3241d54c3b6107b3277df5",
-    "ブルームバーグ:afff0a11034289459a3770391c57f546",
-    "ブルームバーグ:ca1d073d3b28333928277e123a5c0516",
     "ロイター:9eaba9775181b536322d20f844596bf4",
     "ロイター:7bb27522fc9b7e8d8ca66cbc65e7ee72",
     "ロイター:d2a6952eb66e928145ba8d7ef0cc7761",
@@ -814,7 +810,11 @@
     "みんかぶ FX/為替 要人発言:c99f0a5070656212bf83e97cd57df134",
     "みんかぶ FX/為替 要人発言:9bc5ef66c4fc48e6e311c7fc8548bc5a",
     "ブルームバーグ:546b33607dd7b7378542b41bfc149c8c",
-    "ブルームバーグ:8b33aedccbdb67ef70139b7fc3eac0cc"
+    "ブルームバーグ:8b33aedccbdb67ef70139b7fc3eac0cc",
+    "みんかぶ FX/為替 株式:e95cf7dc2e6ea77ac12a622aea909460",
+    "みんかぶ FX/為替 株式:bca82a164e833fc46f12588957416a85",
+    "みんかぶ FX/為替 株式:a6720758f241f3ac33dec8e1dbf91f42",
+    "みんかぶ FX/為替 株式:e990f520a7aa5f18bf7a2ee2ed582159"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -1005,6 +1005,10 @@
     "minkabu:c99f0a5070656212bf83e97cd57df134",
     "minkabu:9bc5ef66c4fc48e6e311c7fc8548bc5a",
     "ブルームバーグ:546b33607dd7b7378542b41bfc149c8c",
-    "ブルームバーグ:8b33aedccbdb67ef70139b7fc3eac0cc"
+    "ブルームバーグ:8b33aedccbdb67ef70139b7fc3eac0cc",
+    "minkabu:e95cf7dc2e6ea77ac12a622aea909460",
+    "minkabu:bca82a164e833fc46f12588957416a85",
+    "minkabu:a6720758f241f3ac33dec8e1dbf91f42",
+    "minkabu:e990f520a7aa5f18bf7a2ee2ed582159"
   ]
 }
