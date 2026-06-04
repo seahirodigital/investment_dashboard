@@ -15,6 +15,10 @@ on:
         description: '1回の起動で監視し続ける時間（分）'
         required: false
         default: '360'
+      test_minkabu_webhook:
+        description: 'みんかぶRSS NEWS用Webhookへテスト通知だけを送る'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -45,11 +49,22 @@ jobs:
         id: rss_news
         env:
           DISCORD_NEWS_WEBHOOK_URL: ${{ secrets.DISCORD_NEWS_WEBHOOK_URL }}
-          DISCORD_MINKABU_RSS_NEWS_WEBHOOK_URL: ${{ secrets.MINKABU_RSS_NEWS }}
+          DISCORD_MINKABU_RSS_NEWS_WEBHOOK_URL: ${{ secrets.DISCORD_MINKABU_RSS_NEWS_WEBHOOK_URL }}
           RSS_MONITOR_INTERVAL_MINUTES: ${{ github.event.inputs.interval_minutes }}
           RSS_MONITOR_DURATION_MINUTES: ${{ github.event.inputs.duration_minutes }}
+          RSS_TEST_MINKABU_WEBHOOK: ${{ github.event.inputs.test_minkabu_webhook }}
         run: |
           set -u
+
+          if [ "${RSS_TEST_MINKABU_WEBHOOK:-false}" = "true" ]; then
+            echo "みんかぶRSS NEWS用Webhookのテスト通知を送信します。"
+            python RSS/rss_discord_news.py \
+              --test-message \
+              --send \
+              --webhook-env DISCORD_MINKABU_RSS_NEWS_WEBHOOK_URL
+            echo "みんかぶRSS NEWS用Webhookのテスト通知が完了しました。"
+            exit 0
+          fi
 
           interval_minutes="${RSS_MONITOR_INTERVAL_MINUTES:-10}"
           duration_minutes="${RSS_MONITOR_DURATION_MINUTES:-360}"
