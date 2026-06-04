@@ -2,21 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-04T20:24:07+00:00"
+      "last_fetch_at": "2026-06-04T20:34:09+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-04T20:24:07+00:00"
+      "last_fetch_at": "2026-06-04T20:34:09+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-04T20:24:07+00:00"
+      "last_fetch_at": "2026-06-04T20:34:09+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-04T20:24:07+00:00"
+      "last_fetch_at": "2026-06-04T20:34:09+00:00"
     }
   },
   "seen_ids": [
-    "ロイター:c4e397ca915260fa02fbdbc06179e486",
-    "ロイター:841c9ff24e140c9d8682aa8d9bc502b9",
     "ロイター:8fb4a90d4e57c3d5dac8c437baa758e8",
     "ロイター:61e2f2f56bcd725dcdcc1e06674b0a9e",
     "ロイター:e7a833115b1655cabefdf8c5926aabcb",
@@ -814,7 +812,9 @@
     "みんかぶ FX/為替 株式:ae9f1da13ef697d94fbd9f258e023e26",
     "みんかぶ FX/為替 株式:9d0235465e7909273c9f667a39981b5f",
     "みんかぶ FX/為替 株式:2609b2e738b3f540e4746ce14f1a4ab6",
-    "みんかぶ FX/為替 株式:f2848d2dfef2b5fdd4204c535096bce0"
+    "みんかぶ FX/為替 株式:f2848d2dfef2b5fdd4204c535096bce0",
+    "みんかぶ FX/為替 株式:0da33c8c7cff264a3b295f3bfa9aa829",
+    "みんかぶ FX/為替 株式:7d37d625fb7cbecfa40e9acf802d065d"
   ],
   "pending_items": [
     {
@@ -955,6 +955,26 @@
       "link": "https://fx.minkabu.jp/news/369245",
       "published_at": "2026-06-04T18:12:00+00:00",
       "fetched_at": "2026-06-04T19:11:50+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:0da33c8c7cff264a3b295f3bfa9aa829",
+      "dedupe_key": "minkabu:0da33c8c7cff264a3b295f3bfa9aa829",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "原油は３．１０％安＝ＮＹ原油終値",
+      "link": "https://fx.minkabu.jp/news/369246",
+      "published_at": "2026-06-04T18:43:00+00:00",
+      "fetched_at": "2026-06-04T20:34:09+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:7d37d625fb7cbecfa40e9acf802d065d",
+      "dedupe_key": "minkabu:7d37d625fb7cbecfa40e9acf802d065d",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ４時台 ダウ平均は９０５ドル高 シカゴ日経平均先物は６万７７７５円",
+      "link": "https://fx.minkabu.jp/news/369247",
+      "published_at": "2026-06-04T19:16:00+00:00",
+      "fetched_at": "2026-06-04T20:34:09+00:00",
       "delivery_route": "minkabu"
     }
   ],
@@ -1188,6 +1208,8 @@
     "minkabu:ae9f1da13ef697d94fbd9f258e023e26",
     "minkabu:9d0235465e7909273c9f667a39981b5f",
     "minkabu:2609b2e738b3f540e4746ce14f1a4ab6",
-    "minkabu:f2848d2dfef2b5fdd4204c535096bce0"
+    "minkabu:f2848d2dfef2b5fdd4204c535096bce0",
+    "minkabu:0da33c8c7cff264a3b295f3bfa9aa829",
+    "minkabu:7d37d625fb7cbecfa40e9acf802d065d"
   ]
 }
