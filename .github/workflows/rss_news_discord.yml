@@ -24,7 +24,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: rss-news-discord
+  group: rss-news-discord-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test_minkabu_webhook == 'true' && 'test-minkabu' || 'monitor' }}
   cancel-in-progress: false
 
 jobs:
