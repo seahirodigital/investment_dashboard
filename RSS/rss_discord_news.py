@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any
 import requests
 
+from shiwake_skill.classifier import classify_news_text, format_discord_date_line
+
 try:
     from zoneinfo import ZoneInfo
 
@@ -240,12 +242,7 @@ def append_delivery_log(path: Path, items: list[NewsItem], delivered_at: datetim
                 "published_at": item.published_at,
                 "published_display": _format_datetime_for_message(item.published_at),
                 "fetched_at": item.fetched_at,
-                "classification": {
-                    "status": "unclassified",
-                    "primary": None,
-                    "candidates": CLASSIFICATION_CANDIDATES,
-                    "reason": "",
-                },
+                "classification": classify_news_text(item.title),
             }
             handle.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
             handle.write("\n")
@@ -441,7 +438,7 @@ def build_discord_messages(items: list[NewsItem], now: datetime) -> list[str]:
         title = _truncate(item.title, 220)
         lines = []
         if published:
-            lines.append(published)
+            lines.append(format_discord_date_line(published, item.title))
         lines.append(title)
         if item.link:
             lines.append(item.link)
