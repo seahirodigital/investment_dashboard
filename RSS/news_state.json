@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-03T20:37:45+00:00"
+      "last_fetch_at": "2026-06-04T02:44:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-03T20:37:45+00:00"
+      "last_fetch_at": "2026-06-04T02:44:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-03T20:37:45+00:00"
+      "last_fetch_at": "2026-06-04T02:44:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-03T20:37:45+00:00"
+      "last_fetch_at": "2026-06-04T02:44:42+00:00"
     }
   },
   "seen_ids": [
@@ -765,7 +765,28 @@
     "みんかぶ FX/為替 株式:1c74c1a532fccdbf203518c1258dc8a7",
     "みんかぶ FX/為替 株式:434381c90f5bde9c1f27d367bc87f063",
     "みんかぶ FX/為替 株式:c1ad576923b3d464c9e14c3bee8aa1fe",
-    "みんかぶ FX/為替 株式:b895672338dbabbc344983e80d539959"
+    "みんかぶ FX/為替 株式:b895672338dbabbc344983e80d539959",
+    "ブルームバーグ:2f6fbfc91f7eb7c2c05e49e40420077a",
+    "ブルームバーグ:33a10f76ba71314ab47a1b40e942f635",
+    "ブルームバーグ:5d5ac0a1b7d2bf743f938c85e03a7c3a",
+    "ブルームバーグ:84bdde100ca09fc4a771ea367736d3e5",
+    "ブルームバーグ:97c71aba616aeb3bf82d1d4b25e0bf71",
+    "ブルームバーグ:a684a9ea1e3a221eef2b8c5d3fb8e799",
+    "ブルームバーグ:a94cc402e0fdd858d30b4914a3c58c7d",
+    "ブルームバーグ:b303fa8498e43e41526d9628f9e99243",
+    "ブルームバーグ:c247db3e58c48e876ec300b18d29f893",
+    "ブルームバーグ:ff6f729d8fc20ee4e72e267001163a6c",
+    "みんかぶ FX/為替 要人発言:2056eec6ea7c67c511323e7f504f2b71",
+    "みんかぶ FX/為替 要人発言:7d12f1e72dc551acce7aa63b5668ce1d",
+    "みんかぶ FX/為替 要人発言:95253de1540edc360365c22f03d021d1",
+    "みんかぶ FX/為替 要人発言:eac5e8ead341002acaa8d0d1223618d2",
+    "みんかぶ FX/為替 要人発言:a5fde7964eca13d47cd2380895fd5dcc",
+    "みんかぶ FX/為替 株式:f1100d1e445e0a2a9fbc610652b7b820",
+    "みんかぶ FX/為替 株式:c6c02045a97054bbd7573a619a3a3e8f",
+    "みんかぶ FX/為替 株式:304d990590baf9b22abe4e0f5fe12a6f",
+    "みんかぶ FX/為替 株式:01a14059563c1c86b21a4494716cd950",
+    "みんかぶ FX/為替 株式:6a1cbe557ddb80cdf88a7bef0a3dba12",
+    "みんかぶ FX/為替 株式:30bf27d4a1c8daea958066f20a0128e0"
   ],
   "pending_items": [
     {
@@ -1369,76 +1390,6 @@
       "delivery_route": "minkabu"
     },
     {
-      "id": "ロイター:0053940cfd6f195ec84daf0652c510f4",
-      "dedupe_key": "ロイター:0053940cfd6f195ec84daf0652c510f4",
-      "source": "ロイター",
-      "title": "トランプ氏、ネタニヤフ氏非難認める 電話会談で「クレイジー」と発言",
-      "link": "https://jp.reuters.com/world/security/P7WCIJ5DN5N4ZIFYL2FZFB2TBY-2026-06-03/",
-      "published_at": "2026-06-03T14:27:17+00:00",
-      "fetched_at": "2026-06-03T18:07:09+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:8fa2be1735a91a6b37a4bbba7beed18d",
-      "dedupe_key": "ロイター:8fa2be1735a91a6b37a4bbba7beed18d",
-      "source": "ロイター",
-      "title": "イスラエル首相、イラン弱体化と認識 トランプ氏との関係は良好",
-      "link": "https://jp.reuters.com/world/security/BDY4EQG6TZPQRGPBN6DWGG327I-2026-06-03/",
-      "published_at": "2026-06-03T14:49:33+00:00",
-      "fetched_at": "2026-06-03T18:07:09+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:d97e28b16f264cdfb2f112b1effaaf6b",
-      "dedupe_key": "ロイター:d97e28b16f264cdfb2f112b1effaaf6b",
-      "source": "ロイター",
-      "title": "レバノン・イスラエル協議、声明や行動計画につながること期待＝米国務長官",
-      "link": "https://jp.reuters.com/world/security/63CHQCBEDFLTDAGN7UYZPAXTDQ-2026-06-03/",
-      "published_at": "2026-06-03T15:14:10+00:00",
-      "fetched_at": "2026-06-03T18:07:09+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:dce866363401609bbd118581b3fc3772",
-      "dedupe_key": "ロイター:dce866363401609bbd118581b3fc3772",
-      "source": "ロイター",
-      "title": "4月米製造業新規受注、前月比4.8％増 約1年ぶりの大きな伸び",
-      "link": "https://jp.reuters.com/markets/japan/XINU4FFX75IWZF5DQODJ6FOQVQ-2026-06-03/",
-      "published_at": "2026-06-03T15:16:06+00:00",
-      "fetched_at": "2026-06-03T18:07:09+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:62063625d8a5aaef595014ab3998646b",
-      "dedupe_key": "ロイター:62063625d8a5aaef595014ab3998646b",
-      "source": "ロイター",
-      "title": "米政権高官10人がスペースＸ株保有、計4000万ドル超か＝報道",
-      "link": "https://jp.reuters.com/markets/world-indices/MKYRXD5NMJKOPA7AU57KTXGBXU-2026-06-03/",
-      "published_at": "2026-06-03T15:36:27+00:00",
-      "fetched_at": "2026-06-03T18:07:09+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:fca71f9babd32a40c6753399bb8cf56f",
-      "dedupe_key": "ロイター:fca71f9babd32a40c6753399bb8cf56f",
-      "source": "ロイター",
-      "title": "米5月ＩＳＭ非製造業指数、54.5に上昇 イラン紛争で発注・在庫積み増し",
-      "link": "https://jp.reuters.com/markets/japan/XB6XM3TD3RNBJKZJJRJQIOPITQ-2026-06-03/",
-      "published_at": "2026-06-03T15:49:37+00:00",
-      "fetched_at": "2026-06-03T18:07:09+00:00",
-      "delivery_route": "main"
-    },
-    {
-      "id": "ロイター:7fc141cec5f3f2a7d3168674393521ed",
-      "dedupe_key": "ロイター:7fc141cec5f3f2a7d3168674393521ed",
-      "source": "ロイター",
-      "title": "現行政策は適切、金利変更不要 インフレ上振れリスクも＝ＮＹ連銀総裁",
-      "link": "https://jp.reuters.com/markets/japan/VARCEHDEKJLNTDW4546W2OESR4-2026-06-03/",
-      "published_at": "2026-06-03T15:49:55+00:00",
-      "fetched_at": "2026-06-03T18:07:09+00:00",
-      "delivery_route": "main"
-    },
-    {
       "id": "みんかぶ FX/為替 株式:1c74c1a532fccdbf203518c1258dc8a7",
       "dedupe_key": "minkabu:1c74c1a532fccdbf203518c1258dc8a7",
       "source": "みんかぶ FX/為替 株式",
@@ -1476,6 +1427,116 @@
       "link": "https://fx.minkabu.jp/news/369114",
       "published_at": "2026-06-03T18:45:00+00:00",
       "fetched_at": "2026-06-03T19:57:36+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:f1100d1e445e0a2a9fbc610652b7b820",
+      "dedupe_key": "minkabu:f1100d1e445e0a2a9fbc610652b7b820",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ＮＹ各市場 ４時台 ダウ平均は４７２ドル安 ナスダックもマイナス圏での推移",
+      "link": "https://fx.minkabu.jp/news/369115",
+      "published_at": "2026-06-03T19:30:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:2056eec6ea7c67c511323e7f504f2b71",
+      "dedupe_key": "minkabu:2056eec6ea7c67c511323e7f504f2b71",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "ダラス連銀総裁、年後半に利上げが必要になる可能性",
+      "link": "https://fx.minkabu.jp/news/369117",
+      "published_at": "2026-06-03T20:20:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:c6c02045a97054bbd7573a619a3a3e8f",
+      "dedupe_key": "minkabu:c6c02045a97054bbd7573a619a3a3e8f",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "ダウ平均は６日ぶり大幅反落 中東情勢が依然流動的な中、利益確定売り＝米国株概況",
+      "link": "https://fx.minkabu.jp/news/369119",
+      "published_at": "2026-06-03T20:38:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:7d12f1e72dc551acce7aa63b5668ce1d",
+      "dedupe_key": "minkabu:7d12f1e72dc551acce7aa63b5668ce1d",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "ドル円、１６０円台に上昇 ただ、介入警戒感もある中で駆け上がる展開まではない＝ＮＹ為替概況",
+      "link": "https://fx.minkabu.jp/news/369121",
+      "published_at": "2026-06-03T20:50:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:95253de1540edc360365c22f03d021d1",
+      "dedupe_key": "minkabu:95253de1540edc360365c22f03d021d1",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "本日の予定【経済指標】",
+      "link": "https://fx.minkabu.jp/news/369128",
+      "published_at": "2026-06-03T22:20:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:eac5e8ead341002acaa8d0d1223618d2",
+      "dedupe_key": "minkabu:eac5e8ead341002acaa8d0d1223618d2",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "本日の予定【発言・イベント】",
+      "link": "https://fx.minkabu.jp/news/369129",
+      "published_at": "2026-06-03T22:21:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:304d990590baf9b22abe4e0f5fe12a6f",
+      "dedupe_key": "minkabu:304d990590baf9b22abe4e0f5fe12a6f",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "日本株ＡＤＲ・円換算終値",
+      "link": "https://fx.minkabu.jp/news/369130",
+      "published_at": "2026-06-03T22:50:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:a5fde7964eca13d47cd2380895fd5dcc",
+      "dedupe_key": "minkabu:a5fde7964eca13d47cd2380895fd5dcc",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "【本日の見通し】ドル円は160円台でもドル高基調継続か",
+      "link": "https://fx.minkabu.jp/news/369131",
+      "published_at": "2026-06-03T22:55:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:01a14059563c1c86b21a4494716cd950",
+      "dedupe_key": "minkabu:01a14059563c1c86b21a4494716cd950",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "東京株式（寄り付き）＝反落、ＮＹダウなど米株安が重荷",
+      "link": "https://fx.minkabu.jp/news/369145",
+      "published_at": "2026-06-04T00:15:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:6a1cbe557ddb80cdf88a7bef0a3dba12",
+      "dedupe_key": "minkabu:6a1cbe557ddb80cdf88a7bef0a3dba12",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "香港株は0.64%安で取引を開始",
+      "link": "https://fx.minkabu.jp/news/369157",
+      "published_at": "2026-06-04T01:30:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
+      "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 株式:30bf27d4a1c8daea958066f20a0128e0",
+      "dedupe_key": "minkabu:30bf27d4a1c8daea958066f20a0128e0",
+      "source": "みんかぶ FX/為替 株式",
+      "title": "上海株は0.74%安で取引を開始",
+      "link": "https://fx.minkabu.jp/news/369158",
+      "published_at": "2026-06-04T01:35:00+00:00",
+      "fetched_at": "2026-06-04T02:44:42+00:00",
       "delivery_route": "minkabu"
     }
   ],
@@ -1612,6 +1673,27 @@
     "minkabu:1c74c1a532fccdbf203518c1258dc8a7",
     "minkabu:434381c90f5bde9c1f27d367bc87f063",
     "minkabu:c1ad576923b3d464c9e14c3bee8aa1fe",
-    "minkabu:b895672338dbabbc344983e80d539959"
+    "minkabu:b895672338dbabbc344983e80d539959",
+    "ブルームバーグ:2f6fbfc91f7eb7c2c05e49e40420077a",
+    "ブルームバーグ:33a10f76ba71314ab47a1b40e942f635",
+    "ブルームバーグ:5d5ac0a1b7d2bf743f938c85e03a7c3a",
+    "ブルームバーグ:84bdde100ca09fc4a771ea367736d3e5",
+    "ブルームバーグ:97c71aba616aeb3bf82d1d4b25e0bf71",
+    "ブルームバーグ:a684a9ea1e3a221eef2b8c5d3fb8e799",
+    "ブルームバーグ:a94cc402e0fdd858d30b4914a3c58c7d",
+    "ブルームバーグ:b303fa8498e43e41526d9628f9e99243",
+    "ブルームバーグ:c247db3e58c48e876ec300b18d29f893",
+    "ブルームバーグ:ff6f729d8fc20ee4e72e267001163a6c",
+    "minkabu:2056eec6ea7c67c511323e7f504f2b71",
+    "minkabu:7d12f1e72dc551acce7aa63b5668ce1d",
+    "minkabu:95253de1540edc360365c22f03d021d1",
+    "minkabu:eac5e8ead341002acaa8d0d1223618d2",
+    "minkabu:a5fde7964eca13d47cd2380895fd5dcc",
+    "minkabu:f1100d1e445e0a2a9fbc610652b7b820",
+    "minkabu:c6c02045a97054bbd7573a619a3a3e8f",
+    "minkabu:304d990590baf9b22abe4e0f5fe12a6f",
+    "minkabu:01a14059563c1c86b21a4494716cd950",
+    "minkabu:6a1cbe557ddb80cdf88a7bef0a3dba12",
+    "minkabu:30bf27d4a1c8daea958066f20a0128e0"
   ]
 }
