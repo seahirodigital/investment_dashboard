@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-04T06:07:40+00:00"
+      "last_fetch_at": "2026-06-04T06:17:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-04T06:07:40+00:00"
+      "last_fetch_at": "2026-06-04T06:17:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-04T06:07:40+00:00"
+      "last_fetch_at": "2026-06-04T06:17:42+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-04T06:07:40+00:00"
+      "last_fetch_at": "2026-06-04T06:17:42+00:00"
     }
   },
   "seen_ids": [
@@ -810,7 +810,8 @@
     "ブルームバーグ:5ccb327b1216704a8f58b6acc54581e4",
     "ブルームバーグ:815f58145853e1748cfba515312b320e",
     "みんかぶ FX/為替 株式:f9120b044ce356f8904c617ac785d468",
-    "みんかぶ FX/為替 株式:bf0f43b6bbeb57dce3b3b36a6ddc0267"
+    "みんかぶ FX/為替 株式:bf0f43b6bbeb57dce3b3b36a6ddc0267",
+    "みんかぶ FX/為替 要人発言:e209cc6aa86e1d911ae47c64bd5f98a7"
   ],
   "pending_items": [
     {
@@ -1582,6 +1583,16 @@
       "published_at": "2026-06-04T03:03:00+00:00",
       "fetched_at": "2026-06-04T04:57:24+00:00",
       "delivery_route": "minkabu"
+    },
+    {
+      "id": "みんかぶ FX/為替 要人発言:e209cc6aa86e1d911ae47c64bd5f98a7",
+      "dedupe_key": "minkabu:e209cc6aa86e1d911ae47c64bd5f98a7",
+      "source": "みんかぶ FX/為替 要人発言",
+      "title": "ブロック豪中銀総裁 豪州のインフレは高すぎる",
+      "link": "https://fx.minkabu.jp/news/369178",
+      "published_at": "2026-06-04T05:20:00+00:00",
+      "fetched_at": "2026-06-04T06:17:42+00:00",
+      "delivery_route": "minkabu"
     }
   ],
   "seen_keys": [
@@ -1762,6 +1773,7 @@
     "ブルームバーグ:5ccb327b1216704a8f58b6acc54581e4",
     "ブルームバーグ:815f58145853e1748cfba515312b320e",
     "minkabu:f9120b044ce356f8904c617ac785d468",
-    "minkabu:bf0f43b6bbeb57dce3b3b36a6ddc0267"
+    "minkabu:bf0f43b6bbeb57dce3b3b36a6ddc0267",
+    "minkabu:e209cc6aa86e1d911ae47c64bd5f98a7"
   ]
 }
