@@ -2,23 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-05T07:24:26+00:00"
+      "last_fetch_at": "2026-06-05T07:34:28+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-05T07:24:26+00:00"
+      "last_fetch_at": "2026-06-05T07:34:28+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-05T07:24:26+00:00"
+      "last_fetch_at": "2026-06-05T07:34:28+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-05T07:24:26+00:00"
+      "last_fetch_at": "2026-06-05T07:34:28+00:00"
     }
   },
   "seen_ids": [
-    "ロイター:e053ab0742b2f4ca5a3de7d8fefe7788",
-    "ロイター:bd4724423f2197a7c5668d4192090980",
-    "ロイター:7b5614807c188ed89eb7d41447507443",
-    "ロイター:88f89ee3e22930551b08137ec032f2e1",
     "ロイター:d00a288c452968a6ab43806342c0edb0",
     "ロイター:e0dfff9f27dae3fe92b35f7c55f22f37",
     "ロイター:fd8ac9cd07b8cfe76dd435910925d9db",
@@ -814,7 +810,11 @@
     "みんかぶ FX/為替 株式:5dd2144f66789e244bbb18ade7c35508",
     "みんかぶ FX/為替 株式:6ca518b2a55ce1b61086612ac9a21f2a",
     "みんかぶ FX/為替 株式:d65091dd6811b2b452daaaa17061998b",
-    "みんかぶ FX/為替 株式:576128d48f46e839368084a70843cd76"
+    "みんかぶ FX/為替 株式:576128d48f46e839368084a70843cd76",
+    "みんかぶ FX/為替 要人発言:3f4d544f1d9856f14b62da055c76873a",
+    "みんかぶ FX/為替 要人発言:19ca018149b671235b570fadc4cbe9c5",
+    "みんかぶ FX/為替 要人発言:738aab77696485e40d468cca8b44b5ef",
+    "みんかぶ FX/為替 要人発言:7d63287f5b9ae4859306105e00d6f611"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -1109,6 +1109,10 @@
     "minkabu:5dd2144f66789e244bbb18ade7c35508",
     "minkabu:6ca518b2a55ce1b61086612ac9a21f2a",
     "minkabu:d65091dd6811b2b452daaaa17061998b",
-    "minkabu:576128d48f46e839368084a70843cd76"
+    "minkabu:576128d48f46e839368084a70843cd76",
+    "minkabu:3f4d544f1d9856f14b62da055c76873a",
+    "minkabu:19ca018149b671235b570fadc4cbe9c5",
+    "minkabu:738aab77696485e40d468cca8b44b5ef",
+    "minkabu:7d63287f5b9ae4859306105e00d6f611"
   ]
 }
