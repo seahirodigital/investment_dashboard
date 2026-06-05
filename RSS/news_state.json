@@ -2,21 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-05T11:35:18+00:00"
+      "last_fetch_at": "2026-06-05T11:45:20+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-05T11:35:18+00:00"
+      "last_fetch_at": "2026-06-05T11:45:20+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-05T11:35:18+00:00"
+      "last_fetch_at": "2026-06-05T11:45:20+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-05T11:35:18+00:00"
+      "last_fetch_at": "2026-06-05T11:45:20+00:00"
     }
   },
   "seen_ids": [
-    "ブルームバーグ:74dcc0e09db0878a9561eda145914ddd",
-    "ブルームバーグ:79a4a1826f5dda689a7d0a709b633ace",
     "ブルームバーグ:b2a3ece2df83aac6b9fd719515703386",
     "ブルームバーグ:db656c77ba9415cfe1518ce2e8c992db",
     "ブルームバーグ:971b92909223ebc801bd87c12bc36a3c",
@@ -814,7 +812,9 @@
     "みんかぶ FX/為替 株式:bed8ce40d0fa632f9dca7913f31ec66a",
     "みんかぶ FX/為替 株式:7ae2447235ef517428377f1f9a02e5f6",
     "みんかぶ FX/為替 株式:9e65318ab786c982f5b99de447a7e405",
-    "みんかぶ FX/為替 株式:6f5696df2820031015f0cc87f4c04095"
+    "みんかぶ FX/為替 株式:6f5696df2820031015f0cc87f4c04095",
+    "ブルームバーグ:e35b1f2a1f7ae81732251bf7b2b95c0c",
+    "ブルームバーグ:e8ccd370d367a3b0ba81bb578bd75d1e"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -1124,6 +1124,8 @@
     "minkabu:bed8ce40d0fa632f9dca7913f31ec66a",
     "minkabu:7ae2447235ef517428377f1f9a02e5f6",
     "minkabu:9e65318ab786c982f5b99de447a7e405",
-    "minkabu:6f5696df2820031015f0cc87f4c04095"
+    "minkabu:6f5696df2820031015f0cc87f4c04095",
+    "ブルームバーグ:e35b1f2a1f7ae81732251bf7b2b95c0c",
+    "ブルームバーグ:e8ccd370d367a3b0ba81bb578bd75d1e"
   ]
 }
