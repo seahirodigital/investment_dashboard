@@ -2,24 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-05T00:24:53+00:00"
+      "last_fetch_at": "2026-06-05T00:34:58+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-05T00:24:53+00:00"
+      "last_fetch_at": "2026-06-05T00:34:58+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-05T00:24:53+00:00"
+      "last_fetch_at": "2026-06-05T00:34:58+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-05T00:24:53+00:00"
+      "last_fetch_at": "2026-06-05T00:34:58+00:00"
     }
   },
   "seen_ids": [
-    "ブルームバーグ:634ce1be3d422371fdddd3272bd27224",
-    "ブルームバーグ:7314b0c8e3b5cef3d8713a52ff6d83a2",
-    "ロイター:42207bf49cbe585e9140a47b66014452",
-    "ロイター:f31d6f49906a2ea5329e01c97b6d3127",
-    "ロイター:975a9fba134d72327bc4efa2474da9c9",
     "ロイター:79cd13aede62141ade0d3c9dbe707184",
     "ロイター:b584af762db46afb3b1fcd94ba36366e",
     "ロイター:7518892edc8a4382eafa7aaed9710168",
@@ -814,7 +809,12 @@
     "ロイター:b27328643b80c8fe9021d1597f5a1caa",
     "ロイター:9ffafef5b9d94a8655a09fca97212bfd",
     "ロイター:9d2aa07d9c1e744e672484ffb6bf8f5a",
-    "ロイター:bf58da9312c8d2641b7a01c6a155d328"
+    "ロイター:bf58da9312c8d2641b7a01c6a155d328",
+    "みんかぶ FX/為替 要人発言:a412b9921db0395da0c1021aaaa4f5df",
+    "みんかぶ FX/為替 要人発言:691bb5f011b606cdd76690ebf23d9933",
+    "みんかぶ FX/為替 要人発言:6f3d198ad29b752e3914c0884ce24909",
+    "みんかぶ FX/為替 要人発言:c782df497d621000989182eec42684e2",
+    "みんかぶ FX/為替 株式:6b18166feee6e3f949a65643f4865599"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -1074,6 +1074,11 @@
     "ロイター:b27328643b80c8fe9021d1597f5a1caa",
     "ロイター:9ffafef5b9d94a8655a09fca97212bfd",
     "ロイター:9d2aa07d9c1e744e672484ffb6bf8f5a",
-    "ロイター:bf58da9312c8d2641b7a01c6a155d328"
+    "ロイター:bf58da9312c8d2641b7a01c6a155d328",
+    "minkabu:a412b9921db0395da0c1021aaaa4f5df",
+    "minkabu:691bb5f011b606cdd76690ebf23d9933",
+    "minkabu:6f3d198ad29b752e3914c0884ce24909",
+    "minkabu:c782df497d621000989182eec42684e2",
+    "minkabu:6b18166feee6e3f949a65643f4865599"
   ]
 }
