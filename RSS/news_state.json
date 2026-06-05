@@ -2,24 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-05T09:04:47+00:00"
+      "last_fetch_at": "2026-06-05T09:14:48+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-05T09:04:47+00:00"
+      "last_fetch_at": "2026-06-05T09:14:48+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-05T09:04:47+00:00"
+      "last_fetch_at": "2026-06-05T09:14:48+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-05T09:04:47+00:00"
+      "last_fetch_at": "2026-06-05T09:14:48+00:00"
     }
   },
   "seen_ids": [
-    "ロイター:b87686ca7342c3260d58f20c1202c29d",
-    "ロイター:fa8d1860a6bcc17a2028decaa53d870e",
-    "ロイター:a7460f13824deec3748fde0227399a05",
-    "ブルームバーグ:c4d05856ab468aeceb4e579c3aa6576b",
-    "ブルームバーグ:e8201f0eedca6b142fa06999ff38e8f1",
     "ブルームバーグ:5e7f3098bd25aa6060bc25597fe40755",
     "ブルームバーグ:6386e1d9deea7fd4b5aaddb52218faba",
     "ブルームバーグ:73ebb98c20eb4b8629790ef703848cec",
@@ -814,7 +809,12 @@
     "みんかぶ FX/為替 要人発言:7d63287f5b9ae4859306105e00d6f611",
     "ブルームバーグ:c8a751368031956113e84906b941c424",
     "ブルームバーグ:dea6a234a8174804cb076f6118bf0390",
-    "ブルームバーグ:ee437517bf54266c141d6cec64bdf26f"
+    "ブルームバーグ:ee437517bf54266c141d6cec64bdf26f",
+    "みんかぶ FX/為替 株式:1e7b9fe12acb6e4e49e6fadcddd291cf",
+    "みんかぶ FX/為替 株式:d9a95580cd6192dce53f8cbc0f5516be",
+    "みんかぶ FX/為替 株式:87f613a80c68af32b5177f4aeb521edf",
+    "みんかぶ FX/為替 株式:607bc7a5a76a9f4877f070e3fd68c6cd",
+    "みんかぶ FX/為替 株式:bed8ce40d0fa632f9dca7913f31ec66a"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -1116,6 +1116,11 @@
     "minkabu:7d63287f5b9ae4859306105e00d6f611",
     "ブルームバーグ:c8a751368031956113e84906b941c424",
     "ブルームバーグ:dea6a234a8174804cb076f6118bf0390",
-    "ブルームバーグ:ee437517bf54266c141d6cec64bdf26f"
+    "ブルームバーグ:ee437517bf54266c141d6cec64bdf26f",
+    "minkabu:1e7b9fe12acb6e4e49e6fadcddd291cf",
+    "minkabu:d9a95580cd6192dce53f8cbc0f5516be",
+    "minkabu:87f613a80c68af32b5177f4aeb521edf",
+    "minkabu:607bc7a5a76a9f4877f070e3fd68c6cd",
+    "minkabu:bed8ce40d0fa632f9dca7913f31ec66a"
   ]
 }
