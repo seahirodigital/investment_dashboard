@@ -2,22 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-06T01:05:58+00:00"
+      "last_fetch_at": "2026-06-06T07:12:59+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-06T01:05:58+00:00"
+      "last_fetch_at": "2026-06-06T07:12:59+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-06T01:05:58+00:00"
+      "last_fetch_at": "2026-06-06T07:12:59+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-06T01:05:58+00:00"
+      "last_fetch_at": "2026-06-06T07:12:59+00:00"
     }
   },
   "seen_ids": [
-    "ロイター:8600f366d91e3acc13316569e431974a",
-    "ブルームバーグ:936f1a815c6c69eea2c6ea5af25b9504",
-    "ブルームバーグ:bd953ac5476de567507033e5186f81dc",
     "ブルームバーグ:dffaf22c8cc87449a765229a1341998e",
     "ロイター:f64229616af4839443827cd8880f676e",
     "ロイター:6f590cce7b94bd7748587c24d360b68d",
@@ -814,7 +811,10 @@
     "みんかぶ FX/為替 株式:78706511c39f305858c9b834a1f4fc03",
     "みんかぶ FX/為替 株式:448c79e6fd973698254a7ed5768097bf",
     "みんかぶ FX/為替 株式:5f98b41ee1d3d25b07a86ebfdda50141",
-    "みんかぶ FX/為替 株式:c030d7eda4c6e77dcf34444f83a5bf29"
+    "みんかぶ FX/為替 株式:c030d7eda4c6e77dcf34444f83a5bf29",
+    "ブルームバーグ:e27f6a47be6322a10ab8d18096ba93a1",
+    "みんかぶ FX/為替 要人発言:970490e99f27fdd551403a4a0f74a5ec",
+    "みんかぶ FX/為替 要人発言:f40131e4e28c36df72472782ea4c0af6"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -1188,6 +1188,9 @@
     "minkabu:78706511c39f305858c9b834a1f4fc03",
     "minkabu:448c79e6fd973698254a7ed5768097bf",
     "minkabu:5f98b41ee1d3d25b07a86ebfdda50141",
-    "minkabu:c030d7eda4c6e77dcf34444f83a5bf29"
+    "minkabu:c030d7eda4c6e77dcf34444f83a5bf29",
+    "ブルームバーグ:e27f6a47be6322a10ab8d18096ba93a1",
+    "minkabu:970490e99f27fdd551403a4a0f74a5ec",
+    "minkabu:f40131e4e28c36df72472782ea4c0af6"
   ]
 }
