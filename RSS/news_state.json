@@ -2,16 +2,16 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-07T20:56:14+00:00"
+      "last_fetch_at": "2026-06-07T21:06:16+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-07T20:56:14+00:00"
+      "last_fetch_at": "2026-06-07T21:06:16+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-07T20:56:14+00:00"
+      "last_fetch_at": "2026-06-07T21:06:16+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-07T20:56:14+00:00"
+      "last_fetch_at": "2026-06-07T21:06:16+00:00"
     }
   },
   "seen_ids": [
@@ -816,18 +816,7 @@
     "ロイター:960e4dc8a93fd5ed5de10e29f4e19d9f",
     "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37"
   ],
-  "pending_items": [
-    {
-      "id": "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37",
-      "dedupe_key": "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37",
-      "source": "ブルームバーグ",
-      "title": "ECB追加利上げに懐疑論、JPモルガンAMなど運用大手「1回で終わる」",
-      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-07/TG9D9ZT9NJLS00?srnd=jp-markets",
-      "published_at": "2026-06-07T15:00:00+00:00",
-      "fetched_at": "2026-06-07T19:14:01+00:00",
-      "delivery_route": "main"
-    }
-  ],
+  "pending_items": [],
   "seen_keys": [
     "minkabu:5bd96acd2d1b49eb770979e4810a13c0",
     "minkabu:ed576d51e27a22dc4f65dd25bbb614c7",
