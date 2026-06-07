@@ -94,7 +94,201 @@ GEMINI_API_KEY="..." GIST_TOKEN="..." GIST_ID="..." python scripts/market/gemini
 
 ---
 
-## セクター分類分析 (`sector_category.html`) 仕様（2026-03-23 最新版）
+## 国内株式イントラデイ・チャート描画仕様（2026-05-27 現行版）
+
+### ゴール
+
+国内株式のチャートとランキングは、**今日の市場時間中に実際に取得できたJPイントラデイデータだけ**で描画する。
+本日データが存在しない場合、前営業日データを「今日のランキング」のように表示してはいけない。
+
+### 正しいデータ経路
+
+```
+.github/workflows/intraday_etf.yml
+  → scripts/market/fetch_intraday.py
+  → scripts/market/etf_data_manager.py fetch_data(period='14d', interval='5m')
+  → data/etf_intraday.json
+  → mainへ Intraday update コミット
+  → gh-pagesへ Intraday CDN update コミット
+  → sector_category.html / topix100.html が ./data/etf_intraday.json を取得
+```
+
+### API取得ルール
+
+`data/etf_intraday.json` の基本取得は `yfinance.download(...)` だが、JPイントラデイは `yfinance` 一括取得だけに依存しない。
+
+国内株式・国内ETF・日経指数のイントラデイは、`scripts/market/etf_data_manager.py` の `supplement_jp_intraday_with_chart_api()` で Yahoo chart API から補完する。
+
+```
+https://query1.finance.yahoo.com/v8/finance/chart/<symbol>?range=14d&interval=5m&includePrePost=false&events=history
+```
+
+補完対象は `JP_INTRADAY_SYMBOLS`。
+
+- `1306.T`（TOPIX ETFベンチマーク）
+- `SECTORS` 内の `.T` 銘柄と `^N225`
+- `SEMICONDUCTOR_JP`
+- `TOPIX100`
+- `BASKET_SECTORS` の構成銘柄
+
+Yahoo chart APIのタイムスタンプはUnix秒で返る。保存時はUTCのnaive datetimeへ変換し、5分足グリッドへ丸める。
+
+例:
+
+```
+2026-05-27 04:05 = UTC 04:05 = JST 13:05
+```
+
+フロントエンドはこのUTC文字列を `toJST()` でJST表示へ変換する。ここで `+9h` を外してはいけない。
+
+### 欠損と横線の扱い
+
+イントラデイでは、価格欠損を全体 `ffill()` / `bfill()` してはいけない。
+
+理由:
+
+- JP銘柄がUS市場時間や未来時刻まで横線で伸びる
+- データが存在しない時刻に、ランキング・チャートがあるように見える
+- 前営業日の終値や古いティックが本日データとして誤表示される
+
+現行ルール:
+
+- イントラデイは欠損を `null` のまま保持
+- 各チャートは `1306.T` が有効なJP市場ティックだけ採用
+- 銘柄ごとの値が `null` の時刻は、その銘柄だけ描画・ランキング対象から除外
+
+### チャート描画ルール（国内株式）
+
+`sector_category.html` のJPイントラデイは `getJpIntradayItems()` を通して描画対象ティックを選別する。
+
+採用条件:
+
+- `rawData.generated_at` から見て未来ではない
+- JST市場時間内
+  - 前場: 09:00〜11:30
+  - 後場: 12:30〜15:30
+- `1306.T` の有効価格がある
+- 選択期間（1d〜14d）の対象営業日に含まれる
+
+本日が平日かつJST 09:00以降の場合、最新JPセッション日が本日でなければ、前営業日ランキングを表示しない。
+
+表示する警告:
+
+```
+本日(YYYY-MM-DD)のJPイントラデイデータが未取得です。前営業日(YYYY-MM-DD)の値は表示しません。
+```
+
+これはバグではなく、古いデータを今日扱いしないための安全装置。
+
+### パフォーマンス計算ルール
+
+国内株式の1d〜14dイントラデイは、前営業日の日次終値を基準価格にする。
+
+```
+絶対パフォーマンス = (現在価格 / 前営業日終値 - 1) * 100
+相対パフォーマンス = 個別・セクターの絶対パフォーマンス - TOPIXの絶対パフォーマンス
+```
+
+`dailyBaseMap` により、`etf_data.json` の前営業日終値を基準として使う。
+これにより、ソフトバンクGなどの個別株ランキングも「当日始値比」ではなく「前営業日終値比」で市場標準の騰落率に揃う。
+
+### YAML / GitHub Actions 運用
+
+対象ファイル:
+
+```
+C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\intraday_etf.yml
+```
+
+現行仕様:
+
+- `workflow_dispatch` で手動実行可能
+- JP前場・後場、US市場の起動cronを複数本持つ
+- `concurrency.group = intraday-etf-update`
+- `cancel-in-progress: false`
+- 起動後は市場時間中、`sleep 900` により15分ごとに取得を継続
+- JP昼休み 11:30〜12:30 JST は5分待機して再チェック
+
+JP市場判定:
+
+```
+JP市場: JST 09:00〜15:45
+昼休み: JST 11:30〜12:30
+```
+
+更新フロー:
+
+1. `python3 scripts/market/fetch_intraday.py`
+2. `data/etf_intraday.json` を `main` にコミット
+3. `git pull --rebase origin main`
+4. `git push origin main`
+5. `data/*.json` とHTML/CSS/JSを `/tmp/gh-pages` へコピー
+6. `gh-pages` に `Intraday CDN update: YYYY-MM-DD HH:mm JST` をpush
+
+### 正常性確認コマンド
+
+`main` の最新JSONに本日JPデータがあるか:
+
+```powershell
+$j = git -c safe.directory=C:/Users/mahha/OneDrive/開発/investment_dashboard show origin/main:data/etf_intraday.json | ConvertFrom-Json
+$today = @($j.dates | Where-Object { $_ -like '2026-05-27*' })
+$today.Count
+$today[-1]
+```
+
+`9984.T` と `1306.T` が同じ本日ティックで揃っているか:
+
+```powershell
+$dates = $j.dates
+$p9984 = @($j.prices.PSObject.Properties['9984.T'].Value)
+$p1306 = @($j.prices.PSObject.Properties['1306.T'].Value)
+for ($i = $dates.Count - 1; $i -ge 0; $i--) {
+  if ($dates[$i] -like '2026-05-27*' -and $null -ne $p9984[$i] -and $null -ne $p1306[$i]) {
+    "aligned_latest=$($dates[$i]) 9984=$($p9984[$i]) 1306=$($p1306[$i])"
+    break
+  }
+}
+```
+
+公開用 `gh-pages` も同じ観点で確認する。
+
+```powershell
+git -c safe.directory=C:/Users/mahha/OneDrive/開発/investment_dashboard fetch origin gh-pages
+$j = git -c safe.directory=C:/Users/mahha/OneDrive/開発/investment_dashboard show FETCH_HEAD:data/etf_intraday.json | ConvertFrom-Json
+```
+
+### 2026-05-27 修正時の確認済み例
+
+`main`:
+
+```
+ef880c2f Intraday update: 2026-05-27 04:20 UTC
+generated_at_jst=2026-05-27 13:20 JST
+today_count=40
+aligned_latest=2026-05-27 04:05 9984=7428.0 1306=416.8
+```
+
+`gh-pages`:
+
+```
+f2c6bf39 Intraday CDN update: 2026-05-27 13:20 JST
+generated_at_jst=2026-05-27 13:20 JST
+today_count=40
+aligned_latest=2026-05-27 04:05 9984=7428.0 1306=416.8
+```
+
+### やってはいけないこと
+
+- JPイントラデイの欠損を全体 `ffill()` / `bfill()` で埋める
+- `toJST()` の `+9h` を削除する
+- 本日JPデータが無い状態で前営業日ランキングを表示する
+- `yfinance` 一括取得だけを唯一の正とみなす
+- `generated_at_jst` だけを見て「本日データあり」と判定する
+- `data/etf_intraday.json` の最新日付を確認せず、ページ表示だけで判断する
+
+---
+
+## セクター分類分析 (`sector_category.html`) 仕様（2026-05-27 最新版）
 
 ### ページ概要
 
@@ -281,7 +475,9 @@ fetchRawData():
 ### タイムスタンプの扱い（重要：変更するな）
 
 ```
-yfinance → 複数市場マージ時にUTC統一 → tz_localize(None) → UTCタイムスタンプ（ラベルなし）
+取得側 → UTCタイムスタンプ（ラベルなし）で保存
+  - yfinance一括取得: 複数市場マージ時にUTC統一 → tz_localize(None)
+  - JP Yahoo chart API補完: Unix秒 → UTC naive datetime → 5分グリッドへ丸め
   例: "2026-03-19 05:40" = UTC 05:40 = JST 14:40
 
 フロントエンド toJST():
@@ -297,6 +493,7 @@ const intradayAvailable = rawIntraday?.dates?.length > 1
 ```
 
 5分足データが未取得の場合、日次データで代替表示し、ヘッダーに「[日次のみ]」を表示する。
+ただし、JP市場中に本日イントラデイが未取得の場合は、前営業日のイントラデイランキングを本日ランキングとして表示しない。
 
 ### データのフレッシュネス表示
 
@@ -572,7 +769,7 @@ TOPIX100（TOPIX Core30 + TOPIX Large70）構成銘柄98銘柄の相対パフォ
 ### データソース
 *   `data/etf_data.json` — 日次終値データ（400日分）
 *   `data/etf_intraday.json` — イントラデイ5分足データ（14日分）
-*   データ取得元: Yahoo Finance (`yfinance`)、`scripts/market/etf_data_manager.py` の `TOPIX100` 定数で定義
+*   データ取得元: Yahoo Finance（`yfinance` 一括取得 + JPイントラデイはYahoo chart API補完）、`scripts/market/etf_data_manager.py` の `TOPIX100` 定数で定義
 
 ### パフォーマンス計算ロジック
 

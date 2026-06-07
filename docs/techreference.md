@@ -768,3 +768,711 @@ validate_spy_output(data_intraday, 'data/etf_intraday.json')
 - USイントラデイのcategory軸。
 
 戻した後にSPY相対を再追加する場合は、まず取得側のSPY保証だけを復元し、`data/etf_data.json` と `data/etf_intraday.json` に `prices.SPY` が入ることを確認する。その後、表示側でUS相対チャートを追加する。JP復旧とUS相対追加を同じ差分で行わない。
+
+---
+
+## 2026-06-07 米国株チャート可視化の現行正解
+
+### この章の位置付け
+
+この章は、2026年6月7日時点の以下の実装を読み合わせた結果をまとめた最新仕様である。
+
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\scripts\market\etf_data_manager.py`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\sector_category.html`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\us_individual.html`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\daily_etf.yml`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\intraday_etf.yml`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\sector_category_discord.yml`
+
+この章より前にある説明と矛盾する場合は、この章を優先する。
+
+特に、以前の記述にある以下の考え方は現行仕様では使わない。
+
+- 米国イントラデイの入力時刻をUTCと決め打ちする。
+- 入力文字列へ単純に9時間を足してJSTにする。
+- USチャートへJP用のdatetime軸や週末rangebreaksを流用する。
+- 表示中の線だけを使って縦軸を決める。
+- 日次終値でチャート最終点を上書きする。
+- Discord撮影時にJP表示からUS表示へ画面操作で切り替える。
+
+### 対象ページとデータ
+
+#### セクター分類分析
+
+対象ファイル:
+
+```text
+C:\Users\mahha\OneDrive\開発\investment_dashboard\sector_category.html
+```
+
+米国セクター分析は `FullSectorChart` が担当する。
+
+主な表示箇所:
+
+1. セクター分類分析ページの最上部
+2. 通常のJP全セクターチャート内のUS切替表示
+3. `embed=us-sector` を指定したUS専用埋め込み表示
+4. US個別分析ページ最上部のiframe
+
+通常ページ最上部のカードIDは次のとおり。
+
+```text
+top-us-sector-flow
+```
+
+US専用埋め込み表示では次の状態を固定する。
+
+```jsx
+initialMarket="us"
+lockMarket={true}
+initialUsMode="relative"
+lockUsMode={true}
+```
+
+したがって、埋め込み表示やDiscord撮影では市場切替ボタンや相対・絶対ボタンをクリックしない。
+
+#### US個別分析
+
+対象ファイル:
+
+```text
+C:\Users\mahha\OneDrive\開発\investment_dashboard\us_individual.html
+```
+
+`StockSection` を共通コンポーネントとして使い、以下を描画する。
+
+- US個別全銘柄パフォーマンス
+- 48分類の各セクターパフォーマンス
+- カルーセル内の全銘柄・各セクターカード
+- 通常ページ下部の全銘柄・各セクター縦積み表示
+
+2026年6月7日時点の全銘柄数は546銘柄である。銘柄定義は `etf_data_manager.py` の `US_INDIVIDUAL`、重複除去後の取得対象は `ALL_US_INDIVIDUAL_SYMBOLS` で管理する。
+
+### 米国株データの取得方法
+
+#### 出力ファイル
+
+日次データ:
+
+```text
+C:\Users\mahha\OneDrive\開発\investment_dashboard\data\etf_data.json
+```
+
+イントラデイデータ:
+
+```text
+C:\Users\mahha\OneDrive\開発\investment_dashboard\data\etf_intraday.json
+```
+
+イントラデイは5分足、取得期間は14日である。
+
+```python
+data_intraday = fetch_data(period="14d", interval="5m")
+```
+
+日次とイントラデイの両方に、JP ETF、USセクターETF、SPY、主要指数、US個別株、TOPIX100等が同じ `dates` と `prices` 構造で保存される。
+
+#### 一括取得
+
+第一取得経路は `yfinance.download()` による一括取得である。
+
+```python
+df = yf.download(
+    ALL_SYMBOLS,
+    period=period,
+    interval=interval,
+    auto_adjust=False,
+    progress=False,
+)
+```
+
+`auto_adjust=False` とし、原則として `Close` の生値を使う。短期パフォーマンスが配当落ち調整で歪むことを避けるため、`Adj Close` より `Close` を優先する。
+
+`ALL_SYMBOLS` には少なくとも以下を含める。
+
+- JPベンチマークとJP ETF
+- JP・US半導体
+- USセクターETF
+- SPY
+- TOPIX100
+- US個別全銘柄
+- JPバスケット構成銘柄
+
+#### 個別補完
+
+一括取得で欠損したSPYまたはUSセクターETFは `ensure_symbol_column()` で補完する。
+
+補完順序:
+
+1. 一括取得済み列に有効な正の価格があるか確認する。
+2. `yf.download(symbol, ...)` で対象シンボルだけ再取得する。
+3. Yahoo Chart APIから直接取得する。
+4. 出力側インデックスへ `reindex()` し、`ffill().bfill()` で揃える。
+5. SPYを揃えられない場合は例外で停止する。
+
+Yahoo Chart API:
+
+```text
+https://query1.finance.yahoo.com/v8/finance/chart/{symbol}
+```
+
+イントラデイ補完は最大60日、日次補完は2年を要求する。
+
+```python
+chart_range = "2y" if interval == "1d" else "60d"
+```
+
+#### SPYは必須
+
+米国セクター相対チャートのベンチマークはSPYだけである。
+
+```python
+US_SP500_BENCHMARKS = {
+    "SPY": "SPY",
+}
+```
+
+`^GSPC`、VOO、IVV等へ自動フォールバックしない。SPYが無い状態で別系列へ切り替えると、時系列の連続性と過去比較の意味が変わるためである。
+
+日次・イントラデイ出力後に以下を必ず検証する。
+
+```python
+validate_spy_output(data_daily, "data/etf_data.json")
+validate_spy_output(data_intraday, "data/etf_intraday.json")
+```
+
+検証条件:
+
+- `prices.SPY` が存在する。
+- `prices.SPY` と `dates` の要素数が一致する。
+- 正の有効価格が1件以上ある。
+
+表示側でもSPYが無ければ次のメッセージを出し、相対チャートを描かない。
+
+```text
+SPYが未取得です。基準の連続性を守るため、他のS&P500連動系列には切り替えません。
+```
+
+#### USセクターETFの補完
+
+`ensure_us_sector_columns()` は最初にSPYを必須取得し、その後 `US_SECTORS` の各シンボルを個別補完する。
+
+全セクターを取得できなくても、有効なUSセクター系列が1つ以上あれば出力できる。ただし有効系列が0件の場合は例外で停止する。
+
+#### GitHub Actionsの取得時刻
+
+日次確定処理:
+
+```text
+C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\daily_etf.yml
+```
+
+- JST 16:00: JP市場閉場後の日次確定
+- JST 06:05: US市場閉場後の日次終値確定
+
+USの朝通知は06:25 JSTなので、06:05 JSTの日次更新後に実行する。
+
+イントラデイ処理:
+
+```text
+C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\intraday_etf.yml
+```
+
+US市場用の主な起動:
+
+- UTC 13:30、13:45、14:00
+- UTC 17:00、17:15
+
+米国夏時間ではJST 22:30が寄り付きとなる。冬時間では1時間後になるため、表示側は固定のJST時間帯で判定せず、必ず `America/New_York` を使う。
+
+### 米国タイムスタンプの解釈
+
+#### 入力をUTCと決め打ちしない
+
+`data\etf_intraday.json` の日時文字列は、取得経路や過去データにより次のどちらとして解釈すべきかが異なる可能性がある。
+
+- NY現地時刻文字列
+- UTC時刻文字列
+
+そのため `sector_category.html` と `us_individual.html` は、両方の候補を試す。
+
+```js
+const candidates = ["ny-local", "utc"].map(timestampMode => {
+    // 各解釈で通常取引時間内の点を抽出する
+});
+```
+
+候補ごとに有効な価格点数を数え、品質スコアが高い解釈を採用する。
+
+```js
+quality = validPriceCount + sessionItemCount * 0.001
+```
+
+同点の場合は、現行JSONの主形式である `ny-local` を優先する。
+
+この自動判定を外し、`new Date(value + "Z")` のようにUTCへ固定してはいけない。
+
+#### NY現地時刻からUTCへの変換
+
+NY現地時刻文字列は `getUtcFromNewYorkLocal()` でUTC実時刻へ変換する。
+
+処理概要:
+
+1. 入力の年月日時分を `Date.UTC()` で仮配置する。
+2. `Intl.DateTimeFormat` の `America/New_York` からオフセットを計算する。
+3. UTC候補を補正する。
+4. 補正後の時刻でもう一度オフセットを計算する。
+5. 夏時間・冬時間を反映したUTC時刻を確定する。
+
+固定の `-4時間` または `-5時間` を使用しない。
+
+#### 通常取引時間
+
+US市場日の判定は `America/New_York` 基準で行う。
+
+```js
+marketTime.minutes >= 570 && marketTime.minutes <= 960
+```
+
+- 570分 = 09:30 ET
+- 960分 = 16:00 ET
+
+土曜日・日曜日は除外する。
+
+`getRecentNewYorkSessionItems()` は次の順に処理する。
+
+1. NY通常取引時間内の点だけ抽出する。
+2. NY市場日単位でグループ化する。
+3. 対象シンボルに有効な価格変化がある日だけ残す。
+4. `1d` なら直近1市場日、`2d` なら直近2市場日を選ぶ。
+5. `ny-local` と `utc` のうち品質が高い解釈を返す。
+
+### JST表示の正解
+
+#### JSTラベル生成
+
+採用した入力時刻をUTC実時刻へ確定した後、`Asia/Tokyo` の `Intl.DateTimeFormat` でラベルを作る。
+
+```js
+const formatJstAxisLabel = (date) => {
+    const parts = getFormatterParts(TOKYO_TIME_FORMATTER, date);
+    return `${Number(parts.month)}/${Number(parts.day)} ${parts.hour}:${parts.minute}`;
+};
+```
+
+表示例:
+
+```text
+6/5 22:30
+6/6 04:55
+```
+
+JST変換は「元文字列へ常に9時間を足す」処理ではない。最初に入力がNY現地時刻かUTCかを確定し、その後JSTへ変換する。
+
+#### 夏時間と冬時間
+
+米国市場のJST表示:
+
+- 夏時間: 22:30から翌05:00付近
+- 冬時間: 23:30から翌06:00付近
+
+コードで22:30や05:00を固定条件として使わない。NY市場時間を判定した結果をJST表示する。
+
+### 横軸の正解
+
+#### USイントラデイ
+
+USイントラデイはPlotlyの `category` 軸を使う。
+
+```js
+{
+    type: "category",
+    nticks: 12,
+    tickangle: -30,
+    title: {
+        text: "時間（JST）"
+    }
+}
+```
+
+理由:
+
+- 1市場日がJSTでは2暦日にまたがる。
+- 米国金曜後半は日本では土曜早朝になる。
+- datetime軸へ週末rangebreaksを適用すると、正しい金曜USセッション後半まで消える。
+- category軸なら、抽出済みの有効な市場ティックを順番どおり、間隔を詰めて表示できる。
+
+USイントラデイへ次のrangebreaksを入れてはいけない。
+
+```js
+{ bounds: ["sat", "mon"] }
+```
+
+USイントラデイではrangebreaksを空にする。
+
+#### US日次
+
+日次表示ではdatetime系列として扱い、土日を除くrangebreaksを使用できる。
+
+#### JPとの分離
+
+JPイントラデイはUSとは別仕様である。
+
+現行JP用rangebreaks:
+
+```js
+[
+  { bounds: ["sat", "mon"] },
+  { bounds: [15.5, 9], pattern: "hour" },
+  { bounds: [11.5, 12.5], pattern: "hour" }
+]
+```
+
+絶対禁止:
+
+- JPのrangebreaksをUSへ流用する。
+- USのcategory軸をJP全チャートへ一括適用する。
+- JPとUSの時刻変換を一つの固定オフセット関数へまとめる。
+
+### 基準価格とパフォーマンス
+
+#### 前営業日終値を基準にする
+
+イントラデイの当日騰落率は、当日最初の5分足や寄り付き価格ではなく、前営業日の日次終値を基準にする。
+
+`buildDailyBaseMap()` は選択した最初のUS市場日より前の日次データを後ろから探す。
+
+```js
+rawDaily.dates[di] < sessionStartDate
+```
+
+その日の価格を各シンボルの基準値として使う。
+
+日次基準が無い場合のみ、次の順でフォールバックする。
+
+1. イントラデイ開始位置より前にある直近の有効価格
+2. 選択期間の開始位置にある有効価格
+
+基準値探索では `null`、`undefined`、0、非数値を除外する。
+
+#### 米国セクター相対値
+
+セクターリターン:
+
+```js
+sectorReturn = sectorCurrent / sectorBase - 1
+```
+
+SPYリターン:
+
+```js
+spyReturn = spyCurrent / spyBase - 1
+```
+
+表示する相対値:
+
+```js
+(sectorReturn - spyReturn) * 100
+```
+
+これは「セクター価格をSPY価格そのもので割った値」ではなく、同じ基準時点からの騰落率差である。
+
+#### 米国セクター絶対値
+
+絶対モード:
+
+```js
+(sectorCurrent / sectorBase - 1) * 100
+```
+
+SPYとの比較を差し引かない。
+
+#### US個別分析
+
+US個別分析の個別株リターン:
+
+```js
+(stockCurrent / stockBase - 1) * 100
+```
+
+`S&P500` は `^GSPC` を使った比較用の点線として同じ基準時点から計算する。
+
+現行 `StockSection` は個別株からS&P500リターンを差し引く相対超過リターンではなく、個別株とS&P500の絶対騰落率を同じチャート上で比較する。
+
+セクター分類分析のSPY相対計算と、US個別分析のS&P500比較線を混同しない。
+
+### 日次終値補正の正解
+
+米国セクター分析では、最終市場日の日次終値が存在する場合、ランキング値を日次終値で補正できる。
+
+ただし、イントラデイチャート線は `etf_intraday.json` の実測系列を維持する。
+
+禁止:
+
+```js
+lastPoint[sectorName] = dailyClosePerformance;
+lastPoint.date = marketCloseLabel;
+```
+
+この上書きを行うと、最終点だけ異なるデータ粒度になり、線が急騰・急落して見える。
+
+原則:
+
+- チャート線: 5分足の実測系列
+- ランキング: 必要に応じて日次終値で補正
+- 期間表示の終了日時: 日次終値がある場合は引け時刻表示に補正可能
+
+US個別分析には既存の日次終値補正処理がある。変更する場合も、チャート全体の基準値、ランキング、最終点のデータ粒度が一致しているかを確認し、セクター分析の禁止事項をそのまま無視してはならない。
+
+### 縦軸の正解
+
+#### 固定レンジを使わない
+
+USチャートの縦軸は、値が何%であっても全データを包含するよう動的に計算する。
+
+使用する値:
+
+- ランキング全件の `performance`
+- 時系列全点の数値
+- 現在表示していない系列も含む
+
+計算:
+
+```js
+const minValue = Math.min(0, ...values);
+const maxValue = Math.max(0, ...values);
+const span = Math.max(maxValue - minValue, 0.5);
+const padding = Math.max(span * 0.08, 0.2);
+const range = [
+    minValue - padding,
+    maxValue + padding,
+];
+```
+
+Plotly:
+
+```js
+{
+    range: yAxisRange,
+    autorange: false
+}
+```
+
+これにより、XSDが-8.69%なら縦軸は-8.69%より下まで広がり、-2%固定のような欠落を起こさない。
+
+#### 0%基準線
+
+最低値と最高値の計算には必ず0を含め、0%の基準線を表示範囲外へ出さない。
+
+#### US個別分析への適用
+
+`StockSection` の動的縦軸は `US個別全銘柄パフォーマンス` だけでなく、全セクターカードとカルーセルにも共通適用される。
+
+546銘柄のうち表示フィルターが上位10件だけでも、縦軸はランキング全件と時系列全系列を見て決める。そのため、ランキングに-20%の銘柄があるのに縦軸が-10%で切れる状態を防ぐ。
+
+### セクター分類分析の表示構成
+
+2026年6月7日時点の通常ページ上部順序:
+
+1. 【US】相対パフォーマンス推移（全セクターvs SPY）
+2. 規模別指数（絶対値）
+3. 【JP】相対パフォーマンス推移（全セクターvs TOPIX）
+4. その他の分類チャート
+
+US相対チャートは相対モードがデフォルトである。通常ページでは必要に応じて絶対モードへ切り替えられる。
+
+US個別分析ページでも最上部カルーセルおよび本文先頭のiframeに同じUS相対チャートを表示する。
+
+埋め込みURL:
+
+```text
+sector_category.html?embed=us-sector&period={period}#full-sector-flow
+```
+
+### 上位・下位表示
+
+`▲ 上7`:
+
+- ランキング上位7件をチャート表示対象にする。
+- USではSOXが上位7件に含まれない場合も参照用として追加されることがある。
+- したがってチャート線は最大8本になり得る。
+
+`▼ 下7`:
+
+- ランキング下位7件をチャート表示対象にする。
+- 同様にSOX参照を含め最大8本になり得る。
+
+Discordのランキング画像は上位7行、下位7行へ限定する。チャート線がSOX参照を含む最大8本であることは現行の正しい仕様である。
+
+### US個別分析の表示フィルター
+
+`StockSection` は次の表示モードを持つ。
+
+- `ALL`
+- `TOP10 + WORST10`
+- `TOP 10`
+- `WORST 10`
+
+表示フィルターはチャート線の選択とランキング表示操作に使うが、動的縦軸の母集団は全ランキング・全時系列である。
+
+イントラデイ横軸は全 `StockSection` で次を共通使用する。
+
+```js
+{
+    type: "category",
+    nticks: 12,
+    tickangle: -30,
+    title: { text: "時間（JST）" }
+}
+```
+
+日次では土日rangebreaksを使う。
+
+### Discord朝通知の現行（20260607時点）正解
+
+対象:
+
+```text
+C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\sector_category_discord.yml
+```
+
+US通知時刻:
+
+```text
+25 21 * * 1-5
+```
+
+UTC月曜日から金曜日の21:25、JSTでは火曜日から土曜日の06:25である。
+
+通知処理:
+
+1. Python、Playwright、Pillow、データ取得依存関係を準備する。
+2. `MARKET_DATA_ALLOW_US_ONLY=1` で `etf_data_manager.py` を実行する。
+3. SPYとUSセクターを含む最新の日次・5分足データを生成する。
+4. ローカルHTTPサーバーを起動する。
+5. US専用埋め込みURLを直接開く。
+6. `data-market="us"`、`data-us-mode="relative"`、タイトルの `vs SPY` を確認する。
+7. 上位表示を選び、ランキングを上位7行へ限定して撮影する。
+8. 下位表示を選び、ランキングを下位7行へ限定して撮影する。
+9. チャートとランキングを横に結合する。
+10. 生成画像をGitHub Actions Artifactへ7日間保存する。
+11. Discordへ本文と2枚の画像を送る。
+12. `curl --fail-with-body` によりDiscord HTTPエラーをWorkflow失敗として扱う。
+
+撮影URL:
+
+```text
+http://127.0.0.1:8000/sector_category.html?embed=us-sector&period=1d#full-sector-flow
+```
+
+JP表示を開いてからUSボタンや相対ボタンをクリックする方式へ戻してはいけない。過去にはReactの再描画後に相対ボタンを見失い、30秒タイムアウトしてDiscord送信がスキップされた。
+
+添付:
+
+1. US相対チャート + 上位7ランキング
+2. US相対チャート + 下位7ランキング
+
+Discord本文のリンク:
+
+```text
+US個別分析
+https://seahirodigital.github.io/investment_dashboard/us_individual.html
+```
+
+2026年6月7日の手動検証成功:
+
+```text
+https://github.com/seahirodigital/investment_dashboard/actions/runs/27088017458
+```
+
+検証された内容:
+
+- USデータ再取得成功
+- SPY相対表示確認成功
+- 上位・下位スクリーンショット生成成功
+- Artifactアップロード成功
+- Discord送信成功
+- 本文のUS個別分析URL確認成功
+
+### 変更時の回帰確認
+
+#### データ
+
+- `data\etf_data.json` にSPYがある。
+- `data\etf_intraday.json` にSPYがある。
+- SPY配列長とdates配列長が一致する。
+- USセクターETFに有効な正の価格がある。
+- US個別銘柄が `prices` に出力される。
+
+#### 時刻
+
+- 入力時刻をUTCへ決め打ちしていない。
+- `ny-local` と `utc` の品質比較が残っている。
+- NY通常取引時間09:30から16:00で抽出している。
+- JSTラベルが夏時間・冬時間へ自動追従する。
+- 金曜USセッション後半が土曜JSTとして消えない。
+
+#### 横軸
+
+- USイントラデイはcategory軸である。
+- 横軸タイトルは `時間（JST）` である。
+- USイントラデイに週末rangebreaksを適用していない。
+- JPのrangebreaksを変更していない。
+
+#### 縦軸
+
+- 固定の±2%、±10%、±20%を設定していない。
+- ランキング全件と時系列全値を使って上下限を計算する。
+- 最小値・最大値と0%を表示範囲に含む。
+- 異常値があっても線がチャート外へ切れない。
+
+#### パフォーマンス
+
+- USセクター相対はSPYとのリターン差である。
+- SPYから他のS&P500系列へフォールバックしていない。
+- 前営業日の日次終値を基準にしている。
+- 日次終値をイントラデイチャート最終点へ上書きしていない。
+- US個別のS&P500線とセクター分析のSPY相対値を混同していない。
+
+#### 表示
+
+- セクター分類分析の最上部にUS相対チャートがある。
+- US個別分析に同じUS相対チャートがある。
+- US個別全銘柄以下の全チャートでJST横軸と動的縦軸が有効である。
+- 上位・下位表示でランキング対象が正しい。
+- SOX参照を含みチャート線が最大8本になることを誤って削除しない。
+
+#### Discord
+
+- US専用埋め込みURLを直接開いている。
+- `data-market="us"` と `data-us-mode="relative"` を確認している。
+- ランキング画像は上位7行・下位7行である。
+- 2枚の結合画像が0バイトではない。
+- Discord送信失敗時にWorkflowも失敗する。
+- 本文リンクがUS個別分析ページである。
+
+### 絶対禁止事項
+
+1. 米国イントラデイ日時をUTCまたはNY現地時刻の一方へ決め打ちしない。
+2. 米国時刻を固定オフセットだけでJSTへ変換しない。
+3. SPY欠損時に `^GSPC`、VOO、IVVへ切り替えない。
+4. USイントラデイへJP用rangebreaksを適用しない。
+5. USとJPの時間軸修正を同じ一括変更で行わない。
+6. 縦軸を固定値へ戻さない。
+7. 表示中の線だけで縦軸を計算しない。
+8. 日次終値をイントラデイチャート最終点へ上書きしない。
+9. Discord撮影を画面切替ボタンのクリックへ依存させない。
+10. `sector_category.html` 全体を古いコミットへ戻して部分修正を失わない。
+
+### 現状の正解を確認する最短手順
+
+1. `etf_data_manager.py` を実行する。
+2. 日次・イントラデイJSONのSPYを確認する。
+3. `sector_category.html?embed=us-sector&period=1d#full-sector-flow` を開く。
+4. タイトルが `【US】相対パフォーマンス推移（全セクターvs SPY）` であることを確認する。
+5. 横軸がJSTで米国1市場日全体を表示することを確認する。
+6. 最悪値を含むよう縦軸が動的に広がることを確認する。
+7. `us_individual.html?period=1d` を開く。
+8. 全銘柄と複数のセクターカードで同じJST横軸・動的縦軸を確認する。
+9. `sector_category_discord.yml` を `mode=us` で手動実行する。
+10. Discordに上位・下位の2画像とUS個別分析URLが届くことを確認する。
