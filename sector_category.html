@@ -3095,7 +3095,17 @@
                             {/* 全チャート一覧 */}
                             {!loading && processedData && processedData.timeSeries.length > 0 && (
                                 <div className="flex flex-col gap-4 animate-fade-in">
-                                    {/* 規模別指数（絶対値・最上部固定） */}
+                                    {/* 米国全セクター相対パフォーマンス（最上部固定） */}
+                                    <FullSectorChart
+                                        processedData={processedData}
+                                        period={period}
+                                        rawIntraday={rawIntraday}
+                                        rawDaily={rawDaily}
+                                        initialMarket="us"
+                                        lockMarket={true}
+                                        cardId="top-us-sector-flow"
+                                    />
+                                    {/* 規模別指数（絶対値） */}
                                     {CATEGORIES.filter(c => c.id === 'scale').map(category => (
                                         <CategorySection
                                             key={category.id}
