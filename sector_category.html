@@ -626,6 +626,64 @@
                     if (benchmarkReturn === null) return null;
                     return (sectorReturn - benchmarkReturn) * 100;
                 };
+                const isValidPriceValue = (value) => {
+                    const n = Number(value);
+                    return Number.isFinite(n) && n > 0;
+                };
+                const findPrevValidPrice = (series, beforeIndex) => {
+                    if (!Array.isArray(series)) return null;
+                    for (let i = beforeIndex - 1; i >= 0; i--) {
+                        if (isValidPriceValue(series[i])) return Number(series[i]);
+                    }
+                    return null;
+                };
+                const calcReturnFromBase = (priceMap, sym, basePriceMap, endIdx) => {
+                    const series = priceMap?.[sym];
+                    const base = basePriceMap?.[sym];
+                    const currentRaw = series?.[endIdx];
+                    if (!isValidPriceValue(base) || !isValidPriceValue(currentRaw)) return null;
+                    return (Number(currentRaw) / Number(base)) - 1;
+                };
+                const calcPerformanceFromBase = (priceMap, sym, basePriceMap, endIdx, bench = benchmark) => {
+                    const sectorReturn = calcReturnFromBase(priceMap, sym, basePriceMap, endIdx);
+                    if (sectorReturn === null) return null;
+                    if (!isRelative) return sectorReturn * 100;
+                    const benchmarkReturn = bench ? calcReturnFromBase(priceMap, bench.code, basePriceMap, endIdx) : null;
+                    if (benchmarkReturn === null) return null;
+                    return (sectorReturn - benchmarkReturn) * 100;
+                };
+                const buildDailyBaseMap = (symbols, sessionStartDate) => {
+                    if (!rawDaily?.dates || !rawDaily?.prices || !sessionStartDate) return null;
+                    let prevDailyIdx = -1;
+                    for (let di = rawDaily.dates.length - 1; di >= 0; di--) {
+                        if (rawDaily.dates[di] < sessionStartDate) { prevDailyIdx = di; break; }
+                    }
+                    if (prevDailyIdx < 0) return null;
+                    const map = {};
+                    symbols.forEach(sym => {
+                        const value = rawDaily.prices?.[sym]?.[prevDailyIdx];
+                        if (isValidPriceValue(value)) map[sym] = Number(value);
+                    });
+                    return Object.keys(map).length ? map : null;
+                };
+                const buildBasePriceMap = (symbols, priceMap, startIdx, dailyBaseMap) => {
+                    const map = {};
+                    symbols.forEach(sym => {
+                        if (isValidPriceValue(dailyBaseMap?.[sym])) {
+                            map[sym] = Number(dailyBaseMap[sym]);
+                            return;
+                        }
+                        const series = priceMap?.[sym];
+                        const prev = findPrevValidPrice(series, startIdx);
+                        if (isValidPriceValue(prev)) {
+                            map[sym] = prev;
+                            return;
+                        }
+                        const start = series?.[startIdx];
+                        if (isValidPriceValue(start)) map[sym] = Number(start);
+                    });
+                    return map;
+                };
                 const buildRefSymbols = () => {
                     const refs = [
                         { code: '^NDX', name: 'NASDAQ100' },
@@ -647,25 +705,26 @@
                     const filteredIndices = filteredItems.map(item => item.index);
                     const itemByIndex = new Map(filteredItems.map(item => [item.index, item]));
                     const startIdx = filteredIndices[0];
-                    // 前日終値基準: セッション開始の1つ前のデータ点を基準にする。
-                    const baseIdx = startIdx > 0 ? startIdx - 1 : startIdx;
                     const timeSeries = [];
                     const rankingMap = {};
                     const refSymbols = buildRefSymbols();
+                    const baseSymbols = [...new Set([...usSymbols, 'SPY', ...refSymbols.map(ref => ref.code)])];
+                    const dailyBaseMap = buildDailyBaseMap(baseSymbols, filteredItems[0]?.date);
+                    const basePriceMap = buildBasePriceMap(baseSymbols, prices, startIdx, dailyBaseMap);
 
                     filteredIndices.forEach(i => {
                         const marketTime = itemByIndex.get(i);
                         const point = { date: marketTime.label, marketDate: marketTime.date };
                         usSymbols.forEach(sym => {
                             const name = US_SECTORS[sym];
-                            const perf = calcPerformance(prices, sym, baseIdx, i);
+                            const perf = calcPerformanceFromBase(prices, sym, basePriceMap, i);
                             if (perf === null) return;
                             point[name] = perf;
                             rankingMap[sym] = { symbol: sym, name, performance: perf };
                         });
                         if (!isRelative) {
                             refSymbols.forEach(ref => {
-                                const perf = calcPerformance(prices, ref.code, baseIdx, i);
+                                const perf = calcPerformanceFromBase(prices, ref.code, basePriceMap, i);
                                 if (perf !== null) point[ref.name] = perf;
                             });
                         }
@@ -901,6 +960,28 @@
                 return traces;
             }, [activeRanking, activeTimeSeries, effectiveVisibleSectors, market, processedData, usData]);
 
+            const yAxisRange = useMemo(() => {
+                if (market !== 'us' || !activeRanking.length || !activeTimeSeries.length) return undefined;
+                const values = [];
+                activeRanking.forEach(item => {
+                    const value = Number(item.performance);
+                    if (Number.isFinite(value)) values.push(value);
+                });
+                activeTimeSeries.forEach(point => {
+                    Object.entries(point).forEach(([key, value]) => {
+                        if (key === 'date' || key === 'marketDate') return;
+                        const n = Number(value);
+                        if (Number.isFinite(n)) values.push(n);
+                    });
+                });
+                if (!values.length) return undefined;
+                const minValue = Math.min(0, ...values);
+                const maxValue = Math.max(0, ...values);
+                const span = Math.max(maxValue - minValue, 0.5);
+                const padding = Math.max(span * 0.08, 0.2);
+                return [minValue - padding, maxValue + padding];
+            }, [activeRanking, activeTimeSeries, market]);
+
             const isUSIntraday = market === 'us' && activeIsIntraday;
             const rangebreaks = useMemo(() => {
                 if (!activeIsIntraday) return [{ bounds: ["sat","mon"] }];
@@ -1012,13 +1093,19 @@
                                                 showgrid: true, gridcolor: '#e2e8f0',
                                                 tickfont: { color: '#64748b', size: 9 },
                                                 rangebreaks: rangebreaks,
-                                                ...(isUSIntraday ? { type: 'category', nticks: 12, tickangle: -30 } : {}),
+                                                ...(isUSIntraday ? {
+                                                    type: 'category',
+                                                    nticks: 12,
+                                                    tickangle: -30,
+                                                    title: { text: '時間（JST）', font: { color: '#64748b', size: 10 } },
+                                                } : {}),
                                             },
                                             yaxis: {
                                                 showgrid: true, gridcolor: '#e2e8f0',
                                                 tickfont: { color: '#64748b', size: 9 },
                                                 ticksuffix: '%',
                                                 zeroline: true, zerolinecolor: '#0f172a', zerolinewidth: 2,
+                                                ...(yAxisRange ? { range: yAxisRange, autorange: false } : {}),
                                             },
                                             paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
                                             showlegend: false,
@@ -1525,20 +1612,71 @@
             minute: '2-digit',
             hourCycle: 'h23',
         });
-        const getNewYorkMarketTime = (utcStr) => {
-            const source = String(utcStr || '').replace(' ', 'T') + ':00Z';
-            const d = new Date(source);
-            if (Number.isNaN(d.getTime())) return null;
+        const TOKYO_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Tokyo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hourCycle: 'h23',
+        });
+        const getFormatterParts = (formatter, date) => {
             const parts = {};
-            NEW_YORK_TIME_FORMATTER.formatToParts(d).forEach(part => {
+            formatter.formatToParts(date).forEach(part => {
                 if (part.type !== 'literal') parts[part.type] = part.value;
             });
+            return parts;
+        };
+        const parseDateTimeParts = (value) => {
+            const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+            if (!match) return null;
+            const [, year, month, day, hour, minute] = match;
+            return {
+                year: Number(year),
+                month: Number(month),
+                day: Number(day),
+                hour: Number(hour),
+                minute: Number(minute),
+            };
+        };
+        const getTimeZoneOffsetMinutes = (date, formatter) => {
+            const parts = getFormatterParts(formatter, date);
+            const asUtc = Date.UTC(
+                Number(parts.year),
+                Number(parts.month) - 1,
+                Number(parts.day),
+                Number(parts.hour),
+                Number(parts.minute)
+            );
+            return (asUtc - date.getTime()) / 60000;
+        };
+        const getUtcFromNewYorkLocal = (parts) => {
+            const localAsUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+            let offset = getTimeZoneOffsetMinutes(new Date(localAsUtc), NEW_YORK_TIME_FORMATTER);
+            let utcMs = localAsUtc - offset * 60000;
+            offset = getTimeZoneOffsetMinutes(new Date(utcMs), NEW_YORK_TIME_FORMATTER);
+            utcMs = localAsUtc - offset * 60000;
+            return new Date(utcMs);
+        };
+        const formatJstAxisLabel = (date) => {
+            const parts = getFormatterParts(TOKYO_TIME_FORMATTER, date);
+            return `${Number(parts.month)}/${Number(parts.day)} ${parts.hour}:${parts.minute}`;
+        };
+        const getNewYorkMarketTime = (dateStr, timestampMode = 'ny-local') => {
+            const parsed = parseDateTimeParts(dateStr);
+            if (!parsed) return null;
+            const d = timestampMode === 'utc'
+                ? new Date(String(dateStr || '').replace(' ', 'T') + ':00Z')
+                : getUtcFromNewYorkLocal(parsed);
+            if (Number.isNaN(d.getTime())) return null;
+            const parts = getFormatterParts(NEW_YORK_TIME_FORMATTER, d);
             const hour = Number(parts.hour);
             const minute = Number(parts.minute);
             if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
             return {
                 date: `${parts.year}-${parts.month}-${parts.day}`,
-                label: `${Number(parts.month)}/${Number(parts.day)} ${parts.hour}:${parts.minute}`,
+                label: formatJstAxisLabel(d),
                 weekday: parts.weekday,
                 minutes: hour * 60 + minute,
             };
@@ -1547,10 +1685,10 @@
             if (!marketTime || marketTime.weekday === 'Sat' || marketTime.weekday === 'Sun') return false;
             return marketTime.minutes >= 570 && marketTime.minutes <= 960;
         };
-        const getNewYorkSessionItems = (dates) => {
+        const getNewYorkSessionItems = (dates, timestampMode = 'ny-local') => {
             const items = [];
             dates.forEach((date, index) => {
-                const marketTime = getNewYorkMarketTime(date);
+                const marketTime = getNewYorkMarketTime(date, timestampMode);
                 if (isNewYorkRegularSession(marketTime)) {
                     items.push({ index, ...marketTime });
                 }
@@ -1570,23 +1708,47 @@
                 return new Set(values.map(value => value.toFixed(6))).size > 1;
             });
         };
-        const getRecentNewYorkSessionItems = (dates, period, prices = null, symbols = []) => {
-            const sessionItems = getNewYorkSessionItems(dates);
-            const sessionMap = new Map();
-            sessionItems.forEach(item => {
-                if (!sessionMap.has(item.date)) sessionMap.set(item.date, []);
-                sessionMap.get(item.date).push(item);
+        const getNewYorkSessionQuality = (items, prices, symbols = []) => {
+            if (!items || items.length === 0) return 0;
+            if (!prices || !symbols.length) return items.length;
+            let validCount = 0;
+            symbols.forEach(symbol => {
+                const series = prices[symbol];
+                if (!Array.isArray(series)) return;
+                items.forEach(item => {
+                    const value = Number(series[item.index]);
+                    if (Number.isFinite(value) && value > 0) validCount += 1;
+                });
             });
-            const sessionDates = [...sessionMap.keys()].filter(date =>
-                hasValidNewYorkSession(sessionMap.get(date), prices, symbols)
-            );
+            return validCount + items.length * 0.001;
+        };
+        const getRecentNewYorkSessionItems = (dates, period, prices = null, symbols = []) => {
             const daysAgo = parseInt(String(period).replace('d', ''), 10) || 1;
-            const selectedDates = new Set(sessionDates.slice(Math.max(0, sessionDates.length - daysAgo)));
-            return {
-                sessionItems,
-                filteredItems: sessionItems.filter(item => selectedDates.has(item.date)),
-                sessionDates,
-            };
+            const candidates = ['ny-local', 'utc'].map(timestampMode => {
+                const sessionItems = getNewYorkSessionItems(dates, timestampMode);
+                const sessionMap = new Map();
+                sessionItems.forEach(item => {
+                    if (!sessionMap.has(item.date)) sessionMap.set(item.date, []);
+                    sessionMap.get(item.date).push(item);
+                });
+                const sessionDates = [...sessionMap.keys()].filter(date =>
+                    hasValidNewYorkSession(sessionMap.get(date), prices, symbols)
+                );
+                const selectedDates = new Set(sessionDates.slice(Math.max(0, sessionDates.length - daysAgo)));
+                const filteredItems = sessionItems.filter(item => selectedDates.has(item.date));
+                return {
+                    timestampMode,
+                    sessionItems,
+                    filteredItems,
+                    sessionDates,
+                    quality: getNewYorkSessionQuality(filteredItems, prices, symbols),
+                };
+            });
+            candidates.sort((a, b) => {
+                if (b.quality !== a.quality) return b.quality - a.quality;
+                return a.timestampMode === 'ny-local' ? -1 : 1;
+            });
+            return candidates[0] || { sessionItems: [], filteredItems: [], sessionDates: [], timestampMode: 'ny-local' };
         };
 
         const COLORS = [
