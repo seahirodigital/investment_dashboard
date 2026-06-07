@@ -2,22 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-07T23:46:39+00:00"
+      "last_fetch_at": "2026-06-07T23:56:41+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-07T23:46:39+00:00"
+      "last_fetch_at": "2026-06-07T23:56:41+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-07T23:46:39+00:00"
+      "last_fetch_at": "2026-06-07T23:56:41+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-07T23:46:39+00:00"
+      "last_fetch_at": "2026-06-07T23:56:41+00:00"
     }
   },
   "seen_ids": [
-    "ロイター:e09b53c6d9ea0eebfccb15ee7fdc35a5",
-    "ロイター:389bd7230c2339c8f4715d85582c444a",
-    "ロイター:1356efdc6fc42fbd8c5a8bd4509193ff",
     "ロイター:3cba756c6b85e95cec2a5737680e7c1d",
     "ロイター:480feef5bdf4a2c28629ae4895b17977",
     "ロイター:279f25796b755bdc3940e45eed1828ba",
@@ -814,7 +811,10 @@
     "ロイター:93e6f6e47f9acc0e7ac845b38d5793a6",
     "ロイター:960e4dc8a93fd5ed5de10e29f4e19d9f",
     "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37",
-    "ブルームバーグ:c4506afbfeac3074b989aee67ae70f2b"
+    "ブルームバーグ:c4506afbfeac3074b989aee67ae70f2b",
+    "みんかぶ FX/為替 要人発言:ac7daa18b3b782571ea63878654f741f",
+    "みんかぶ FX/為替 要人発言:c7238b36039f545ff9adc02e2bfb2149",
+    "みんかぶ FX/為替 要人発言:4257a32e9e6e3f6b1afba1082adbb2f8"
   ],
   "pending_items": [],
   "seen_keys": [
@@ -1216,6 +1216,9 @@
     "ロイター:93e6f6e47f9acc0e7ac845b38d5793a6",
     "ロイター:960e4dc8a93fd5ed5de10e29f4e19d9f",
     "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37",
-    "ブルームバーグ:c4506afbfeac3074b989aee67ae70f2b"
+    "ブルームバーグ:c4506afbfeac3074b989aee67ae70f2b",
+    "minkabu:ac7daa18b3b782571ea63878654f741f",
+    "minkabu:c7238b36039f545ff9adc02e2bfb2149",
+    "minkabu:4257a32e9e6e3f6b1afba1082adbb2f8"
   ]
 }
