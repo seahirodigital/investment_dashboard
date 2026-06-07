@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import requests
 import json
 import os
 import urllib.parse
@@ -289,6 +290,11 @@ US_SECTORS = {
   'PAVE': 'インフラ',
 }
 
+# ── 米国相対パフォーマンス用ベンチマーク（S&P500連動）───────────────
+US_SP500_BENCHMARKS = {
+  'SPY': 'SPY',
+}
+
 # ── バスケットセクター（時価総額上位銘柄で構成）─────────────────────────
 # 同一ETFコードに複数業種が混在しているため、代表銘柄の等加重平均で分離
 BASKET_SECTORS = {
@@ -566,6 +572,7 @@ ALL_SYMBOLS = list(set(
     + list(SEMICONDUCTOR_JP.keys())
     + list(SEMICONDUCTOR_US.keys())
     + list(US_SECTORS.keys())
+    + list(US_SP500_BENCHMARKS.keys())
     + list(TOPIX100.keys())
     + ALL_US_INDIVIDUAL_SYMBOLS
     + ALL_BASKET_SYMBOLS
@@ -708,6 +715,154 @@ def supplement_jp_intraday_with_chart_api(df, period, interval):
     return df.sort_index()
 
 
+def extract_close_series(downloaded, symbol):
+    if downloaded is None or downloaded.empty:
+        return None
+
+    df = downloaded
+    if isinstance(df.columns, pd.MultiIndex):
+        if "Close" in df.columns.get_level_values(0):
+            df = df["Close"]
+        elif "Adj Close" in df.columns.get_level_values(0):
+            df = df["Adj Close"]
+
+    if isinstance(df, pd.DataFrame):
+        if symbol in df.columns:
+            series = df[symbol]
+        elif len(df.columns) == 1:
+            series = df.iloc[:, 0]
+        else:
+            return None
+    else:
+        series = df
+
+    series = pd.to_numeric(series, errors="coerce")
+    if series.empty:
+        return None
+    series.index = pd.to_datetime(series.index).tz_localize(None)
+    return series.ffill().bfill()
+
+
+def fetch_symbol_from_yahoo_chart(symbol, period, interval):
+    chart_range = "2y" if interval == "1d" else ("60d" if interval.endswith("m") else period)
+    params = {
+        "range": chart_range,
+        "interval": interval,
+        "includePrePost": "true",
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json,text/plain,*/*",
+    }
+    response = requests.get(
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(symbol, safe='')}",
+        params=params,
+        headers=headers,
+        timeout=30,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    chart = payload.get("chart", {})
+    if chart.get("error"):
+        raise RuntimeError(f"Yahoo chart API returned an error for {symbol}: {chart['error']}")
+    result = (chart.get("result") or [None])[0]
+    if not result or not result.get("timestamp"):
+        raise RuntimeError(f"Yahoo chart API returned no {symbol} timestamps for period={period}, interval={interval}")
+
+    closes = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+    index = pd.to_datetime(result["timestamp"], unit="s", utc=True).tz_convert(None)
+    series = pd.Series(closes, index=index)
+    series = pd.to_numeric(series, errors="coerce")
+    if interval == "1d":
+        series.index = series.index.normalize()
+        series = series.groupby(series.index).last()
+    return series.ffill().bfill()
+
+
+def fetch_spy_from_yahoo_chart(period, interval):
+    return fetch_symbol_from_yahoo_chart("SPY", period, interval)
+
+
+def has_valid_prices(series):
+    if series is None:
+        return False
+    numeric = pd.to_numeric(series, errors="coerce").dropna()
+    return not numeric.empty and (numeric > 0).any()
+
+
+def ensure_symbol_column(df, symbol, period, interval, required=False):
+    if symbol in df.columns and has_valid_prices(df[symbol]):
+        return df
+
+    print(f"  {symbol} missing from batch download. Fetching separately...")
+    series = None
+    try:
+        raw = yf.download(symbol, period=period, interval=interval, auto_adjust=False, progress=False)
+        series = extract_close_series(raw, symbol)
+    except Exception as exc:
+        print(f"  yfinance {symbol} fallback failed: {exc}")
+
+    if not has_valid_prices(series):
+        print(f"  Fetching {symbol} from Yahoo chart API...")
+        try:
+            series = fetch_symbol_from_yahoo_chart(symbol, period, interval)
+        except Exception as exc:
+            if required:
+                raise
+            print(f"  Yahoo chart {symbol} fallback failed: {exc}")
+            return df
+    if not has_valid_prices(series):
+        if required:
+            raise RuntimeError(f"{symbol} data could not be fetched for period={period}, interval={interval}")
+        return df
+
+    if df is None or df.empty or len(df.index) == 0:
+        df = pd.DataFrame(index=series.index)
+    else:
+        df = df.reindex(df.index.union(series.index).sort_values())
+
+    aligned = series.reindex(df.index).ffill().bfill()
+    if not has_valid_prices(aligned):
+        if required:
+            raise RuntimeError(f"{symbol} data could not be aligned to output dates for period={period}, interval={interval}")
+        return df
+
+    df = df.copy()
+    df[symbol] = aligned
+    return df
+
+
+def ensure_spy_column(df, period, interval):
+    return ensure_symbol_column(df, "SPY", period, interval, required=True)
+
+
+def ensure_us_sector_columns(df, period, interval):
+    df = ensure_spy_column(df, period, interval)
+    for symbol in US_SECTORS.keys():
+        df = ensure_symbol_column(df, symbol, period, interval, required=False)
+
+    valid_us_count = sum(
+        1
+        for symbol in US_SECTORS.keys()
+        if symbol in df.columns and has_valid_prices(df[symbol])
+    )
+    if valid_us_count == 0:
+        raise RuntimeError(f"US sector data could not be fetched for period={period}, interval={interval}")
+    print(f"  US sector data validated: {valid_us_count}/{len(US_SECTORS)} symbols")
+    return df
+
+
+def validate_spy_output(data, label):
+    spy = data.get("prices", {}).get("SPY")
+    dates = data.get("dates", [])
+    if not spy or len(spy) != len(dates):
+        raise RuntimeError(f"SPY is missing or length mismatch in {label}: spy={len(spy) if spy else 0}, dates={len(dates)}")
+    valid_count = sum(1 for value in spy if value is not None and float(value) > 0)
+    if valid_count == 0:
+        raise RuntimeError(f"SPY has no valid prices in {label}")
+    print(f"  SPY validated in {label}: {valid_count}/{len(dates)} points")
+
+
 def fetch_data(period="400d", interval="1d"):
     # sectors 定義はSECTORSのみ（半導体個別株は混入させない）
     sectors_def = dict(SECTORS)
@@ -719,6 +874,7 @@ def fetch_data(period="400d", interval="1d"):
         "semiconductor_us": SEMICONDUCTOR_US,
         "topix100": TOPIX100,
         "us_sectors": US_SECTORS,
+        "us_sp500_benchmarks": US_SP500_BENCHMARKS,
         "us_individual": US_INDIVIDUAL,
         "dates": [],
         "prices": {}
@@ -734,7 +890,7 @@ def fetch_data(period="400d", interval="1d"):
 
     if df.empty:
         print("Warning: No data fetched from Yahoo Finance.")
-        if not is_intraday:
+        if not is_intraday and os.environ.get("MARKET_DATA_ALLOW_US_ONLY") != "1":
             return output
         df = pd.DataFrame()
 
@@ -758,8 +914,11 @@ def fetch_data(period="400d", interval="1d"):
         if BENCHMARK in df_for_prices.columns:
             df_for_prices = df_for_prices[df_for_prices[BENCHMARK].notna()]
 
+    # 米国相対チャートはSPYだけを基準にするため、USセクターETFも含めて欠損時は補完する。
+    df_for_prices = ensure_us_sector_columns(df_for_prices, period, interval)
+
     # ── ETFセクター・半導体銘柄価格の保存──
-    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys()) + list(TOPIX100.keys()) + ALL_US_INDIVIDUAL_SYMBOLS
+    etf_symbols = [BENCHMARK] + list(SECTORS.keys()) + list(SEMICONDUCTOR_JP.keys()) + list(SEMICONDUCTOR_US.keys()) + list(US_SECTORS.keys()) + list(US_SP500_BENCHMARKS.keys()) + list(TOPIX100.keys()) + ALL_US_INDIVIDUAL_SYMBOLS
     for symbol in etf_symbols:
         if symbol in df_for_prices.columns:
             output["prices"][symbol] = [
@@ -826,13 +985,18 @@ def main():
     data_daily = fetch_data(period="400d", interval="1d")
     data_daily['generated_at'] = ts_utc
     data_daily['generated_at_jst'] = ts_jst
-    with open('data/etf_data.json', 'w', encoding='utf-8') as f:
-        json.dump(data_daily, f, ensure_ascii=False)
 
     # イントラデイ 5分足（14日）
     data_intraday = fetch_data(period="14d", interval="5m")
     data_intraday['generated_at'] = ts_utc
     data_intraday['generated_at_jst'] = ts_jst
+
+    validate_spy_output(data_daily, 'data/etf_data.json')
+    validate_spy_output(data_intraday, 'data/etf_intraday.json')
+
+    with open('data/etf_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data_daily, f, ensure_ascii=False)
+
     with open('data/etf_intraday.json', 'w', encoding='utf-8') as f:
         json.dump(data_intraday, f, ensure_ascii=False)
 

@@ -38,6 +38,18 @@ jobs:
           pip install pillow
           python -m playwright install --with-deps chromium
 
+      - name: Install market data dependencies
+        if: github.event.schedule == '25 21 * * 1-5' || github.event.inputs.mode == 'us'
+        run: |
+          pip install -r requirements.txt
+
+      - name: Refresh ETF data for US relative screenshots
+        if: github.event.schedule == '25 21 * * 1-5' || github.event.inputs.mode == 'us'
+        env:
+          MARKET_DATA_ALLOW_US_ONLY: '1'
+        run: |
+          python scripts/market/etf_data_manager.py
+
       - name: Capture sector category screenshots
         env:
           GITHUB_EVENT_SCHEDULE: ${{ github.event.schedule }}
@@ -174,7 +186,7 @@ jobs:
                       report_date = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d")
 
                       lines = [
-                          f"{report_date}の米国株各セクター資金流入",
+                          f"{report_date}の米国株各セクター / SPY相対",
                           "",
                           "▼上位7件",
                       ]
