@@ -2,20 +2,19 @@
   "version": 1,
   "feeds": {
     "https://assets.wor.jp/rss/rdf/bloomberg/markets.rdf": {
-      "last_fetch_at": "2026-06-07T13:06:37+00:00"
+      "last_fetch_at": "2026-06-07T19:14:01+00:00"
     },
     "https://assets.wor.jp/rss/rdf/reuters/top.rdf": {
-      "last_fetch_at": "2026-06-07T13:06:37+00:00"
+      "last_fetch_at": "2026-06-07T19:14:01+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/statement.rdf": {
-      "last_fetch_at": "2026-06-07T13:06:37+00:00"
+      "last_fetch_at": "2026-06-07T19:14:01+00:00"
     },
     "https://assets.wor.jp/rss/rdf/minkabufx/stock.rdf": {
-      "last_fetch_at": "2026-06-07T13:06:37+00:00"
+      "last_fetch_at": "2026-06-07T19:14:01+00:00"
     }
   },
   "seen_ids": [
-    "ロイター:29e99d08a9ff30be4487cedf7b5adba6",
     "ロイター:a1c16a4ffa1ab25fddd17cd5d4c7f6de",
     "ロイター:e09b53c6d9ea0eebfccb15ee7fdc35a5",
     "ロイター:389bd7230c2339c8f4715d85582c444a",
@@ -814,9 +813,21 @@
     "ロイター:663208782a00e604b03e115cb63b4ace",
     "ロイター:b8e3025ec2d49cc9b42f858be2609a01",
     "ロイター:93e6f6e47f9acc0e7ac845b38d5793a6",
-    "ロイター:960e4dc8a93fd5ed5de10e29f4e19d9f"
+    "ロイター:960e4dc8a93fd5ed5de10e29f4e19d9f",
+    "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37"
   ],
-  "pending_items": [],
+  "pending_items": [
+    {
+      "id": "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37",
+      "dedupe_key": "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37",
+      "source": "ブルームバーグ",
+      "title": "ECB追加利上げに懐疑論、JPモルガンAMなど運用大手「1回で終わる」",
+      "link": "https://www.bloomberg.com/jp/news/articles/2026-06-07/TG9D9ZT9NJLS00?srnd=jp-markets",
+      "published_at": "2026-06-07T15:00:00+00:00",
+      "fetched_at": "2026-06-07T19:14:01+00:00",
+      "delivery_route": "main"
+    }
+  ],
   "seen_keys": [
     "minkabu:5bd96acd2d1b49eb770979e4810a13c0",
     "minkabu:ed576d51e27a22dc4f65dd25bbb614c7",
@@ -1214,6 +1225,7 @@
     "ロイター:663208782a00e604b03e115cb63b4ace",
     "ロイター:b8e3025ec2d49cc9b42f858be2609a01",
     "ロイター:93e6f6e47f9acc0e7ac845b38d5793a6",
-    "ロイター:960e4dc8a93fd5ed5de10e29f4e19d9f"
+    "ロイター:960e4dc8a93fd5ed5de10e29f4e19d9f",
+    "ブルームバーグ:c1567a46e0f71f8d1f13db84f251ed37"
   ]
 }
