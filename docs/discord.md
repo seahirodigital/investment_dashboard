@@ -1,6 +1,6 @@
 # Discord通知一覧
 
-更新日: 2026-05-31  
+更新日: 2026-06-07
 対象リポジトリ: `/Users/user/Library/CloudStorage/OneDrive-個人用/開発/investment_dashboard`  
 共通Webhook Secret: `DISCORD_OPTION_WEBHOOK_URL`
 
@@ -9,7 +9,7 @@
 | 通知名 | Workflow | 実行タイミング | 手動実行 | 送信条件 | 通知内容 | 添付ファイル | 直近状況 |
 |---|---|---:|---|---|---|---|---|
 | 朝の市況Discord通知 | `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\morning_market_discord.yml` | 平日 06:33 JST（月〜金） / `33 21 * * 0-4` UTC | あり | 常に送信 | Fear & Greed Indexの数値とURL、日経VIXの数値とURL、FinvizヒートマップURL、指定ハッシュタグ | 1. Finvizヒートマップ<br>2. Fear & Greed Index<br>3. 日経VIX 1wチャート | 成功。直近手動実行: 2026-05-20 23:54 JST / `https://github.com/seahirodigital/investment_dashboard/actions/runs/26170687841` |
-| 米国株セクター資金流入通知 | `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\sector_category_discord.yml` | 06:25 JST（UTC月〜金の21:25なのでJST火〜土相当） / `25 21 * * 1-5` UTC | あり。`mode=us` | 常に送信 | 当日の日付、米国株各セクター資金流入、上位7件、下位7件、ハッシュタグ、セクター分析ページURL | 1. 米国株セクター上位7件チャート＋ランキング<br>2. 米国株セクター下位7件チャート＋ランキング | 成功。直近の該当Workflow実行: 2026-05-20 19:03 JST / `https://github.com/seahirodigital/investment_dashboard/actions/runs/26155557923` |
+| 米国株セクター資金流入通知 | `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\sector_category_discord.yml` | 06:25 JST（UTC月〜金の21:25なのでJST火〜土相当） / `25 21 * * 1-5` UTC | あり。`mode=us` | 常に送信 | 当日の日付、SPY相対の米国株各セクター上位7件・下位7件、ハッシュタグ、US個別分析ページURL | 1. 米国株セクター上位7件チャート＋ランキング<br>2. 米国株セクター下位7件チャート＋ランキング | 成功。直近手動実行: 2026-06-07 JST / `https://github.com/seahirodigital/investment_dashboard/actions/runs/27086990720` |
 | 日本株セクター資金流入通知 | `C:\Users\mahha\OneDrive\開発\investment_dashboard\.github\workflows\sector_category_discord.yml` | 平日 15:40 JST（月〜金） / `40 6 * * 1-5` UTC | あり。`mode=jp` | 常に送信 | 当日の日付、セクター資金流入割合分析、上位5件、下位5件、ハッシュタグ、セクター分析ページURL | 1. 日本株セクター上位7件チャート＋ランキング<br>2. 日本株セクター下位7件チャート＋ランキング<br>3. 日本株セクター全ランキング | 成功。直近の該当Workflow実行: 2026-05-20 19:03 JST / `https://github.com/seahirodigital/investment_dashboard/actions/runs/26155557923` |
 | 日経225オプション分析通知 | `/Users/user/Library/CloudStorage/OneDrive-個人用/開発/investment_dashboard/.github/workflows/daily_participant.yml` | 平日 17:45 JST（月〜金） / `45 8 * * 1-5` UTC | あり | JPX手口データとオプション履歴を取得後に送信 | `YYYYMMDDの日経225 オプション分析`、ハッシュタグ、オプションページURL、トップページURL | 1. 主要投資家差分チャート<br>2. 主要投資家合計チャート<br>3. 主要投資家トレンドチャート<br>4. 日経225建玉ストライク別チャート<br>5. 日経225差分ストライク別チャート | 平日のみ送信 |
 | Gemini投資戦略サマリー通知 | `/Users/user/Library/CloudStorage/OneDrive-個人用/開発/investment_dashboard/.github/workflows/daily_market_analysis.yml` | 平日 18:15 JST（月〜金） / `15 9 * * 1-5` UTC | あり | Gemini分析完了後に送信 | 投資カレンダー「情報」タブと同じMarkdown本文。`１：投資戦略サマリー`、`２：分析内容`、`３：生ファクト詳細`をDiscordの本文上限に合わせて分割送信 | 全文Markdownファイル | 追加済み |
@@ -45,7 +45,8 @@ https://finviz.com/map
 
 #株式投資 #デイトレ #オプション #FX
 
-https://seahirodigital.github.io/investment_dashboard/sector_category.html#full-sector-flow
+US個別分析
+https://seahirodigital.github.io/investment_dashboard/us_individual.html
 ```
 
 ### 日本株セクター資金流入通知

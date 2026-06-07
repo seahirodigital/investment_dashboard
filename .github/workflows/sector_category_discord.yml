@@ -74,7 +74,11 @@ jobs:
           mode = dispatch_mode if dispatch_mode in {'jp', 'us'} else ('us' if schedule == '25 21 * * 1-5' else 'jp')
           (output_dir / 'mode.txt').write_text(mode, encoding='utf-8')
 
-          page_url = 'http://127.0.0.1:8000/sector_category.html?period=1d#full-sector-flow'
+          page_url = (
+              'http://127.0.0.1:8000/sector_category.html?embed=us-sector&period=1d#full-sector-flow'
+              if mode == 'us'
+              else 'http://127.0.0.1:8000/sector_category.html?period=1d#full-sector-flow'
+          )
           card_selector = '#full-sector-flow[data-capture="full-sector-card"]'
           chart_selector = '[data-capture="full-sector-chart"]'
           ranking_selector = '[data-capture="full-sector-ranking"]'
@@ -91,15 +95,14 @@ jobs:
 
                   card = page.locator(card_selector).first
                   if mode == 'us':
-                      card.locator('[data-capture="market-us"]').click()
                       page.wait_for_function(
-                          """() => document.querySelector('#full-sector-flow[data-capture="full-sector-card"]')?.dataset.market === 'us'""",
-                          timeout=30000,
-                      )
-                      card.locator('[data-capture="us-mode-relative"]').click()
-                      page.wait_for_function(
-                          """() => document.querySelector('#full-sector-flow[data-capture="full-sector-card"]')?.dataset.usMode === 'relative'""",
-                          timeout=30000,
+                          """() => {
+                            const card = document.querySelector('#full-sector-flow[data-capture="full-sector-card"]');
+                            return card?.dataset.market === 'us'
+                              && card?.dataset.usMode === 'relative'
+                              && card?.querySelector('h3')?.textContent.includes('vs SPY');
+                          }""",
+                          timeout=45000,
                       )
                       page.wait_for_timeout(5000)
 
@@ -112,14 +115,33 @@ jobs:
                       timeout=45000,
                   )
 
-                  def scroll_ranking(position):
-                      ranking.evaluate(
+                  def show_ranking_slice(position):
+                      visible_count = ranking.evaluate(
                           """(element, position) => {
+                            const rows = Array.from(element.querySelectorAll('.relative.group.h-8'));
+                            const start = position === 'bottom' ? Math.max(0, rows.length - 7) : 0;
+                            const end = Math.min(rows.length, start + 7);
+                            rows.forEach((row, index) => {
+                              row.style.display = index >= start && index < end ? 'flex' : 'none';
+                            });
                             const scroller = element.querySelector('.overflow-y-auto');
-                            if (!scroller) return;
-                            scroller.scrollTop = position === 'bottom' ? scroller.scrollHeight : 0;
+                            if (scroller) scroller.scrollTop = 0;
+                            return rows.filter((row) => row.style.display !== 'none').length;
                           }""",
                           position,
+                      )
+                      if visible_count != 7:
+                          raise RuntimeError(
+                              f"{position}ランキングの表示件数が7件ではありません: {visible_count}"
+                          )
+
+                  def restore_ranking_rows():
+                      ranking.evaluate(
+                          """element => {
+                            element.querySelectorAll('.relative.group.h-8').forEach((row) => {
+                              row.style.display = 'flex';
+                            });
+                          }"""
                       )
 
                   def combine(left_path, right_path, output_path):
@@ -136,6 +158,8 @@ jobs:
                       canvas.paste(left, (0, 0))
                       canvas.paste(right, (left.width + gap, 0))
                       canvas.save(output_path)
+                      if not output_path.exists() or output_path.stat().st_size == 0:
+                          raise RuntimeError(f"結合画像を生成できませんでした: {output_path}")
 
                   def extract_ranking_items():
                       rows = ranking.evaluate(
@@ -200,7 +224,8 @@ jobs:
                           "",
                           "#米国株 #株式投資 #デイトレ #オプション #FX",
                           "",
-                          "https://seahirodigital.github.io/investment_dashboard/sector_category.html#full-sector-flow",
+                          "US個別分析",
+                          "https://seahirodigital.github.io/investment_dashboard/us_individual.html",
                       ])
 
                       (output_dir / 'discord_message.txt').write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -215,7 +240,7 @@ jobs:
 
                   card.locator('[data-capture="show-top7"]').click()
                   page.wait_for_timeout(2500)
-                  scroll_ranking('top')
+                  show_ranking_slice('top')
                   page.wait_for_timeout(500)
                   top_chart = output_dir / f'{prefix}_top7_chart.png'
                   top_ranking = output_dir / f'{prefix}_top7_ranking.png'
@@ -229,7 +254,7 @@ jobs:
 
                   card.locator('[data-capture="show-bottom7"]').click()
                   page.wait_for_timeout(2500)
-                  scroll_ranking('bottom')
+                  show_ranking_slice('bottom')
                   page.wait_for_timeout(500)
                   bottom_chart = output_dir / f'{prefix}_bottom7_chart.png'
                   bottom_ranking = output_dir / f'{prefix}_bottom7_ranking.png'
@@ -242,6 +267,7 @@ jobs:
                   )
 
                   if mode == 'jp':
+                      restore_ranking_rows()
                       ranking.evaluate(
                           """element => {
                             const scroller = element.querySelector('.overflow-y-auto');
@@ -271,6 +297,15 @@ jobs:
               server.wait(timeout=10)
           PY
 
+      - name: Upload sector category screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sector-category-screenshots-${{ github.run_id }}
+          path: artifacts/sector_category_screenshots
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Send sector category screenshots to Discord
         env:
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
@@ -283,12 +318,12 @@ jobs:
           MODE="$(cat artifacts/sector_category_screenshots/mode.txt)"
 
           if [ "$MODE" = "us" ]; then
-            curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
+            curl --fail-with-body -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
               -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
               -F "files[0]=@artifacts/sector_category_screenshots/us_sector_category_top7_with_ranking.png" \
               -F "files[1]=@artifacts/sector_category_screenshots/us_sector_category_bottom7_with_ranking.png"
           else
-            curl -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
+            curl --fail-with-body -sS -X POST "$DISCORD_OPTION_WEBHOOK_URL" \
               -F "content=<artifacts/sector_category_screenshots/discord_message.txt" \
               -F "files[0]=@artifacts/sector_category_screenshots/sector_category_full_ranking.png" \
               -F "files[1]=@artifacts/sector_category_screenshots/sector_category_top7_with_ranking.png" \
