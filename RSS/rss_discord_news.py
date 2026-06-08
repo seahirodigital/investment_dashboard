@@ -176,6 +176,13 @@ def _normalize_link_for_key(link: str) -> str:
     return normalized.split("#", 1)[0].rstrip("/")
 
 
+def _normalize_article_link_for_key(link: str) -> str:
+    normalized = _normalize_link_for_key(link)
+    if not normalized:
+        return ""
+    return normalized.split("?", 1)[0]
+
+
 def _feed_delivery_route(feed: dict[str, str]) -> str:
     return feed.get("delivery_route") or DEFAULT_DELIVERY_ROUTE
 
@@ -191,6 +198,10 @@ def _make_dedupe_key(delivery_route: str, raw_id: str, title: str, link: str, it
         base = _normalize_link_for_key(link) or raw_id or title or item_id
         digest = hashlib.sha256(base.encode("utf-8")).hexdigest()
         return f"{MINKABU_DELIVERY_ROUTE}:{digest[:32]}"
+    normalized_link = _normalize_article_link_for_key(link)
+    if normalized_link:
+        digest = hashlib.sha256(normalized_link.encode("utf-8")).hexdigest()
+        return f"{delivery_route}:{digest[:32]}"
     return item_id
 
 
@@ -246,6 +257,42 @@ def append_delivery_log(path: Path, items: list[NewsItem], delivered_at: datetim
             }
             handle.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
             handle.write("\n")
+
+
+def merge_delivery_log_seen_keys(state: dict[str, Any], path: Path) -> int:
+    if not path.exists():
+        return 0
+
+    seen_key_list = list(dict.fromkeys(state.get("seen_keys", [])))
+    seen_keys = set(seen_key_list)
+    added = 0
+
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(record, dict):
+                continue
+
+            item_id = str(record.get("id") or "")
+            source = str(record.get("source") or "")
+            title = str(record.get("title") or "")
+            link = str(record.get("link") or "")
+            delivery_route = str(record.get("delivery_route") or _delivery_route_from_source(source))
+            dedupe_key = _make_dedupe_key(delivery_route, "", title, link, item_id)
+
+            if dedupe_key and dedupe_key not in seen_keys:
+                seen_keys.add(dedupe_key)
+                seen_key_list.append(dedupe_key)
+                added += 1
+
+    state["seen_keys"] = list(dict.fromkeys(seen_key_list))[-MAX_SEEN_IDS:]
+    return added
 
 
 def _truncate(value: str, limit: int) -> str:
@@ -602,6 +649,9 @@ def main() -> int:
         return 0
 
     state = load_state(state_path)
+    restored_seen_count = merge_delivery_log_seen_keys(state, delivery_log_path)
+    if restored_seen_count:
+        print(f"配信ログから既配信NEWSの重複判定キーを復元しました: {restored_seen_count} 件")
     exit_code = 0
 
     try:
