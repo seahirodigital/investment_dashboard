@@ -250,20 +250,10 @@ NEWS配信
 YYYY-MM-DD HH:mm JST
 ```
 
-各NEWSは以下の形式で投稿する。
-
-時刻が信頼できる場合:
+各NEWSは以下の形式で投稿する。投稿ヘッダーにJSTの配信時刻があるため、個別NEWSには公開日付を表示しない。
 
 ```text
-YYYY/MM/DD/HH:mm
-タイトル
-URL
-```
-
-RSS itemの時刻がJST `00:00:00` の場合:
-
-```text
-YYYY/MM/DD
+★★★●●●
 タイトル
 URL
 ```

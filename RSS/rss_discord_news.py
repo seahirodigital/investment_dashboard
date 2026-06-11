@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 import requests
 
-from shiwake_skill.classifier import classify_news_text, format_discord_date_line
+from shiwake_skill.classifier import classify_news_text
 
 try:
     from zoneinfo import ZoneInfo
@@ -481,11 +481,12 @@ def build_discord_messages(items: list[NewsItem], now: datetime) -> list[str]:
     current = header
 
     for item in items:
-        published = _format_datetime_for_message(item.published_at)
         title = _truncate(item.title, 220)
         lines = []
-        if published:
-            lines.append(format_discord_date_line(published, item.title))
+        classification = classify_news_text(item.title)
+        marker = classification.get("marker", "")
+        if marker:
+            lines.append(marker)
         lines.append(title)
         if item.link:
             lines.append(item.link)
