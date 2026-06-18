@@ -18,7 +18,7 @@
 
     <!-- Utilities -->
     <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js"></script>
 
     <style>
         body { background-color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; color: #334155; }
@@ -65,7 +65,8 @@
         };
     </script>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
+        /** @jsxRuntime classic */
         const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
         // Plotlyラッパー

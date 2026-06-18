@@ -11,7 +11,7 @@
     <script src="https://unpkg.com/recharts@2.12.0/umd/Recharts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js"></script>
     <!-- EasyMDE (投資記録カード) -->
     <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
     <!-- Markdown 共通スタイル (3ページ共通: index / short_selling / option) -->
@@ -71,7 +71,8 @@
             el.innerHTML = `<strong>System Error:</strong><br>${message}<br><small class="text-xs opacity-75">${source}:${lineno}</small>`;
         };
     </script>
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
+        /** @jsxRuntime classic */
         const { useState, useEffect, useMemo, useRef } = React;
         const { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, Cell, Brush } = window.Recharts || {};
 
