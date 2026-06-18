@@ -1476,3 +1476,27 @@ https://github.com/seahirodigital/investment_dashboard/actions/runs/27088017458
 8. 全銘柄と複数のセクターカードで同じJST横軸・動的縦軸を確認する。
 9. `sector_category_discord.yml` を `mode=us` で手動実行する。
 10. Discordに上位・下位の2画像とUS個別分析URLが届くことを確認する。
+
+## 2026-06-18 更新事項
+
+### GitHub Pages 白画面対策
+
+`https://seahirodigital.github.io/investment_dashboard/` が白画面になる問題に対応した。
+
+原因は、複数の HTML が `https://unpkg.com/@babel/standalone/babel.min.js` をバージョン未固定で読み込んでいたこと。UNPKG 側の `@babel/standalone` の `latest` が昨日から今日にかけて `@babel/standalone@8.0.0` へ切り替わった可能性が高く、リポジトリ側を変更していなくても、ブラウザで読み込まれる Babel の実体が変わった。
+
+この影響で、JSX 変換後コードに通常の `<script>` では実行できない `import` が混入し、React 描画前に停止して `#root` が空のままになった。つまり、サイト側のコミットがなくても、外部 CDN の未固定 `latest` が変わることで突然表示不能になる状態だった。
+
+対策として、以下の HTML で Babel を `https://unpkg.com/@babel/standalone@7.26.10/babel.min.js` に固定し、`<script type="text/babel" data-presets="env,react">` と `/** @jsxRuntime classic */` を追加した。
+
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\index.html`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\advanced.html`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\analytics.html`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\sector_category.html`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\short_selling.html`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\topix100.html`
+- `C:\Users\mahha\OneDrive\開発\investment_dashboard\us_individual.html`
+
+検証では、7 ページすべてで `#root` が描画され、`Cannot use import statement outside a module` および `react/jsx-runtime` 系のエラーが出ないことを確認した。
+
+修正コミット: `33875071 Fix GitHub Pages white screen`
