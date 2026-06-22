@@ -5,6 +5,17 @@ on:
     # 18:15 JST = 09:15 UTC
     - cron: '15 9 * * 1-5'
   workflow_dispatch:
+    inputs:
+      note_post_mode:
+        description: 'note投稿モード'
+        required: false
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run
+          - publish
+          - draft
+          - skip
 
 permissions:
   contents: write
@@ -16,13 +27,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Checkout notion2note
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        uses: actions/checkout@v4
+        with:
+          repository: seahirodigital/notion2note
+          path: _external/notion2note
+          token: ${{ secrets.GH_PAT || github.token }}
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          if [ -d "_external/notion2note" ]; then
+            pip install -r _external/notion2note/requirements.txt
+            python -m playwright install --with-deps chromium
+          fi
 
       # ── Step 1: データ取得 ──────────────────────────────────
       - name: Fetch intraday data
@@ -58,7 +82,25 @@ jobs:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
           GIST_ID: ${{ secrets.GIST_ID }}
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+          NOTE_POST_MODE: ${{ github.event_name == 'schedule' && 'publish' || github.event.inputs.note_post_mode }}
+          NOTE_PROJECT_DIR: ${{ github.workspace }}/_external/notion2note
+          NOTE_EMAIL: ${{ secrets.NOTE_EMAIL }}
+          NOTE_PASSWORD: ${{ secrets.NOTE_PASSWORD }}
+          NOTE_STORAGE_STATE: ${{ secrets.NOTE_STORAGE_STATE }}
+          NOTE_STORAGE_SECRET_NAME: NOTE_STORAGE_STATE
+          NOTE_AFFILIATE_MEMO: '1'
+          NOTE_AFFILIATE_COUNT: '1'
+          NOTE_AFFILIATE_SEED: ${{ github.run_id }}
         run: python scripts/market/gemini_analysis.py
+
+      - name: Upload note generated artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: note-blog-generated-${{ github.run_id }}
+          path: note/generated
+          if-no-files-found: ignore
+          retention-days: 7
 
       # ── Step 3: レポートとデータをコミット ──────────────────
       - name: Commit reports and data

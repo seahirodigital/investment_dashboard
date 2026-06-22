@@ -14,6 +14,8 @@
   DISCORD_OPTION_WEBHOOK_URL — Discord通知用Webhook（任意、Discord連携時）
 """
 
+import argparse
+import importlib.util
 import json
 import os
 import sys
@@ -30,6 +32,7 @@ if sys.platform == "win32":
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 REPORT_DIR = os.path.join(BASE_DIR, "market_analysis", "reports")
+NOTE_BLOG_PUBLISHER_PATH = os.path.join(BASE_DIR, "note", "note_blog_publisher.py")
 
 GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 GEMINI_ENDPOINT = (
@@ -38,6 +41,85 @@ GEMINI_ENDPOINT = (
 
 JST = timezone(timedelta(hours=9))
 DISCORD_CONTENT_LIMIT = 1900
+
+
+def _env_int(name, default):
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Gemini市場分析とDiscord/note配信を実行する")
+    parser.add_argument(
+        "--note-post-mode",
+        default=os.environ.get("NOTE_POST_MODE", "skip"),
+        choices=["skip", "draft", "dry-run", "publish"],
+        help="note投稿モード。skip / draft / dry-run / publish",
+    )
+    parser.add_argument("--note-dry-run-publish", action="store_true", help="note公開直前まで進め、最後の投稿ボタンは押さない")
+    parser.add_argument("--note-publish", action="store_true", help="noteへ本投稿する")
+    parser.add_argument("--note-draft", action="store_true", help="note下書きだけ作成する")
+    parser.add_argument("--skip-note", action="store_true", help="note投稿を明示的にスキップする")
+    parser.add_argument("--note-only", action="store_true", help="Gemini APIとDiscordを実行せず、既存レポートからnote投稿だけ行う")
+    parser.add_argument("--note-date", default=os.environ.get("NOTE_POST_DATE", ""), help="note記事日付。YYYY-MM-DD または YYYYMMDD")
+    parser.add_argument("--report-file", default=os.environ.get("NOTE_REPORT_FILE", ""), help="note投稿に使うGeminiレポートMarkdownのフルパス")
+    parser.add_argument("--note-reuse-assets", action="store_true", help="note/generated 配下の生成済み画像を再利用する")
+    parser.add_argument("--note-affiliate-memo", type=int, default=_env_int("NOTE_AFFILIATE_MEMO", 1), help="使用するアフィリエイトMEMO番号")
+    parser.add_argument("--note-affiliate-count", type=int, default=_env_int("NOTE_AFFILIATE_COUNT", 1), help="H2ごとのアフィリエイト挿入数")
+    parser.add_argument("--note-affiliate-seed", default=os.environ.get("NOTE_AFFILIATE_SEED", ""), help="アフィリエイト選定の固定シード")
+    return parser.parse_args()
+
+
+def resolve_note_post_mode(args):
+    if args.skip_note:
+        return "skip"
+    if args.note_publish:
+        return "publish"
+    if args.note_dry_run_publish:
+        return "dry-run"
+    if args.note_draft:
+        return "draft"
+    if args.note_only and args.note_post_mode == "skip":
+        return "dry-run"
+    return args.note_post_mode
+
+
+def load_note_blog_publisher():
+    if not os.path.exists(NOTE_BLOG_PUBLISHER_PATH):
+        raise FileNotFoundError(f"note投稿モジュールが見つかりません: {NOTE_BLOG_PUBLISHER_PATH}")
+    spec = importlib.util.spec_from_file_location("investment_dashboard_note_blog_publisher", NOTE_BLOG_PUBLISHER_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"note投稿モジュールを読み込めません: {NOTE_BLOG_PUBLISHER_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["investment_dashboard_note_blog_publisher"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def run_note_post_process(report_text, today_str, args):
+    mode = resolve_note_post_mode(args)
+    if mode == "skip":
+        print("⏭️ note投稿モードは skip のため、note投稿をスキップします")
+        return {"success": True, "skipped": True, "mode": mode}
+
+    print(f"📝 note投稿プロセスを開始します: mode={mode}")
+    note_blog_publisher = load_note_blog_publisher()
+    result = note_blog_publisher.publish_note_blog(
+        report_text=report_text,
+        date_value=args.note_date or today_str,
+        mode=mode,
+        report_file=args.report_file,
+        affiliate_memo=args.note_affiliate_memo,
+        affiliate_count=args.note_affiliate_count,
+        affiliate_seed=args.note_affiliate_seed,
+        reuse_assets=args.note_reuse_assets,
+    )
+    if not result.get("success"):
+        raise RuntimeError(f"note投稿に失敗しました: {json.dumps(result, ensure_ascii=False)[:1000]}")
+    print(f"✅ note投稿プロセス完了: mode={mode}, url={result.get('url', '')}, published={result.get('published_url', '')}")
+    return result
 
 
 # ── データ読み込みユーティリティ ───────────────────────────────────
@@ -469,15 +551,24 @@ def update_gist_calendar(report_text, today_str, gist_token, gist_id):
 
 # ── メイン ─────────────────────────────────────────────────────────
 def main():
+    args = parse_args()
+
+    # 本日の日付 (JST)
+    now_jst = datetime.now(JST)
+    today_str = now_jst.strftime("%Y-%m-%d")
+
+    if args.note_only:
+        print(f"🧪 note-only モードで実行します: {args.note_date or today_str}")
+        run_note_post_process("", today_str, args)
+        print("✅ note-only モード完了")
+        return
+
     # APIキー取得
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("❌ 環境変数 GEMINI_API_KEY が設定されていません", file=sys.stderr)
         sys.exit(1)
 
-    # 本日の日付 (JST)
-    now_jst = datetime.now(JST)
-    today_str = now_jst.strftime("%Y-%m-%d")
     print(f"📅 分析日: {today_str}")
 
     # データ読み込み
@@ -516,6 +607,9 @@ def main():
     # Discord通知（環境変数が設定されている場合のみ）
     discord_webhook_url = os.environ.get("DISCORD_OPTION_WEBHOOK_URL")
     send_discord_market_report(report_text, today_str, discord_webhook_url)
+
+    # note投稿（Discord通知完了後に実行）
+    run_note_post_process(report_text, today_str, args)
 
     print("🎉 市場分析完了")
 

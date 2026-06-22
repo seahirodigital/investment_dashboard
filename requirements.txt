@@ -9,3 +9,4 @@ python-dateutil>=2.8.0
 yfinance>=0.2.0
 firebase-admin>=6.2.0
 playwright>=1.44.0
+Pillow>=10.0.0
