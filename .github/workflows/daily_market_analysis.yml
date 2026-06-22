@@ -9,13 +9,19 @@ on:
       note_post_mode:
         description: 'note投稿モード'
         required: false
-        default: 'dry-run'
+        default: 'draft-note-only'
         type: choice
         options:
+          - draft-note-only
           - dry-run
           - publish
           - draft
           - skip
+      note_date:
+        description: 'note記事日付（空なら当日、該当レポートがなければ最新レポート）'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -33,7 +39,6 @@ jobs:
         with:
           repository: seahirodigital/notion2note
           path: _external/notion2note
-          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -50,48 +55,61 @@ jobs:
 
       # ── Step 1: データ取得 ──────────────────────────────────
       - name: Fetch intraday data
+        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
         run: python scripts/market/fetch_intraday.py
         continue-on-error: true
 
       - name: Fetch ETF daily data
+        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
         run: python scripts/market/etf_data_manager.py
         continue-on-error: true
 
       - name: Fetch short selling data
+        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
         run: python scripts/market/fetch_short_selling.py
         continue-on-error: true
 
       # teguchi/option データは daily_participant.yml (08:45 UTC) で取得済み
       # 万一未取得の場合のフォールバックとして実行（失敗しても分析は続行）
       - name: Fetch teguchi data (fallback)
+        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: python scripts/jpx/fetch_teguchi.py
         continue-on-error: true
 
       - name: Fetch option data (fallback)
+        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: python scripts/jpx/fetch_option.py
         continue-on-error: true
 
-      # ── Step 2: Gemini 分析 + レポート生成 + カレンダー更新 ─
-      - name: Run Gemini market analysis
+      # ── Step 2: Gemini 分析 + note投稿 ─
+      - name: Run Gemini market analysis or note-only debug
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
           GIST_ID: ${{ secrets.GIST_ID }}
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+          NOTION2NOTE_DISCORD_WEBHOOK: ${{ secrets.NOTION2NOTE_DISCORD_WEBHOOK }}
           NOTE_POST_MODE: ${{ github.event_name == 'schedule' && 'publish' || github.event.inputs.note_post_mode }}
+          NOTE_POST_DATE: ${{ github.event.inputs.note_date }}
           NOTE_PROJECT_DIR: ${{ github.workspace }}/_external/notion2note
           NOTE_EMAIL: ${{ secrets.NOTE_EMAIL }}
           NOTE_PASSWORD: ${{ secrets.NOTE_PASSWORD }}
           NOTE_STORAGE_STATE: ${{ secrets.NOTE_STORAGE_STATE }}
           NOTE_STORAGE_SECRET_NAME: NOTE_STORAGE_STATE
+          NOTE_PUBLISH_MAGAZINE_NAME: '日本株の振り返りまとめ '
           NOTE_AFFILIATE_MEMO: '1'
           NOTE_AFFILIATE_COUNT: '1'
           NOTE_AFFILIATE_SEED: ${{ github.run_id }}
-        run: python scripts/market/gemini_analysis.py
+        run: |
+          if [ "$NOTE_POST_MODE" = "draft-note-only" ]; then
+            python scripts/market/gemini_analysis.py --note-post-mode draft-note-only --note-date "$NOTE_POST_DATE"
+          else
+            python scripts/market/gemini_analysis.py
+          fi
 
       - name: Upload note generated artifacts
         if: always()
@@ -104,6 +122,7 @@ jobs:
 
       # ── Step 3: レポートとデータをコミット ──────────────────
       - name: Commit reports and data
+        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"

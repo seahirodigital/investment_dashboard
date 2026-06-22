@@ -10,6 +10,7 @@ import json
 import os
 import random
 import re
+import requests
 import socket
 import subprocess
 import sys
@@ -47,6 +48,10 @@ BLOG_TITLE_TEMPLATE = "日本株投資・投資信託ランキング・今後お
 SECTOR_H2 = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：日本株セクター毎の資金流入割合分析"
 OPTION_H2 = "日経225 オプション分析"
 SUMMARY_H2 = "投資戦略サマリー(Gemini分析)"
+NOTE_PUBLISH_TAGS = "投資初心者 投資 デイトレ 日本株 日経平均 米国株 高配当 FX ドル円"
+DISCORD_TEMPLATE_TAGS = "#投資初心者 #投資 #デイトレ #日本株 #日経平均 #米国株 #高配当 #FX #ドル円"
+NOTE_MAGAZINE_NAME = "日本株の振り返りまとめ "
+DISCORD_NOTE_TITLE = "【日本株投資・投資信託ランキングETFおすすめセクター資金流入分析】"
 
 
 def _reconfigure_stdio() -> None:
@@ -168,20 +173,19 @@ def _create_note_thumbnail(source_path: Path, output_path: Path) -> Path:
 
     source = Image.open(source_path).convert("RGB")
     width, height = source.size
-    one_third = max(1, height // 3)
-    top = source.crop((0, 0, width, one_third))
-    bottom = source.crop((0, max(0, height - one_third), width, height))
-
     canvas_width, canvas_height = 1600, 836
-    half_width = canvas_width // 2
-    left = ImageOps.fit(top, (half_width, canvas_height), method=Image.Resampling.LANCZOS, centering=(0.5, 0.0))
-    right = ImageOps.fit(bottom, (canvas_width - half_width, canvas_height), method=Image.Resampling.LANCZOS, centering=(0.5, 1.0))
 
-    canvas = Image.new("RGB", (canvas_width, canvas_height), "white")
-    canvas.paste(left, (0, 0))
-    canvas.paste(right, (half_width, 0))
+    # noteの横長サムネイルで中央が欠けないよう、ランキング画像の左側を主役にして切り出す。
+    left_crop_width = max(1, int(width * 0.64))
+    left_crop = source.crop((0, 0, left_crop_width, height))
+    thumbnail = ImageOps.fit(
+        left_crop,
+        (canvas_width, canvas_height),
+        method=Image.Resampling.LANCZOS,
+        centering=(0.42, 0.5),
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    canvas.save(output_path, quality=92)
+    thumbnail.save(output_path, quality=92)
     return output_path
 
 
@@ -481,11 +485,68 @@ def _apply_affiliate_links(
 
 
 def _read_tags(note_project_dir: Path) -> str:
-    publisher = _load_module(
-        "investment_dashboard_note_publisher_tags_runtime",
-        note_project_dir / "scripts" / "note_post" / "note_post_publisher.py",
+    return NOTE_PUBLISH_TAGS
+
+
+def _note_url_from_result(result: dict[str, Any]) -> str:
+    candidates = [
+        result.get("published_url"),
+        result.get("final_url"),
+        result.get("url"),
+    ]
+    publish_result = ((result.get("editor_result") or {}).get("publish") or {})
+    candidates.extend(
+        [
+            publish_result.get("final_url"),
+            (publish_result.get("post_result") or {}).get("final_url_after_click"),
+        ]
     )
-    return publisher._read_tags(note_project_dir / "tag.md")
+    for candidate in candidates:
+        value = str(candidate or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _notify_discord_after_note(result: dict[str, Any], mode: str) -> dict[str, Any]:
+    webhook_url = (
+        os.getenv("NOTION2NOTE_DISCORD_WEBHOOK", "").strip()
+        or os.getenv("DISCORD_OPTION_WEBHOOK_URL", "").strip()
+    )
+    note_url = _note_url_from_result(result)
+    status: dict[str, Any] = {
+        "attempted": False,
+        "success": False,
+        "webhook_configured": bool(webhook_url),
+        "url": note_url,
+        "mode": mode,
+        "error": "",
+    }
+    if not note_url:
+        status["error"] = "note URL が空のためDiscord通知をスキップしました。"
+        print(f"   [警告] {status['error']}")
+        return status
+    if not webhook_url:
+        status["error"] = "NOTION2NOTE_DISCORD_WEBHOOK / DISCORD_OPTION_WEBHOOK_URL が未設定のためDiscord通知をスキップしました。"
+        print(f"   [情報] {status['error']}")
+        return status
+
+    prefix = "【下書き】" if mode != "publish" else ""
+    message = f"{prefix}{DISCORD_NOTE_TITLE} \n\n{note_url}\n\n{DISCORD_TEMPLATE_TAGS}"
+    status["attempted"] = True
+    try:
+        response = requests.post(webhook_url, json={"content": message}, timeout=15)
+    except requests.RequestException as exc:
+        status["error"] = str(exc)
+        print(f"   [警告] Discord通知に失敗しました: {exc}")
+        return status
+    if response.ok:
+        status["success"] = True
+        print("   [OK] Discordへnote完了通知を送信しました")
+        return status
+    status["error"] = f"Discord API {response.status_code}: {response.text[:300]}"
+    print(f"   [警告] Discord通知に失敗しました: {status['error']}")
+    return status
 
 
 def _post_to_note(
@@ -495,6 +556,7 @@ def _post_to_note(
     thumbnail_path: Path,
     body_image_uploads: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    os.environ["NOTE_PUBLISH_MAGAZINE_NAME"] = os.getenv("NOTE_PUBLISH_MAGAZINE_NAME", NOTE_MAGAZINE_NAME)
     publish_tags = _read_tags(note_project_dir)
     if mode == "draft":
         note_engine = _load_module(
@@ -513,20 +575,28 @@ def _post_to_note(
             body_image_uploads=body_image_uploads,
         )
 
-    publisher = _load_module(
-        "investment_dashboard_note_publisher_runtime",
-        note_project_dir / "scripts" / "note_post" / "note_post_publisher.py",
-    )
-    return publisher.publish_markdown_to_note(
-        markdown,
-        run_ogp=True,
-        run_top_image=True,
-        insert_toc=True,
-        publish_tags=publish_tags,
-        top_image_path=str(thumbnail_path),
-        body_image_uploads=body_image_uploads,
-        dry_run_publish=(mode == "dry-run"),
-    )
+    original_discord_webhook = os.environ.get("NOTION2NOTE_DISCORD_WEBHOOK")
+    os.environ["NOTION2NOTE_DISCORD_WEBHOOK"] = ""
+    try:
+        publisher = _load_module(
+            "investment_dashboard_note_publisher_runtime",
+            note_project_dir / "scripts" / "note_post" / "note_post_publisher.py",
+        )
+        return publisher.publish_markdown_to_note(
+            markdown,
+            run_ogp=True,
+            run_top_image=True,
+            insert_toc=True,
+            publish_tags=publish_tags,
+            top_image_path=str(thumbnail_path),
+            body_image_uploads=body_image_uploads,
+            dry_run_publish=(mode == "dry-run"),
+        )
+    finally:
+        if original_discord_webhook is None:
+            os.environ.pop("NOTION2NOTE_DISCORD_WEBHOOK", None)
+        else:
+            os.environ["NOTION2NOTE_DISCORD_WEBHOOK"] = original_discord_webhook
 
 
 def publish_note_blog(
@@ -540,13 +610,17 @@ def publish_note_blog(
     reuse_assets: bool = False,
 ) -> dict[str, Any]:
     dashed_date, compact_date, display_date = _normalize_date(date_value)
-    normalized_mode = (mode or "skip").strip().lower().replace("_", "-")
-    if normalized_mode in {"none", "off", "false"}:
-        normalized_mode = "skip"
-    if normalized_mode not in {"skip", "draft", "dry-run", "publish"}:
-        raise ValueError(f"NOTE_POST_MODE は skip / draft / dry-run / publish のいずれかを指定してください: {mode}")
-    if normalized_mode == "skip":
-        return {"success": True, "skipped": True, "mode": normalized_mode, "date": dashed_date}
+    requested_mode = (mode or "skip").strip().lower().replace("_", "-")
+    if requested_mode in {"none", "off", "false"}:
+        requested_mode = "skip"
+    post_mode = "draft" if requested_mode == "draft-note-only" else requested_mode
+    if post_mode not in {"skip", "draft", "dry-run", "publish"}:
+        raise ValueError(
+            "NOTE_POST_MODE は skip / draft / draft-note-only / dry-run / publish のいずれかを指定してください: "
+            f"{mode}"
+        )
+    if post_mode == "skip":
+        return {"success": True, "skipped": True, "mode": requested_mode, "post_mode": post_mode, "date": dashed_date}
 
     note_project_dir = _resolve_note_project_dir()
     run_dir = GENERATED_DIR / compact_date
@@ -605,13 +679,15 @@ def publish_note_blog(
     result = _post_to_note(
         markdown,
         note_project_dir=note_project_dir,
-        mode=normalized_mode,
+        mode=post_mode,
         thumbnail_path=thumbnail_path,
         body_image_uploads=body_image_uploads,
     )
+    result["discord_notification"] = _notify_discord_after_note(result, mode=post_mode)
     result.update(
         {
-            "mode": normalized_mode,
+            "mode": requested_mode,
+            "post_mode": post_mode,
             "date": dashed_date,
             "markdown_path": str(markdown_path),
             "thumbnail_path": str(thumbnail_path),
@@ -631,7 +707,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--date", default="", help="記事日付。YYYY-MM-DD または YYYYMMDD")
     parser.add_argument("--report-file", default="", help="Gemini投資戦略サマリーMarkdownのフルパス")
     parser.add_argument("--report-text", default="", help="Gemini投資戦略サマリー本文を直接指定")
-    parser.add_argument("--mode", default=os.getenv("NOTE_POST_MODE", "dry-run"), choices=["skip", "draft", "dry-run", "publish"])
+    parser.add_argument(
+        "--mode",
+        default=os.getenv("NOTE_POST_MODE", "dry-run"),
+        choices=["skip", "draft", "draft-note-only", "dry-run", "publish"],
+    )
     parser.add_argument("--affiliate-memo", type=int, default=int(os.getenv("NOTE_AFFILIATE_MEMO", "1")))
     parser.add_argument("--affiliate-count", type=int, default=int(os.getenv("NOTE_AFFILIATE_COUNT", "1")))
     parser.add_argument("--affiliate-seed", default=os.getenv("NOTE_AFFILIATE_SEED", ""))

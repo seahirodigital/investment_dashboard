@@ -55,8 +55,8 @@ def parse_args():
     parser.add_argument(
         "--note-post-mode",
         default=os.environ.get("NOTE_POST_MODE", "skip"),
-        choices=["skip", "draft", "dry-run", "publish"],
-        help="note投稿モード。skip / draft / dry-run / publish",
+        choices=["skip", "draft", "draft-note-only", "dry-run", "publish"],
+        help="note投稿モード。skip / draft / draft-note-only / dry-run / publish",
     )
     parser.add_argument("--note-dry-run-publish", action="store_true", help="note公開直前まで進め、最後の投稿ボタンは押さない")
     parser.add_argument("--note-publish", action="store_true", help="noteへ本投稿する")
@@ -75,6 +75,8 @@ def parse_args():
 def resolve_note_post_mode(args):
     if args.skip_note:
         return "skip"
+    if args.note_post_mode == "draft-note-only":
+        return "draft-note-only"
     if args.note_publish:
         return "publish"
     if args.note_dry_run_publish:
@@ -557,7 +559,7 @@ def main():
     now_jst = datetime.now(JST)
     today_str = now_jst.strftime("%Y-%m-%d")
 
-    if args.note_only:
+    if args.note_only or args.note_post_mode == "draft-note-only":
         print(f"🧪 note-only モードで実行します: {args.note_date or today_str}")
         run_note_post_process("", today_str, args)
         print("✅ note-only モード完了")
