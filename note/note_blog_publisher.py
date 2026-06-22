@@ -29,7 +29,7 @@ BODY_IMAGE_MARKER_TEMPLATE = "[[NOTE_BLOG_BODY_IMAGE_{index:03d}]]"
 AFFILIATE_SLOT_TEMPLATE = "[[NOTION_NOTE_AFFILIATE_{index:03d}]]"
 DISCLOSURE_TEXT = (
     "Amazonのアソシエイトとして本アカウントは適格販売により収入を得ています。"
-    "文章にはAIの整形・編集が含まれます。"
+    "文章にはAIの整形・編集が含まれ、解釈は自己責任でお願いします。"
 )
 INTRO_TEXT = (
     "日本株ランキングを下に日本取引時間内の、日本株ETFでおすすめ上位銘柄や、"
@@ -168,6 +168,36 @@ def _combine_images(left_path: Path, right_path: Path, output_path: Path) -> Pat
     return output_path
 
 
+def _stitch_images_horizontally(image_paths: list[Path], output_path: Path) -> Path:
+    from PIL import Image
+
+    if not image_paths:
+        raise ValueError("横結合する画像がありません。")
+
+    opened_images = [Image.open(path).convert("RGB") for path in image_paths]
+    target_height = min(image.height for image in opened_images)
+    normalized_images = []
+    for image in opened_images:
+        if image.height != target_height:
+            resized_width = max(1, round(image.width * target_height / image.height))
+            image = image.resize((resized_width, target_height), Image.Resampling.LANCZOS)
+        normalized_images.append(image)
+
+    gap = 18
+    canvas_width = sum(image.width for image in normalized_images) + gap * (len(normalized_images) - 1)
+    canvas = Image.new("RGB", (canvas_width, target_height), "white")
+    x_offset = 0
+    for image in normalized_images:
+        canvas.paste(image, (x_offset, 0))
+        x_offset += image.width + gap
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(output_path)
+    if not output_path.exists() or output_path.stat().st_size == 0:
+        raise RuntimeError(f"横結合画像を生成できませんでした: {output_path}")
+    return output_path
+
+
 def _create_note_thumbnail(source_path: Path, output_path: Path) -> Path:
     from PIL import Image, ImageOps
 
@@ -175,18 +205,32 @@ def _create_note_thumbnail(source_path: Path, output_path: Path) -> Path:
     width, height = source.size
     canvas_width, canvas_height = 1600, 836
 
-    # noteの横長サムネイルで中央が欠けないよう、ランキング画像の左側を主役にして切り出す。
-    left_crop_width = max(1, int(width * 0.64))
-    left_crop = source.crop((0, 0, left_crop_width, height))
+    # noteの横長サムネイルでは、上位ランキングが一目で見える上側だけを使う。
+    top_crop_height = max(1, int(height * 0.34))
+    top_crop = source.crop((0, 0, width, top_crop_height))
     thumbnail = ImageOps.fit(
-        left_crop,
+        top_crop,
         (canvas_width, canvas_height),
         method=Image.Resampling.LANCZOS,
-        centering=(0.42, 0.5),
+        centering=(0.5, 0.0),
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     thumbnail.save(output_path, quality=92)
     return output_path
+
+
+def _create_option_composite_images(image_paths: list[Path], output_dir: Path) -> list[Path]:
+    if len(image_paths) < 5:
+        raise RuntimeError(f"日経225オプション画像が5枚未満です: {len(image_paths)}")
+    first_three = _stitch_images_horizontally(
+        image_paths[:3],
+        output_dir / "04_option_major_3charts_combined.png",
+    )
+    last_two = _stitch_images_horizontally(
+        image_paths[3:5],
+        output_dir / "05_option_strike_2charts_combined.png",
+    )
+    return [first_three, last_two]
 
 
 def capture_sector_assets(output_dir: Path) -> dict[str, Any]:
@@ -374,7 +418,7 @@ def capture_option_assets(output_dir: Path) -> dict[str, Any]:
                 assert_canvas_has_content(element_id).screenshot(path=str(output_path))
                 images.append(output_path)
             browser.close()
-    return {"images": images}
+    return {"images": _create_option_composite_images(images, output_dir)}
 
 
 def _body_image_upload(path: Path, marker: str, caption: str) -> dict[str, Any]:
@@ -448,8 +492,6 @@ def build_blog_markdown(
         start_index=1,
         caption_prefix="日本株セクター資金流入割合分析 画像",
     )
-    lines.extend(_format_ranking_lines("▼上位5件", list(sector_assets.get("top5") or [])))
-    lines.extend(["", *_format_ranking_lines("▼下位5件", list(sector_assets.get("bottom5") or [])), ""])
     lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=1), "", f"## {OPTION_H2}", ""])
     next_image_index = _append_image_markers(
         lines,
@@ -645,16 +687,23 @@ def publish_note_blog(
         print("   [情報] note用の日本株セクター画像を生成します")
         sector_assets = capture_sector_assets(image_dir)
 
-    if reuse_assets and (image_dir / "04_option_major_diff.png").exists():
+    option_individual_images = [
+        image_dir / "04_option_major_diff.png",
+        image_dir / "05_option_major_total.png",
+        image_dir / "06_option_major_trend.png",
+        image_dir / "07_option_n225_oi_by_strike.png",
+        image_dir / "08_option_n225_diff_by_strike.png",
+    ]
+    option_composite_images = [
+        image_dir / "04_option_major_3charts_combined.png",
+        image_dir / "05_option_strike_2charts_combined.png",
+    ]
+    if reuse_assets and all(path.exists() for path in option_composite_images):
         option_assets = {
-            "images": [
-                image_dir / "04_option_major_diff.png",
-                image_dir / "05_option_major_total.png",
-                image_dir / "06_option_major_trend.png",
-                image_dir / "07_option_n225_oi_by_strike.png",
-                image_dir / "08_option_n225_diff_by_strike.png",
-            ],
+            "images": option_composite_images,
         }
+    elif reuse_assets and all(path.exists() for path in option_individual_images):
+        option_assets = {"images": _create_option_composite_images(option_individual_images, image_dir)}
     else:
         print("   [情報] note用の日経225オプション画像を生成します")
         option_assets = capture_option_assets(image_dir)
