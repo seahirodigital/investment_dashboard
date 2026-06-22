@@ -30,22 +30,38 @@ jobs:
   market-analysis:
     runs-on: ubuntu-latest
     steps:
+      - name: Check JST weekday
+        id: weekday
+        run: |
+          day="$(TZ=Asia/Tokyo date +%u)"
+          echo "day=$day" >> "$GITHUB_OUTPUT"
+          if [ "$day" -ge 6 ]; then
+            echo "is_weekday=false" >> "$GITHUB_OUTPUT"
+            echo "JST weekend; skipping Daily Market Analysis."
+          else
+            echo "is_weekday=true" >> "$GITHUB_OUTPUT"
+            echo "JST weekday; continuing Daily Market Analysis."
+          fi
+
       - name: Checkout repository
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' }}
         uses: actions/checkout@v4
 
       - name: Checkout notion2note
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip') }}
         uses: actions/checkout@v4
         with:
           repository: seahirodigital/notion2note
           path: _external/notion2note
 
       - name: Set up Python
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' }}
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' }}
         run: |
           pip install -r requirements.txt
           if [ -d "_external/notion2note" ]; then
@@ -55,31 +71,31 @@ jobs:
 
       # ── Step 1: データ取得 ──────────────────────────────────
       - name: Fetch intraday data
-        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && github.event.inputs.note_post_mode != 'draft-note-only' }}
         run: python scripts/market/fetch_intraday.py
         continue-on-error: true
 
       - name: Fetch ETF daily data
-        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && github.event.inputs.note_post_mode != 'draft-note-only' }}
         run: python scripts/market/etf_data_manager.py
         continue-on-error: true
 
       - name: Fetch short selling data
-        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && github.event.inputs.note_post_mode != 'draft-note-only' }}
         run: python scripts/market/fetch_short_selling.py
         continue-on-error: true
 
       # teguchi/option データは daily_participant.yml (08:45 UTC) で取得済み
       # 万一未取得の場合のフォールバックとして実行（失敗しても分析は続行）
       - name: Fetch teguchi data (fallback)
-        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && github.event.inputs.note_post_mode != 'draft-note-only' }}
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: python scripts/jpx/fetch_teguchi.py
         continue-on-error: true
 
       - name: Fetch option data (fallback)
-        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && github.event.inputs.note_post_mode != 'draft-note-only' }}
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: python scripts/jpx/fetch_option.py
@@ -87,6 +103,7 @@ jobs:
 
       # ── Step 2: Gemini 分析 + note投稿 ─
       - name: Run Gemini market analysis or note-only debug
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
@@ -112,7 +129,7 @@ jobs:
           fi
 
       - name: Upload note generated artifacts
-        if: always()
+        if: ${{ always() && steps.weekday.outputs.is_weekday == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: note-blog-generated-${{ github.run_id }}
@@ -122,7 +139,7 @@ jobs:
 
       # ── Step 3: レポートとデータをコミット ──────────────────
       - name: Commit reports and data
-        if: ${{ github.event.inputs.note_post_mode != 'draft-note-only' }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && github.event.inputs.note_post_mode != 'draft-note-only' }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"

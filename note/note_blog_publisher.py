@@ -15,7 +15,7 @@ import socket
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -39,15 +39,28 @@ SECTOR_POLICY_TEXT = (
     "基本方針として、日本株の各セクターへの資金割合流入を見ます、"
     "上がる・伸びる日本株の銘柄を分析のために、各セクターETF銘柄をTOPIXで割返しています。"
 )
+WEEKLY_FLOW_TEXT = (
+    "海外投資家動向（JPX・財務省）は毎週木曜に東証から公開されます、"
+    "日本市場では海外投資家（主に機関投資家）が７割と言われる市場のため、"
+    "海外投資家の資金が流入・流出したのかは、"
+    "翌週以降の日本株投資のランキングでおすすめETF分析をするうえで重要です。"
+)
+WEEKLY_FLOW_SENSITIVITY_TEXT = (
+    "その際の海外投資家の資金フローを各ETFの結果で感応度計算をした結果が以下です。"
+    "どのセクターから資金流出/入したかの参考になります"
+    "（つまり、先週まではどのセクターに海外投資家が投資をしていたのかということです。"
+    "今週の情報は、下にある各セクターごとのチャートで確認します。）"
+)
 FOLLOW_TEXT = (
     "最新の市場トレンドや、視覚的にわかりやすいお役立ち情報をいち早くキャッチしたい方は、"
     "ぜひ以下のリンクからフォローをお願いします。"
     "[https://x.com/RipplePhantom](https://x.com/RipplePhantom)"
 )
 BLOG_TITLE_TEMPLATE = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：{date}"
+WEEKLY_FLOW_H2 = "海外投資家動向（JPX・財務省）"
 SECTOR_H2 = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：日本株セクター毎の資金流入割合分析"
-OPTION_H2 = "日経225 オプション分析"
-SUMMARY_H2 = "投資戦略サマリー(Gemini分析)"
+OPTION_H2 = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：日経225 オプション分析"
+SUMMARY_H2 = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：投資戦略サマリー(Gemini分析)"
 NOTE_PUBLISH_TAGS = "投資初心者 投資 デイトレ 日本株 日経平均 米国株 高配当 FX ドル円"
 DISCORD_TEMPLATE_TAGS = "#投資初心者 #投資 #デイトレ #日本株 #日経平均 #米国株 #高配当 #FX #ドル円"
 NOTE_MAGAZINE_NAME = "日本株の振り返りまとめ "
@@ -144,6 +157,212 @@ def _static_server():
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             process.kill()
+
+
+def _date_is_thursday(dashed_date: str) -> bool:
+    return datetime.strptime(dashed_date, "%Y-%m-%d").weekday() == 3
+
+
+def _page_clip_from_boxes(page, boxes: list[dict[str, float]], padding: int = 24) -> dict[str, float]:
+    usable_boxes = [
+        box
+        for box in boxes
+        if box
+        and float(box.get("width") or 0) > 0
+        and float(box.get("height") or 0) > 0
+    ]
+    if not usable_boxes:
+        raise RuntimeError("スクリーンショット対象の要素位置を取得できませんでした。")
+
+    document_size = page.evaluate(
+        """() => ({
+          width: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth),
+          height: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight),
+        })"""
+    )
+    x0 = max(0, min(float(box["x"]) for box in usable_boxes) - padding)
+    y0 = max(0, min(float(box["y"]) for box in usable_boxes) - padding)
+    x1 = min(float(document_size["width"]), max(float(box["x"]) + float(box["width"]) for box in usable_boxes) + padding)
+    y1 = min(float(document_size["height"]), max(float(box["y"]) + float(box["height"]) for box in usable_boxes) + padding)
+    return {
+        "x": x0,
+        "y": y0,
+        "width": max(1, x1 - x0),
+        "height": max(1, y1 - y0),
+    }
+
+
+def _capture_boxes_from_js(page, js: str, output_path: Path, padding: int = 24) -> Path:
+    boxes = page.evaluate(js)
+    clip = _page_clip_from_boxes(page, boxes, padding=padding)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(output_path), clip=clip)
+    if not output_path.exists() or output_path.stat().st_size == 0:
+        raise RuntimeError(f"スクリーンショットを生成できませんでした: {output_path}")
+    return output_path
+
+
+def _sector_three_week_range_for_capture(dashed_date: str) -> tuple[str, str]:
+    end_date = datetime.strptime(dashed_date, "%Y-%m-%d").date()
+    start_date = end_date - timedelta(days=21)
+    return start_date.isoformat(), end_date.isoformat()
+
+
+def _latest_sector_three_week_range() -> tuple[str, str]:
+    path = BASE_DIR / "data" / "sector_data.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    weeks = sorted(
+        {
+            (str(row.get("week_start")), str(row.get("week_end")))
+            for row in payload.get("data", [])
+            if row.get("week_start") and row.get("week_end")
+        },
+        key=lambda item: item[1],
+    )
+    if not weeks:
+        raise RuntimeError(f"セクター別感応度の週次データが見つかりません: {path}")
+    target_weeks = weeks[-3:] if len(weeks) >= 3 else weeks
+    return target_weeks[0][0], target_weeks[-1][1]
+
+
+def capture_weekly_investor_assets(output_dir: Path, dashed_date: str) -> dict[str, Any]:
+    from playwright.sync_api import sync_playwright
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with _static_server() as base_url:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+
+            jpx_page = browser.new_page(viewport={"width": 1600, "height": 1700})
+            jpx_page.goto(f"{base_url}/index.html?view=jpx", wait_until="domcontentloaded", timeout=60000)
+            jpx_page.get_by_text("海外投資家動向（JPX・財務省）").first.wait_for(state="visible", timeout=45000)
+            jpx_page.get_by_text("差引推移").first.wait_for(state="visible", timeout=45000)
+            jpx_page.wait_for_timeout(7000)
+
+            jpx_flow_image = _capture_boxes_from_js(
+                jpx_page,
+                """() => {
+                  const rectOf = (element) => {
+                    const rect = element.getBoundingClientRect();
+                    return {
+                      x: rect.left + window.scrollX,
+                      y: rect.top + window.scrollY,
+                      width: rect.width,
+                      height: rect.height,
+                    };
+                  };
+                  const chartCard = Array.from(document.querySelectorAll('div.bg-white.rounded-xl'))
+                    .find((element) => element.innerText?.includes('差引推移'));
+                  const statsGrid = Array.from(document.querySelectorAll('div.grid'))
+                    .find((element) => element.innerText?.includes('最新週') && element.innerText?.includes('買い越し 平均'));
+                  return [chartCard, statsGrid].filter(Boolean).map(rectOf);
+                }""",
+                output_dir / "09_weekly_jpx_investor_flow.png",
+                padding=24,
+            )
+
+            jpx_page.wait_for_function(
+                """() => {
+                  const mofCard = Array.from(document.querySelectorAll('div.bg-white.rounded-xl'))
+                    .find((element) => element.innerText?.includes('財務省 対内証券投資（株式・ファンド持分）'));
+                  if (!mofCard) return false;
+                  const text = mofCard.innerText || '';
+                  return text.includes('毎週木曜更新')
+                    && !text.includes('| 0件')
+                    && !text.includes('データを読み込み中');
+                }""",
+                timeout=45000,
+            )
+            jpx_page.evaluate(
+                """() => {
+                  const mofCard = Array.from(document.querySelectorAll('div.bg-white.rounded-xl'))
+                    .find((element) => element.innerText?.includes('財務省 対内証券投資（株式・ファンド持分）'));
+                  if (!mofCard) throw new Error('財務省カードが見つかりません。');
+                  const oneYearButton = Array.from(mofCard.querySelectorAll('button'))
+                    .find((button) => button.textContent.trim() === '1年');
+                  if (!oneYearButton) throw new Error('財務省カードの1年ボタンが見つかりません。');
+                  oneYearButton.click();
+                }"""
+            )
+            jpx_page.wait_for_timeout(2500)
+            jpx_page.wait_for_function(
+                """() => {
+                  const mofCard = Array.from(document.querySelectorAll('div.bg-white.rounded-xl'))
+                    .find((element) => element.innerText?.includes('財務省 対内証券投資（株式・ファンド持分）'));
+                  if (!mofCard) return false;
+                  const activeButton = Array.from(mofCard.querySelectorAll('button'))
+                    .find((button) => button.textContent.trim() === '1年');
+                  return activeButton
+                    && activeButton.className.includes('bg-[#7C4DFF]')
+                    && !mofCard.innerText.includes('データを読み込み中');
+                }""",
+                timeout=30000,
+            )
+            mof_image = _capture_boxes_from_js(
+                jpx_page,
+                """() => {
+                  const rectOf = (element) => {
+                    const rect = element.getBoundingClientRect();
+                    return {
+                      x: rect.left + window.scrollX,
+                      y: rect.top + window.scrollY,
+                      width: rect.width,
+                      height: rect.height,
+                    };
+                  };
+                  const mofCard = Array.from(document.querySelectorAll('div.bg-white.rounded-xl'))
+                    .find((element) => element.innerText?.includes('財務省 対内証券投資（株式・ファンド持分）'));
+                  return mofCard ? [rectOf(mofCard)] : [];
+                }""",
+                output_dir / "10_weekly_mof_inward_securities_1y.png",
+                padding=24,
+            )
+            jpx_page.close()
+
+            try:
+                start_date, end_date = _sector_three_week_range_for_capture(dashed_date)
+            except ValueError:
+                start_date, end_date = _latest_sector_three_week_range()
+            sensitivity_page = browser.new_page(viewport={"width": 1700, "height": 1900})
+            sensitivity_page.goto(f"{base_url}/analytics.html", wait_until="domcontentloaded", timeout=60000)
+            sensitivity_page.locator("#chart-container").wait_for(state="visible", timeout=45000)
+            sensitivity_page.locator('input[type="date"]').nth(0).fill(start_date)
+            sensitivity_page.locator('input[type="date"]').nth(1).fill(end_date)
+            sensitivity_page.wait_for_timeout(2500)
+            sensitivity_page.wait_for_function(
+                """() => {
+                  const flowChart = document.querySelector('#chart-flow');
+                  if (!flowChart) return false;
+                  return flowChart.querySelectorAll('.recharts-rectangle, .recharts-bar-rectangle').length >= 3;
+                }""",
+                timeout=30000,
+            )
+            sensitivity_page.evaluate("() => document.activeElement && document.activeElement.blur()")
+            sensitivity_page.wait_for_timeout(500)
+            sensitivity_image = _capture_boxes_from_js(
+                sensitivity_page,
+                """() => {
+                  const rectOf = (element) => {
+                    const rect = element.getBoundingClientRect();
+                    return {
+                      x: rect.left + window.scrollX,
+                      y: rect.top + window.scrollY,
+                      width: rect.width,
+                      height: rect.height,
+                    };
+                  };
+                  const filterCard = Array.from(document.querySelectorAll('div.bg-white.rounded-xl'))
+                    .find((element) => element.innerText?.includes('分析期間:') && element.innerText?.includes('期間内 累積海外資金流入額'));
+                  const chartContainer = document.querySelector('#chart-container');
+                  return [filterCard, chartContainer].filter(Boolean).map(rectOf);
+                }""",
+                output_dir / "11_weekly_sector_sensitivity_3weeks.png",
+                padding=24,
+            )
+            sensitivity_page.close()
+            browser.close()
+
+    return {"images": [jpx_flow_image, mof_image, sensitivity_image]}
 
 
 def _combine_images(left_path: Path, right_path: Path, output_path: Path) -> Path:
@@ -468,9 +687,12 @@ def build_blog_markdown(
     date_display: str,
     sector_assets: dict[str, Any],
     option_assets: dict[str, Any],
+    weekly_assets: dict[str, Any] | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
     title = BLOG_TITLE_TEMPLATE.format(date=date_display)
     body_uploads: list[dict[str, Any]] = []
+    next_affiliate_index = 1
+    next_image_index = 1
     lines: list[str] = [
         f"# {title}",
         "",
@@ -480,19 +702,40 @@ def build_blog_markdown(
         "",
         DISCLOSURE_TEXT,
         "",
-        f"## {SECTOR_H2}",
-        "",
-        SECTOR_POLICY_TEXT,
-        "",
     ]
+
+    weekly_images = list((weekly_assets or {}).get("images") or [])
+    if weekly_images:
+        lines.extend(
+            [
+                f"## {WEEKLY_FLOW_H2}",
+                "",
+                WEEKLY_FLOW_TEXT,
+                "",
+                WEEKLY_FLOW_SENSITIVITY_TEXT,
+                "",
+            ]
+        )
+        next_image_index = _append_image_markers(
+            lines,
+            body_uploads,
+            weekly_images,
+            start_index=next_image_index,
+            caption_prefix="海外投資家動向 JPX 財務省 セクター別感応度 画像",
+        )
+        lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=next_affiliate_index), ""])
+        next_affiliate_index += 1
+
+    lines.extend([f"## {SECTOR_H2}", "", SECTOR_POLICY_TEXT, ""])
     next_image_index = _append_image_markers(
         lines,
         body_uploads,
         list(sector_assets["images"]),
-        start_index=1,
+        start_index=next_image_index,
         caption_prefix="日本株セクター資金流入割合分析 画像",
     )
-    lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=1), "", f"## {OPTION_H2}", ""])
+    lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=next_affiliate_index), "", f"## {OPTION_H2}", ""])
+    next_affiliate_index += 1
     next_image_index = _append_image_markers(
         lines,
         body_uploads,
@@ -500,8 +743,17 @@ def build_blog_markdown(
         start_index=next_image_index,
         caption_prefix="日経225オプション分析 画像",
     )
-    lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=2), "", f"## {SUMMARY_H2}", ""])
-    lines.extend([_demote_report_headings(report_text), "", AFFILIATE_SLOT_TEMPLATE.format(index=3), "", FOLLOW_TEXT])
+    lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=next_affiliate_index), "", f"## {SUMMARY_H2}", ""])
+    next_affiliate_index += 1
+    lines.extend(
+        [
+            _demote_report_headings(report_text),
+            "",
+            AFFILIATE_SLOT_TEMPLATE.format(index=next_affiliate_index),
+            "",
+            FOLLOW_TEXT,
+        ]
+    )
     return "\n".join(lines).strip() + "\n", body_uploads
 
 
@@ -673,6 +925,19 @@ def publish_note_blog(
     if not report_text:
         report_text = _read_report_text(compact_date, report_file=report_file)
 
+    weekly_images = [
+        image_dir / "09_weekly_jpx_investor_flow.png",
+        image_dir / "10_weekly_mof_inward_securities_1y.png",
+        image_dir / "11_weekly_sector_sensitivity_3weeks.png",
+    ]
+    weekly_assets: dict[str, Any] = {"images": []}
+    if _date_is_thursday(dashed_date):
+        if reuse_assets and all(path.exists() for path in weekly_images):
+            weekly_assets = {"images": weekly_images}
+        else:
+            print("   [情報] 木曜用の海外投資家動向・財務省・セクター別感応度画像を生成します")
+            weekly_assets = capture_weekly_investor_assets(image_dir, dashed_date)
+
     if reuse_assets and (image_dir / "01_sector_full_ranking.png").exists():
         sector_assets = {
             "top5": [],
@@ -712,7 +977,13 @@ def publish_note_blog(
         Path(sector_assets["images"][0]),
         image_dir / "00_note_thumbnail.jpg",
     )
-    markdown, body_image_uploads = build_blog_markdown(report_text, display_date, sector_assets, option_assets)
+    markdown, body_image_uploads = build_blog_markdown(
+        report_text,
+        display_date,
+        sector_assets,
+        option_assets,
+        weekly_assets=weekly_assets,
+    )
     markdown, affiliate_insertions = _apply_affiliate_links(
         markdown,
         note_project_dir,
@@ -741,6 +1012,7 @@ def publish_note_blog(
             "markdown_path": str(markdown_path),
             "thumbnail_path": str(thumbnail_path),
             "body_image_count": len(body_image_uploads),
+            "weekly_image_count": len(weekly_assets.get("images") or []),
             "affiliate_insertions": affiliate_insertions,
             "note_project_dir": str(note_project_dir),
         }
