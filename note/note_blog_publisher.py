@@ -33,11 +33,31 @@ DISCLOSURE_TEXT = (
 )
 INTRO_TEXT = (
     "日本株ランキングを下に日本取引時間内の、日本株ETFでおすすめ上位銘柄や、"
-    "2026年の今後の見通しの日本株銘柄最新情報、今後上がる・伸びる銘柄投資分析のための情報をまとめます。"
+    "2026年の今後の見通しの日本株銘柄最新情報、今後上がる・伸びる銘柄投資分析のための、"
+    "本日の日本株取引時間での数位・チャートから分析をまとめます。\n\n"
+    "後段の投資戦略 by Geminiは、セクターランキング・株価変動・オプションのデータを読み込ませて出力させています。\n\n"
+    "当記事では、日本株セクターごとのETFランキング、日経オプション、明日以降の投資戦略（by Gemini）の順で簡易に結果がわかるように記載します。\n\n"
+    "多忙な方はランキングや図だけを毎日見るだけでも、違ってきます。"
+    "簡易に飛ばし見や、参考になれば投資戦略までお役立てください。"
+    "将来的にはAIの進化でより精度が上がるはずです。（自作ですので精度はご容赦ください。）"
 )
 SECTOR_POLICY_TEXT = (
-    "基本方針として、日本株の各セクターへの資金割合流入を見ます、"
-    "上がる・伸びる日本株の銘柄を分析のために、各セクターETF銘柄をTOPIXで割返しています。"
+    "日本株の各セクターへの資金割合流入から、上がる・伸びる日本株の銘柄を分析のために、"
+    "各セクターETF銘柄をTOPIXで割返すことで相対化したのが以下のランキング表です、"
+    "マクロ環境や地合いの影響をなくし、各セクターへの資金流入の強弱を見るために相対化しています。"
+    "トレンドに乗る・逆らわないようにするためにこの考え方を採用しています。\n\n"
+    "外国人投資がが７割の日本市場においてお金が入ってくる・抜けてくるセクターを分析しています。\n\n"
+    "本日の日本株セクター毎のランキングは以下です。上位が資金「流入」セクター、下位が資金「流出」セクターです。"
+)
+OPTION_ANALYSIS_TEXT = (
+    "毎日東証から発表される日経225オプションの分析です。\n\n"
+    "日経225,TOPIXは主に機関投資家が、日経225mini、マイクロは個人投資家が利用されているオプションです。"
+    "オプションの増減と、建玉数、推移を示しています。\n\n"
+    "また、日経オプションのCall-Putをすることで、"
+    "どこで（オプションで保険をかけたいと考えている機関投資家・個人投資家が）均衡しているのかを見ています。"
+    "ちょうどCallやPutが増え始める堺目を中心に、上下で上がる・下がることに対してオプションを利用しています。\n\n"
+    "コール・プット前日比では、急増したオプションを見て、"
+    "（主に機関投資家・外資系銀行（クライアント含む））保険を急に増減したことが判断できます。"
 )
 WEEKLY_FLOW_TEXT = (
     "海外投資家動向（JPX・財務省）は毎週木曜に東証から公開されます、"
@@ -734,7 +754,16 @@ def build_blog_markdown(
         start_index=next_image_index,
         caption_prefix="日本株セクター資金流入割合分析 画像",
     )
-    lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=next_affiliate_index), "", f"## {OPTION_H2}", ""])
+    lines.extend(
+        [
+            AFFILIATE_SLOT_TEMPLATE.format(index=next_affiliate_index),
+            "",
+            f"## {OPTION_H2}",
+            "",
+            OPTION_ANALYSIS_TEXT,
+            "",
+        ]
+    )
     next_affiliate_index += 1
     next_image_index = _append_image_markers(
         lines,
@@ -779,6 +808,12 @@ def _apply_affiliate_links(
 
 
 def _read_tags(note_project_dir: Path) -> str:
+    tag_file = note_project_dir / "tag.md"
+    if tag_file.exists():
+        tags = re.sub(r"\s+", " ", tag_file.read_text(encoding="utf-8")).strip()
+        if tags:
+            return tags
+    print(f"   [警告] tag.md が読めないため既定タグを使います: {tag_file}")
     return NOTE_PUBLISH_TAGS
 
 
