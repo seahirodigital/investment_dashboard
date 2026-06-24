@@ -490,6 +490,11 @@ def parse_args() -> argparse.Namespace:
         default="DISCORD_OPTION_WEBHOOK_URL",
         help="Discord Webhook URLを読む環境変数名。",
     )
+    parser.add_argument(
+        "--keep-output",
+        action="store_true",
+        help="Discord送信後もスクリーンショットを残します。",
+    )
     return parser.parse_args()
 
 
@@ -505,7 +510,10 @@ def main() -> None:
         webhook_url = os.environ.get(args.webhook_env) or os.environ.get("DISCORD_WEBHOOK_URL", "")
         send_to_discord(webhook_url, snapshot)
         print("Discordへの送信が完了しました。")
-        cleanup_output_dir(output_dir)
+        if args.keep_output:
+            print(f"Note投稿用に一時スクリーンショットを保持します: {output_dir.resolve()}")
+        else:
+            cleanup_output_dir(output_dir)
     else:
         print("Discord送信はスキップしました。")
 

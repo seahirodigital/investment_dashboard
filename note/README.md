@@ -35,3 +35,17 @@ Markdown、本文画像、noteサムネイル、投稿結果JSONは `C:\Users\ma
 公開時のタグは `#投資初心者 #投資 #デイトレ #日本株 #日経平均 #米国株 #高配当 #FX #ドル円` と同じ内容を使います。
 
 公開時のマガジンは `日本株の振り返りまとめ ` を選びます。
+
+## 米国株セクター朝記事
+
+`C:\Users\mahha\OneDrive\開発\investment_dashboard\note\us_sector_note_publisher.py` は、朝の市況Discord通知で作成した4画像（米株ヒートマップ、Fear & Greed Index、SOX指数、日経VIX）と、米国セクター資金流入ランキング上位7件・下位7件の画像を組み合わせてnote記事を投稿します。
+
+GitHub Actionsでは `朝の市況Discord通知` の `Run workflow` から `note_post_mode=draft-note-only` を選ぶと、公開せず下書きでDebugできます。スケジュール実行では4画像をDiscordへ送信したあと、米国ETFデータを更新し、note投稿後にnoteリンクをDiscordへ再通知します。
+
+```powershell
+python C:\Users\mahha\OneDrive\開発\investment_dashboard\note\us_sector_note_publisher.py --mode draft-note-only --date 20260623 --market-assets-dir C:\Users\mahha\OneDrive\開発\investment_dashboard\artifacts\morning_market_notification
+```
+
+米国株セクター朝記事のMarkdown、本文画像、noteサムネイル、投稿結果JSONは `C:\Users\mahha\OneDrive\開発\investment_dashboard\note\generated\us_sector\<YYYYMMDD>` に保存されます。
+
+米国株セクター朝記事の公開時マガジンは `米国株のニュース・動向まとめ` を選びます。タグとアフィリエイトは既存の日本株note投稿と同じく、`C:\Users\mahha\OneDrive\開発\notion2note\tag.md` と `C:\Users\mahha\OneDrive\開発\notion2note\affiliate_links.txt` を参照します。
