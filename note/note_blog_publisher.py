@@ -146,7 +146,15 @@ def _read_report_text(date_compact: str, report_file: str = "") -> str:
     preferred = REPORT_DIR / f"{date_compact}_daily_report.md"
     if preferred.exists():
         return preferred.read_text(encoding="utf-8")
-    reports = sorted(REPORT_DIR.glob("*_daily_report.md"), key=lambda item: item.stat().st_mtime, reverse=True)
+    reports = sorted(
+        (
+            item
+            for item in REPORT_DIR.glob("*_daily_report.md")
+            if re.fullmatch(r"\d{8}_daily_report\.md", item.name)
+        ),
+        key=lambda item: item.name[:8],
+        reverse=True,
+    )
     if not reports:
         raise FileNotFoundError(f"Gemini投資戦略サマリーが見つかりません: {REPORT_DIR}")
     print(f"   [警告] 指定日のレポートがないため最新レポートを使います: {reports[0]}")
