@@ -9,12 +9,12 @@ on:
       note_post_mode:
         description: 'note投稿モード'
         required: false
-        default: 'draft-note-only'
+        default: 'publish'
         type: choice
         options:
+          - publish
           - draft-note-only
           - dry-run
-          - publish
           - draft
           - skip
       note_date:
