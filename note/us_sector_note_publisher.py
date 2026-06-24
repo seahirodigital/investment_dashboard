@@ -513,7 +513,7 @@ def _append_image_marker(
 
 
 def _format_ranking_items(items: list[dict[str, Any]]) -> str:
-    return " ".join(f"{item['name']}: {item['performance']}" for item in items)
+    return "\n".join(f"{item['name']}: {item['performance']}" for item in items)
 
 
 def build_blog_markdown(
@@ -551,7 +551,8 @@ def build_blog_markdown(
         [
             f"## {section_prefix}:米国Fear&Greed Index",
             "",
-            f"米国：Fear & Greed Index：{fear_greed_value}  [{CNN_URL}]({CNN_URL})",
+            f"米国：Fear & Greed Index：{fear_greed_value}",
+            f"[{CNN_URL}]({CNN_URL})",
             "",
         ]
     )
@@ -562,7 +563,8 @@ def build_blog_markdown(
         [
             f"## {section_prefix}:SOX指数",
             "",
-            f"米国での半導体：SOX指数 [{SOX_URL}]({SOX_URL})",
+            "米国での半導体：SOX指数",
+            f"[{SOX_URL}]({SOX_URL})",
             "",
         ]
     )
@@ -572,7 +574,8 @@ def build_blog_markdown(
         [
             f"## {section_prefix}:日経恐怖指数の日経VIX",
             "",
-            f"日本での恐怖指数：日経VIX:{nikkei_vi_value}[{NIKKEI_VI_URL}]({NIKKEI_VI_URL})",
+            f"日本での恐怖指数：日経VIX:{nikkei_vi_value}",
+            f"[{NIKKEI_VI_URL}]({NIKKEI_VI_URL})",
             "",
         ]
     )
@@ -592,7 +595,7 @@ def build_blog_markdown(
         image_index,
         "米国セクター資金流入ランキング上位7件",
     )
-    lines.extend(["▼上位7件", _format_ranking_items(sector_assets["top7"]), ""])
+    lines.extend(["▼上位7件", "", _format_ranking_items(sector_assets["top7"]), ""])
     image_index = _append_image_marker(
         lines,
         body_uploads,
@@ -603,6 +606,7 @@ def build_blog_markdown(
     lines.extend(
         [
             "▼下位7件",
+            "",
             _format_ranking_items(sector_assets["bottom7"]),
             "",
             AFFILIATE_SLOT_TEMPLATE.format(index=4),
