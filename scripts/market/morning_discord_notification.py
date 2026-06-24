@@ -32,6 +32,7 @@ NIKKEI_WEEK_SCREENSHOT_URL = (
 FINVIZ_URL = "https://finviz.com/map"
 FINVIZ_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=d1"
 SOX_URL = "https://www.tradingview.com/symbols/NASDAQ-SOX/"
+ADR_URL = "https://nikkei225jp.com/adr/"
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 DESKTOP_USER_AGENT = (
@@ -353,6 +354,46 @@ def _capture_sox_index(page, output_dir: Path) -> Path:
     return screenshot_path
 
 
+def _capture_adr_major_movers(page, output_dir: Path) -> Path:
+    screenshot_path = output_dir / "adr_major_movers.png"
+    page.set_viewport_size({"width": 1200, "height": 1600})
+    page.goto(ADR_URL, wait_until="domcontentloaded", timeout=90000)
+    page.wait_for_timeout(10000)
+    page.wait_for_function(
+        """() => Array.from(document.querySelectorAll('table.tbl')).some((table) => {
+          const text = (table.innerText || table.textContent || '').replace(/\s+/g, ' ');
+          return text.includes('ADR株価')
+            && text.includes('主要銘柄')
+            && text.includes('5%');
+        })""",
+        timeout=30000,
+    )
+    table_handle = page.evaluate_handle(
+        """() => {
+          const tables = Array.from(document.querySelectorAll('table.tbl')).filter((table) => {
+            const text = (table.innerText || table.textContent || '').replace(/\s+/g, ' ');
+            return text.includes('ADR株価')
+              && text.includes('主要銘柄')
+              && text.includes('5%');
+          });
+          return tables.sort((a, b) => {
+            const ar = a.getBoundingClientRect();
+            const br = b.getBoundingClientRect();
+            return (ar.width * ar.height) - (br.width * br.height);
+          })[0] || null;
+        }"""
+    )
+    table = table_handle.as_element()
+    if table is None:
+        raise RuntimeError("ADR主要銘柄変動率テーブルが見つかりませんでした。")
+    table.scroll_into_view_if_needed(timeout=10000)
+    page.wait_for_timeout(1000)
+    table.screenshot(path=str(screenshot_path))
+    if not screenshot_path.exists() or screenshot_path.stat().st_size == 0:
+        raise RuntimeError(f"ADR主要銘柄変動率画像を生成できませんでした: {screenshot_path}")
+    return screenshot_path
+
+
 def _build_message(fear_greed_value: str, nikkei_vi_value: str) -> str:
     return "\n".join(
         [
@@ -367,6 +408,9 @@ def _build_message(fear_greed_value: str, nikkei_vi_value: str) -> str:
             "",
             "SOX指数",
             SOX_URL,
+            "",
+            "ADR株価 主要銘柄 変動率",
+            ADR_URL,
             "",
             "#デイトレ #米国株 #日本株 #日経平均 #FX  #CFD ",
             "",
@@ -392,6 +436,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             nikkei_vi_value, nikkei_vi_path = _capture_nikkei_vi(page, output_dir)
             finviz_path = _capture_finviz_heatmap(page, output_dir)
             sox_path = _capture_sox_index(page, output_dir)
+            adr_path = _capture_adr_major_movers(page, output_dir)
         finally:
             context.close()
             browser.close()
@@ -408,12 +453,14 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             "nikkei_vi": NIKKEI_WEEK_URL,
             "finviz": FINVIZ_URL,
             "sox": SOX_URL,
+            "adr": ADR_URL,
         },
         "screenshots": [
             str(finviz_path),
             str(fear_greed_path),
             str(nikkei_vi_path),
             str(sox_path),
+            str(adr_path),
         ],
         "message_file": str(message_path),
     }
@@ -426,7 +473,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
         fear_greed_value=fear_greed_value,
         nikkei_vi_value=nikkei_vi_value,
         message=message,
-        screenshot_paths=[finviz_path, fear_greed_path, nikkei_vi_path, sox_path],
+        screenshot_paths=[finviz_path, fear_greed_path, nikkei_vi_path, sox_path, adr_path],
     )
 
 
