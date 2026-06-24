@@ -71,31 +71,31 @@ jobs:
 
       # ── Step 1: データ取得 ──────────────────────────────────
       - name: Fetch intraday data
-        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'skip') }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'publish' || github.event.inputs.note_post_mode == 'skip') }}
         run: python scripts/market/fetch_intraday.py
         continue-on-error: true
 
       - name: Fetch ETF daily data
-        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'skip') }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'publish' || github.event.inputs.note_post_mode == 'skip') }}
         run: python scripts/market/etf_data_manager.py
         continue-on-error: true
 
       - name: Fetch short selling data
-        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'skip') }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'publish' || github.event.inputs.note_post_mode == 'skip') }}
         run: python scripts/market/fetch_short_selling.py
         continue-on-error: true
 
       # teguchi/option データは daily_participant.yml (08:45 UTC) で取得済み
       # 万一未取得の場合のフォールバックとして実行（失敗しても分析は続行）
       - name: Fetch teguchi data (fallback)
-        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'skip') }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'publish' || github.event.inputs.note_post_mode == 'skip') }}
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: python scripts/jpx/fetch_teguchi.py
         continue-on-error: true
 
       - name: Fetch option data (fallback)
-        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'skip') }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'publish' || github.event.inputs.note_post_mode == 'skip') }}
         env:
           FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
         run: python scripts/jpx/fetch_option.py
@@ -124,8 +124,6 @@ jobs:
         run: |
           if [ "$NOTE_POST_MODE" = "draft-note-only" ]; then
             python scripts/market/gemini_analysis.py --note-post-mode draft-note-only --note-date "$NOTE_POST_DATE"
-          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$NOTE_POST_MODE" = "publish" ]; then
-            python scripts/market/gemini_analysis.py --note-only --note-publish --note-date "$NOTE_POST_DATE"
           elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$NOTE_POST_MODE" = "dry-run" ]; then
             python scripts/market/gemini_analysis.py --note-only --note-dry-run-publish --note-date "$NOTE_POST_DATE"
           elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$NOTE_POST_MODE" = "draft" ]; then
@@ -145,7 +143,7 @@ jobs:
 
       # ── Step 3: レポートとデータをコミット ──────────────────
       - name: Commit reports and data
-        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'skip') }}
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode == 'publish' || github.event.inputs.note_post_mode == 'skip') }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"

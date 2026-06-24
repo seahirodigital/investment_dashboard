@@ -10,7 +10,7 @@
 python C:\Users\mahha\OneDrive\開発\investment_dashboard\scripts\market\gemini_analysis.py --note-post-mode draft-note-only --note-date 20260619
 ```
 
-GitHub Actionsでは `Daily Market Analysis (Gemini)` の `Run workflow` から `note_post_mode=draft-note-only` を選ぶと下書きDebugできます。初期値は `publish` のため、通常の手動実行は保存済みレポートを使って本投稿します。
+GitHub Actionsでは `Daily Market Analysis (Gemini)` の `Run workflow` から `note_post_mode=draft-note-only` を選ぶと下書きDebugできます。初期値は `publish` のため、通常の手動実行はデータ取得、Gemini分析、note本投稿まで最初から実行します。
 
 ## Debug公開直前投稿
 
@@ -21,6 +21,10 @@ python C:\Users\mahha\OneDrive\開発\investment_dashboard\scripts\market\gemini
 ```
 
 ## 本投稿
+
+GitHub Actionsでは `Daily Market Analysis (Gemini)` の `Run workflow` から `note_post_mode=publish` を選びます。スマホから初期値のまま実行しても同じ本投稿フローになります。
+
+保存済みレポートだけを使って再投稿するローカル確認用コマンドは以下です。
 
 ```powershell
 python C:\Users\mahha\OneDrive\開発\investment_dashboard\scripts\market\gemini_analysis.py --note-only --note-publish --note-date 20260619
