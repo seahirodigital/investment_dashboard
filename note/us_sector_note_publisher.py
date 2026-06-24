@@ -32,6 +32,7 @@ CNN_URL = "https://edition.cnn.com/markets/fear-and-greed"
 FINVIZ_URL = "https://finviz.com/map"
 SOX_URL = "https://www.tradingview.com/symbols/NASDAQ-SOX/"
 NIKKEI_VI_URL = "https://indexes.nikkei.co.jp/nkave/index/profile?cid=1&idx=nk225vi#section-gist"
+ADR_URL = "https://nikkei225jp.com/adr/"
 
 TITLE_PREFIX = "米国株ランキング分析・日本株今後おすすめ銘柄分析向け"
 BLOG_TITLE_TEMPLATE = f"{TITLE_PREFIX}2026：{{date}}"
@@ -47,7 +48,7 @@ INTRO_TEXT = (
     "米国での資金流入セクターを分析します。\n\n"
     "日本取引時間内の、日本株ETFでおすすめ上位銘柄や、2026年の今後の見通しの日本株銘柄最新情報、"
     "今後上がる・伸びる銘柄投資分析のための、本日の米国取引時間での推移とチャートから分析をまとめます。\n\n"
-    "また、前段では、現状のマクロ環境での動きを抑えるために、４つの重要情報を添付します。\n\n"
+    "また、前段では、現状のマクロ環境での動きを抑えるために、５つの重要情報を添付します。\n\n"
     "多忙な方はランキングや図だけを毎日見るだけでも、マクロ環境への意識が違ってきます。"
     "簡易に飛ばし見や、参考になれば投資戦略までお役立てください。"
 )
@@ -332,6 +333,13 @@ def _copy_image(source_path: Path, output_path: Path) -> Path:
     return output_path
 
 
+def _metadata_has_screenshot(metadata: dict[str, Any], source_dir: Path, stem: str) -> bool:
+    for item in metadata.get("screenshots") or []:
+        if Path(str(item)).stem == stem:
+            return True
+    return (source_dir / f"{stem}.png").exists()
+
+
 def _ensure_morning_snapshot(source_dir: Path) -> dict[str, Any]:
     metadata_path = source_dir / "metadata.json"
     if not metadata_path.exists():
@@ -343,7 +351,16 @@ def _ensure_morning_snapshot(source_dir: Path) -> dict[str, Any]:
         module.build_snapshot(source_dir)
     if not metadata_path.exists():
         raise FileNotFoundError(f"朝の市況メタデータが見つかりません: {metadata_path}")
-    return json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if not _metadata_has_screenshot(metadata, source_dir, "adr_major_movers"):
+        print(f"   [情報] ADR画像が見つからないため朝の市況画像を再生成します: {source_dir}")
+        module = _load_module(
+            "investment_dashboard_morning_discord_runtime",
+            BASE_DIR / "scripts" / "market" / "morning_discord_notification.py",
+        )
+        module.build_snapshot(source_dir)
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    return metadata
 
 
 def _find_screenshot_by_name(metadata: dict[str, Any], source_dir: Path, stem: str) -> Path:
@@ -377,6 +394,10 @@ def load_market_assets(source_dir: Path, image_dir: Path) -> dict[str, Any]:
         _find_screenshot_by_name(metadata, source_dir, "nikkei_vi_1w_chart"),
         image_dir / "04_nikkei_vi_1w_chart.png",
     )
+    adr = _copy_image(
+        _find_screenshot_by_name(metadata, source_dir, "adr_major_movers"),
+        image_dir / "05_adr_major_movers.png",
+    )
     return {
         "fear_greed_value": str(metadata.get("fear_greed_value") or "").strip(),
         "nikkei_vi_value": str(metadata.get("nikkei_vi_value") or "").strip(),
@@ -385,6 +406,7 @@ def load_market_assets(source_dir: Path, image_dir: Path) -> dict[str, Any]:
             "fear_greed": fear_greed,
             "sox": sox,
             "nikkei_vi": nikkei_vi,
+            "adr": adr,
         },
         "metadata": metadata,
     }
@@ -465,7 +487,7 @@ def capture_us_sector_assets(output_dir: Path) -> dict[str, Any]:
             top_ranking = output_dir / "us_sector_top7_ranking.png"
             chart.screenshot(path=str(top_chart))
             ranking.screenshot(path=str(top_ranking))
-            top_combined = _combine_images(top_chart, top_ranking, output_dir / "05_us_sector_top7_with_ranking.png")
+            top_combined = _combine_images(top_chart, top_ranking, output_dir / "06_us_sector_top7_with_ranking.png")
 
             card.locator('[data-capture="show-bottom7"]').click()
             page.wait_for_timeout(2500)
@@ -478,7 +500,7 @@ def capture_us_sector_assets(output_dir: Path) -> dict[str, Any]:
             bottom_combined = _combine_images(
                 bottom_chart,
                 bottom_ranking,
-                output_dir / "06_us_sector_bottom7_with_ranking.png",
+                output_dir / "07_us_sector_bottom7_with_ranking.png",
             )
             browser.close()
 
@@ -581,6 +603,18 @@ def build_blog_markdown(
     )
     image_index = _append_image_marker(lines, body_uploads, images["nikkei_vi"], image_index, "日経VIX")
     lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=3), ""])
+
+    lines.extend(
+        [
+            f"## {section_prefix}:ADR",
+            "",
+            "米国上場の日本株ADR",
+            "",
+            f"[{ADR_URL}]({ADR_URL})",
+            "",
+        ]
+    )
+    image_index = _append_image_marker(lines, body_uploads, images["adr"], image_index, "ADR株価 主要銘柄 変動率")
 
     lines.extend(
         [
