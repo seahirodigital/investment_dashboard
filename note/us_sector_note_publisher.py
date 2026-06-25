@@ -250,6 +250,11 @@ def _post_to_note(
             "investment_dashboard_us_sector_note_publisher_runtime",
             note_project_dir / "scripts" / "note_post" / "note_post_publisher.py",
         )
+        publish_button_patch = _load_module(
+            "investment_dashboard_us_sector_publish_button_patch",
+            NOTE_DIR / "publish_button_patch.py",
+        )
+        publisher = publish_button_patch.patch_note_publisher_publish_next(publisher)
         return publisher.publish_markdown_to_note(
             markdown,
             run_ogp=True,
