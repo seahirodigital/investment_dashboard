@@ -81,6 +81,18 @@ WEEKLY_FLOW_H2 = "海外投資家動向（JPX・財務省）"
 SECTOR_H2 = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：日本株セクター毎の資金流入割合分析"
 OPTION_H2 = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：日経225 オプション分析"
 SUMMARY_H2 = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：投資戦略サマリー(Gemini分析)"
+NIKKEI225_CHART_URL = "https://nikkei225jp.com/chart/nikkei.php"
+NIKKEI225_HEATMAP_LABEL = "日経225 ヒートマップ"
+CONTRIBUTION_H2 = "日本株投資・投資信託ランキング・今後おすすめ銘柄分析2026：日経225 寄与度ランキング"
+CONTRIBUTION_TEXT = (
+    "日経225寄与度ランキングは以下です。"
+    "値段の大きい大型株の依存度が強く、半導体銘柄に左右されることが多いため"
+    "日本市場全体を見る際にはTOPIXを採用します。"
+)
+DESKTOP_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
 NOTE_PUBLISH_TAGS = "投資初心者 投資 デイトレ 日本株 日経平均 米国株 高配当 FX ドル円"
 DISCORD_TEMPLATE_TAGS = "#投資初心者 #投資 #デイトレ #日本株 #日経平均 #米国株 #高配当 #FX #ドル円"
 NOTE_MAGAZINE_NAME = "日本株の振り返りまとめ "
@@ -228,6 +240,137 @@ def _capture_boxes_from_js(page, js: str, output_path: Path, padding: int = 24) 
     if not output_path.exists() or output_path.stat().st_size == 0:
         raise RuntimeError(f"スクリーンショットを生成できませんでした: {output_path}")
     return output_path
+
+
+def _capture_table_without_caption(
+    page,
+    output_path: Path,
+    *,
+    table_id: str = "",
+    match_text: str = "",
+    padding: int = 0,
+) -> Path:
+    box = page.evaluate(
+        """({ tableId, matchText }) => {
+          const tables = Array.from(document.querySelectorAll(tableId ? `table#${tableId}` : 'table.tbl'));
+          const normalize = (text) => String(text || '').replace(/\s+/g, ' ').trim();
+          const table = tables.find((candidate) => {
+            if (tableId && candidate.id !== tableId) return false;
+            if (!matchText) return true;
+            const captionText = normalize(candidate.querySelector('caption')?.innerText || '');
+            const tableText = normalize(candidate.innerText || candidate.textContent || '');
+            return captionText.includes(matchText) || tableText.includes(matchText);
+          });
+          if (!table) {
+            throw new Error(`対象テーブルが見つかりません: ${matchText || tableId}`);
+          }
+          const rectOf = (element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+              x: rect.left + window.scrollX,
+              y: rect.top + window.scrollY,
+              width: rect.width,
+              height: rect.height,
+            };
+          };
+          const tableRect = rectOf(table);
+          const caption = table.querySelector('caption');
+          const captionRect = caption ? rectOf(caption) : null;
+          let y = tableRect.y;
+          let height = tableRect.height;
+          if (captionRect && captionRect.height > 0 && captionRect.height < tableRect.height) {
+            const captionBottom = captionRect.y + captionRect.height;
+            y = Math.min(tableRect.y + tableRect.height, Math.max(tableRect.y, captionBottom));
+            height = Math.max(1, tableRect.y + tableRect.height - y);
+          }
+          return {
+            x: tableRect.x,
+            y,
+            width: tableRect.width,
+            height,
+          };
+        }""",
+        {"tableId": table_id, "matchText": match_text},
+    )
+    clip = _page_clip_from_boxes(page, [box], padding=padding)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(output_path), clip=clip)
+    if not output_path.exists() or output_path.stat().st_size == 0:
+        raise RuntimeError(f"スクリーンショットを生成できませんでした: {output_path}")
+    return output_path
+
+
+def _assert_image_minimum_size(path: Path, min_width: int, min_height: int, label: str) -> None:
+    from PIL import Image
+
+    with Image.open(path) as image:
+        width, height = image.size
+    if width < min_width or height < min_height:
+        raise RuntimeError(
+            f"{label} のスクリーンショットが小さすぎます: {path} ({width}x{height})"
+        )
+
+
+def _capture_nikkei225_heatmap_image(page, output_path: Path) -> Path:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    heatmap_table = page.locator("table.tbl").filter(has_text=NIKKEI225_HEATMAP_LABEL).first
+    heatmap_table.wait_for(state="visible", timeout=45000)
+    heatmap_body = heatmap_table.locator("tr").first
+    heatmap_body.wait_for(state="visible", timeout=45000)
+    heatmap_body.screenshot(path=str(output_path))
+    _assert_image_minimum_size(output_path, min_width=1000, min_height=1000, label=NIKKEI225_HEATMAP_LABEL)
+    return output_path
+
+
+def capture_nikkei225_chart_assets(output_dir: Path) -> dict[str, Any]:
+    from playwright.sync_api import sync_playwright
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    heatmap_image = output_dir / "00_nikkei225_heatmap.png"
+    contribution_image = output_dir / "00_nikkei225_contribution_ranking.png"
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        context = browser.new_context(
+            viewport={"width": 1400, "height": 3000},
+            device_scale_factor=2,
+            user_agent=DESKTOP_USER_AGENT,
+        )
+        page = context.new_page()
+        page.goto(NIKKEI225_CHART_URL, wait_until="domcontentloaded", timeout=90000)
+        page.wait_for_timeout(10000)
+        page.wait_for_function(
+            """() => Array.from(document.querySelectorAll('table.tbl')).some((table) => {
+              const text = (table.innerText || table.textContent || '').replace(/\s+/g, ' ');
+              return text.includes('日経225 ヒートマップ') && text.includes('業種別指数');
+            })""",
+            timeout=45000,
+        )
+        page.wait_for_function(
+            """() => Boolean(document.querySelector('table#nkrnk'))""",
+            timeout=45000,
+        )
+        heatmap_image = _capture_nikkei225_heatmap_image(page, heatmap_image)
+        contribution_image = _capture_table_without_caption(
+            page,
+            contribution_image,
+            table_id="nkrnk",
+            padding=0,
+        )
+        _assert_image_minimum_size(
+            contribution_image,
+            min_width=1000,
+            min_height=500,
+            label="日経225 寄与度ランキング",
+        )
+        context.close()
+        browser.close()
+
+    return {
+        "images": [heatmap_image, contribution_image],
+        "heatmap_image": heatmap_image,
+        "contribution_image": contribution_image,
+    }
 
 
 def _sector_three_week_range_for_capture(dashed_date: str) -> tuple[str, str]:
@@ -713,6 +856,7 @@ def _format_ranking_lines(label: str, items: list[dict[str, Any]]) -> list[str]:
 def build_blog_markdown(
     report_text: str,
     date_display: str,
+    nikkei225_assets: dict[str, Any],
     sector_assets: dict[str, Any],
     option_assets: dict[str, Any],
     weekly_assets: dict[str, Any] | None = None,
@@ -726,11 +870,42 @@ def build_blog_markdown(
         "",
         INTRO_TEXT,
         "",
-        TOC_MARKER,
-        "",
-        DISCLOSURE_TEXT,
-        "",
     ]
+    heatmap_image = (nikkei225_assets or {}).get("heatmap_image")
+    if heatmap_image:
+        next_image_index = _append_image_markers(
+            lines,
+            body_uploads,
+            [Path(heatmap_image)],
+            start_index=next_image_index,
+            caption_prefix="日経225ヒートマップ 画像",
+        )
+
+    lines.extend([TOC_MARKER, ""])
+
+    contribution_image = (nikkei225_assets or {}).get("contribution_image")
+    if contribution_image:
+        lines.extend(
+            [
+                f"## {CONTRIBUTION_H2}",
+                "",
+                CONTRIBUTION_TEXT,
+                "",
+                NIKKEI225_CHART_URL,
+                "",
+            ]
+        )
+        next_image_index = _append_image_markers(
+            lines,
+            body_uploads,
+            [Path(contribution_image)],
+            start_index=next_image_index,
+            caption_prefix="日経225寄与度ランキング 画像",
+        )
+        lines.extend([AFFILIATE_SLOT_TEMPLATE.format(index=next_affiliate_index), ""])
+        next_affiliate_index += 1
+
+    lines.extend([DISCLOSURE_TEXT, ""])
 
     weekly_images = list((weekly_assets or {}).get("images") or [])
     if weekly_images:
@@ -973,6 +1148,19 @@ def publish_note_blog(
     if not report_text:
         report_text = _read_report_text(compact_date, report_file=report_file)
 
+    nikkei225_image_paths = {
+        "heatmap_image": image_dir / "00_nikkei225_heatmap.png",
+        "contribution_image": image_dir / "00_nikkei225_contribution_ranking.png",
+    }
+    if reuse_assets and all(path.exists() for path in nikkei225_image_paths.values()):
+        nikkei225_assets = {
+            "images": list(nikkei225_image_paths.values()),
+            **nikkei225_image_paths,
+        }
+    else:
+        print("   [情報] note用の日経225ヒートマップ・寄与度ランキング画像を生成します")
+        nikkei225_assets = capture_nikkei225_chart_assets(image_dir)
+
     weekly_images = [
         image_dir / "09_weekly_jpx_investor_flow.png",
         image_dir / "10_weekly_mof_inward_securities_1y.png",
@@ -1021,13 +1209,11 @@ def publish_note_blog(
         print("   [情報] note用の日経225オプション画像を生成します")
         option_assets = capture_option_assets(image_dir)
 
-    thumbnail_path = _create_note_thumbnail(
-        Path(sector_assets["images"][0]),
-        image_dir / "00_note_thumbnail.jpg",
-    )
+    thumbnail_path = Path(nikkei225_assets["heatmap_image"])
     markdown, body_image_uploads = build_blog_markdown(
         report_text,
         display_date,
+        nikkei225_assets,
         sector_assets,
         option_assets,
         weekly_assets=weekly_assets,
@@ -1060,6 +1246,7 @@ def publish_note_blog(
             "markdown_path": str(markdown_path),
             "thumbnail_path": str(thumbnail_path),
             "body_image_count": len(body_image_uploads),
+            "nikkei225_image_count": len(nikkei225_assets.get("images") or []),
             "weekly_image_count": len(weekly_assets.get("images") or []),
             "affiliate_insertions": affiliate_insertions,
             "note_project_dir": str(note_project_dir),
