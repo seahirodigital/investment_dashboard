@@ -592,20 +592,24 @@ def _create_note_thumbnail(source_path: Path, output_path: Path) -> Path:
     from PIL import Image, ImageOps
 
     source = Image.open(source_path).convert("RGB")
-    width, height = source.size
     canvas_width, canvas_height = 1600, 836
 
-    # noteの横長サムネイルでは、上位ランキングが一目で見える上側だけを使う。
-    top_crop_height = max(1, int(height * 0.34))
-    top_crop = source.crop((0, 0, width, top_crop_height))
-    thumbnail = ImageOps.fit(
-        top_crop,
+    # note側の横長サムネイルで上下が切れないよう、ヒートマップ本体全体を縮小して収める。
+    thumbnail = ImageOps.contain(
+        source,
         (canvas_width, canvas_height),
         method=Image.Resampling.LANCZOS,
-        centering=(0.5, 0.0),
+    )
+    canvas = Image.new("RGB", (canvas_width, canvas_height), "white")
+    canvas.paste(
+        thumbnail,
+        (
+            max(0, (canvas_width - thumbnail.width) // 2),
+            max(0, (canvas_height - thumbnail.height) // 2),
+        ),
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    thumbnail.save(output_path, quality=92)
+    canvas.save(output_path, quality=92)
     return output_path
 
 
@@ -1209,7 +1213,10 @@ def publish_note_blog(
         print("   [情報] note用の日経225オプション画像を生成します")
         option_assets = capture_option_assets(image_dir)
 
-    thumbnail_path = Path(nikkei225_assets["heatmap_image"])
+    thumbnail_path = _create_note_thumbnail(
+        Path(nikkei225_assets["heatmap_image"]),
+        image_dir / "00_note_thumbnail.jpg",
+    )
     markdown, body_image_uploads = build_blog_markdown(
         report_text,
         display_date,
