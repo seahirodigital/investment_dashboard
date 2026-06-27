@@ -33,6 +33,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 REPORT_DIR = os.path.join(BASE_DIR, "market_analysis", "reports")
 NOTE_BLOG_PUBLISHER_PATH = os.path.join(BASE_DIR, "note", "note_blog_publisher.py")
+PROMPT_TEMPLATE_PATH = os.path.join(BASE_DIR, "note", "prompt", "daily_market_analysis_prompt.md")
 
 GEMINI_MODEL = "gemini-3.5-flash"
 GEMINI_ENDPOINT = (
@@ -240,101 +241,39 @@ def summarize_option_history(option_history):
 
 
 # ── プロンプト構築 ─────────────────────────────────────────────────
+def _json_for_prompt(value):
+    return json.dumps(value, ensure_ascii=False, indent=1)
+
+
+def _load_prompt_template():
+    if not os.path.exists(PROMPT_TEMPLATE_PATH):
+        raise FileNotFoundError(f"Gemini分析プロンプトが見つかりません: {PROMPT_TEMPLATE_PATH}")
+    with open(PROMPT_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+        return f.read()
+
+
 def build_prompt(short_selling, teguchi, option_history, etf_intraday, etf_data, today_str):
     """分析用プロンプトを構築"""
-    prompt = f"""あなたは日本株市場の専門アナリストです。以下のデータを用いて、本日（{today_str}）の市場分析レポートを作成してください。
-
-## 分析ルール
-
-### 売買フロー底打ち検知 (short_selling.json)
-- 売買代金の膨張シグナル（S1）：20日移動平均比+30%超
-- 空売り比率ピークアウトシグナル（S2）：直近ピークから相対で20%低下
-- Phase判定：下落 / 反発準備 / 反転上昇
-
-### 米系投資銀行のオプション手口分析 (teguchi.json, option_history.json)
-- ゴールドマンサックス、J.P.モルガン、モルガン・スタンレーなど米系投資銀行のオプション・先物手口を分析
-- 建玉の偏りから上値抵抗線（レジスタンス）と下値支持線（サポート）を推測
-
-### セクター分析 (etf_data.json)
-- 主要セクターETFの本日パフォーマンスを比較
-- 最も買われているセクターと最も売られているセクターを判定
-
-### 個別株ランキング (etf_intraday.json)
-- TOPIX100全銘柄の本日パフォーマンスから上位20と下位20を抽出
-
-### 各種インデックス評価
-- US先物指数（NQmain, ESmain, YMmain）
-- 日本主要指数（日経平均, TOPIX, 半導体ETF）
-
-## データ
-
-### 空売り・売買フローデータ (short_selling.json)
-```json
-{json.dumps(short_selling, ensure_ascii=False, indent=1)}
-```
-
-### 手口データ (teguchi.json)
-```json
-{json.dumps(teguchi, ensure_ascii=False, indent=1)}
-```
-
-### オプション建玉履歴 (option_history.json) ※直近2日分
-```json
-{json.dumps(option_history, ensure_ascii=False, indent=1)}
-```
-
-### ETFイントラデイ・サマリー (etf_intraday.json から集計)
-各銘柄の本日始値・終値・騰落率（intraday_pct=当日始値比、daily_pct=前日終値比）
-```json
-{json.dumps(etf_intraday, ensure_ascii=False, indent=1)}
-```
-
-### ETF日次・サマリー (etf_data.json から集計)
-各銘柄の直近終値・前日比(daily_pct)・週間比(weekly_pct)・月間比(monthly_pct)
-```json
-{json.dumps(etf_data, ensure_ascii=False, indent=1)}
-```
-
-## 出力フォーマット（厳格に従ってください）
-
-### １：投資戦略サマリー（打ち手の模索）
-* **明日の投資戦略**: (相場全体の強弱と、具体的なアクションプラン)
-* **明日の日経225先物のレンジの想定**: (オプション手口・ボラティリティから算出される想定上限値と下限値)
-* **日経225オプション建玉分析（米系の思惑を観測）**: (米系投資銀行の手口による相場の仕掛けや抵抗帯の観測結果)
-* **日本のどのセクターが買い、売りなのか判定**: (セクターローテーションに基づく推奨の買いセクターと売りセクター)
-* **明日見るべき個別株と、その周辺セクター**: (相場を牽引する、または底打ち反転が期待される個別注目株)
-
-### ２：分析内容（analysis）
-<!-- データに基づく市場メカニズムの解説、センチメントの背景、主要プレイヤーの動向などの定性的な深掘り -->
-
-### ３：生ファクト詳細（data）
-- **US先物・指数動向**:
-  - NQmain: (数値・変動率%)
-  - ESmain: (数値・変動率%)
-  - YMmain: (数値・変動率%)
-- **日本・主要指数**:
-  - 日経平均(^N225): (数値・変動率%)
-  - TOPIX(1306.T): (数値・変動率%)
-  - 半導体ETF(2644.T): (数値・変動率%)
-- **各セクター分類分析**: (上位セクター、下位セクターと各々の変動率)
-- **売買フロー**: (売買代金と空売り比率の数値、底打ちPhase判定の結果)
-- **日経225オプション動向**: (主要なストライクの建玉残高・増減、米系手口の集中ライン)
-- **TOPIX100 個別株ランキング**:
-  - **上位20銘柄**（必ず1銘柄ごとに改行し、1位から順に縦に並べること。横並び厳禁）:
-    1. 銘柄名(騰落率%)
-    2. 銘柄名(騰落率%)
-    ...（20位まで）
-  - **下位20銘柄**（必ず1銘柄ごとに改行し、ワーストから順に縦に並べること。横並び厳禁）:
-    1. 銘柄名(騰落率%)
-    2. 銘柄名(騰落率%)
-    ...（20位まで）
-"""
+    replacements = {
+        "{{today_str}}": today_str,
+        "{{short_selling_json}}": _json_for_prompt(short_selling),
+        "{{teguchi_json}}": _json_for_prompt(teguchi),
+        "{{option_history_json}}": _json_for_prompt(option_history),
+        "{{etf_intraday_json}}": _json_for_prompt(etf_intraday),
+        "{{etf_data_json}}": _json_for_prompt(etf_data),
+    }
+    prompt = _load_prompt_template()
+    for placeholder, value in replacements.items():
+        prompt = prompt.replace(placeholder, value)
+    unresolved = [item for item in replacements if item in prompt]
+    if unresolved:
+        raise RuntimeError(f"Gemini分析プロンプトの置換に失敗しました: {unresolved}")
     return prompt
 
 
 # ── Gemini API 呼び出し ────────────────────────────────────────────
 def call_gemini(prompt, api_key, max_retries=3):
-    """Gemini 3.1 Flash Lite Preview API を呼び出す（リトライ付き）"""
+    """Gemini API を呼び出す（リトライ付き）"""
     url = f"{GEMINI_ENDPOINT}?key={api_key}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
