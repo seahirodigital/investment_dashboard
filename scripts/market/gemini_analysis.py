@@ -498,7 +498,7 @@ def main():
     now_jst = datetime.now(JST)
     today_str = now_jst.strftime("%Y-%m-%d")
 
-    if args.note_only or args.note_post_mode == "draft-note-only":
+    if args.note_only:
         print(f"🧪 note-only モードで実行します: {args.note_date or today_str}")
         run_note_post_process("", today_str, args)
         print("✅ note-only モード完了")
