@@ -1,5 +1,5 @@
 """
-市場分析自動実行スクリプト (Gemini 3.1 Flash Lite Preview)
+市場分析自動実行スクリプト (Gemini 3.5 Flash)
 
 データ取得済みのJSONファイルを読み込み、Gemini APIで分析・レポート生成を行う。
 レポートは market_analysis/reports/ に保存し、オプションでGistの投資カレンダー「情報」タブに反映する。
@@ -34,7 +34,7 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 REPORT_DIR = os.path.join(BASE_DIR, "market_analysis", "reports")
 NOTE_BLOG_PUBLISHER_PATH = os.path.join(BASE_DIR, "note", "note_blog_publisher.py")
 
-GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
+GEMINI_MODEL = "gemini-3.5-flash"
 GEMINI_ENDPOINT = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 )
