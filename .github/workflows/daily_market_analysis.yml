@@ -35,7 +35,10 @@ jobs:
         run: |
           day="$(TZ=Asia/Tokyo date +%u)"
           echo "day=$day" >> "$GITHUB_OUTPUT"
-          if [ "$day" -ge 6 ]; then
+          if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
+            echo "is_weekday=true" >> "$GITHUB_OUTPUT"
+            echo "手動実行のため、JSTの曜日に関係なく Daily Market Analysis を実行します。"
+          elif [ "$day" -ge 6 ]; then
             echo "is_weekday=false" >> "$GITHUB_OUTPUT"
             echo "JST weekend; skipping Daily Market Analysis."
           else
@@ -45,7 +48,7 @@ jobs:
 
       - name: Checkout repository
         if: ${{ steps.weekday.outputs.is_weekday == 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Checkout notion2note
         if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip') }}
@@ -56,7 +59,7 @@ jobs:
 
       - name: Set up Python
         if: ${{ steps.weekday.outputs.is_weekday == 'true' }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: '3.11'
 
@@ -66,7 +69,26 @@ jobs:
           pip install -r requirements.txt
           if [ -d "_external/notion2note" ]; then
             pip install -r _external/notion2note/requirements.txt
-            python -m playwright install --with-deps chromium
+            # GitHub Actions の Ubuntu イメージ側で Microsoft apt リポジトリが 403 になることがある。
+            # Chromium の実行には不要なので、一時ランナー内だけで無効化して Playwright の依存導入を安定させる。
+            while IFS= read -r source_file; do
+              echo "不安定な Microsoft apt ソースを無効化します: $source_file"
+              sudo rm -f "$source_file"
+            done < <(grep -Rl "packages.microsoft.com" /etc/apt/sources.list.d 2>/dev/null || true)
+
+            for attempt in 1 2 3; do
+              if python -m playwright install --with-deps chromium; then
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::Playwright Chromium のインストールが3回失敗しました。"
+                exit 1
+              fi
+              echo "Playwright Chromium のインストールに失敗しました ($attempt/3)。15秒後に再試行します..."
+              sleep 15
+            done
+
+            python -c "from playwright.sync_api import sync_playwright; pw = sync_playwright().start(); browser = pw.chromium.launch(); browser.close(); pw.stop(); print('Playwright Chromium の起動確認 OK')"
           fi
 
       # ── Step 1: データ取得 ──────────────────────────────────
