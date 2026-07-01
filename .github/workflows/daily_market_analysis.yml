@@ -13,6 +13,7 @@ on:
         type: choice
         options:
           - publish
+          - publish-note-only
           - draft-note-only
           - dry-run
           - draft
@@ -148,7 +149,9 @@ jobs:
           # 外部Webフォントの読込不良でスクリーンショット全体が停止することを防ぐ。
           PW_TEST_SCREENSHOT_NO_FONTS_READY: '1'
         run: |
-          if [ "$NOTE_POST_MODE" = "draft-note-only" ]; then
+          if [ "$NOTE_POST_MODE" = "publish-note-only" ]; then
+            python scripts/market/gemini_analysis.py --note-only --note-post-mode publish --note-date "$NOTE_POST_DATE"
+          elif [ "$NOTE_POST_MODE" = "draft-note-only" ]; then
             python scripts/market/gemini_analysis.py --note-post-mode draft-note-only --note-date "$NOTE_POST_DATE"
           elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$NOTE_POST_MODE" = "dry-run" ]; then
             python scripts/market/gemini_analysis.py --note-only --note-dry-run-publish --note-date "$NOTE_POST_DATE"
