@@ -69,6 +69,8 @@ jobs:
           pip install -r requirements.txt
           if [ -d "_external/notion2note" ]; then
             pip install -r _external/notion2note/requirements.txt
+            # note画像生成で動作確認済みのPlaywrightとChromiumを固定する。
+            pip install 'playwright==1.60.0'
             # GitHub Actions の Ubuntu イメージ側で Microsoft apt リポジトリが 403 になることがある。
             # Chromium の実行には不要なので、一時ランナー内だけで無効化して Playwright の依存導入を安定させる。
             while IFS= read -r source_file; do
@@ -143,6 +145,8 @@ jobs:
           NOTE_AFFILIATE_MEMO: '1'
           NOTE_AFFILIATE_COUNT: '1'
           NOTE_AFFILIATE_SEED: ${{ github.run_id }}
+          # 外部Webフォントの読込不良でスクリーンショット全体が停止することを防ぐ。
+          PW_TEST_SCREENSHOT_NO_FONTS_READY: '1'
         run: |
           if [ "$NOTE_POST_MODE" = "draft-note-only" ]; then
             python scripts/market/gemini_analysis.py --note-post-mode draft-note-only --note-date "$NOTE_POST_DATE"

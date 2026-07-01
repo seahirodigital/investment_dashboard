@@ -272,7 +272,7 @@ def build_prompt(short_selling, teguchi, option_history, etf_intraday, etf_data,
 
 
 # ── Gemini API 呼び出し ────────────────────────────────────────────
-def call_gemini(prompt, api_key, max_retries=3):
+def call_gemini(prompt, api_key, max_retries=5):
     """Gemini API を呼び出す（リトライ付き）"""
     url = f"{GEMINI_ENDPOINT}?key={api_key}"
     payload = {
