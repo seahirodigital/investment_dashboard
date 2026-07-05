@@ -34,6 +34,18 @@ FINVIZ_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=d1"
 SOX_URL = "https://www.tradingview.com/symbols/NASDAQ-SOX/"
 ADR_URL = "https://nikkei225jp.com/adr/"
 BASE_DIR = Path(__file__).resolve().parents[2]
+US_FUND_FLOW_MESSAGE = "\n".join(
+    [
+        "#米国株 今日の資金フロー",
+        "▼セクター/TPX",
+        "",
+        "強：",
+        "弱：",
+        "",
+        "",
+        " #デイトレ #日本株 #日経平均 #株クラ #投資家さんと繋がりたい",
+    ]
+)
 
 DESKTOP_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -394,18 +406,26 @@ def _capture_adr_major_movers(page, output_dir: Path) -> Path:
     return screenshot_path
 
 
-def _build_message(fear_greed_value: str, nikkei_vi_value: str) -> str:
-    return "\n".join(
+def _build_message(
+    fear_greed_value: str,
+    nikkei_vi_value: str,
+    include_fund_flow: bool = False,
+) -> str:
+    lines = [
+        f"Feaar % Greed Index：{fear_greed_value}",
+        CNN_URL,
+        "",
+        f"日経VIX:{nikkei_vi_value}",
+        NIKKEI_WEEK_URL,
+        "",
+        "米株ヒートマップ",
+        FINVIZ_URL,
+        "",
+    ]
+    if include_fund_flow:
+        lines.extend([US_FUND_FLOW_MESSAGE, ""])
+    lines.extend(
         [
-            f"Feaar % Greed Index：{fear_greed_value}",
-            CNN_URL,
-            "",
-            f"日経VIX:{nikkei_vi_value}",
-            NIKKEI_WEEK_URL,
-            "",
-            "米株ヒートマップ",
-            FINVIZ_URL,
-            "",
             "SOX指数",
             SOX_URL,
             "",
@@ -416,6 +436,21 @@ def _build_message(fear_greed_value: str, nikkei_vi_value: str) -> str:
             "",
         ]
     )
+    return "\n".join(lines)
+
+
+def _resolve_mooview_us_image() -> Path | None:
+    capture_dir_value = os.environ.get("MOOVIEW_CAPTURE_DIR", "").strip()
+    if not capture_dir_value:
+        return None
+
+    capture_dir = Path(capture_dir_value)
+    if not capture_dir.is_absolute():
+        capture_dir = (BASE_DIR / capture_dir).resolve()
+    image_path = capture_dir / "us_market_top_charts.png"
+    if not image_path.is_file() or image_path.stat().st_size == 0:
+        raise FileNotFoundError(f"米国株資金フロー画像が見つかりません: {image_path}")
+    return image_path
 
 
 def build_snapshot(output_dir: Path) -> MarketSnapshot:
@@ -441,7 +476,12 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             context.close()
             browser.close()
 
-    message = _build_message(fear_greed_value, nikkei_vi_value)
+    mooview_us_path = _resolve_mooview_us_image()
+    message = _build_message(
+        fear_greed_value,
+        nikkei_vi_value,
+        include_fund_flow=mooview_us_path is not None,
+    )
     message_path = output_dir / "discord_message.txt"
     message_path.write_text(message, encoding="utf-8")
 
@@ -456,11 +496,16 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             "adr": ADR_URL,
         },
         "screenshots": [
-            str(finviz_path),
-            str(fear_greed_path),
-            str(nikkei_vi_path),
-            str(sox_path),
-            str(adr_path),
+            str(path)
+            for path in [
+                finviz_path,
+                mooview_us_path,
+                fear_greed_path,
+                nikkei_vi_path,
+                sox_path,
+                adr_path,
+            ]
+            if path is not None
         ],
         "message_file": str(message_path),
     }
@@ -473,7 +518,18 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
         fear_greed_value=fear_greed_value,
         nikkei_vi_value=nikkei_vi_value,
         message=message,
-        screenshot_paths=[finviz_path, fear_greed_path, nikkei_vi_path, sox_path, adr_path],
+        screenshot_paths=[
+            path
+            for path in [
+                finviz_path,
+                mooview_us_path,
+                fear_greed_path,
+                nikkei_vi_path,
+                sox_path,
+                adr_path,
+            ]
+            if path is not None
+        ],
     )
 
 

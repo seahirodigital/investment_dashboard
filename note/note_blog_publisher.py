@@ -11,6 +11,7 @@ import os
 import random
 import re
 import requests
+import shutil
 import socket
 import subprocess
 import sys
@@ -841,6 +842,29 @@ def _append_image_markers(
     return index
 
 
+def _load_mooview_jp_images(image_dir: Path) -> list[Path]:
+    capture_dir_value = os.environ.get("MOOVIEW_CAPTURE_DIR", "").strip()
+    if not capture_dir_value:
+        return []
+
+    capture_dir = Path(capture_dir_value)
+    if not capture_dir.is_absolute():
+        capture_dir = (BASE_DIR / capture_dir).resolve()
+    mappings = [
+        ("jp_market_sector_chart.png", "00_mooview_jp_sector_chart.png"),
+        ("jp_market_semiconductor_charts.png", "00_mooview_jp_semiconductor_charts.png"),
+    ]
+    copied_images: list[Path] = []
+    for source_name, output_name in mappings:
+        source_path = capture_dir / source_name
+        if not source_path.is_file() or source_path.stat().st_size == 0:
+            raise FileNotFoundError(f"日本株note用のMooView画像が見つかりません: {source_path}")
+        output_path = image_dir / output_name
+        shutil.copy2(source_path, output_path)
+        copied_images.append(output_path)
+    return copied_images
+
+
 def _demote_report_headings(markdown: str) -> str:
     updated_lines: list[str] = []
     for line in (markdown or "").replace("\r\n", "\n").replace("\r", "\n").split("\n"):
@@ -864,6 +888,7 @@ def build_blog_markdown(
     sector_assets: dict[str, Any],
     option_assets: dict[str, Any],
     weekly_assets: dict[str, Any] | None = None,
+    mooview_images: list[Path] | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
     title = BLOG_TITLE_TEMPLATE.format(date=date_display)
     body_uploads: list[dict[str, Any]] = []
@@ -883,6 +908,14 @@ def build_blog_markdown(
             [Path(heatmap_image)],
             start_index=next_image_index,
             caption_prefix="日経225ヒートマップ 画像",
+        )
+    if mooview_images:
+        next_image_index = _append_image_markers(
+            lines,
+            body_uploads,
+            list(mooview_images),
+            start_index=next_image_index,
+            caption_prefix="MooView 日本株資金フロー 画像",
         )
 
     lines.extend([TOC_MARKER, ""])
@@ -1217,6 +1250,7 @@ def publish_note_blog(
         Path(nikkei225_assets["heatmap_image"]),
         image_dir / "00_note_thumbnail.jpg",
     )
+    mooview_images = _load_mooview_jp_images(image_dir)
     markdown, body_image_uploads = build_blog_markdown(
         report_text,
         display_date,
@@ -1224,6 +1258,7 @@ def publish_note_blog(
         sector_assets,
         option_assets,
         weekly_assets=weekly_assets,
+        mooview_images=mooview_images,
     )
     markdown, affiliate_insertions = _apply_affiliate_links(
         markdown,

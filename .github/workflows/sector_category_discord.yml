@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   send-sector-category:
@@ -36,7 +37,31 @@ jobs:
         run: |
           pip install playwright
           pip install pillow
+          pip install 'requests>=2.31.0'
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+          fc-cache -f
           python -m playwright install --with-deps chromium
+
+      - name: Tailscale経由でOCIへ接続
+        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: mooview-oci.taild87712.ts.net
+
+      - name: 日本株資金フロー画像を撮影
+        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        run: |
+          python scripts/market/oci_mooview_screenshot.py \
+            --base-url "https://mooview-oci.taild87712.ts.net" \
+            --output-dir "artifacts/oci_mooview_capture" \
+            --timeout-seconds "600" \
+            --refresh-wait-seconds "10" \
+            --viewport-width "1800" \
+            --viewport-height "1000"
 
       - name: Install market data dependencies
         if: github.event.schedule == '25 21 * * 1-5' || github.event.inputs.mode == 'us'
@@ -329,3 +354,12 @@ jobs:
               -F "files[1]=@artifacts/sector_category_screenshots/sector_category_top7_with_ranking.png" \
               -F "files[2]=@artifacts/sector_category_screenshots/sector_category_bottom7_with_ranking.png"
           fi
+
+      - name: 日本株資金フロー画像をDiscordへ送信
+        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        env:
+          DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+        run: |
+          python scripts/market/mooview_fund_flow_discord.py \
+            --capture-dir "artifacts/oci_mooview_capture" \
+            --webhook-env "DISCORD_OPTION_WEBHOOK_URL"

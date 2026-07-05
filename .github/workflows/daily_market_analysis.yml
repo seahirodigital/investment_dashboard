@@ -26,6 +26,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   market-analysis:
@@ -72,6 +73,9 @@ jobs:
             pip install -r _external/notion2note/requirements.txt
             # note画像生成で動作確認済みのPlaywrightとChromiumを固定する。
             pip install 'playwright==1.60.0'
+            sudo apt-get update
+            sudo apt-get install -y fonts-noto-cjk
+            fc-cache -f
             # GitHub Actions の Ubuntu イメージ側で Microsoft apt リポジトリが 403 になることがある。
             # Chromium の実行には不要なので、一時ランナー内だけで無効化して Playwright の依存導入を安定させる。
             while IFS= read -r source_file; do
@@ -93,6 +97,26 @@ jobs:
 
             python -c "from playwright.sync_api import sync_playwright; pw = sync_playwright().start(); browser = pw.chromium.launch(); browser.close(); pw.stop(); print('Playwright Chromium の起動確認 OK')"
           fi
+
+      - name: Tailscale経由でOCIへ接続
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip') }}
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: mooview-oci.taild87712.ts.net
+
+      - name: 日本株note用の資金フロー画像を撮影
+        if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip') }}
+        run: |
+          python scripts/market/oci_mooview_screenshot.py \
+            --base-url "https://mooview-oci.taild87712.ts.net" \
+            --output-dir "artifacts/oci_mooview_capture" \
+            --timeout-seconds "600" \
+            --refresh-wait-seconds "10" \
+            --viewport-width "1800" \
+            --viewport-height "1000"
 
       # ── Step 1: データ取得 ──────────────────────────────────
       - name: Fetch intraday data
@@ -146,6 +170,7 @@ jobs:
           NOTE_AFFILIATE_MEMO: '1'
           NOTE_AFFILIATE_COUNT: '1'
           NOTE_AFFILIATE_SEED: ${{ github.run_id }}
+          MOOVIEW_CAPTURE_DIR: artifacts/oci_mooview_capture
           # 外部Webフォントの読込不良でスクリーンショット全体が停止することを防ぐ。
           PW_TEST_SCREENSHOT_NO_FONTS_READY: '1'
         run: |

@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   notify:
@@ -53,11 +54,33 @@ jobs:
           if [ -d "_external/notion2note" ]; then
             pip install -r _external/notion2note/requirements.txt
           fi
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+          fc-cache -f
           python -m playwright install --with-deps chromium
+
+      - name: Tailscale経由でOCIへ接続
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: mooview-oci.taild87712.ts.net
+
+      - name: 米国株資金フロー画像を撮影
+        run: |
+          python scripts/market/oci_mooview_screenshot.py \
+            --base-url "https://mooview-oci.taild87712.ts.net" \
+            --output-dir "artifacts/oci_mooview_capture" \
+            --timeout-seconds "600" \
+            --refresh-wait-seconds "10" \
+            --viewport-width "1800" \
+            --viewport-height "1000"
 
       - name: 通知本文とスクリーンショットを作成して送信
         env:
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+          MOOVIEW_CAPTURE_DIR: artifacts/oci_mooview_capture
         run: python scripts/market/morning_discord_notification.py --send --keep-output --output-dir artifacts/morning_market_notification
 
       - name: 米国ETFデータを更新
@@ -83,6 +106,7 @@ jobs:
           NOTE_AFFILIATE_COUNT: '1'
           NOTE_AFFILIATE_SEED: ${{ github.run_id }}
           MORNING_MARKET_ASSETS_DIR: artifacts/morning_market_notification
+          MOOVIEW_CAPTURE_DIR: artifacts/oci_mooview_capture
         run: |
           python note/us_sector_note_publisher.py \
             --mode "$NOTE_POST_MODE" \

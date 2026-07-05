@@ -408,6 +408,19 @@ def load_market_assets(source_dir: Path, image_dir: Path) -> dict[str, Any]:
         _find_screenshot_by_name(metadata, source_dir, "adr_major_movers"),
         image_dir / "05_adr_major_movers.png",
     )
+    mooview = None
+    mooview_capture_dir_value = os.environ.get("MOOVIEW_CAPTURE_DIR", "").strip()
+    if mooview_capture_dir_value:
+        mooview_capture_dir = Path(mooview_capture_dir_value)
+        if not mooview_capture_dir.is_absolute():
+            mooview_capture_dir = (BASE_DIR / mooview_capture_dir).resolve()
+        mooview_source = mooview_capture_dir / "us_market_top_charts.png"
+        if not mooview_source.is_file() or mooview_source.stat().st_size == 0:
+            raise FileNotFoundError(f"米国株note用のMooView画像が見つかりません: {mooview_source}")
+        mooview = _copy_image(
+            mooview_source,
+            image_dir / "06_us_market_top_charts.png",
+        )
     return {
         "fear_greed_value": str(metadata.get("fear_greed_value") or "").strip(),
         "nikkei_vi_value": str(metadata.get("nikkei_vi_value") or "").strip(),
@@ -417,6 +430,7 @@ def load_market_assets(source_dir: Path, image_dir: Path) -> dict[str, Any]:
             "sox": sox,
             "nikkei_vi": nikkei_vi,
             "adr": adr,
+            "mooview": mooview,
         },
         "metadata": metadata,
     }
@@ -578,6 +592,24 @@ def build_blog_markdown(
         "",
     ]
     image_index = _append_image_marker(lines, body_uploads, images["finviz"], image_index, "米国株ヒートマップ")
+
+    if images.get("mooview"):
+        lines.extend(
+            [
+                f"## {section_prefix}:米国セクター資金流入",
+                "",
+                "米国各セクターETFをSPYで割り、相対化することでセクターの資金流入・流出の強弱を測ります。",
+                "Trading Viewでは有償プランで描画可能で、Moomoo証券では割り算ができないため自作しています。",
+                "",
+            ]
+        )
+        image_index = _append_image_marker(
+            lines,
+            body_uploads,
+            images["mooview"],
+            image_index,
+            "米国セクター資金流入",
+        )
 
     lines.extend(
         [
