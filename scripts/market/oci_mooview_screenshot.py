@@ -25,6 +25,12 @@ if sys.platform == "win32":
 DEFAULT_BASE_URL = "https://mooview-oci.taild87712.ts.net"
 DEFAULT_PROBE_SYMBOLS = ("JP.1306", "US.VOO")
 API_RETRY_INTERVAL_SECONDS = 5
+# 初回確認で採用する固定列幅。毎回現在幅へ2/3を掛けず、常に同じ境界へ戻す。
+CAPTURE_COLUMN_WIDTHS_PX = (483, 417)
+# 上段左右の高さを揃え、下段チャートの開始位置も固定する。
+CAPTURE_TOP_ROW_HEIGHT_PX = 442
+KLINE_PRELOAD_BATCH_LIMIT = 55
+KLINE_PRELOAD_COOLDOWN_SECONDS = 30
 
 
 def _normalize_base_url(value: str) -> str:
@@ -167,7 +173,7 @@ def _stored_symbol_operands(raw_symbol: str) -> list[str]:
     ]
 
 
-def _preload_top_chart_candles(
+def _preload_capture_chart_candles(
     base_url: str,
     *,
     minimum_chart_count: int,
@@ -180,11 +186,23 @@ def _preload_top_chart_candles(
     )
     workspace_response.raise_for_status()
     workspace = workspace_response.json()
-    panels = ((workspace.get("settings") or {}).get("panels") or [])[:minimum_chart_count]
+    settings = workspace.get("settings") or {}
+    panels = (settings.get("panels") or [])[:minimum_chart_count]
     if len(panels) < minimum_chart_count:
         raise RuntimeError(
-            f"OCI共有設定の上段チャートが不足しています: {len(panels)}画面"
+            f"OCI共有設定の撮影対象チャートが不足しています: {len(panels)}画面"
         )
+
+    basket_sections: dict[str, list[str]] = {}
+    for tab in settings.get("watchlistTabs") or []:
+        for section in tab.get("sections") or []:
+            section_id = str(section.get("id") or "")
+            if section_id:
+                basket_sections[section_id] = [
+                    str(symbol)
+                    for symbol in (section.get("symbols") or [])
+                    if str(symbol).strip()
+                ]
 
     targets: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
@@ -195,20 +213,32 @@ def _preload_top_chart_candles(
             *(str(symbol) for symbol in (panel.get("comparisonSymbols") or [])),
         ]
         for raw_symbol in raw_symbols:
-            for operand in _stored_symbol_operands(raw_symbol):
-                target = (operand, timeframe)
-                if target in seen:
-                    continue
-                seen.add(target)
-                targets.append(target)
+            basket_members = (
+                basket_sections.get(raw_symbol[7:], [])
+                if raw_symbol.startswith("BASKET:")
+                else [raw_symbol]
+            )
+            for member_symbol in basket_members:
+                for operand in _stored_symbol_operands(member_symbol):
+                    target = (operand, timeframe)
+                    if target in seen:
+                        continue
+                    seen.add(target)
+                    targets.append(target)
 
     cache: dict[str, list[dict[str, Any]]] = {}
     timestamps: dict[str, int] = {}
     failures: list[dict[str, str]] = []
     fetched: list[dict[str, Any]] = []
 
-    print(f"[取得] 上段2チャート用の時系列データを先行取得します: {len(targets)}銘柄")
+    print(f"[取得] 撮影対象4チャートの時系列データを先行取得します: {len(targets)}銘柄")
     for index, (symbol, timeframe) in enumerate(targets, start=1):
+        if index > 1 and (index - 1) % KLINE_PRELOAD_BATCH_LIMIT == 0:
+            print(
+                "[待機] OCIのKLine負荷を抑えるため、"
+                f"{KLINE_PRELOAD_COOLDOWN_SECONDS}秒待機します。"
+            )
+            time.sleep(KLINE_PRELOAD_COOLDOWN_SECONDS)
         try:
             response = session.post(
                 f"{base_url}/api/moomoo/kline",
@@ -476,31 +506,158 @@ def _assert_chart_data_ready(
         )
 
     print(
-        "[成功] 上段2チャートに十分な時系列点と値動きを確認しました: "
+        "[成功] 撮影対象4チャートに十分な時系列点と値動きを確認しました: "
         + json.dumps(charts, ensure_ascii=False)
     )
     return state
 
 
-def _top_chart_clip(
-    chart_state: dict[str, Any],
-    *,
-    viewport_width: int,
-    viewport_height: int,
-) -> dict[str, float]:
-    charts = (chart_state.get("charts") or [])[:2]
-    if len(charts) < 2:
-        raise RuntimeError("上段2チャートの撮影範囲を計算できませんでした。")
+def _apply_fixed_capture_layout(page: Page) -> dict[str, Any]:
+    target_widths = list(CAPTURE_COLUMN_WIDTHS_PX)
+    page.evaluate(
+        """({ targetWidths, topRowHeight }) => {
+          targetWidths.forEach((width, index) => {
+            const column = document.getElementById(`col-group-${index}`);
+            if (!column) {
+              throw new Error(`チャート列が見つかりません: col-group-${index}`);
+            }
+            const fixedWidth = `${width}px`;
+            column.style.setProperty('flex', `0 0 ${fixedWidth}`, 'important');
+            column.style.setProperty('width', fixedWidth, 'important');
+            column.style.setProperty('min-width', fixedWidth, 'important');
+            column.style.setProperty('max-width', fixedWidth, 'important');
+          });
 
-    left = max(0.0, min(chart["x"] for chart in charts) - 12.0)
-    top = max(0.0, min(chart["y"] for chart in charts) - 44.0)
+          const firstColumn = document.getElementById('col-group-0');
+          if (firstColumn?.parentElement) {
+            firstColumn.parentElement.style.setProperty('justify-content', 'flex-start', 'important');
+          }
+
+          const chartPanels = Array.from(
+            document.querySelectorAll('[id^="chart-panel-container-"]')
+          ).slice(0, 4);
+          [0, 2].forEach((panelIndex) => {
+            const panel = chartPanels[panelIndex];
+            if (!panel) {
+              throw new Error(`上段チャートが見つかりません: DOM順序${panelIndex}`);
+            }
+            const fixedHeight = `${topRowHeight}px`;
+            panel.style.setProperty('flex', `0 0 ${fixedHeight}`, 'important');
+            panel.style.setProperty('height', fixedHeight, 'important');
+            panel.style.setProperty('min-height', fixedHeight, 'important');
+            panel.style.setProperty('max-height', fixedHeight, 'important');
+          });
+
+          window.dispatchEvent(new Event('resize'));
+        }""",
+        {
+            "targetWidths": target_widths,
+            "topRowHeight": CAPTURE_TOP_ROW_HEIGHT_PX,
+        },
+    )
+    page.wait_for_timeout(2000)
+
+    state = page.evaluate(
+        """({ targetWidths, topRowHeight }) => {
+          const toBox = (element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+              x: rect.x + window.scrollX,
+              y: rect.y + window.scrollY,
+              width: rect.width,
+              height: rect.height,
+            };
+          };
+          const columns = targetWidths.map((_, index) => {
+            const column = document.getElementById(`col-group-${index}`);
+            if (!column) return null;
+            return toBox(column);
+          });
+          const panels = Array.from(
+            document.querySelectorAll('[id^="chart-panel-container-"]')
+          ).slice(0, 4).map((panel) => {
+            const chartSvg = Array.from(panel.querySelectorAll('svg'))
+              .map((svg) => ({ element: svg, box: toBox(svg) }))
+              .sort((left, right) => (
+                right.box.width * right.box.height - left.box.width * left.box.height
+              ))[0];
+            return {
+              id: panel.id,
+              ...toBox(panel),
+              chart: chartSvg?.box || null,
+            };
+          });
+          return {
+            targetWidths,
+            topRowHeight,
+            columns,
+            panels,
+            pageWidth: Math.max(
+              document.documentElement.scrollWidth,
+              document.body?.scrollWidth || 0,
+              window.innerWidth
+            ),
+            pageHeight: Math.max(
+              document.documentElement.scrollHeight,
+              document.body?.scrollHeight || 0,
+              window.innerHeight
+            ),
+          };
+        }""",
+        {
+            "targetWidths": target_widths,
+            "topRowHeight": CAPTURE_TOP_ROW_HEIGHT_PX,
+        },
+    )
+
+    if len(state.get("panels") or []) < 4:
+        raise RuntimeError(
+            "固定幅撮影に必要な4チャートを確認できませんでした: "
+            + json.dumps(state, ensure_ascii=False)[:1000]
+        )
+    for index, target_width in enumerate(target_widths):
+        actual_width = float(state["columns"][index]["width"])
+        if abs(actual_width - target_width) > 3:
+            raise RuntimeError(
+                f"列{index + 1}の固定幅反映に失敗しました: "
+                f"期待={target_width}px、実際={actual_width}px"
+            )
+    for panel_index in (0, 2):
+        actual_height = float(state["panels"][panel_index]["height"])
+        if abs(actual_height - CAPTURE_TOP_ROW_HEIGHT_PX) > 3:
+            raise RuntimeError(
+                f"上段チャート{panel_index + 1}の固定高反映に失敗しました: "
+                f"期待={CAPTURE_TOP_ROW_HEIGHT_PX}px、実際={actual_height}px"
+            )
+
+    print(
+        "[成功] チャート境界を固定サイズへ移動し、SVGを再描画しました: "
+        + json.dumps(
+            {
+                "columns": state["columns"],
+                "topRowHeight": state["topRowHeight"],
+            },
+            ensure_ascii=False,
+        )
+    )
+    return state
+
+
+def _panel_clip(
+    layout_state: dict[str, Any],
+    panel_indices: tuple[int, ...],
+) -> dict[str, float]:
+    panels = layout_state.get("panels") or []
+    selected = [panels[index] for index in panel_indices]
+    left = max(0.0, min(panel["x"] for panel in selected))
+    top = max(0.0, min(panel["y"] for panel in selected))
     right = min(
-        float(viewport_width),
-        max(chart["x"] + chart["width"] for chart in charts) + 12.0,
+        float(layout_state["pageWidth"]),
+        max(panel["x"] + panel["width"] for panel in selected),
     )
     bottom = min(
-        float(viewport_height),
-        max(chart["y"] + chart["height"] for chart in charts) + 12.0,
+        float(layout_state["pageHeight"]),
+        max(panel["y"] + panel["height"] for panel in selected),
     )
     return {
         "x": left,
@@ -524,7 +681,9 @@ def capture_mooview(
     output_dir.mkdir(parents=True, exist_ok=True)
     result_path = output_dir / "oci_mooview_capture_result.json"
     viewport_path = output_dir / "oci_mooview_viewport.png"
-    top_charts_path = output_dir / "oci_mooview_top_charts.png"
+    us_market_path = output_dir / "us_market_top_charts.png"
+    jp_sector_path = output_dir / "jp_market_sector_chart.png"
+    jp_semiconductor_path = output_dir / "jp_market_semiconductor_charts.png"
     error_path = output_dir / "oci_mooview_error.png"
 
     result: dict[str, Any] = {
@@ -541,9 +700,9 @@ def capture_mooview(
         timeout_seconds,
         probe_symbols,
     )
-    preloaded_cache, preloaded_timestamps, preload_summary = _preload_top_chart_candles(
+    preloaded_cache, preloaded_timestamps, preload_summary = _preload_capture_chart_candles(
         base_url,
-        minimum_chart_count=2,
+        minimum_chart_count=4,
     )
     result["preload"] = preload_summary
 
@@ -589,7 +748,7 @@ def capture_mooview(
             _wait_for_chart_shells(
                 page,
                 timeout_seconds=timeout_seconds,
-                minimum_chart_count=2,
+                minimum_chart_count=4,
             )
             injected_count = _inject_candle_cache(
                 page,
@@ -602,7 +761,7 @@ def capture_mooview(
             _wait_for_chart_shells(
                 page,
                 timeout_seconds=timeout_seconds,
-                minimum_chart_count=2,
+                minimum_chart_count=4,
             )
             _click_refresh_and_wait(
                 page,
@@ -624,26 +783,35 @@ def capture_mooview(
             try:
                 _assert_chart_data_ready(
                     chart_state,
-                    minimum_chart_count=2,
+                    minimum_chart_count=4,
                 )
             except Exception:
                 page.screenshot(path=str(error_path), full_page=False)
                 result["errorScreenshot"] = str(error_path)
                 raise
 
+            layout_state = _apply_fixed_capture_layout(page)
+            # DOM順は左上、左下、右上、右下。
+            us_market_clip = _panel_clip(layout_state, (0, 2))
+            jp_sector_clip = _panel_clip(layout_state, (0,))
+            jp_semiconductor_clip = _panel_clip(layout_state, (1, 3))
             page.screenshot(path=str(viewport_path), full_page=False)
-            clip = _top_chart_clip(
-                chart_state,
-                viewport_width=viewport_width,
-                viewport_height=viewport_height,
-            )
-            page.screenshot(path=str(top_charts_path), clip=clip)
+            page.screenshot(path=str(us_market_path), clip=us_market_clip)
+            page.screenshot(path=str(jp_sector_path), clip=jp_sector_clip)
+            page.screenshot(path=str(jp_semiconductor_path), clip=jp_semiconductor_clip)
             result["browser"].update({
-                "topChartClip": clip,
+                "fixedCaptureLayout": layout_state,
+                "captureClips": {
+                    "usMarket": us_market_clip,
+                    "jpSector": jp_sector_clip,
+                    "jpSemiconductor": jp_semiconductor_clip,
+                },
             })
             result["files"] = {
                 "viewport": str(viewport_path),
-                "topCharts": str(top_charts_path),
+                "usMarket": str(us_market_path),
+                "jpSector": str(jp_sector_path),
+                "jpSemiconductor": str(jp_semiconductor_path),
                 "result": str(result_path),
             }
             result["success"] = True
@@ -675,7 +843,9 @@ def capture_mooview(
             encoding="utf-8",
         )
 
-    print(f"[成功] 上段比較チャートを撮影しました: {top_charts_path}")
+    print(f"[成功] 米国株記事用の上段2チャートを撮影しました: {us_market_path}")
+    print(f"[成功] 日本株記事用のJPセクターチャートを撮影しました: {jp_sector_path}")
+    print(f"[成功] 日本株記事用の下段2チャートを撮影しました: {jp_semiconductor_path}")
     print(f"[成功] 画面全体を撮影しました: {viewport_path}")
     print(f"[成功] 診断結果を書き出しました: {result_path}")
     return result
