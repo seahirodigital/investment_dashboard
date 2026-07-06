@@ -23,6 +23,19 @@ on:
         required: false
         default: '1000'
         type: string
+      weekend_publish_test:
+        description: '週末まとめをnoteへ公開投稿しDiscordへ通知する'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      note_date:
+        description: '週末まとめの配信日（空なら実行日）'
+        required: false
+        default: ''
+        type: string
   # 初回のActions疎通確認用。確認完了後に削除する。
   push:
     branches:
@@ -38,8 +51,9 @@ permissions:
 jobs:
   capture:
     name: OCI接続・実データ待機・画面撮影
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       MOOVIEW_BASE_URL: https://mooview-oci.taild87712.ts.net
       SCREENSHOT_OUTPUT_DIR: /home/runner/work/investment_dashboard/investment_dashboard/artifacts/oci_mooview_capture
@@ -47,6 +61,13 @@ jobs:
     steps:
       - name: リポジトリを取得
         uses: actions/checkout@v6.0.2
+
+      - name: notion2noteを取得
+        if: ${{ github.event.inputs.weekend_publish_test == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: seahirodigital/notion2note
+          path: _external/notion2note
 
       - name: Tailscale経由でOCIへ接続
         uses: tailscale/github-action@v4
@@ -72,6 +93,12 @@ jobs:
           python -m pip install 'requests>=2.31.0' 'playwright==1.60.0'
           python -m playwright install chromium
 
+      - name: 公開テスト用の依存関係を準備
+        if: ${{ github.event.inputs.weekend_publish_test == 'true' }}
+        run: |
+          pip install -r /home/runner/work/investment_dashboard/investment_dashboard/requirements.txt
+          pip install -r /home/runner/work/investment_dashboard/investment_dashboard/_external/notion2note/requirements.txt
+
       - name: OCIの実データ取得を待って撮影
         env:
           CAPTURE_TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '600' }}
@@ -84,8 +111,33 @@ jobs:
             --output-dir "$SCREENSHOT_OUTPUT_DIR" \
             --timeout-seconds "$CAPTURE_TIMEOUT_SECONDS" \
             --refresh-wait-seconds "$CAPTURE_REFRESH_WAIT_SECONDS" \
+            --display-range "${{ github.event.inputs.weekend_publish_test == 'true' && 'w' || 'd' }}" \
             --viewport-width "$CAPTURE_VIEWPORT_WIDTH" \
             --viewport-height "$CAPTURE_VIEWPORT_HEIGHT"
+
+      - name: 週末まとめをnoteへ公開してDiscordへ通知
+        if: ${{ github.event.inputs.weekend_publish_test == 'true' }}
+        env:
+          DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+          NOTION2NOTE_DISCORD_WEBHOOK: ${{ secrets.NOTION2NOTE_DISCORD_WEBHOOK }}
+          NOTE_POST_MODE: publish
+          NOTE_POST_DATE: ${{ github.event.inputs.note_date }}
+          NOTE_PROJECT_DIR: /home/runner/work/investment_dashboard/investment_dashboard/_external/notion2note
+          NOTE_EMAIL: ${{ secrets.NOTE_EMAIL }}
+          NOTE_PASSWORD: ${{ secrets.NOTE_PASSWORD }}
+          NOTE_STORAGE_STATE: ${{ secrets.NOTE_STORAGE_STATE }}
+          NOTE_STORAGE_SECRET_NAME: NOTE_STORAGE_STATE
+          NOTE_PUBLISH_MAGAZINE_NAME: '日本株の振り返りまとめ '
+          NOTE_AFFILIATE_MEMO: '1'
+          NOTE_AFFILIATE_COUNT: '1'
+          NOTE_AFFILIATE_SEED: ${{ github.run_id }}
+          MOOVIEW_CAPTURE_DIR: /home/runner/work/investment_dashboard/investment_dashboard/artifacts/oci_mooview_capture
+          PW_TEST_SCREENSHOT_NO_FONTS_READY: '1'
+        run: |
+          python /home/runner/work/investment_dashboard/investment_dashboard/note/weekend_market_note_publisher.py \
+            --mode publish \
+            --date "$NOTE_POST_DATE" \
+            --mooview-assets-dir "$MOOVIEW_CAPTURE_DIR"
 
       - name: 撮影画像と診断結果を保存
         if: always()

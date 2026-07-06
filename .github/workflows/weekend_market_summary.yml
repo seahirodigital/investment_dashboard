@@ -1,0 +1,119 @@
+name: 土曜朝の日本株・米国株週間まとめ
+
+on:
+  schedule:
+    # 毎週土曜09:00 JST = 毎週土曜00:00 UTC
+    - cron: '0 0 * * 6'
+  workflow_dispatch:
+    inputs:
+      note_post_mode:
+        description: 'note投稿モード'
+        required: false
+        default: 'publish'
+        type: choice
+        options:
+          - publish
+          - draft-note-only
+          - dry-run
+          - draft
+          - skip
+      note_date:
+        description: '記事の配信日（空なら実行日）'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-weekend-summary:
+    name: 週間まとめをnoteとDiscordへ配信
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v6.0.2
+
+      - name: notion2noteを取得
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        uses: actions/checkout@v4
+        with:
+          repository: seahirodigital/notion2note
+          path: _external/notion2note
+
+      - name: Pythonを準備
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: '3.11'
+
+      - name: 依存関係をインストール
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        run: |
+          pip install -r "/home/runner/work/investment_dashboard/investment_dashboard/requirements.txt"
+          pip install -r "/home/runner/work/investment_dashboard/investment_dashboard/_external/notion2note/requirements.txt"
+          pip install 'playwright==1.60.0'
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+          fc-cache -f
+          python -m playwright install --with-deps chromium
+          python -c "from playwright.sync_api import sync_playwright; pw = sync_playwright().start(); browser = pw.chromium.launch(); browser.close(); pw.stop(); print('Playwright Chromium の起動確認 OK')"
+
+      - name: Tailscale経由でOCIへ接続
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: mooview-oci.taild87712.ts.net
+
+      - name: 週次W表示の4チャートを撮影
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        run: |
+          python "/home/runner/work/investment_dashboard/investment_dashboard/scripts/market/oci_mooview_screenshot.py" \
+            --base-url "https://mooview-oci.taild87712.ts.net" \
+            --output-dir "/home/runner/work/investment_dashboard/investment_dashboard/artifacts/oci_mooview_weekly" \
+            --display-range "w" \
+            --timeout-seconds "900" \
+            --refresh-wait-seconds "10" \
+            --viewport-width "1800" \
+            --viewport-height "1000"
+
+      - name: 週間まとめをnoteへ投稿してDiscordへ通知
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        env:
+          DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
+          NOTION2NOTE_DISCORD_WEBHOOK: ${{ secrets.NOTION2NOTE_DISCORD_WEBHOOK }}
+          NOTE_POST_MODE: ${{ github.event_name == 'schedule' && 'publish' || github.event.inputs.note_post_mode }}
+          NOTE_POST_DATE: ${{ github.event.inputs.note_date }}
+          NOTE_PROJECT_DIR: /home/runner/work/investment_dashboard/investment_dashboard/_external/notion2note
+          NOTE_EMAIL: ${{ secrets.NOTE_EMAIL }}
+          NOTE_PASSWORD: ${{ secrets.NOTE_PASSWORD }}
+          NOTE_STORAGE_STATE: ${{ secrets.NOTE_STORAGE_STATE }}
+          NOTE_STORAGE_SECRET_NAME: NOTE_STORAGE_STATE
+          NOTE_PUBLISH_MAGAZINE_NAME: '日本株の振り返りまとめ '
+          NOTE_AFFILIATE_MEMO: '1'
+          NOTE_AFFILIATE_COUNT: '1'
+          NOTE_AFFILIATE_SEED: ${{ github.run_id }}
+          MOOVIEW_CAPTURE_DIR: /home/runner/work/investment_dashboard/investment_dashboard/artifacts/oci_mooview_weekly
+          PW_TEST_SCREENSHOT_NO_FONTS_READY: '1'
+        run: |
+          python "/home/runner/work/investment_dashboard/investment_dashboard/note/weekend_market_note_publisher.py" \
+            --mode "$NOTE_POST_MODE" \
+            --date "$NOTE_POST_DATE" \
+            --mooview-assets-dir "$MOOVIEW_CAPTURE_DIR"
+
+      - name: 週末記事の生成物をアップロード
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekend-market-summary-${{ github.run_id }}
+          path: |
+            /home/runner/work/investment_dashboard/investment_dashboard/artifacts/oci_mooview_weekly
+            /home/runner/work/investment_dashboard/investment_dashboard/note/generated/weekend_market
+          if-no-files-found: ignore
+          retention-days: 7
