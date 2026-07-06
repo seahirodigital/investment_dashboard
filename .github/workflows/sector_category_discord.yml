@@ -2,6 +2,8 @@ name: Sector Category Discord Screenshots
 
 on:
   schedule:
+    # 平日 12:35 JST = 03:35 UTC。前場の振り返りとして日本株版を送信する。
+    - cron: '35 3 * * 1-5'
     # 平日 15:40 JST = 06:40 UTC。16:00 JST の ETF 日次更新より前に日本株版を送信する。
     - cron: '40 6 * * 1-5'
     # 米国市場引け後 06:25 JST = 21:25 UTC。06:30 JST までの米国株版到着を狙う。
@@ -44,7 +46,7 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Tailscale経由でOCIへ接続
-        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        if: github.event.schedule == '40 6 * * 1-5' || github.event.schedule == '35 3 * * 1-5' || github.event.inputs.mode == 'jp'
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -53,7 +55,7 @@ jobs:
           ping: mooview-oci.taild87712.ts.net
 
       - name: 日本株資金フロー画像を撮影
-        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        if: github.event.schedule == '40 6 * * 1-5' || github.event.schedule == '35 3 * * 1-5' || github.event.inputs.mode == 'jp'
         run: |
           python scripts/market/oci_mooview_screenshot.py \
             --base-url "https://mooview-oci.taild87712.ts.net" \
@@ -356,7 +358,7 @@ jobs:
           fi
 
       - name: 日本株資金フロー画像をDiscordへ送信
-        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        if: github.event.schedule == '40 6 * * 1-5' || github.event.schedule == '35 3 * * 1-5' || github.event.inputs.mode == 'jp'
         env:
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
         run: |
