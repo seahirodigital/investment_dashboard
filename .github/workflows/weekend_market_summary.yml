@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write
 
 jobs:
@@ -70,6 +71,26 @@ jobs:
           audience: ${{ secrets.TS_AUDIENCE }}
           tags: tag:ci
           ping: mooview-oci.taild87712.ts.net
+
+      - name: 最新の日経225ヒートマップを既存Actionから取得
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest_run_id="$(gh run list \
+            --workflow daily_market_analysis.yml \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          if [ -z "$latest_run_id" ] || [ "$latest_run_id" = "null" ]; then
+            echo "::error::成功済みの日本株日次Actionが見つかりません。"
+            exit 1
+          fi
+          gh run download "$latest_run_id" \
+            --name "note-blog-generated-$latest_run_id" \
+            --dir "/home/runner/work/investment_dashboard/investment_dashboard/artifacts/latest_daily_note"
+          echo "WEEKEND_NIKKEI_HEATMAP_DIR=/home/runner/work/investment_dashboard/investment_dashboard/artifacts/latest_daily_note" >> "$GITHUB_ENV"
 
       - name: 週次W表示の4チャートを撮影
         if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}

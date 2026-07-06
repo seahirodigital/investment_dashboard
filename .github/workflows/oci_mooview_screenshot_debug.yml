@@ -41,6 +41,11 @@ on:
         required: false
         default: ''
         type: string
+      reuse_nikkei_run_id:
+        description: '日経225ヒートマップを再利用する日次run ID'
+        required: false
+        default: ''
+        type: string
   # 初回のActions疎通確認用。確認完了後に削除する。
   push:
     branches:
@@ -51,6 +56,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write
 
 jobs:
@@ -113,6 +119,15 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.event.inputs.reuse_capture_run_id }}
 
+      - name: 既存日次Actionの日経225ヒートマップを再利用
+        if: ${{ github.event.inputs.weekend_publish_test == 'true' && github.event.inputs.reuse_nikkei_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: note-blog-generated-${{ github.event.inputs.reuse_nikkei_run_id }}
+          path: /home/runner/work/investment_dashboard/investment_dashboard/artifacts/latest_daily_note
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.inputs.reuse_nikkei_run_id }}
+
       - name: OCIの実データ取得を待って撮影
         if: ${{ github.event.inputs.reuse_capture_run_id == '' }}
         env:
@@ -147,6 +162,7 @@ jobs:
           NOTE_AFFILIATE_COUNT: '1'
           NOTE_AFFILIATE_SEED: ${{ github.run_id }}
           MOOVIEW_CAPTURE_DIR: /home/runner/work/investment_dashboard/investment_dashboard/artifacts/oci_mooview_capture
+          WEEKEND_NIKKEI_HEATMAP_DIR: /home/runner/work/investment_dashboard/investment_dashboard/artifacts/latest_daily_note
           PW_TEST_SCREENSHOT_NO_FONTS_READY: '1'
         run: |
           python /home/runner/work/investment_dashboard/investment_dashboard/note/weekend_market_note_publisher.py \

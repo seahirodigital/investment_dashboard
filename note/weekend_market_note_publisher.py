@@ -111,6 +111,26 @@ def _resolve_mooview_assets_dir(value: str = "") -> Path:
     return path
 
 
+def _resolve_reused_nikkei_heatmap() -> Path | None:
+    raw_value = os.getenv("WEEKEND_NIKKEI_HEATMAP_DIR", "").strip()
+    if not raw_value:
+        return None
+    path = Path(raw_value).expanduser().resolve()
+    if path.is_file() and path.name == "00_nikkei225_heatmap.png":
+        return path
+    if path.is_dir():
+        candidates = sorted(
+            path.rglob("00_nikkei225_heatmap.png"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
+        if candidates:
+            return candidates[0]
+    raise FileNotFoundError(
+        f"再利用する日経225ヒートマップが見つかりません: {path}"
+    )
+
+
 def _weekly_mooview_images(assets_dir: Path) -> dict[str, Path]:
     return {
         key: assets_dir / file_name
@@ -330,8 +350,18 @@ def publish_weekend_note(
     run_dir.mkdir(parents=True, exist_ok=True)
     image_dir.mkdir(parents=True, exist_ok=True)
 
-    nikkei_heatmap = image_dir / "00_nikkei225_heatmap.png"
-    if not (reuse_assets and nikkei_heatmap.is_file()):
+    reused_nikkei_heatmap = _resolve_reused_nikkei_heatmap()
+    nikkei_heatmap = (
+        reused_nikkei_heatmap
+        if reused_nikkei_heatmap is not None
+        else image_dir / "00_nikkei225_heatmap.png"
+    )
+    if reused_nikkei_heatmap is not None:
+        print(
+            "   [情報] 既存Actionsの最新日経225ヒートマップを再利用します: "
+            f"{nikkei_heatmap}"
+        )
+    elif not (reuse_assets and nikkei_heatmap.is_file()):
         print("   [情報] 週末記事用の日経225ヒートマップを生成します。")
         nikkei_assets = _capture_with_retry(
             "日経225ヒートマップ",
