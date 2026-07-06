@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +73,25 @@ MOOVIEW_WEEKLY_FILES = {
     "semiconductor_tpx": "weekend_semiconductor_tpx_w.png",
     "semiconductor_sector": "weekend_semiconductor_sector_w.png",
 }
+
+
+def _capture_with_retry(label: str, operation, attempts: int = 3):
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return operation()
+        except Exception as exc:
+            last_error = exc
+            if attempt >= attempts:
+                break
+            print(
+                f"   [再試行] {label}の生成に失敗しました"
+                f"（{attempt}/{attempts}）: {exc}"
+            )
+            time.sleep(15)
+    raise RuntimeError(
+        f"{label}を{attempts}回試行しても生成できませんでした: {last_error}"
+    ) from last_error
 
 
 def _resolve_mooview_assets_dir(value: str = "") -> Path:
@@ -313,13 +333,19 @@ def publish_weekend_note(
     nikkei_heatmap = image_dir / "00_nikkei225_heatmap.png"
     if not (reuse_assets and nikkei_heatmap.is_file()):
         print("   [情報] 週末記事用の日経225ヒートマップを生成します。")
-        nikkei_assets = daily_note.capture_nikkei225_chart_assets(image_dir)
+        nikkei_assets = _capture_with_retry(
+            "日経225ヒートマップ",
+            lambda: daily_note.capture_nikkei225_chart_assets(image_dir),
+        )
         nikkei_heatmap = Path(nikkei_assets["heatmap_image"])
 
     weekly_finviz_heatmap = image_dir / "finviz_heatmap_1week.png"
     if not (reuse_assets and weekly_finviz_heatmap.is_file()):
         print("   [情報] Finvizの1-Week Performanceヒートマップを生成します。")
-        weekly_finviz_heatmap = capture_weekly_finviz_heatmap(image_dir)
+        weekly_finviz_heatmap = _capture_with_retry(
+            "Finviz 1-Week Performanceヒートマップ",
+            lambda: capture_weekly_finviz_heatmap(image_dir),
+        )
 
     investor_image_paths = [
         image_dir / "09_weekly_jpx_investor_flow.png",
@@ -328,9 +354,12 @@ def publish_weekend_note(
     ]
     if not (reuse_assets and all(path.is_file() for path in investor_image_paths)):
         print("   [情報] 海外投資家動向の週次画像3枚を生成します。")
-        investor_assets = daily_note.capture_weekly_investor_assets(
-            image_dir,
-            dashed_date,
+        investor_assets = _capture_with_retry(
+            "海外投資家動向の週次画像",
+            lambda: daily_note.capture_weekly_investor_assets(
+                image_dir,
+                dashed_date,
+            ),
         )
         investor_image_paths = [
             Path(path) for path in investor_assets["images"]
