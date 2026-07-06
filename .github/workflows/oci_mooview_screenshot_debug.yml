@@ -36,6 +36,11 @@ on:
         required: false
         default: ''
         type: string
+      reuse_capture_run_id:
+        description: '再利用する成功済み撮影run ID（空なら新規撮影）'
+        required: false
+        default: ''
+        type: string
   # 初回のActions疎通確認用。確認完了後に削除する。
   push:
     branches:
@@ -99,7 +104,17 @@ jobs:
           pip install -r /home/runner/work/investment_dashboard/investment_dashboard/requirements.txt
           pip install -r /home/runner/work/investment_dashboard/investment_dashboard/_external/notion2note/requirements.txt
 
+      - name: 成功済みの週次撮影成果物を再利用
+        if: ${{ github.event.inputs.weekend_publish_test == 'true' && github.event.inputs.reuse_capture_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: oci-mooview-screenshot-${{ github.event.inputs.reuse_capture_run_id }}
+          path: /home/runner/work/investment_dashboard/investment_dashboard/artifacts/oci_mooview_capture
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.inputs.reuse_capture_run_id }}
+
       - name: OCIの実データ取得を待って撮影
+        if: ${{ github.event.inputs.reuse_capture_run_id == '' }}
         env:
           CAPTURE_TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '600' }}
           CAPTURE_REFRESH_WAIT_SECONDS: ${{ github.event.inputs.refresh_wait_seconds || '10' }}
