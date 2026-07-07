@@ -2,8 +2,16 @@ name: Sector Category Discord Screenshots
 
 on:
   schedule:
-    # 平日 15:40 JST = 06:40 UTC。16:00 JST の ETF 日次更新より前に日本株版を送信する。
+    # 平日 11:35 JSTの前場通知。10分間隔の監視起動で未配信時だけ再試行する。
+    - cron: '35 2 * * 1-5'
+    - cron: '45 2 * * 1-5'
+    - cron: '55 2 * * 1-5'
+    - cron: '5 3 * * 1-5'
+    # 平日 15:40 JSTの大引け通知。10分間隔の監視起動で未配信時だけ再試行する。
     - cron: '40 6 * * 1-5'
+    - cron: '50 6 * * 1-5'
+    - cron: '0 7 * * 1-5'
+    - cron: '10 7 * * 1-5'
     # 米国市場引け後 06:25 JST = 21:25 UTC。06:30 JST までの米国株版到着を狙う。
     - cron: '25 21 * * 1-5'
   workflow_dispatch:
@@ -19,10 +27,73 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write
 
+concurrency:
+  group: sector-category-discord-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  delivery-gate:
+    name: 配信済み確認
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+      delivery_key: ${{ steps.gate.outputs.delivery_key }}
+    steps:
+      - name: 未配信の時間帯だけ実行を許可
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "手動実行のため配信を許可します。"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "delivery_key=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          case "$EVENT_SCHEDULE" in
+            "35 2 * * 1-5"|"45 2 * * 1-5"|"55 2 * * 1-5"|"5 3 * * 1-5")
+              delivery_slot="jp-midday"
+              ;;
+            "40 6 * * 1-5"|"50 6 * * 1-5"|"0 7 * * 1-5"|"10 7 * * 1-5")
+              delivery_slot="jp-close"
+              ;;
+            *)
+              echo "日本株監視枠ではないため通常実行します。"
+              echo "should_run=true" >> "$GITHUB_OUTPUT"
+              echo "delivery_key=" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+
+          jst_date="$(TZ=Asia/Tokyo date +%Y%m%d)"
+          delivery_key="sector-category-delivery-${delivery_slot}-${jst_date}"
+          artifact_count="$(
+            gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts" \
+              -f name="$delivery_key" \
+              --jq '.total_count'
+          )"
+
+          echo "delivery_key=$delivery_key" >> "$GITHUB_OUTPUT"
+          if [ "$artifact_count" -gt 0 ]; then
+            echo "$delivery_key は配信済みです。バックアップ実行を終了します。"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$delivery_key は未配信です。配信処理を開始します。"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   send-sector-category:
+    needs: delivery-gate
+    if: needs.delivery-gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -44,7 +115,7 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Tailscale経由でOCIへ接続
-        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        if: github.event.schedule != '25 21 * * 1-5' && github.event.inputs.mode != 'us'
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -53,7 +124,7 @@ jobs:
           ping: mooview-oci.taild87712.ts.net
 
       - name: 日本株資金フロー画像を撮影
-        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        if: github.event.schedule != '25 21 * * 1-5' && github.event.inputs.mode != 'us'
         run: |
           python scripts/market/oci_mooview_screenshot.py \
             --base-url "https://mooview-oci.taild87712.ts.net" \
@@ -356,10 +427,29 @@ jobs:
           fi
 
       - name: 日本株資金フロー画像をDiscordへ送信
-        if: github.event.schedule == '40 6 * * 1-5' || github.event.inputs.mode == 'jp'
+        if: github.event.schedule != '25 21 * * 1-5' && github.event.inputs.mode != 'us'
         env:
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
         run: |
           python scripts/market/mooview_fund_flow_discord.py \
             --capture-dir "artifacts/oci_mooview_capture" \
             --webhook-env "DISCORD_OPTION_WEBHOOK_URL"
+
+      - name: 日本株配信完了マーカーを作成
+        if: success() && needs.delivery-gate.outputs.delivery_key != ''
+        env:
+          DELIVERY_KEY: ${{ needs.delivery-gate.outputs.delivery_key }}
+        run: |
+          mkdir -p artifacts/sector_category_delivery
+          printf '{"delivery_key":"%s","run_id":"%s"}\n' \
+            "$DELIVERY_KEY" "$GITHUB_RUN_ID" \
+            > artifacts/sector_category_delivery/result.json
+
+      - name: 日本株配信完了マーカーを保存
+        if: success() && needs.delivery-gate.outputs.delivery_key != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.delivery-gate.outputs.delivery_key }}
+          path: artifacts/sector_category_delivery/result.json
+          if-no-files-found: error
+          retention-days: 14

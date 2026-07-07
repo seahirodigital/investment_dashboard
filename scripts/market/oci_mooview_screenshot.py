@@ -31,6 +31,12 @@ CAPTURE_COLUMN_WIDTHS_PX = (483, 417)
 CAPTURE_TOP_ROW_HEIGHT_PX = 442
 KLINE_PRELOAD_BATCH_LIMIT = 55
 KLINE_PRELOAD_COOLDOWN_SECONDS = 30
+DISPLAY_RANGE_TIMEFRAMES = {
+    "d": "5m",
+    "w": "30m",
+}
+WEEKLY_REFRESH_ATTEMPTS = 5
+WEEKLY_REFRESH_INTERVAL_SECONDS = 60
 
 
 def _normalize_base_url(value: str) -> str:
@@ -177,7 +183,13 @@ def _preload_capture_chart_candles(
     base_url: str,
     *,
     minimum_chart_count: int,
-) -> tuple[dict[str, list[dict[str, Any]]], dict[str, int], dict[str, Any]]:
+    display_range: str,
+) -> tuple[
+    dict[str, list[dict[str, Any]]],
+    dict[str, int],
+    dict[str, Any],
+    dict[str, Any],
+]:
     session = requests.Session()
     session.headers.update({"User-Agent": "investment-dashboard-oci-capture/1.0"})
     workspace_response = session.get(
@@ -207,7 +219,7 @@ def _preload_capture_chart_candles(
     targets: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for panel in panels:
-        timeframe = str(panel.get("timeframe") or "5m")
+        timeframe = DISPLAY_RANGE_TIMEFRAMES[display_range]
         raw_symbols = [
             str(panel.get("symbol") or ""),
             *(str(symbol) for symbol in (panel.get("comparisonSymbols") or [])),
@@ -240,21 +252,66 @@ def _preload_capture_chart_candles(
             )
             time.sleep(KLINE_PRELOAD_COOLDOWN_SECONDS)
         try:
-            response = session.post(
-                f"{base_url}/api/moomoo/kline",
-                json={"symbol": symbol, "timeframe": timeframe, "reqNum": 150},
-                timeout=50,
+            primary_error = ""
+            data: dict[str, Any] = {}
+            candles: Any = None
+            source_timeframe = timeframe
+            try:
+                response = session.post(
+                    f"{base_url}/api/moomoo/kline",
+                    json={"symbol": symbol, "timeframe": timeframe, "reqNum": 150},
+                    timeout=50,
+                )
+                response.raise_for_status()
+                data = response.json()
+                candles = data.get("candles") if isinstance(data, dict) else None
+            except Exception as exc:
+                primary_error = str(exc)
+
+            primary_valid = (
+                isinstance(data, dict)
+                and data.get("success") is True
+                and isinstance(candles, list)
+                and len(candles) >= 10
             )
-            response.raise_for_status()
-            data = response.json()
-            candles = data.get("candles") if isinstance(data, dict) else None
+            if not primary_valid and display_range == "w":
+                fallback_response = session.post(
+                    f"{base_url}/api/moomoo/kline",
+                    json={"symbol": symbol, "timeframe": "1d", "reqNum": 30},
+                    timeout=50,
+                )
+                fallback_response.raise_for_status()
+                fallback_data = fallback_response.json()
+                fallback_candles = (
+                    fallback_data.get("candles")
+                    if isinstance(fallback_data, dict)
+                    else None
+                )
+                if (
+                    isinstance(fallback_data, dict)
+                    and fallback_data.get("success") is True
+                    and isinstance(fallback_candles, list)
+                    and len(fallback_candles) >= 4
+                ):
+                    data = fallback_data
+                    candles = fallback_candles
+                    source_timeframe = "1d"
+                    print(
+                        f"[補完] {symbol}の30分足を取得できないため、"
+                        "週次表示へ日足を使用します。"
+                    )
+
             if (
                 not isinstance(data, dict)
                 or data.get("success") is not True
                 or not isinstance(candles, list)
-                or len(candles) < 10
+                or len(candles) < (4 if source_timeframe == "1d" else 10)
             ):
-                raise RuntimeError(json.dumps(data, ensure_ascii=False)[:500])
+                detail = primary_error or json.dumps(
+                    data,
+                    ensure_ascii=False,
+                )[:500]
+                raise RuntimeError(detail)
 
             cache_key = f"{symbol}-{timeframe}"
             cache[cache_key] = candles[-180:]
@@ -263,12 +320,18 @@ def _preload_capture_chart_candles(
                 {
                     "symbol": symbol,
                     "timeframe": timeframe,
+                    "sourceTimeframe": source_timeframe,
                     "candleCount": len(candles),
                 }
             )
             print(
                 f"[成功] 先行取得 {index}/{len(targets)}: "
                 f"{symbol} {timeframe} {len(candles)}本"
+                + (
+                    f"（{source_timeframe}補完）"
+                    if source_timeframe != timeframe
+                    else ""
+                )
             )
         except Exception as exc:
             failures.append(
@@ -297,12 +360,14 @@ def _preload_capture_chart_candles(
 
     return cache, timestamps, {
         "workspaceRevision": workspace.get("revision"),
+        "displayRange": display_range,
+        "timeframe": DISPLAY_RANGE_TIMEFRAMES[display_range],
         "targetCount": len(targets),
         "successCount": len(fetched),
         "failureCount": len(failures),
         "fetched": fetched,
         "failures": failures,
-    }
+    }, workspace
 
 
 def _inject_candle_cache(
@@ -323,17 +388,34 @@ def _inject_candle_cache(
             request.onerror = () => reject(request.error);
           });
 
+          const readValue = (key) => new Promise((resolve, reject) => {
+            const transaction = database.transaction('values', 'readonly');
+            const request = transaction.objectStore('values').get(key);
+            request.onsuccess = () => resolve(request.result || {});
+            request.onerror = () => reject(request.error);
+          });
+          const existingCache = await readValue('candles');
+          const existingTimestamps = await readValue('meta');
+          const mergedCache = {
+            ...(existingCache && typeof existingCache === 'object' ? existingCache : {}),
+            ...cache,
+          };
+          const mergedTimestamps = {
+            ...(existingTimestamps && typeof existingTimestamps === 'object' ? existingTimestamps : {}),
+            ...timestamps,
+          };
+
           await new Promise((resolve, reject) => {
             const transaction = database.transaction('values', 'readwrite');
             const store = transaction.objectStore('values');
-            store.put(cache, 'candles');
-            store.put(timestamps, 'meta');
+            store.put(mergedCache, 'candles');
+            store.put(mergedTimestamps, 'meta');
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
             transaction.onabort = () => reject(transaction.error);
           });
           database.close();
-          return Object.keys(cache).length;
+          return Object.keys(mergedCache).length;
         }""",
         {"cache": cache, "timestamps": timestamps},
     )
@@ -375,8 +457,9 @@ def _chart_state(page: Page) -> dict[str, Any]:
                 })
                 .filter((line) => line.pointCount >= 2);
               const denseSeries = series.filter((line) => line.pointCount >= 10);
-              const variedSeries = denseSeries.filter(
-                (line) => line.ySpread >= 2 && line.uniqueYCount >= 4
+              const evaluableSeries = series.filter((line) => line.pointCount >= 4);
+              const variedSeries = evaluableSeries.filter(
+                (line) => line.ySpread >= 2 && line.uniqueYCount >= 3
               );
               return {
                 x: rect.x + window.scrollX,
@@ -385,6 +468,7 @@ def _chart_state(page: Page) -> dict[str, Any]:
                 height: rect.height,
                 seriesCount: series.length,
                 denseSeriesCount: denseSeries.length,
+                evaluableSeriesCount: evaluableSeries.length,
                 variedSeriesCount: variedSeries.length,
                 minimumPointCount: series.length > 0
                   ? Math.min(...series.map((line) => line.pointCount))
@@ -441,6 +525,71 @@ def _wait_for_chart_shells(
     )
 
 
+def _select_display_range(
+    page: Page,
+    *,
+    display_range: str,
+    minimum_chart_count: int,
+) -> dict[str, Any]:
+    target_menu_text = "今週" if display_range == "w" else "今日"
+    target_label = display_range.upper()
+
+    for panel_index in range(minimum_chart_count):
+        panels = page.locator('[id^="chart-panel-container-"]')
+        if panels.count() < minimum_chart_count:
+            raise RuntimeError(
+                f"D/W選択に必要なチャートが不足しています: {panels.count()}画面"
+            )
+        panel = panels.nth(panel_index)
+        dropdown = panel.locator('button[title="D/W表示を選択"]')
+        dropdown.wait_for(state="visible", timeout=10000)
+        dropdown.click(timeout=10000)
+        menu_item = page.get_by_role("button").filter(has_text=target_menu_text)
+        menu_item.wait_for(state="visible", timeout=10000)
+        menu_item.click(timeout=10000)
+        page.wait_for_timeout(350)
+
+    state = page.evaluate(
+        """({ expectedCount }) => {
+          const panels = Array.from(
+            document.querySelectorAll('[id^="chart-panel-container-"]')
+          ).slice(0, expectedCount);
+          return {
+            labels: panels.map((panel) => {
+              const dropdown = panel.querySelector('button[title="D/W表示を選択"]');
+              const labelButton = dropdown?.previousElementSibling;
+              return (labelButton?.textContent || '').trim();
+            }),
+          };
+        }""",
+        {"expectedCount": minimum_chart_count},
+    )
+    labels = state.get("labels") or []
+    if len(labels) < minimum_chart_count or any(
+        label != target_label for label in labels
+    ):
+        raise RuntimeError(
+            "D/W表示の固定に失敗しました: "
+            + json.dumps(
+                {
+                    "expected": target_label,
+                    "actual": labels,
+                },
+                ensure_ascii=False,
+            )
+        )
+
+    print(
+        f"[成功] 撮影対象{minimum_chart_count}チャートの表示範囲を"
+        f"{target_label}へ固定しました。"
+    )
+    return {
+        "value": display_range,
+        "label": target_label,
+        "panelLabels": labels,
+    }
+
+
 def _click_refresh_and_wait(
     page: Page,
     *,
@@ -468,6 +617,34 @@ def _click_refresh_and_wait(
     raise RuntimeError(f"更新ボタンを押せませんでした: {last_error}")
 
 
+def _refresh_chart_data(
+    page: Page,
+    *,
+    display_range: str,
+    timeout_seconds: int,
+    daily_wait_seconds: int,
+) -> dict[str, int]:
+    attempts = WEEKLY_REFRESH_ATTEMPTS if display_range == "w" else 1
+    wait_seconds = (
+        WEEKLY_REFRESH_INTERVAL_SECONDS
+        if display_range == "w"
+        else daily_wait_seconds
+    )
+    for attempt in range(1, attempts + 1):
+        print(
+            f"[更新] チャートデータ更新 {attempt}/{attempts} を実行します。"
+        )
+        _click_refresh_and_wait(
+            page,
+            timeout_seconds=timeout_seconds,
+            wait_seconds=wait_seconds,
+        )
+    return {
+        "attempts": attempts,
+        "intervalSeconds": wait_seconds,
+    }
+
+
 def _assert_chart_data_ready(
     state: dict[str, Any],
     *,
@@ -486,6 +663,10 @@ def _assert_chart_data_ready(
                     "chart": index,
                     "seriesCount": series_count,
                     "denseSeriesCount": chart.get("denseSeriesCount", 0),
+                    "evaluableSeriesCount": chart.get(
+                        "evaluableSeriesCount",
+                        0,
+                    ),
                     "variedSeriesCount": varied_series_count,
                     "requiredVariedCount": required_varied_count,
                     "minimumPointCount": chart.get("minimumPointCount", 0),
@@ -676,6 +857,7 @@ def capture_mooview(
     viewport_width: int,
     viewport_height: int,
     probe_symbols: tuple[str, ...],
+    display_range: str,
 ) -> dict[str, Any]:
     output_dir = output_dir.expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -684,12 +866,19 @@ def capture_mooview(
     us_market_path = output_dir / "us_market_top_charts.png"
     jp_sector_path = output_dir / "jp_market_sector_chart.png"
     jp_semiconductor_path = output_dir / "jp_market_semiconductor_charts.png"
+    weekly_jp_sector_path = output_dir / "weekend_jp_sector_tpx_w.png"
+    weekly_us_sector_path = output_dir / "weekend_us_sector_spy_w.png"
+    weekly_semiconductor_tpx_path = output_dir / "weekend_semiconductor_tpx_w.png"
+    weekly_semiconductor_sector_path = (
+        output_dir / "weekend_semiconductor_sector_w.png"
+    )
     error_path = output_dir / "oci_mooview_error.png"
 
     result: dict[str, Any] = {
         "baseUrl": base_url,
         "capturedAtUtc": datetime.now(timezone.utc).isoformat(),
         "outputDirectory": str(output_dir),
+        "displayRange": display_range,
         "success": False,
     }
 
@@ -700,9 +889,15 @@ def capture_mooview(
         timeout_seconds,
         probe_symbols,
     )
-    preloaded_cache, preloaded_timestamps, preload_summary = _preload_capture_chart_candles(
+    (
+        preloaded_cache,
+        preloaded_timestamps,
+        preload_summary,
+        workspace_snapshot,
+    ) = _preload_capture_chart_candles(
         base_url,
         minimum_chart_count=4,
+        display_range=display_range,
     )
     result["preload"] = preload_summary
 
@@ -721,6 +916,23 @@ def capture_mooview(
                 viewport={"width": viewport_width, "height": viewport_height},
                 locale="ja-JP",
                 timezone_id="Asia/Tokyo",
+            )
+
+            def isolate_shared_workspace(route, request) -> None:
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(workspace_snapshot, ensure_ascii=False),
+                )
+                if request.method.upper() == "PUT":
+                    print(
+                        "[保護] 撮影中のD/W切替によるOCI共有設定の保存を"
+                        "ブラウザー内で遮断しました。"
+                    )
+
+            context.route(
+                "**/api/workspace-settings**",
+                isolate_shared_workspace,
             )
             page = context.new_page()
 
@@ -763,11 +975,46 @@ def capture_mooview(
                 timeout_seconds=timeout_seconds,
                 minimum_chart_count=4,
             )
-            _click_refresh_and_wait(
+            display_range_state = _select_display_range(
                 page,
-                timeout_seconds=timeout_seconds,
-                wait_seconds=refresh_wait_seconds,
+                display_range=display_range,
+                minimum_chart_count=4,
             )
+            refresh_state = _refresh_chart_data(
+                page,
+                display_range=display_range,
+                timeout_seconds=timeout_seconds,
+                daily_wait_seconds=refresh_wait_seconds,
+            )
+            if display_range == "w":
+                final_cache_timestamps = {
+                    cache_key: int(time.time() * 1000)
+                    for cache_key in preloaded_cache
+                }
+                final_merged_cache_count = _inject_candle_cache(
+                    page,
+                    preloaded_cache,
+                    final_cache_timestamps,
+                )
+                print(
+                    "[成功] 5回更新で取得したデータを保持し、"
+                    "先行取得済みの週次履歴を最終マージしました: "
+                    f"{final_merged_cache_count}件"
+                )
+                page.reload(wait_until="domcontentloaded", timeout=90000)
+                page.evaluate("window.scrollTo(0, 0)")
+                _wait_for_chart_shells(
+                    page,
+                    timeout_seconds=timeout_seconds,
+                    minimum_chart_count=4,
+                )
+                display_range_state = _select_display_range(
+                    page,
+                    display_range=display_range,
+                    minimum_chart_count=4,
+                )
+                page.wait_for_timeout(refresh_wait_seconds * 1000)
+                refresh_state["finalMergedCacheCount"] = final_merged_cache_count
             chart_state = _chart_state(page)
             result["browser"] = {
                 "page": chart_state,
@@ -778,7 +1025,9 @@ def capture_mooview(
                     "height": viewport_height,
                 },
                 "refreshWaitSeconds": refresh_wait_seconds,
+                "refresh": refresh_state,
                 "injectedCandleCacheCount": injected_count,
+                "displayRange": display_range_state,
             }
             try:
                 _assert_chart_data_ready(
@@ -795,16 +1044,40 @@ def capture_mooview(
             us_market_clip = _panel_clip(layout_state, (0, 2))
             jp_sector_clip = _panel_clip(layout_state, (0,))
             jp_semiconductor_clip = _panel_clip(layout_state, (1, 3))
+            individual_panel_clips = {
+                "jpSectorTpx": _panel_clip(layout_state, (0,)),
+                "semiconductorTpx": _panel_clip(layout_state, (1,)),
+                "usSectorSpy": _panel_clip(layout_state, (2,)),
+                "semiconductorSector": _panel_clip(layout_state, (3,)),
+            }
             page.screenshot(path=str(viewport_path), full_page=False)
             page.screenshot(path=str(us_market_path), clip=us_market_clip)
             page.screenshot(path=str(jp_sector_path), clip=jp_sector_clip)
             page.screenshot(path=str(jp_semiconductor_path), clip=jp_semiconductor_clip)
+            if display_range == "w":
+                page.screenshot(
+                    path=str(weekly_jp_sector_path),
+                    clip=individual_panel_clips["jpSectorTpx"],
+                )
+                page.screenshot(
+                    path=str(weekly_semiconductor_tpx_path),
+                    clip=individual_panel_clips["semiconductorTpx"],
+                )
+                page.screenshot(
+                    path=str(weekly_us_sector_path),
+                    clip=individual_panel_clips["usSectorSpy"],
+                )
+                page.screenshot(
+                    path=str(weekly_semiconductor_sector_path),
+                    clip=individual_panel_clips["semiconductorSector"],
+                )
             result["browser"].update({
                 "fixedCaptureLayout": layout_state,
                 "captureClips": {
                     "usMarket": us_market_clip,
                     "jpSector": jp_sector_clip,
                     "jpSemiconductor": jp_semiconductor_clip,
+                    "individualPanels": individual_panel_clips,
                 },
             })
             result["files"] = {
@@ -814,10 +1087,18 @@ def capture_mooview(
                 "jpSemiconductor": str(jp_semiconductor_path),
                 "result": str(result_path),
             }
+            if display_range == "w":
+                result["files"]["weeklyPanels"] = {
+                    "jpSectorTpx": str(weekly_jp_sector_path),
+                    "usSectorSpy": str(weekly_us_sector_path),
+                    "semiconductorTpx": str(weekly_semiconductor_tpx_path),
+                    "semiconductorSector": str(weekly_semiconductor_sector_path),
+                }
             result["success"] = True
 
             context.close()
             browser.close()
+
     except Exception as exc:
         result["error"] = str(exc)
         if "page" in locals():
@@ -838,6 +1119,39 @@ def capture_mooview(
                 pass
         raise
     finally:
+        if "workspace_snapshot" in locals():
+            try:
+                final_workspace_response = requests.get(
+                    f"{base_url}/api/workspace-settings?profile=desktop",
+                    timeout=30,
+                )
+                final_workspace_response.raise_for_status()
+                final_workspace = final_workspace_response.json()
+                initial_revision = workspace_snapshot.get("revision")
+                final_revision = final_workspace.get("revision")
+                result["workspaceProtection"] = {
+                    "initialRevision": initial_revision,
+                    "finalRevision": final_revision,
+                    "unchangedDuringCapture": initial_revision == final_revision,
+                }
+                if initial_revision == final_revision:
+                    print(
+                        "[成功] 撮影前後でOCI共有設定のrevisionが変わって"
+                        f"いないことを確認しました: {initial_revision}"
+                    )
+                else:
+                    print(
+                        "[注意] 撮影中にOCI共有設定が別クライアントから"
+                        f"更新されました: {initial_revision} -> {final_revision}"
+                    )
+            except Exception as workspace_exc:
+                result["workspaceProtection"] = {
+                    "error": str(workspace_exc),
+                }
+                print(
+                    "[注意] 撮影後のOCI共有設定revisionを確認できませんでした: "
+                    f"{workspace_exc}"
+                )
         result_path.write_text(
             json.dumps(result, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
@@ -846,6 +1160,12 @@ def capture_mooview(
     print(f"[成功] 米国株記事用の上段2チャートを撮影しました: {us_market_path}")
     print(f"[成功] 日本株記事用のJPセクターチャートを撮影しました: {jp_sector_path}")
     print(f"[成功] 日本株記事用の下段2チャートを撮影しました: {jp_semiconductor_path}")
+    if display_range == "w":
+        print(
+            "[成功] 週末記事用のW表示4チャートを個別撮影しました: "
+            f"{weekly_jp_sector_path}, {weekly_us_sector_path}, "
+            f"{weekly_semiconductor_tpx_path}, {weekly_semiconductor_sector_path}"
+        )
     print(f"[成功] 画面全体を撮影しました: {viewport_path}")
     print(f"[成功] 診断結果を書き出しました: {result_path}")
     return result
@@ -861,6 +1181,12 @@ def main() -> None:
     parser.add_argument("--refresh-wait-seconds", type=int, default=10)
     parser.add_argument("--viewport-width", type=int, default=1800)
     parser.add_argument("--viewport-height", type=int, default=1000)
+    parser.add_argument(
+        "--display-range",
+        choices=sorted(DISPLAY_RANGE_TIMEFRAMES),
+        default="d",
+        help="全4チャートのD/W表示。日次はd、週末はwを指定する",
+    )
     parser.add_argument(
         "--probe-symbols",
         default=",".join(DEFAULT_PROBE_SYMBOLS),
@@ -891,6 +1217,7 @@ def main() -> None:
         viewport_width=args.viewport_width,
         viewport_height=args.viewport_height,
         probe_symbols=probe_symbols,
+        display_range=args.display_range,
     )
 
 

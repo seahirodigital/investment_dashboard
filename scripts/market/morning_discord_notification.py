@@ -31,6 +31,7 @@ NIKKEI_WEEK_SCREENSHOT_URL = (
 )
 FINVIZ_URL = "https://finviz.com/map"
 FINVIZ_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=d1"
+FINVIZ_WEEKLY_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=w1"
 SOX_URL = "https://www.tradingview.com/symbols/NASDAQ-SOX/"
 ADR_URL = "https://nikkei225jp.com/adr/"
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -295,11 +296,17 @@ def _capture_nikkei_vi(page, output_dir: Path) -> tuple[str, Path]:
     return value, screenshot_path
 
 
-def _capture_finviz_heatmap(page, output_dir: Path) -> Path:
+def _capture_finviz_heatmap(
+    page,
+    output_dir: Path,
+    *,
+    render_url: str = FINVIZ_RENDER_URL,
+    file_name: str = "finviz_heatmap.png",
+) -> Path:
     page.set_viewport_size({"width": 1840, "height": 1100})
 
     response = page.context.request.get(
-        FINVIZ_RENDER_URL,
+        render_url,
         headers={"User-Agent": DESKTOP_USER_AGENT},
         timeout=60000,
     )
@@ -321,13 +328,37 @@ def _capture_finviz_heatmap(page, output_dir: Path) -> Path:
     page.wait_for_timeout(12000)
     page.locator("#map canvas.chart").first.wait_for(state="visible", timeout=45000)
 
-    screenshot_path = output_dir / "finviz_heatmap.png"
+    screenshot_path = output_dir / file_name
     map_area = page.locator("#map").first
     try:
         map_area.screenshot(path=str(screenshot_path))
     except Exception:
         page.screenshot(path=str(screenshot_path), full_page=False)
     return screenshot_path
+
+
+def capture_weekly_finviz_heatmap(output_dir: Path) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        context = browser.new_context(
+            ignore_https_errors=True,
+            viewport={"width": 1840, "height": 1100},
+            user_agent=DESKTOP_USER_AGENT,
+            locale="ja-JP",
+            timezone_id="Asia/Tokyo",
+        )
+        page = context.new_page()
+        try:
+            return _capture_finviz_heatmap(
+                page,
+                output_dir,
+                render_url=FINVIZ_WEEKLY_RENDER_URL,
+                file_name="finviz_heatmap_1week.png",
+            )
+        finally:
+            context.close()
+            browser.close()
 
 
 def _capture_sox_index(page, output_dir: Path) -> Path:
