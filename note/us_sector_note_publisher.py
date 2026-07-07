@@ -160,7 +160,6 @@ def _note_url_from_result(result: dict[str, Any]) -> str:
     candidates = [
         result.get("published_url"),
         result.get("final_url"),
-        result.get("url"),
     ]
     publish_result = ((result.get("editor_result") or {}).get("publish") or {})
     candidates.extend(
