@@ -1,0 +1,12 @@
+[Unit]
+Description=investment_dashboard 日本株セクター前場Discord通知タイマー
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 11:35:00 Asia/Tokyo
+Unit=investment-dashboard-jp-sector-discord@midday.service
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+
+[Install]
+WantedBy=timers.target

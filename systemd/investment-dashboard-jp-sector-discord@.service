@@ -1,0 +1,16 @@
+[Unit]
+Description=investment_dashboard 日本株セクターDiscord通知 (%i)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/investment_dashboard
+Environment=PYTHONUNBUFFERED=1
+Environment=PLAYWRIGHT_BROWSERS_PATH=/home/ubuntu/.cache/ms-playwright
+EnvironmentFile=/home/ubuntu/investment_dashboard/.secrets/discord.env
+ExecStart=/home/ubuntu/investment_dashboard/.venv/bin/python /home/ubuntu/investment_dashboard/scripts/market/jp_sector_discord_oracle.py --slot %i --state-dir /home/ubuntu/investment_dashboard/artifacts/sector_category_delivery --output-root /home/ubuntu/investment_dashboard/artifacts/oracle_sector_category_discord --mooview-base-url https://mooview-oci.taild87712.ts.net --retry-count 4 --retry-interval-seconds 600
+TimeoutStartSec=3600
+Nice=5
