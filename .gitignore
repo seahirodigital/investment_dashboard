@@ -9,3 +9,4 @@ firebase-key.json
 *.json.bak
 artifacts/
 note/generated/
+.secrets/

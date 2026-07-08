@@ -1,0 +1,12 @@
+[Unit]
+Description=investment_dashboard 日本株セクター大引けDiscord通知タイマー
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 15:35:00 Asia/Tokyo
+Unit=investment-dashboard-jp-sector-discord@close.service
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+
+[Install]
+WantedBy=timers.target
