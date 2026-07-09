@@ -25,6 +25,7 @@ if sys.platform == "win32":
 DEFAULT_BASE_URL = "https://mooview-oci.taild87712.ts.net"
 DEFAULT_PROBE_SYMBOLS = ("JP.1306", "US.VOO")
 API_RETRY_INTERVAL_SECONDS = 5
+OPTIONAL_QUOTE_TIMEOUT_SECONDS = 60
 # 初回確認で採用する固定列幅。毎回現在幅へ2/3を掛けず、常に同じ境界へ戻す。
 CAPTURE_COLUMN_WIDTHS_PX = (483, 417)
 # 上段左右の高さを揃え、下段チャートの開始位置も固定する。
@@ -84,6 +85,54 @@ def _request_json_with_retry(
     raise RuntimeError(f"{label}の待機時間を超過しました: {last_error}")
 
 
+def _request_optional_json_with_retry(
+    session: requests.Session,
+    *,
+    url: str,
+    payload: dict[str, Any],
+    timeout_seconds: int,
+    deadline: float,
+    optional_timeout_seconds: int,
+    validator: Callable[[dict[str, Any]], bool],
+    label: str,
+) -> dict[str, Any]:
+    attempt = 0
+    last_error = "応答がありません"
+    optional_deadline = min(deadline, time.monotonic() + optional_timeout_seconds)
+
+    while time.monotonic() < optional_deadline:
+        attempt += 1
+        try:
+            response = session.post(url, json=payload, timeout=timeout_seconds)
+            response.raise_for_status()
+            data = response.json()
+            if not isinstance(data, dict):
+                raise ValueError(f"JSONオブジェクトではありません: {type(data).__name__}")
+            if validator(data):
+                print(f"[成功] {label}: {url}（試行{attempt}回）")
+                return data
+            last_error = json.dumps(data, ensure_ascii=False)[:500]
+        except Exception as exc:
+            last_error = str(exc)
+
+        remaining_seconds = optional_deadline - time.monotonic()
+        if remaining_seconds <= 0:
+            break
+        wait_seconds = min(API_RETRY_INTERVAL_SECONDS, remaining_seconds)
+        print(
+            f"[待機] 任意確認の{label}が未完了です。"
+            f"{wait_seconds:.1f}秒後に再試行します: {last_error}"
+        )
+        time.sleep(wait_seconds)
+
+    print(f"[警告] 任意確認の{label}を省略します: {last_error}")
+    return {
+        "success": False,
+        "optional": True,
+        "error": last_error,
+    }
+
+
 def _verify_market_data(
     base_url: str,
     timeout_seconds: int,
@@ -105,12 +154,13 @@ def _verify_market_data(
 
     probes: list[dict[str, Any]] = []
     for symbol in probe_symbols:
-        quote = _request_json_with_retry(
+        quote = _request_optional_json_with_retry(
             session,
             url=f"{base_url}/api/moomoo/quote",
             payload={"symbol": symbol},
             timeout_seconds=35,
             deadline=deadline,
+            optional_timeout_seconds=OPTIONAL_QUOTE_TIMEOUT_SECONDS,
             validator=lambda data: (
                 data.get("success") is True
                 and isinstance(data.get("price"), (int, float))
@@ -135,6 +185,8 @@ def _verify_market_data(
             {
                 "symbol": symbol,
                 "price": quote.get("price"),
+                "quoteAvailable": quote.get("success") is True,
+                "quoteError": quote.get("error"),
                 "candleCount": len(candles),
                 "lastCandle": candles[-1] if candles else None,
             }
