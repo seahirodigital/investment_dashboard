@@ -210,9 +210,10 @@ jobs:
 
           if ! git diff --staged --quiet; then
             git commit -m "Auto: Daily Market Analysis Report $(date +'%Y-%m-%d')"
-            # intraday_etf が頻繁にpushするため、pull --rebase で競合回避
+            # intraday_etf が頻繁にpushするため、pull --rebase で競合回避。
+            # 同じJSONが競合した場合は、この実行で生成したデータを優先する。
             for i in 1 2 3; do
-              git pull --rebase origin main || { git rebase --abort 2>/dev/null; true; }
+              git pull --rebase -X theirs origin main || { git rebase --abort 2>/dev/null; true; }
               if git push origin main; then
                 echo "Report committed and pushed."
                 exit 0
