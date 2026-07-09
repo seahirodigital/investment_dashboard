@@ -627,6 +627,15 @@ def _create_note_thumbnail(source_path: Path, output_path: Path) -> Path:
     return output_path
 
 
+def _first_existing_image_path(*image_groups: Any) -> Path | None:
+    for image_group in image_groups:
+        for image_path in image_group or []:
+            path = Path(image_path)
+            if path.is_file() and path.stat().st_size > 0:
+                return path
+    return None
+
+
 def _create_option_composite_images(image_paths: list[Path], output_dir: Path) -> list[Path]:
     if len(image_paths) < 5:
         raise RuntimeError(f"日経225オプション画像が5枚未満です: {len(image_paths)}")
@@ -1263,11 +1272,20 @@ def publish_note_blog(
         print("   [情報] note用の日経225オプション画像を生成します")
         option_assets = capture_option_assets(image_dir)
 
+    mooview_images = _load_mooview_jp_images(image_dir)
+    thumbnail_source = _first_existing_image_path(
+        [nikkei225_assets.get("heatmap_image")],
+        sector_assets.get("images"),
+        option_assets.get("images"),
+        weekly_assets.get("images"),
+        mooview_images,
+    )
+    if not thumbnail_source:
+        raise RuntimeError("noteサムネイル用の画像を生成できませんでした")
     thumbnail_path = _create_note_thumbnail(
-        Path(nikkei225_assets["heatmap_image"]),
+        thumbnail_source,
         image_dir / "00_note_thumbnail.jpg",
     )
-    mooview_images = _load_mooview_jp_images(image_dir)
     markdown, body_image_uploads = build_blog_markdown(
         report_text,
         display_date,
