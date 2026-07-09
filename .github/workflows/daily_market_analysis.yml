@@ -110,11 +110,12 @@ jobs:
       - name: 日本株note用の資金フロー画像を撮影
         if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip') }}
         continue-on-error: true
+        timeout-minutes: 4
         run: |
           python scripts/market/oci_mooview_screenshot.py \
             --base-url "https://mooview-oci.taild87712.ts.net" \
             --output-dir "artifacts/oci_mooview_capture" \
-            --timeout-seconds "600" \
+            --timeout-seconds "120" \
             --refresh-wait-seconds "10" \
             --viewport-width "1800" \
             --viewport-height "1000" \
