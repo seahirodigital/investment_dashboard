@@ -630,6 +630,8 @@ def _create_note_thumbnail(source_path: Path, output_path: Path) -> Path:
 def _first_existing_image_path(*image_groups: Any) -> Path | None:
     for image_group in image_groups:
         for image_path in image_group or []:
+            if not image_path:
+                continue
             path = Path(image_path)
             if path.is_file() and path.stat().st_size > 0:
                 return path
