@@ -272,6 +272,17 @@ def build_prompt(short_selling, teguchi, option_history, etf_intraday, etf_data,
 
 
 # ── Gemini API 呼び出し ────────────────────────────────────────────
+def _extract_gemini_text(result):
+    texts = []
+    for candidate in result.get("candidates", []) or []:
+        content = candidate.get("content") or {}
+        for part in content.get("parts", []) or []:
+            text = part.get("text")
+            if text:
+                texts.append(text)
+    return "\n".join(texts).strip()
+
+
 def call_gemini(prompt, api_key, max_retries=5):
     """Gemini API を呼び出す（リトライ付き）"""
     url = f"{GEMINI_ENDPOINT}?key={api_key}"
@@ -283,32 +294,48 @@ def call_gemini(prompt, api_key, max_retries=5):
         },
     }
 
+    last_result = None
     for attempt in range(1, max_retries + 1):
         print(f"📡 Gemini API ({GEMINI_MODEL}) を呼び出し中... (試行 {attempt}/{max_retries})")
         response = requests.post(url, json=payload, timeout=180)
 
-        if response.status_code == 200:
-            break
-        if response.status_code in (429, 503) and attempt < max_retries:
-            wait = 30 * attempt
-            print(f"⏳ HTTP {response.status_code} — {wait}秒待機してリトライ...")
+        if response.status_code != 200:
+            if response.status_code in (429, 503) and attempt < max_retries:
+                wait = 30 * attempt
+                print(f"⏳ HTTP {response.status_code} — {wait}秒待機してリトライ...")
+                time.sleep(wait)
+                continue
+            print(f"❌ Gemini API エラー: HTTP {response.status_code}", file=sys.stderr)
+            print(response.text, file=sys.stderr)
+            sys.exit(1)
+
+        result = response.json()
+        last_result = result
+        candidates = result.get("candidates", [])
+        if not candidates:
+            print("⚠️ Gemini API: 応答候補なし", file=sys.stderr)
+        else:
+            text = _extract_gemini_text(result)
+            if text:
+                usage = result.get("usageMetadata", {})
+                print(f"✅ 応答取得完了 (入力: {usage.get('promptTokenCount', '?')} tokens, 出力: {usage.get('candidatesTokenCount', '?')} tokens)")
+                return text
+            finish_reasons = [candidate.get("finishReason", "?") for candidate in candidates]
+            print(
+                f"⚠️ Gemini API: text本文なし (finishReason={finish_reasons})",
+                file=sys.stderr,
+            )
+
+        if attempt < max_retries:
+            wait = 15 * attempt
+            print(f"⏳ Gemini応答本文なし — {wait}秒待機してリトライ...")
             time.sleep(wait)
             continue
-        print(f"❌ Gemini API エラー: HTTP {response.status_code}", file=sys.stderr)
-        print(response.text, file=sys.stderr)
-        sys.exit(1)
 
-    result = response.json()
-    candidates = result.get("candidates", [])
-    if not candidates:
-        print("❌ Gemini API: 応答候補なし", file=sys.stderr)
-        print(json.dumps(result, indent=2, ensure_ascii=False), file=sys.stderr)
-        sys.exit(1)
-
-    text = candidates[0]["content"]["parts"][0]["text"]
-    usage = result.get("usageMetadata", {})
-    print(f"✅ 応答取得完了 (入力: {usage.get('promptTokenCount', '?')} tokens, 出力: {usage.get('candidatesTokenCount', '?')} tokens)")
-    return text
+    print("❌ Gemini API: text本文を含む応答を取得できませんでした", file=sys.stderr)
+    if last_result is not None:
+        print(json.dumps(last_result, indent=2, ensure_ascii=False), file=sys.stderr)
+    sys.exit(1)
 
 
 # ── レポート保存 ───────────────────────────────────────────────────
