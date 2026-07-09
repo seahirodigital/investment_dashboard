@@ -330,42 +330,55 @@ def capture_nikkei225_chart_assets(output_dir: Path) -> dict[str, Any]:
     heatmap_image = output_dir / "00_nikkei225_heatmap.png"
     contribution_image = output_dir / "00_nikkei225_contribution_ranking.png"
 
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch()
-        context = browser.new_context(
-            viewport={"width": 1400, "height": 3000},
-            device_scale_factor=2,
-            user_agent=DESKTOP_USER_AGENT,
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            context = browser.new_context(
+                viewport={"width": 1400, "height": 3000},
+                device_scale_factor=2,
+                user_agent=DESKTOP_USER_AGENT,
+            )
+            try:
+                page = context.new_page()
+                page.goto(NIKKEI225_CHART_URL, wait_until="domcontentloaded", timeout=90000)
+                page.wait_for_timeout(10000)
+                page.wait_for_function(
+                    """() => Array.from(document.querySelectorAll('table.tbl')).some((table) => {
+                      const text = (table.innerText || table.textContent || '').replace(/\s+/g, ' ');
+                      return text.includes('日経225 ヒートマップ') && text.includes('業種別指数');
+                    })""",
+                    timeout=45000,
+                )
+                page.wait_for_function(
+                    """() => Boolean(document.querySelector('table#nkrnk'))""",
+                    timeout=45000,
+                )
+                heatmap_image = _capture_nikkei225_heatmap_image(page, heatmap_image)
+                contribution_image = _capture_table_without_caption(
+                    page,
+                    contribution_image,
+                    table_id="nkrnk",
+                    padding=0,
+                )
+                _assert_image_minimum_size(
+                    contribution_image,
+                    min_width=1000,
+                    min_height=500,
+                    label="日経225 寄与度ランキング",
+                )
+            finally:
+                context.close()
+                browser.close()
+    except Exception as exc:
+        print(
+            "[警告] 日経225ヒートマップ・寄与度ランキング画像を省略します: "
+            f"{exc}"
         )
-        page = context.new_page()
-        page.goto(NIKKEI225_CHART_URL, wait_until="domcontentloaded", timeout=90000)
-        page.wait_for_timeout(10000)
-        page.wait_for_function(
-            """() => Array.from(document.querySelectorAll('table.tbl')).some((table) => {
-              const text = (table.innerText || table.textContent || '').replace(/\s+/g, ' ');
-              return text.includes('日経225 ヒートマップ') && text.includes('業種別指数');
-            })""",
-            timeout=45000,
-        )
-        page.wait_for_function(
-            """() => Boolean(document.querySelector('table#nkrnk'))""",
-            timeout=45000,
-        )
-        heatmap_image = _capture_nikkei225_heatmap_image(page, heatmap_image)
-        contribution_image = _capture_table_without_caption(
-            page,
-            contribution_image,
-            table_id="nkrnk",
-            padding=0,
-        )
-        _assert_image_minimum_size(
-            contribution_image,
-            min_width=1000,
-            min_height=500,
-            label="日経225 寄与度ランキング",
-        )
-        context.close()
-        browser.close()
+        return {
+            "images": [],
+            "heatmap_image": None,
+            "contribution_image": None,
+        }
 
     return {
         "images": [heatmap_image, contribution_image],
