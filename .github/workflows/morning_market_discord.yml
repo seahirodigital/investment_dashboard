@@ -89,6 +89,7 @@ jobs:
           ping: mooview-oci.taild87712.ts.net
 
       - name: 米国株資金フロー画像を撮影
+        continue-on-error: true
         run: |
           python scripts/market/oci_mooview_screenshot.py \
             --base-url "https://mooview-oci.taild87712.ts.net" \
@@ -96,7 +97,8 @@ jobs:
             --timeout-seconds "600" \
             --refresh-wait-seconds "10" \
             --viewport-width "1800" \
-            --viewport-height "1000"
+            --viewport-height "1000" \
+            --probe-symbols "US.VOO,US.SPY"
 
       - name: 通知本文とスクリーンショットを作成して送信
         env:

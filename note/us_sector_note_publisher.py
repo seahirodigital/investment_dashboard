@@ -415,11 +415,15 @@ def load_market_assets(source_dir: Path, image_dir: Path) -> dict[str, Any]:
             mooview_capture_dir = (BASE_DIR / mooview_capture_dir).resolve()
         mooview_source = mooview_capture_dir / "us_market_top_charts.png"
         if not mooview_source.is_file() or mooview_source.stat().st_size == 0:
-            raise FileNotFoundError(f"米国株note用のMooView画像が見つかりません: {mooview_source}")
-        mooview = _copy_image(
-            mooview_source,
-            image_dir / "06_us_market_top_charts.png",
-        )
+            print(
+                "[警告] 米国株note用のMooView画像を省略します: "
+                f"{mooview_source}"
+            )
+        else:
+            mooview = _copy_image(
+                mooview_source,
+                image_dir / "06_us_market_top_charts.png",
+            )
     return {
         "fear_greed_value": str(metadata.get("fear_greed_value") or "").strip(),
         "nikkei_vi_value": str(metadata.get("nikkei_vi_value") or "").strip(),

@@ -858,7 +858,11 @@ def _load_mooview_jp_images(image_dir: Path) -> list[Path]:
     for source_name, output_name in mappings:
         source_path = capture_dir / source_name
         if not source_path.is_file() or source_path.stat().st_size == 0:
-            raise FileNotFoundError(f"日本株note用のMooView画像が見つかりません: {source_path}")
+            print(
+                "[警告] 日本株note用のMooView画像を省略します: "
+                f"{source_path}"
+            )
+            continue
         output_path = image_dir / output_name
         shutil.copy2(source_path, output_path)
         copied_images.append(output_path)

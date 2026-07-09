@@ -480,7 +480,11 @@ def _resolve_mooview_us_image() -> Path | None:
         capture_dir = (BASE_DIR / capture_dir).resolve()
     image_path = capture_dir / "us_market_top_charts.png"
     if not image_path.is_file() or image_path.stat().st_size == 0:
-        raise FileNotFoundError(f"米国株資金フロー画像が見つかりません: {image_path}")
+        print(
+            "[警告] 米国株資金フロー画像を添付せずに通知を続行します: "
+            f"{image_path}"
+        )
+        return None
     return image_path
 
 

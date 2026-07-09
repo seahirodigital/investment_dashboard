@@ -167,12 +167,13 @@ def _verify_market_data(
             ),
             label=f"{symbol}の実価格取得",
         )
-        kline = _request_json_with_retry(
+        kline = _request_optional_json_with_retry(
             session,
             url=f"{base_url}/api/moomoo/kline",
             payload={"symbol": symbol, "timeframe": "1d", "reqNum": 2},
             timeout_seconds=50,
             deadline=deadline,
+            optional_timeout_seconds=OPTIONAL_QUOTE_TIMEOUT_SECONDS,
             validator=lambda data: (
                 data.get("success") is True
                 and isinstance(data.get("candles"), list)
@@ -187,6 +188,8 @@ def _verify_market_data(
                 "price": quote.get("price"),
                 "quoteAvailable": quote.get("success") is True,
                 "quoteError": quote.get("error"),
+                "klineAvailable": kline.get("success") is True,
+                "klineError": kline.get("error"),
                 "candleCount": len(candles),
                 "lastCandle": candles[-1] if candles else None,
             }
