@@ -112,7 +112,7 @@ https://seahirodigital.github.io/investment_dashboard/
 | 項目 | 現状 |
 |---|---|
 | Webhook Secret | 全通知で `DISCORD_OPTION_WEBHOOK_URL` を使用 |
-| 日本株セクター通知の監視 | 11:35/11:45/11:55/12:05 JSTと15:40/15:50/16:00/16:10 JSTに起動し、未配信の場合だけ処理する |
+| 日本株セクター通知の監視 | 11:35/11:45/11:55/12:05 JSTと15:45/15:55/16:05/16:15 JSTに起動し、未配信の場合だけ処理する |
 | 日本株セクター通知の重複防止 | `sector-category-delivery-jp-midday-YYYYMMDD`または`sector-category-delivery-jp-close-YYYYMMDD`という成功マーカーArtifactを14日間保存 |
 | Oracle版日本株セクター通知 | `C:\Users\mahha\OneDrive\開発\investment_dashboard\docs\oracle_jp_sector_discord.md` に設定手順を保存。Oracle側は11:35/15:35 JSTの`systemd timer`で起動し、`C:\Users\mahha\OneDrive\開発\investment_dashboard\scripts\market\jp_sector_discord_oracle.py` がローカルJSONマーカーで重複防止 |
 | Pages自動ビルド | GitHub Pagesの公開元が`main`直下のため、RSS状態の10分ごとのcommitや市場中データのcommitごとにGitHub管理の`pages-build-deployment`が起動する |
