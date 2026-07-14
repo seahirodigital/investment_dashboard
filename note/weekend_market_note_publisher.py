@@ -126,9 +126,20 @@ def _resolve_reused_nikkei_heatmap() -> Path | None:
         )
         if candidates:
             return candidates[0]
-    raise FileNotFoundError(
-        f"再利用する日経225ヒートマップが見つかりません: {path}"
+    print(
+        "[警告] 再利用する日経225ヒートマップが見つからないため、"
+        f"週末投稿内で新規取得を試します: {path}"
     )
+    return None
+
+
+def _existing_image_path(value: Any) -> Path | None:
+    if not value:
+        return None
+    path = Path(value)
+    if path.is_file():
+        return path
+    return None
 
 
 def _weekly_mooview_images(assets_dir: Path) -> dict[str, Path]:
@@ -160,9 +171,11 @@ def build_weekend_markdown(
     date_display: str,
     *,
     nikkei_heatmap: Path,
+    nikkei_heatmap_caption: str = "日本株 日経225ヒートマップ",
     weekly_finviz_heatmap: Path,
     mooview_images: dict[str, Path],
     investor_images: list[Path],
+    skip_mooview_keys: set[str] | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
     title = TITLE_TEMPLATE.format(date=date_display)
     lines: list[str] = [
@@ -183,21 +196,23 @@ def build_weekend_markdown(
     ]
     uploads: list[dict[str, Any]] = []
     image_index = 1
+    skip_mooview_keys = skip_mooview_keys or set()
+    japan_image_paths = [nikkei_heatmap]
+    japan_captions = [nikkei_heatmap_caption]
+    for key, caption in [
+        ("jp_sector_tpx", "日本株 JPセクター TOPIX比 週間チャート"),
+        ("semiconductor_tpx", "日本株 半導体 TOPIX比 週間チャート"),
+        ("semiconductor_sector", "日本株 半導体セクター 週間チャート"),
+    ]:
+        if key in skip_mooview_keys:
+            continue
+        japan_image_paths.append(mooview_images[key])
+        japan_captions.append(caption)
     image_index = _append_images(
         lines,
         uploads,
-        [
-            nikkei_heatmap,
-            mooview_images["jp_sector_tpx"],
-            mooview_images["semiconductor_tpx"],
-            mooview_images["semiconductor_sector"],
-        ],
-        [
-            "日本株 日経225ヒートマップ",
-            "日本株 JPセクター TOPIX比 週間チャート",
-            "日本株 半導体 TOPIX比 週間チャート",
-            "日本株 半導体セクター 週間チャート",
-        ],
+        japan_image_paths,
+        japan_captions,
         image_index,
     )
     lines.extend(
@@ -259,10 +274,17 @@ def build_weekend_markdown(
 def _note_url_from_result(result: dict[str, Any]) -> str:
     candidates = [
         result.get("published_url"),
+        result.get("final_url"),
         result.get("note_url"),
         result.get("url"),
-        result.get("draft_url"),
     ]
+    publish_result = ((result.get("editor_result") or {}).get("publish") or {})
+    candidates.extend(
+        [
+            publish_result.get("final_url"),
+            (publish_result.get("post_result") or {}).get("final_url_after_click"),
+        ]
+    )
     for candidate in candidates:
         value = str(candidate or "").strip()
         if value:
@@ -351,6 +373,7 @@ def publish_weekend_note(
     image_dir.mkdir(parents=True, exist_ok=True)
 
     reused_nikkei_heatmap = _resolve_reused_nikkei_heatmap()
+    nikkei_heatmap_caption = "日本株 日経225ヒートマップ"
     nikkei_heatmap = (
         reused_nikkei_heatmap
         if reused_nikkei_heatmap is not None
@@ -367,7 +390,25 @@ def publish_weekend_note(
             "日経225ヒートマップ",
             lambda: daily_note.capture_nikkei225_chart_assets(image_dir),
         )
-        nikkei_heatmap = Path(nikkei_assets["heatmap_image"])
+        heatmap_image = _existing_image_path(nikkei_assets.get("heatmap_image"))
+        contribution_image = _existing_image_path(
+            nikkei_assets.get("contribution_image")
+        )
+        if heatmap_image is not None:
+            nikkei_heatmap = heatmap_image
+            print(f"   [情報] 日経225ヒートマップを使用します: {nikkei_heatmap}")
+        elif contribution_image is not None:
+            nikkei_heatmap = contribution_image
+            nikkei_heatmap_caption = "日本株 日経225寄与度ランキング"
+            print(
+                "[警告] 日経225ヒートマップを取得できないため、"
+                f"寄与度ランキング画像で投稿を継続します: {nikkei_heatmap}"
+            )
+        else:
+            print(
+                "[警告] 日経225ヒートマップと寄与度ランキングを取得できませんでした。"
+                "MooView週次チャートで投稿継続を試します。"
+            )
 
     weekly_finviz_heatmap = image_dir / "finviz_heatmap_1week.png"
     if not (reuse_assets and weekly_finviz_heatmap.is_file()):
@@ -397,6 +438,15 @@ def publish_weekend_note(
 
     mooview_dir = _resolve_mooview_assets_dir(mooview_assets_dir)
     mooview_images = _weekly_mooview_images(mooview_dir)
+    skip_mooview_keys: set[str] = set()
+    if not nikkei_heatmap.is_file():
+        nikkei_heatmap = mooview_images["jp_sector_tpx"]
+        nikkei_heatmap_caption = "日本株 JPセクター TOPIX比 週間チャート"
+        skip_mooview_keys.add("jp_sector_tpx")
+        print(
+            "[警告] 日経225画像が使えないため、"
+            f"MooViewの日本株週次チャートをサムネイルと本文先頭に使います: {nikkei_heatmap}"
+        )
     thumbnail_path = daily_note._create_note_thumbnail(
         nikkei_heatmap,
         image_dir / "00_weekend_note_thumbnail.jpg",
@@ -404,9 +454,11 @@ def publish_weekend_note(
     markdown, body_image_uploads = build_weekend_markdown(
         display_date,
         nikkei_heatmap=nikkei_heatmap,
+        nikkei_heatmap_caption=nikkei_heatmap_caption,
         weekly_finviz_heatmap=weekly_finviz_heatmap,
         mooview_images=mooview_images,
         investor_images=investor_image_paths,
+        skip_mooview_keys=skip_mooview_keys,
     )
     markdown, affiliate_insertions = daily_note._apply_affiliate_links(
         markdown,

@@ -87,9 +87,15 @@ jobs:
             echo "::error::成功済みの日本株日次Actionが見つかりません。"
             exit 1
           fi
+          echo "最新の日次Action run id: $latest_run_id"
           gh run download "$latest_run_id" \
             --name "note-blog-generated-$latest_run_id" \
             --dir "/home/runner/work/investment_dashboard/investment_dashboard/artifacts/latest_daily_note"
+          if find "/home/runner/work/investment_dashboard/investment_dashboard/artifacts/latest_daily_note" -name "00_nikkei225_heatmap.png" -print -quit | grep -q .; then
+            echo "日次artifact内の日経225ヒートマップを確認しました。"
+          else
+            echo "::warning::日次artifact内に日経225ヒートマップがありません。週末投稿処理で新規取得へフォールバックします。"
+          fi
           echo "WEEKEND_NIKKEI_HEATMAP_DIR=/home/runner/work/investment_dashboard/investment_dashboard/artifacts/latest_daily_note" >> "$GITHUB_ENV"
 
       - name: 週次W表示の4チャートを撮影
