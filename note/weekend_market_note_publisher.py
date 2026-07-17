@@ -294,7 +294,7 @@ def _note_url_from_result(result: dict[str, Any]) -> str:
 
 def _notify_discord_after_note(result: dict[str, Any], mode: str) -> dict[str, Any]:
     webhook_url = (
-        os.getenv("NOTION2NOTE_DISCORD_WEBHOOK", "").strip()
+        os.getenv("NOTE_DISCORD_WEBHOOK", "").strip()
         or os.getenv("DISCORD_OPTION_WEBHOOK_URL", "").strip()
     )
     note_url = _note_url_from_result(result)
@@ -309,7 +309,7 @@ def _notify_discord_after_note(result: dict[str, Any], mode: str) -> dict[str, A
         return status
     if not webhook_url:
         status["error"] = (
-            "NOTION2NOTE_DISCORD_WEBHOOK / DISCORD_OPTION_WEBHOOK_URL "
+            "NOTE_DISCORD_WEBHOOK / DISCORD_OPTION_WEBHOOK_URL "
             "が未設定のためDiscord通知をスキップしました。"
         )
         print(f"   [情報] {status['error']}")

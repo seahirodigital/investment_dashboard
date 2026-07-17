@@ -1,6 +1,6 @@
 # note投稿連携
 
-`C:\Users\mahha\OneDrive\開発\investment_dashboard\note\note_blog_publisher.py` は、Discord配信で使う市場材料をnoteブログ向けに再構成し、`C:\Users\mahha\OneDrive\開発\notion2note` の投稿エンジンへ渡します。
+`/Users/user/Library/CloudStorage/OneDrive-個人用/開発/investment_dashboard/note/note_blog_publisher.py` は、Discord配信で使う市場材料をnoteブログ向けに再構成し、同一リポジトリ内の投稿エンジンへ渡します。
 
 ## Debug下書き投稿（Gemini生成なし）
 
@@ -52,4 +52,4 @@ python C:\Users\mahha\OneDrive\開発\investment_dashboard\note\us_sector_note_p
 
 米国株セクター朝記事のMarkdown、本文画像、noteサムネイル、投稿結果JSONは `C:\Users\mahha\OneDrive\開発\investment_dashboard\note\generated\us_sector\<YYYYMMDD>` に保存されます。
 
-米国株セクター朝記事の公開時マガジンは `米国株のニュース・動向まとめ` を選びます。タグとアフィリエイトは既存の日本株note投稿と同じく、`C:\Users\mahha\OneDrive\開発\notion2note\tag.md` と `C:\Users\mahha\OneDrive\開発\notion2note\affiliate_links.txt` を参照します。
+米国株セクター朝記事の公開時マガジンは `米国株のニュース・動向まとめ` を選びます。タグとアフィリエイトは `/Users/user/Library/CloudStorage/OneDrive-個人用/開発/investment_dashboard/note/note_publisher/tag.md` と `/Users/user/Library/CloudStorage/OneDrive-個人用/開発/investment_dashboard/note/note_publisher/affiliate_links.txt` を参照します。

@@ -42,7 +42,7 @@ def _click_publish_next_role_button_first(note_engine: Any, page: Any) -> str:
 
 
 def patch_note_publisher_publish_next(publisher: Any) -> Any:
-    """notion2note の note_engine 読み込み時に公開ボタン戦略だけ差し替える。"""
+    """内蔵note投稿エンジンの公開ボタン戦略だけ差し替える。"""
 
     original_load_note_engine = publisher._load_note_engine
 

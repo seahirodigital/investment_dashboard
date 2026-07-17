@@ -107,22 +107,10 @@ def _load_module(module_name: str, path: Path):
 
 
 def _resolve_note_project_dir() -> Path:
-    env_value = os.getenv("NOTE_PROJECT_DIR", "").strip()
-    candidates: list[Path] = []
-    if env_value:
-        candidates.append(Path(env_value))
-    candidates.extend(
-        [
-            BASE_DIR.parent / "notion2note",
-            Path(r"C:\Users\mahha\OneDrive\開発\notion2note"),
-        ]
-    )
-    for candidate in candidates:
-        resolved = candidate.expanduser().resolve()
-        if (resolved / "scripts" / "note_engine" / "note_draft_poster.py").exists():
-            return resolved
-    checked = ", ".join(str(path) for path in candidates)
-    raise FileNotFoundError(f"notion2note が見つかりません。確認パス: {checked}")
+    publisher_dir = NOTE_DIR / "note_publisher"
+    if (publisher_dir / "scripts" / "note_engine" / "note_draft_poster.py").exists():
+        return publisher_dir
+    raise FileNotFoundError(f"内蔵note投稿エンジンが見つかりません: {publisher_dir}")
 
 
 def _read_tags(note_project_dir: Path) -> str:
@@ -142,12 +130,12 @@ def _apply_affiliate_links(
     affiliate_count: int,
     seed: str,
 ) -> tuple[str, int]:
-    notion_post = _load_module(
-        "investment_dashboard_us_sector_notion_post_runtime",
-        note_project_dir / "scripts" / "notion_note" / "post_from_notion.py",
+    affiliate_manager = _load_module(
+        "investment_dashboard_us_sector_affiliate_runtime",
+        NOTE_DIR / "affiliate_links.py",
     )
     affiliate_file = note_project_dir / "affiliate_links.txt"
-    return notion_post._insert_affiliate_after_each_h2(
+    return affiliate_manager.insert_affiliate_after_each_h2(
         markdown,
         affiliate_file=affiliate_file,
         memo_number=max(1, memo_number),
@@ -177,7 +165,7 @@ def _note_url_from_result(result: dict[str, Any]) -> str:
 
 def _notify_discord_after_note(result: dict[str, Any], mode: str) -> dict[str, Any]:
     webhook_url = (
-        os.getenv("NOTION2NOTE_DISCORD_WEBHOOK", "").strip()
+        os.getenv("NOTE_DISCORD_WEBHOOK", "").strip()
         or os.getenv("DISCORD_OPTION_WEBHOOK_URL", "").strip()
     )
     note_url = _note_url_from_result(result)
@@ -194,7 +182,7 @@ def _notify_discord_after_note(result: dict[str, Any], mode: str) -> dict[str, A
         print(f"   [警告] {status['error']}")
         return status
     if not webhook_url:
-        status["error"] = "NOTION2NOTE_DISCORD_WEBHOOK / DISCORD_OPTION_WEBHOOK_URL が未設定のためDiscord通知をスキップしました。"
+        status["error"] = "NOTE_DISCORD_WEBHOOK / DISCORD_OPTION_WEBHOOK_URL が未設定のためDiscord通知をスキップしました。"
         print(f"   [情報] {status['error']}")
         return status
 
@@ -242,8 +230,8 @@ def _post_to_note(
             body_image_uploads=body_image_uploads,
         )
 
-    original_discord_webhook = os.environ.get("NOTION2NOTE_DISCORD_WEBHOOK")
-    os.environ["NOTION2NOTE_DISCORD_WEBHOOK"] = ""
+    original_discord_webhook = os.environ.get("NOTE_DISCORD_WEBHOOK")
+    os.environ["NOTE_DISCORD_WEBHOOK"] = ""
     try:
         publisher = _load_module(
             "investment_dashboard_us_sector_note_publisher_runtime",
@@ -266,9 +254,9 @@ def _post_to_note(
         )
     finally:
         if original_discord_webhook is None:
-            os.environ.pop("NOTION2NOTE_DISCORD_WEBHOOK", None)
+            os.environ.pop("NOTE_DISCORD_WEBHOOK", None)
         else:
-            os.environ["NOTION2NOTE_DISCORD_WEBHOOK"] = original_discord_webhook
+            os.environ["NOTE_DISCORD_WEBHOOK"] = original_discord_webhook
 
 
 def _find_free_port() -> int:
