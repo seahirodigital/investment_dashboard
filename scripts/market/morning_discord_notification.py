@@ -33,6 +33,7 @@ FINVIZ_URL = "https://finviz.com/map"
 FINVIZ_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=d1"
 FINVIZ_WEEKLY_RENDER_URL = "https://finviz.com/map.ashx?t=sec&st=w1"
 SOX_URL = "https://www.tradingview.com/symbols/NASDAQ-SOX/"
+FEDWATCH_URL = "https://www.cmegroup.com/ja/markets/interest-rates/cme-fedwatch-tool.html"
 ADR_URL = "https://nikkei225jp.com/adr/"
 BASE_DIR = Path(__file__).resolve().parents[2]
 US_FUND_FLOW_MESSAGE = "\n".join(
@@ -397,6 +398,91 @@ def _capture_sox_index(page, output_dir: Path) -> Path:
     return screenshot_path
 
 
+def _find_fedwatch_frame(page):
+    for _ in range(60):
+        for frame in page.frames:
+            try:
+                probabilities = frame.get_by_text("Probabilities", exact=True).first
+                if probabilities.is_visible(timeout=500):
+                    return frame, probabilities
+            except Exception:
+                continue
+        page.wait_for_timeout(1000)
+    raise RuntimeError("FedWatchのProbabilitiesメニューが見つかりませんでした。")
+
+
+def _fedwatch_table_handle(frame, heading_text: str):
+    heading = frame.get_by_text(heading_text, exact=False).first
+    heading.wait_for(state="visible", timeout=30000)
+    heading_handle = heading.element_handle()
+    if heading_handle is None:
+        raise RuntimeError(f"FedWatchの表見出しが見つかりませんでした: {heading_text}")
+
+    region_handle = frame.evaluate_handle(
+        """(heading) => {
+          const table = heading.closest('table');
+          if (table) return table;
+
+          for (
+            let element = heading.parentElement;
+            element && element !== document.body;
+            element = element.parentElement
+          ) {
+            const rect = element.getBoundingClientRect();
+            if (rect.width >= 500 && rect.height >= 100 && rect.height <= 900) {
+              return element;
+            }
+          }
+          return null;
+        }""",
+        heading_handle,
+    )
+    region = region_handle.as_element()
+    if region is None:
+        raise RuntimeError(f"FedWatchの表領域が見つかりませんでした: {heading_text}")
+    return region
+
+
+def _capture_fedwatch_probabilities(page, output_dir: Path) -> Path:
+    screenshot_path = output_dir / "fedwatch_probabilities.png"
+    page.set_viewport_size({"width": 2048, "height": 1600})
+    page.goto(FEDWATCH_URL, wait_until="domcontentloaded", timeout=120000)
+    page.wait_for_timeout(15000)
+    _dismiss_consent_and_overlays(page)
+
+    frame, probabilities = _find_fedwatch_frame(page)
+    try:
+        frame.frame_element().scroll_into_view_if_needed(timeout=10000)
+    except Exception:
+        pass
+    probabilities.click(timeout=15000)
+    page.wait_for_timeout(5000)
+
+    futures_table = _fedwatch_table_handle(frame, "FED FUND FUTURES")
+    probabilities_table = _fedwatch_table_handle(
+        frame,
+        "CME FEDWATCH TOOL - CONDITIONAL MEETING PROBABILITIES",
+    )
+    futures_table.scroll_into_view_if_needed(timeout=10000)
+    probabilities_table.scroll_into_view_if_needed(timeout=10000)
+    page.wait_for_timeout(1000)
+
+    futures_box = futures_table.bounding_box()
+    probabilities_box = probabilities_table.bounding_box()
+    if not futures_box or not probabilities_box:
+        raise RuntimeError("FedWatchの表領域を測定できませんでした。")
+
+    clip = _page_clip_from_boxes(
+        page,
+        [futures_box, probabilities_box],
+        padding=18,
+    )
+    page.screenshot(path=str(screenshot_path), clip=clip)
+    if not screenshot_path.exists() or screenshot_path.stat().st_size == 0:
+        raise RuntimeError(f"FedWatch画像を生成できませんでした: {screenshot_path}")
+    return screenshot_path
+
+
 def _capture_adr_major_movers(page, output_dir: Path) -> Path:
     screenshot_path = output_dir / "adr_major_movers.png"
     page.set_viewport_size({"width": 1200, "height": 1600})
@@ -460,6 +546,9 @@ def _build_message(
             "SOX指数",
             SOX_URL,
             "",
+            "Fed Watch (Probabilities)",
+            FEDWATCH_URL,
+            "",
             "ADR株価 主要銘柄 変動率",
             ADR_URL,
             "",
@@ -506,6 +595,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             nikkei_vi_value, nikkei_vi_path = _capture_nikkei_vi(page, output_dir)
             finviz_path = _capture_finviz_heatmap(page, output_dir)
             sox_path = _capture_sox_index(page, output_dir)
+            fedwatch_path = _capture_fedwatch_probabilities(page, output_dir)
             adr_path = _capture_adr_major_movers(page, output_dir)
         finally:
             context.close()
@@ -528,6 +618,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             "nikkei_vi": NIKKEI_WEEK_URL,
             "finviz": FINVIZ_URL,
             "sox": SOX_URL,
+            "fedwatch": FEDWATCH_URL,
             "adr": ADR_URL,
         },
         "screenshots": [
@@ -538,6 +629,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
                 fear_greed_path,
                 nikkei_vi_path,
                 sox_path,
+                fedwatch_path,
                 adr_path,
             ]
             if path is not None
@@ -561,6 +653,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
                 fear_greed_path,
                 nikkei_vi_path,
                 sox_path,
+                fedwatch_path,
                 adr_path,
             ]
             if path is not None
