@@ -95,6 +95,8 @@ jobs:
         env:
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
           MOOVIEW_CAPTURE_DIR: artifacts/oci_mooview_capture
+          # GitHub ActionsではADRサイトのCloudflare検証画面になるため、取得を停止する。
+          ADR_CAPTURE_ENABLED: '0'
         run: python scripts/market/morning_discord_notification.py --send --keep-output --output-dir artifacts/morning_market_notification
 
       - name: 米国ETFデータを更新

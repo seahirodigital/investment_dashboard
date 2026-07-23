@@ -437,10 +437,28 @@ def _capture_adr_major_movers(page, output_dir: Path) -> Path:
     return screenshot_path
 
 
+def _is_adr_capture_enabled() -> bool:
+    value = os.environ.get("ADR_CAPTURE_ENABLED", "1").strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def _capture_adr_major_movers_if_enabled(
+    page,
+    output_dir: Path,
+    *,
+    enabled: bool,
+) -> Path | None:
+    if not enabled:
+        print("[情報] ADR主要銘柄変動率画像の取得は無効です。")
+        return None
+    return _capture_adr_major_movers(page, output_dir)
+
+
 def _build_message(
     fear_greed_value: str,
     nikkei_vi_value: str,
     include_fund_flow: bool = False,
+    include_adr: bool = True,
 ) -> str:
     lines = [
         f"Feaar % Greed Index：{fear_greed_value}",
@@ -455,18 +473,10 @@ def _build_message(
     ]
     if include_fund_flow:
         lines.extend([US_FUND_FLOW_MESSAGE, ""])
-    lines.extend(
-        [
-            "SOX指数",
-            SOX_URL,
-            "",
-            "ADR株価 主要銘柄 変動率",
-            ADR_URL,
-            "",
-            "#デイトレ #米国株 #日本株 #日経平均 #FX  #CFD ",
-            "",
-        ]
-    )
+    lines.extend(["SOX指数", SOX_URL, ""])
+    if include_adr:
+        lines.extend(["ADR株価 主要銘柄 変動率", ADR_URL, ""])
+    lines.extend(["#デイトレ #米国株 #日本株 #日経平均 #FX  #CFD ", ""])
     return "\n".join(lines)
 
 
@@ -490,6 +500,7 @@ def _resolve_mooview_us_image() -> Path | None:
 
 def build_snapshot(output_dir: Path) -> MarketSnapshot:
     output_dir.mkdir(parents=True, exist_ok=True)
+    adr_capture_enabled = _is_adr_capture_enabled()
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -506,7 +517,11 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             nikkei_vi_value, nikkei_vi_path = _capture_nikkei_vi(page, output_dir)
             finviz_path = _capture_finviz_heatmap(page, output_dir)
             sox_path = _capture_sox_index(page, output_dir)
-            adr_path = _capture_adr_major_movers(page, output_dir)
+            adr_path = _capture_adr_major_movers_if_enabled(
+                page,
+                output_dir,
+                enabled=adr_capture_enabled,
+            )
         finally:
             context.close()
             browser.close()
@@ -516,6 +531,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
         fear_greed_value,
         nikkei_vi_value,
         include_fund_flow=mooview_us_path is not None,
+        include_adr=adr_capture_enabled,
     )
     message_path = output_dir / "discord_message.txt"
     message_path.write_text(message, encoding="utf-8")
