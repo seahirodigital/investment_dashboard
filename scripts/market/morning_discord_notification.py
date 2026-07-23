@@ -402,29 +402,42 @@ def _capture_adr_major_movers(page, output_dir: Path) -> Path:
     page.set_viewport_size({"width": 1200, "height": 1600})
     page.goto(ADR_URL, wait_until="domcontentloaded", timeout=90000)
     page.wait_for_timeout(10000)
-    page.wait_for_function(
-        """() => Array.from(document.querySelectorAll('table.tbl')).some((table) => {
+    adr_table_markers = [
+        "ADR株価 主要銘柄 変動率",
+        "5%以上変動",
+        "3%以上変動",
+        "1%以上変動",
+    ]
+    try:
+        page.wait_for_function(
+            """(markers) => Array.from(document.querySelectorAll('table.tbl')).some((table) => {
           const text = (table.innerText || table.textContent || '').replace(/\s+/g, ' ');
-          return text.includes('ADR株価')
-            && text.includes('主要銘柄')
-            && text.includes('5%');
+          return markers.every((marker) => text.includes(marker));
         })""",
-        timeout=30000,
-    )
+            arg=adr_table_markers,
+            timeout=30000,
+        )
+    except PlaywrightTimeoutError as exc:
+        page_title = page.title().strip()
+        body_text = page.locator("body").inner_text(timeout=8000)
+        body_excerpt = re.sub(r"\s+", " ", body_text).strip()[:300]
+        raise RuntimeError(
+            "ADR主要銘柄変動率テーブルが表示されませんでした。"
+            f" title={page_title!r} body={body_excerpt!r}"
+        ) from exc
     table_handle = page.evaluate_handle(
-        """() => {
+        """(markers) => {
           const tables = Array.from(document.querySelectorAll('table.tbl')).filter((table) => {
             const text = (table.innerText || table.textContent || '').replace(/\s+/g, ' ');
-            return text.includes('ADR株価')
-              && text.includes('主要銘柄')
-              && text.includes('5%');
+            return markers.every((marker) => text.includes(marker));
           });
           return tables.sort((a, b) => {
             const ar = a.getBoundingClientRect();
             const br = b.getBoundingClientRect();
             return (ar.width * ar.height) - (br.width * br.height);
           })[0] || null;
-        }"""
+        }""",
+        adr_table_markers,
     )
     table = table_handle.as_element()
     if table is None:
@@ -435,6 +448,18 @@ def _capture_adr_major_movers(page, output_dir: Path) -> Path:
     if not screenshot_path.exists() or screenshot_path.stat().st_size == 0:
         raise RuntimeError(f"ADR主要銘柄変動率画像を生成できませんでした: {screenshot_path}")
     return screenshot_path
+
+
+def _capture_adr_major_movers_or_none(page, output_dir: Path) -> Path | None:
+    try:
+        return _capture_adr_major_movers(page, output_dir)
+    except Exception as exc:
+        print(
+            "[警告] ADR主要銘柄変動率画像を添付せずに通知を続行します: "
+            f"{type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return None
 
 
 def _build_message(
@@ -506,7 +531,7 @@ def build_snapshot(output_dir: Path) -> MarketSnapshot:
             nikkei_vi_value, nikkei_vi_path = _capture_nikkei_vi(page, output_dir)
             finviz_path = _capture_finviz_heatmap(page, output_dir)
             sox_path = _capture_sox_index(page, output_dir)
-            adr_path = _capture_adr_major_movers(page, output_dir)
+            adr_path = _capture_adr_major_movers_or_none(page, output_dir)
         finally:
             context.close()
             browser.close()
