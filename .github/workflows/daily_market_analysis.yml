@@ -100,6 +100,7 @@ jobs:
 
       - name: Tailscale経由でOCIへ接続
         if: ${{ steps.weekday.outputs.is_weekday == 'true' && (github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip') }}
+        continue-on-error: true
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -155,7 +156,7 @@ jobs:
 
       # ── Step 2: Gemini 分析 + note投稿 ─
       - name: Run Gemini market analysis or note-only debug
-        if: ${{ steps.weekday.outputs.is_weekday == 'true' }}
+        if: ${{ !cancelled() && steps.weekday.outputs.is_weekday == 'true' }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
@@ -194,7 +195,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: note-blog-generated-${{ github.run_id }}
-          path: note/generated
+          path: |
+            note/generated
+            note/note_publisher/debug/note_gazo_test/artifacts
           if-no-files-found: ignore
           retention-days: 7
 

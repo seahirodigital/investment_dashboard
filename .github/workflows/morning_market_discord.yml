@@ -71,6 +71,7 @@ jobs:
           python -c "from playwright.sync_api import sync_playwright; pw = sync_playwright().start(); browser = pw.chromium.launch(); browser.close(); pw.stop(); print('Playwright Chromium の起動確認 OK')"
 
       - name: Tailscale経由でOCIへ接続
+        continue-on-error: true
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -106,7 +107,7 @@ jobs:
         run: python scripts/market/etf_data_manager.py
 
       - name: 米国株セクターnote記事を投稿
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip' }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event.inputs.note_post_mode != 'skip') }}
         env:
           DISCORD_OPTION_WEBHOOK_URL: ${{ secrets.DISCORD_OPTION_WEBHOOK_URL }}
           NOTE_POST_MODE: ${{ github.event_name == 'schedule' && 'publish' || github.event.inputs.note_post_mode }}
@@ -137,5 +138,6 @@ jobs:
           path: |
             artifacts/morning_market_notification
             note/generated/us_sector
+            note/note_publisher/debug/note_gazo_test/artifacts
           if-no-files-found: ignore
           retention-days: 7

@@ -624,15 +624,64 @@ def _dump_upload_retry_artifacts(page, artifacts_dir: Path | None, stem: str) ->
     _write_control_snapshot(artifacts_dir / f"{stem}_controls.json", page)
 
 
-def _click_top_image_button(page) -> str:
-    return _click_visible_candidate(
-        page,
-        candidates=[
-            ("button[aria-label='画像を追加']", page.locator(TOP_IMAGE_BUTTON_SELECTOR)),
-            ("button[aria-label*='画像']", page.locator("button[aria-label*='画像']")),
-        ],
-        description="トップ画像ボタン",
+def _click_top_image_button(page, artifacts_dir: Path | None = None) -> str:
+    """noteのUI差分を吸収しながらトップ画像ボタンを開く。"""
+    name_pattern = re.compile(
+        r"画像\s*を?\s*追加|見出し画像|トップ画像|カバー画像|サムネイル画像|アイキャッチ"
     )
+    errors = []
+
+    for attempt in range(1, 4):
+        try:
+            page.keyboard.press("Escape")
+        except Exception:
+            pass
+        try:
+            page.evaluate(
+                """() => {
+                  window.scrollTo(0, 0);
+                  if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+                }"""
+            )
+        except Exception:
+            pass
+        page.wait_for_timeout(800)
+
+        try:
+            strategy = _click_visible_candidate(
+                page,
+                candidates=[
+                    ("button[aria-label='画像を追加']", page.locator(TOP_IMAGE_BUTTON_SELECTOR)),
+                    (
+                        "role_button_top_image_name",
+                        page.get_by_role("button", name=name_pattern),
+                    ),
+                    (
+                        "clickable_aria_contains_image",
+                        page.locator("button[aria-label*='画像'], [role='button'][aria-label*='画像']"),
+                    ),
+                    (
+                        "clickable_title_contains_image",
+                        page.locator("button[title*='画像'], [role='button'][title*='画像']"),
+                    ),
+                    (
+                        "clickable_text_top_image",
+                        page.locator("button, [role='button']").filter(has_text=name_pattern),
+                    ),
+                ],
+                description="トップ画像ボタン",
+                timeout_ms=5000,
+            )
+            return f"attempt#{attempt}:{strategy}"
+        except Exception as exc:
+            errors.append(f"attempt#{attempt}={exc}")
+            _dump_upload_retry_artifacts(
+                page,
+                artifacts_dir,
+                f"top_image_button_attempt_{attempt}_failed",
+            )
+
+    raise RuntimeError(f"トップ画像ボタンを3回試しても特定できませんでした: {' / '.join(errors)}")
 
 
 def _choose_direct_upload_image_file(page, image_path: Path, artifacts_dir: Path | None = None) -> str:
@@ -3184,7 +3233,7 @@ def _attach_amazon_top_image_to_page(
     controls_before = _collect_control_snapshot(page)
     _write_json(artifacts_dir / "controls_before_top_image.json", controls_before)
 
-    image_button_strategy = _click_top_image_button(page)
+    image_button_strategy = _click_top_image_button(page, artifacts_dir=artifacts_dir)
     _dump_page_artifacts(page, artifacts_dir, "top_image_menu_open")
 
     selected_upload_image, selected_upload_kind = _select_note_top_image_for_upload(fetch_result)
@@ -3209,7 +3258,7 @@ def _attach_amazon_top_image_to_page(
             if not _wait_for_editor_content(page, timeout_sec=EDITOR_LOAD_TIMEOUT_SEC):
                 raise RuntimeError("Adobe Express 失敗後のエディタ再読込に失敗しました。")
             before_count = _count_page_images(page)
-            image_button_strategy = _click_top_image_button(page)
+            image_button_strategy = _click_top_image_button(page, artifacts_dir=artifacts_dir)
             _dump_page_artifacts(page, artifacts_dir, "top_image_menu_reopen_after_adobe_failure")
             flow_result = _run_direct_note_image_upload(
                 page,
@@ -3283,7 +3332,7 @@ def _attach_local_top_image_to_page(
     controls_before = _collect_control_snapshot(page)
     _write_json(artifacts_dir / "controls_before_top_image.json", controls_before)
 
-    image_button_strategy = _click_top_image_button(page)
+    image_button_strategy = _click_top_image_button(page, artifacts_dir=artifacts_dir)
     _dump_page_artifacts(page, artifacts_dir, "top_image_menu_open")
     flow_result = _run_direct_note_image_upload(
         page,
@@ -3738,26 +3787,7 @@ def _run_ogp_expansion_on_draft(
         print("   ⏳ OGP反映待機（5秒）...")
         page.wait_for_timeout(5000)
 
-        if insert_toc:
-            try:
-                result["toc"] = _insert_table_of_contents(page, source_markdown=source_markdown)
-            except Exception as e:
-                result["toc"] = {"success": False, "strategy": f"error: {e}"}
-                print(f"   ⚠️ 目次挿入エラー: {e}")
-        else:
-            result["toc"] = {"success": False, "strategy": "skipped_by_option"}
-            print("   ⏭️ 目次挿入はオプション指定によりスキップします")
-
-        try:
-            result["body_images"] = _attach_body_images_to_page(
-                page,
-                body_image_uploads=body_image_uploads,
-                artifacts_dir=artifacts_dir,
-            )
-        except Exception as e:
-            result["body_images"] = {"success": False, "error": str(e)}
-            print(f"   ⚠️ 本文画像添付エラー: {e}")
-
+        # 公開の必須条件であるトップ画像を、任意の目次・本文画像より先に確定する。
         if run_top_image:
             if top_image_path:
                 top_image_result = _attach_local_top_image_to_page(
@@ -3777,6 +3807,29 @@ def _run_ogp_expansion_on_draft(
             top_image_result = {"image_flow": "skipped_by_option"}
             print("   ⏭️ Amazonトップ画像はオプション指定によりスキップします")
         result["top_image"] = top_image_result
+
+        if publish_after and top_image_result.get("image_flow") in {"skipped", "skipped_by_option"}:
+            raise RuntimeError("トップ画像を設定できないため、トップ画像なしの公開投稿は実行しません。")
+
+        if insert_toc:
+            try:
+                result["toc"] = _insert_table_of_contents(page, source_markdown=source_markdown)
+            except Exception as e:
+                result["toc"] = {"success": False, "strategy": f"error: {e}"}
+                print(f"   ⚠️ 目次挿入エラー（公開処理は続行）: {e}")
+        else:
+            result["toc"] = {"success": False, "strategy": "skipped_by_option"}
+            print("   ⏭️ 目次挿入はオプション指定によりスキップします")
+
+        try:
+            result["body_images"] = _attach_body_images_to_page(
+                page,
+                body_image_uploads=body_image_uploads,
+                artifacts_dir=artifacts_dir,
+            )
+        except Exception as e:
+            result["body_images"] = {"success": False, "error": str(e)}
+            print(f"   ⚠️ 本文画像添付エラー（公開処理は続行）: {e}")
 
         if top_image_result.get("image_flow") in {"skipped", "skipped_by_option"}:
             print("   💾 トップ画像スキップのため Ctrl+S で保存を要求します...")

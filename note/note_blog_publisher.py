@@ -1263,7 +1263,18 @@ def publish_note_blog(
             weekly_assets = {"images": weekly_images}
         else:
             print("   [情報] 木曜用の海外投資家動向・財務省・セクター別感応度画像を生成します")
-            weekly_assets = capture_weekly_investor_assets(image_dir, dashed_date)
+            try:
+                weekly_assets = capture_weekly_investor_assets(image_dir, dashed_date)
+            except Exception as exc:
+                completed_images = [path for path in weekly_images if path.exists()]
+                weekly_assets = {
+                    "images": completed_images,
+                    "capture_error": str(exc),
+                }
+                print(
+                    "   [警告] 木曜用の追加画像生成に失敗しましたが、"
+                    f"生成済み{len(completed_images)}枚を使用してnote公開処理を続行します: {exc}"
+                )
 
     if reuse_assets and (image_dir / "01_sector_full_ranking.png").exists():
         sector_assets = {
