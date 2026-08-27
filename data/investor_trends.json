@@ -1,7 +1,7 @@
 {
-  "updated_at": "2026-08-06T19:57:11+09:00",
+  "updated_at": "2026-08-28T04:08:43+09:00",
   "source": "https://nikkei225jp.com/data/shutai.php",
-  "row_count": 46,
+  "row_count": 49,
   "rows": [
     {
       "date": "2025/09/19",
@@ -738,6 +738,54 @@
       "trustBank": -318290,
       "insurance": -10195,
       "cityBank": -17006
+    },
+    {
+      "date": "2026/08/07",
+      "nikkei": 65606.71,
+      "change": "▲1.93%",
+      "foreign": -382782,
+      "proprietary": -438432,
+      "individual": -156673,
+      "individual_cash": -336016,
+      "individual_margin": 179343,
+      "trust": -78148,
+      "business": 1088258,
+      "other": -41127,
+      "trustBank": 169744,
+      "insurance": -37499,
+      "cityBank": -24751
+    },
+    {
+      "date": "2026/08/14",
+      "nikkei": 68713.8,
+      "change": "▲4.74%",
+      "foreign": 213469,
+      "proprietary": 465438,
+      "individual": -655795,
+      "individual_cash": -612259,
+      "individual_margin": -43536,
+      "trust": 25582,
+      "business": 257824,
+      "other": -28207,
+      "trustBank": -82399,
+      "insurance": -30521,
+      "cityBank": -9337
+    },
+    {
+      "date": "2026/08/21",
+      "nikkei": 66016.36,
+      "change": "▼3.93%",
+      "foreign": -437811,
+      "proprietary": 147435,
+      "individual": 697751,
+      "individual_cash": 209167,
+      "individual_margin": 488583,
+      "trust": -63912,
+      "business": 177768,
+      "other": 12790,
+      "trustBank": -508289,
+      "insurance": -25149,
+      "cityBank": -38989
     }
   ]
 }
