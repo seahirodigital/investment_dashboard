@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-27T17:39:21+09:00",
+  "generated_at": "2026-09-03T12:56:23+09:00",
   "source": "https://www.mof.go.jp/policy/international_policy/reference/itn_transactions_in_securities/week.csv",
   "unit": "億円",
   "description": "対内証券投資 株式・投資ファンド持分 ネット（非居住者による日本株売買ネット）",
-  "total_records": 1129,
+  "total_records": 1130,
   "data": [
     {
       "date": "2005-01-08",
@@ -5647,8 +5647,13 @@
     },
     {
       "date": "2026-08-22",
-      "value": -7641,
+      "value": -7634,
       "period": "2026．8．16～8．22"
+    },
+    {
+      "date": "2026-08-29",
+      "value": 358,
+      "period": "2026．8．23～8．29"
     }
   ]
 }
