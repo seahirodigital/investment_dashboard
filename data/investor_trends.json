@@ -1,7 +1,7 @@
 {
-  "updated_at": "2026-09-10T21:57:56+09:00",
+  "updated_at": "2026-09-17T22:34:23+09:00",
   "source": "https://nikkei225jp.com/data/shutai.php",
-  "row_count": 51,
+  "row_count": 52,
   "rows": [
     {
       "date": "2025/09/19",
@@ -358,7 +358,7 @@
     {
       "date": "2026/02/20",
       "nikkei": 56825.7,
-      "change": "▼0.20%",
+      "change": "▼\n0.20\n%",
       "foreign": 542667,
       "proprietary": 75017,
       "individual": 546619,
@@ -374,7 +374,7 @@
     {
       "date": "2026/02/27",
       "nikkei": 58850.27,
-      "change": "▲3.56%",
+      "change": "▲\n3.56\n%",
       "foreign": 791073,
       "proprietary": 904729,
       "individual": -460478,
@@ -390,7 +390,7 @@
     {
       "date": "2026/03/06",
       "nikkei": 55620.84,
-      "change": "▼5.49%",
+      "change": "▼\n5.49\n%",
       "foreign": 237787,
       "proprietary": -196341,
       "individual": 832943,
@@ -406,7 +406,7 @@
     {
       "date": "2026/03/13",
       "nikkei": 53819.61,
-      "change": "▼3.24%",
+      "change": "▼\n3.24\n%",
       "foreign": -490671,
       "proprietary": 151137,
       "individual": 426723,
@@ -422,7 +422,7 @@
     {
       "date": "2026/03/19",
       "nikkei": 53372.53,
-      "change": "▼0.83%",
+      "change": "▼\n0.83\n%",
       "foreign": -519110,
       "proprietary": 457557,
       "individual": 338398,
@@ -438,7 +438,7 @@
     {
       "date": "2026/03/27",
       "nikkei": 53373.07,
-      "change": "0.00%",
+      "change": "−\n0.00\n%",
       "foreign": -1509050,
       "proprietary": 1276717,
       "individual": -14577,
@@ -454,7 +454,7 @@
     {
       "date": "2026/04/03",
       "nikkei": 53123.49,
-      "change": "▼0.47%",
+      "change": "▼\n0.47\n%",
       "foreign": 1914989,
       "proprietary": -1598428,
       "individual": -439610,
@@ -470,7 +470,7 @@
     {
       "date": "2026/04/10",
       "nikkei": 56924.11,
-      "change": "▲7.15%",
+      "change": "▲\n7.15\n%",
       "foreign": 1641896,
       "proprietary": -539704,
       "individual": -787112,
@@ -486,7 +486,7 @@
     {
       "date": "2026/04/17",
       "nikkei": 58475.9,
-      "change": "▲2.73%",
+      "change": "▲\n2.73\n%",
       "foreign": 997724,
       "proprietary": -963305,
       "individual": 330296,
@@ -502,7 +502,7 @@
     {
       "date": "2026/04/24",
       "nikkei": 59716.18,
-      "change": "▲2.12%",
+      "change": "▲\n2.12\n%",
       "foreign": 784212,
       "proprietary": -838597,
       "individual": 161761,
@@ -518,7 +518,7 @@
     {
       "date": "2026/05/01",
       "nikkei": 59513.12,
-      "change": "▼0.34%",
+      "change": "▼\n0.34\n%",
       "foreign": 357635,
       "proprietary": -905706,
       "individual": 303372,
@@ -534,7 +534,7 @@
     {
       "date": "2026/05/08",
       "nikkei": 62713.65,
-      "change": "▲5.38%",
+      "change": "▲\n5.38\n%",
       "foreign": 1235128,
       "proprietary": -278752,
       "individual": -497892,
@@ -550,7 +550,7 @@
     {
       "date": "2026/05/15",
       "nikkei": 61409.29,
-      "change": "▼2.08%",
+      "change": "▼\n2.08\n%",
       "foreign": 557282,
       "proprietary": -498259,
       "individual": 172002,
@@ -566,7 +566,7 @@
     {
       "date": "2026/05/22",
       "nikkei": 63339.07,
-      "change": "▲3.14%",
+      "change": "▲\n3.14\n%",
       "foreign": 460912,
       "proprietary": -296857,
       "individual": -140288,
@@ -582,7 +582,7 @@
     {
       "date": "2026/05/29",
       "nikkei": 66329.5,
-      "change": "▲4.72%",
+      "change": "▲\n4.72\n%",
       "foreign": -395271,
       "proprietary": -268096,
       "individual": 105717,
@@ -598,7 +598,7 @@
     {
       "date": "2026/06/05",
       "nikkei": 66588.12,
-      "change": "▲0.39%",
+      "change": "▲\n0.39\n%",
       "foreign": -80974,
       "proprietary": -480746,
       "individual": 308114,
@@ -614,7 +614,7 @@
     {
       "date": "2026/06/12",
       "nikkei": 66020.04,
-      "change": "▼0.85%",
+      "change": "▼\n0.85\n%",
       "foreign": -507432,
       "proprietary": 587480,
       "individual": -501017,
@@ -630,7 +630,7 @@
     {
       "date": "2026/06/19",
       "nikkei": 71250.06,
-      "change": "▲7.92%",
+      "change": "▲\n7.92\n%",
       "foreign": 1056277,
       "proprietary": -3519,
       "individual": -446997,
@@ -646,7 +646,7 @@
     {
       "date": "2026/06/26",
       "nikkei": 69360.88,
-      "change": "▼2.65%",
+      "change": "▼\n2.65\n%",
       "foreign": -1237822,
       "proprietary": 290885,
       "individual": 950368,
@@ -662,7 +662,7 @@
     {
       "date": "2026/07/03",
       "nikkei": 69744.07,
-      "change": "▲0.55%",
+      "change": "▲\n0.55\n%",
       "foreign": 366243,
       "proprietary": 56192,
       "individual": -636850,
@@ -678,7 +678,7 @@
     {
       "date": "2026/07/10",
       "nikkei": 68557.73,
-      "change": "▼1.70%",
+      "change": "▼\n1.70\n%",
       "foreign": 492966,
       "proprietary": -42026,
       "individual": -63791,
@@ -694,7 +694,7 @@
     {
       "date": "2026/07/17",
       "nikkei": 64141.12,
-      "change": "▼6.44%",
+      "change": "▼\n6.44\n%",
       "foreign": -286302,
       "proprietary": -117133,
       "individual": 407479,
@@ -710,7 +710,7 @@
     {
       "date": "2026/07/24",
       "nikkei": 64611.15,
-      "change": "▲0.73%",
+      "change": "▲\n0.73\n%",
       "foreign": 351462,
       "proprietary": -148864,
       "individual": -456810,
@@ -726,7 +726,7 @@
     {
       "date": "2026/07/31",
       "nikkei": 64362.02,
-      "change": "▼0.39%",
+      "change": "▼\n0.39\n%",
       "foreign": -492156,
       "proprietary": 938842,
       "individual": -416736,
@@ -742,7 +742,7 @@
     {
       "date": "2026/08/07",
       "nikkei": 65606.71,
-      "change": "▲1.93%",
+      "change": "▲\n1.93\n%",
       "foreign": -382782,
       "proprietary": -438432,
       "individual": -156673,
@@ -758,7 +758,7 @@
     {
       "date": "2026/08/14",
       "nikkei": 68713.8,
-      "change": "▲4.74%",
+      "change": "▲\n4.74\n%",
       "foreign": 213469,
       "proprietary": 465438,
       "individual": -655795,
@@ -774,7 +774,7 @@
     {
       "date": "2026/08/21",
       "nikkei": 66016.36,
-      "change": "▼3.93%",
+      "change": "▼\n3.93\n%",
       "foreign": -437811,
       "proprietary": 147435,
       "individual": 697751,
@@ -790,7 +790,7 @@
     {
       "date": "2026/08/28",
       "nikkei": 66405.56,
-      "change": "▲0.59%",
+      "change": "▲\n0.59\n%",
       "foreign": -131939,
       "proprietary": 316646,
       "individual": -115575,
@@ -806,7 +806,7 @@
     {
       "date": "2026/09/04",
       "nikkei": 65020.94,
-      "change": "▼2.09%",
+      "change": "▼\n2.09\n%",
       "foreign": 689343,
       "proprietary": -82187,
       "individual": -1868,
@@ -818,6 +818,22 @@
       "trustBank": -446922,
       "insurance": -48350,
       "cityBank": -32214
+    },
+    {
+      "date": "2026/09/11",
+      "nikkei": 64011.34,
+      "change": "▼\n1.55\n%",
+      "foreign": -303683,
+      "proprietary": 315078,
+      "individual": 449139,
+      "individual_cash": 74775,
+      "individual_margin": 374363,
+      "trust": 84480,
+      "business": 67377,
+      "other": 13890,
+      "trustBank": -550671,
+      "insurance": -58584,
+      "cityBank": -38568
     }
   ]
 }
