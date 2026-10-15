@@ -1,7 +1,7 @@
 {
-  "updated_at": "2026-10-02T00:30:14+09:00",
+  "updated_at": "2026-10-15T22:30:59+09:00",
   "source": "https://nikkei225jp.com/data/shutai.php",
-  "row_count": 54,
+  "row_count": 55,
   "rows": [
     {
       "date": "2025/09/19",
@@ -866,6 +866,22 @@
       "trustBank": -367301,
       "insurance": -21899,
       "cityBank": -23063
+    },
+    {
+      "date": "2026/10/02",
+      "nikkei": 68309.46,
+      "change": "▲\n2.93\n%",
+      "foreign": 955912,
+      "proprietary": -1222573,
+      "individual": 222928,
+      "individual_cash": 53284,
+      "individual_margin": 169644,
+      "trust": -14320,
+      "business": -52816,
+      "other": 13154,
+      "trustBank": 176425,
+      "insurance": -34564,
+      "cityBank": -23355
     }
   ]
 }
