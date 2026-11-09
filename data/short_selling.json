@@ -1,15 +1,6 @@
 {
   "data": [
     {
-      "date": "2026-11-09",
-      "genbutsu_uri": 6229929,
-      "karauri": 3468399,
-      "karauri_kiseiari": 2724613,
-      "karauri_free": 743786,
-      "total": 9698328,
-      "karauri_ratio": 0.3576
-    },
-    {
       "date": "2026-11-06",
       "genbutsu_uri": 8881346,
       "karauri": 4841639,
@@ -3709,6 +3700,6 @@
       "karauri_ratio": 0.3918
     }
   ],
-  "generated_at": "2026-11-09T18:40:05",
-  "generated_at_jst": "2026-11-09 18:40 JST"
+  "generated_at": "2026-11-06T15:51:43",
+  "generated_at_jst": "2026-11-06 15:51 JST"
 }
