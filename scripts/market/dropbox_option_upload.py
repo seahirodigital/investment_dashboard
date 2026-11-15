@@ -46,9 +46,9 @@ def upload_option_report(report_text, date_string, environ=None, session=request
             description = ""
         if error_code not in {"invalid_request", "invalid_client", "invalid_grant", "unauthorized_client", "unsupported_grant_type", "invalid_scope"}:
             error_code = "unknown"
-        known_descriptions = {"refresh token is malformed", "refresh token is invalid", "refresh token is expired", "invalid refresh token", "invalid client_id", "invalid client_secret"}
-        description = description if description in known_descriptions else "非公開"
-        raise RuntimeError(f"Dropbox認証に失敗しました: HTTP {token_response.status_code}, error={error_code}, 詳細={description}")
+        description = str(description).lower()
+        categories = [word for word in ("malformed", "expired", "revoked", "invalid", "mismatch", "not found", "app key", "refresh token") if word in description]
+        raise RuntimeError(f"Dropbox認証に失敗しました: HTTP {token_response.status_code}, error={error_code}, 分類={categories}")
     token = token_response.json().get("access_token")
     if not token:
         raise RuntimeError("Dropbox認証応答にアクセストークンがありません")
