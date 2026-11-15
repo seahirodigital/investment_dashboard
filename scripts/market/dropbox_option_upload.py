@@ -20,7 +20,8 @@ def content_hash(data):
 def upload_option_report(report_text, date_string, environ=None, session=requests):
     environ = os.environ if environ is None else environ
     keys = ("DROPBOX_APP_KEY", "DROPBOX_APP_SECRET", "DROPBOX_REFRESH_TOKEN")
-    missing = [key for key in keys if not environ.get(key)]
+    credentials = {key: environ.get(key, "").strip() for key in keys}
+    missing = [key for key in keys if not credentials[key]]
     if missing:
         raise RuntimeError(f"Dropbox認証のGitHub Secretsが未設定です: {', '.join(missing)}")
     compact = date_string.replace("-", "")
@@ -31,8 +32,8 @@ def upload_option_report(report_text, date_string, environ=None, session=request
         raise ValueError("Dropboxに保存する分析結果が空です")
     token_response = session.post(
         "https://api.dropboxapi.com/oauth2/token",
-        data={"grant_type": "refresh_token", "refresh_token": environ["DROPBOX_REFRESH_TOKEN"]},
-        auth=(environ["DROPBOX_APP_KEY"], environ["DROPBOX_APP_SECRET"]),
+        data={"grant_type": "refresh_token", "refresh_token": credentials["DROPBOX_REFRESH_TOKEN"]},
+        auth=(credentials["DROPBOX_APP_KEY"], credentials["DROPBOX_APP_SECRET"]),
         timeout=30,
     )
     if not token_response.ok:
