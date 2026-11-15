@@ -30,4 +30,4 @@ jobs:
           DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
           DROPBOX_OPTION_DIRECTORY: /アプリ/remotely-save/Obsidian4dropbox/10_investment_insight/100_daily/option
         run: |
-          python -c 'import sys; from pathlib import Path; sys.path.insert(0, "scripts/market"); from dropbox_option_upload import upload_option_report; p = Path("market_analysis/reports/20261113_daily_report.md"); upload_option_report(p.read_text(encoding="utf-8"), "2026-11-13")'
+          python scripts/market/check_dropbox_location.py
