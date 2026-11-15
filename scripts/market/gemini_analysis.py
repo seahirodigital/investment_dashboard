@@ -23,6 +23,7 @@ import time
 import requests
 from datetime import datetime, timezone, timedelta
 from jp_analysis_prices import build_summaries as build_jp_price_summaries, fetch_us_futures
+from dropbox_option_upload import upload_option_report
 
 # Windows CP932 環境での絵文字出力エラーを回避
 if sys.platform == "win32":
@@ -583,8 +584,23 @@ def main():
     discord_webhook_url = os.environ.get("DISCORD_OPTION_WEBHOOK_URL")
     send_discord_market_report(report_text, today_str, discord_webhook_url)
 
+    # Dropbox保存の成否とnote投稿をそれぞれ報告する。
+    dropbox_error = None
+    dropbox_keys = ("DROPBOX_APP_KEY", "DROPBOX_APP_SECRET", "DROPBOX_REFRESH_TOKEN")
+    if not any(os.environ.get(key) for key in dropbox_keys):
+        print("::warning::Dropbox認証情報が未設定のためDropboxへの保存は行われませんでした。", file=sys.stderr)
+    else:
+        try:
+            upload_option_report(report_text, today_str)
+        except Exception as exc:
+            dropbox_error = exc
+            print(f"❌ Dropbox保存失敗: {exc}", file=sys.stderr)
+
     # note投稿（Discord通知完了後に実行）
     run_note_post_process(report_text, today_str, args)
+
+    if dropbox_error:
+        raise RuntimeError("Dropbox保存に失敗しました") from dropbox_error
 
     print("🎉 市場分析完了")
 
