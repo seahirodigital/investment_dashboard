@@ -1,4 +1,4 @@
-name: Dropbox保存先のルート確認
+name: Dropboxアカウントのルート確認
 
 on:
   workflow_dispatch:
