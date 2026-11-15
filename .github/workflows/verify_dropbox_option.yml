@@ -1,4 +1,4 @@
-name: Dropbox分析レポートの実保存検証
+name: Dropbox保存先のルート確認
 
 on:
   workflow_dispatch:
