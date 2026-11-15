@@ -1,5 +1,6 @@
 """Dropbox APIのルートと指定済みファイルの存在を確認する。"""
 
+import json
 import os
 import requests
 
@@ -13,6 +14,17 @@ def main():
     )
     response.raise_for_status()
     headers = {"Authorization": "Bearer " + response.json()["access_token"]}
+    account = requests.post("https://api.dropboxapi.com/2/users/get_current_account", headers=headers, timeout=30)
+    if account.ok:
+        root_id = account.json().get("root_info", {}).get("root_namespace_id")
+        if root_id:
+            rooted_headers = dict(headers, **{"Dropbox-API-Path-Root": json.dumps({".tag": "root", "root": root_id})})
+            rooted = requests.post("https://api.dropboxapi.com/2/files/list_folder", headers=rooted_headers, json={"path": "", "limit": 100}, timeout=30)
+            print(f"アカウントルートへのアクセス: HTTP {rooted.status_code}")
+            if rooted.ok:
+                print("アカウントルートの項目数:", len(rooted.json().get("entries", [])))
+    else:
+        print(f"アカウントルート情報: HTTP {account.status_code}")
     result = requests.post("https://api.dropboxapi.com/2/files/list_folder", headers=headers, json={"path": "", "limit": 100}, timeout=30)
     if not result.ok:
         print(f"ルート一覧確認: HTTP {result.status_code}")
