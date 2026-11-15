@@ -61,7 +61,9 @@ def upload_option_report(report_text, date_string, environ=None, session=request
         timeout=60,
     )
     if not response.ok:
-        raise RuntimeError(f"Dropbox保存に失敗しました: HTTP {response.status_code}。保存先や同名ファイルを確認してください")
+        detail = response.text.lower()
+        categories = [word for word in ("path", "invalid", "malformed", "required", "restricted", "missing", "not_found", "conflict", "scope", "permission", "header", "json", "utf", "unicode", "content-type", "too_many") if word in detail]
+        raise RuntimeError(f"Dropbox保存に失敗しました: HTTP {response.status_code}, 分類={categories}")
     metadata = response.json()
     if metadata.get("content_hash") != content_hash(data):
         raise RuntimeError("Dropbox保存結果の内容ハッシュが一致しません")
