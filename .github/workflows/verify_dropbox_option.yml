@@ -1,4 +1,4 @@
-name: Dropboxアカウントのルート確認
+name: Dropbox指定フォルダへの保存検証
 
 on:
   workflow_dispatch:
@@ -23,11 +23,11 @@ jobs:
           python-version: '3.11'
       - name: 必要なライブラリを準備
         run: pip install requests
-      - name: 分析結果の指定保存先を検証
+      - name: 検証用フォルダに分析結果を保存
         env:
           DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
           DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
           DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
-          DROPBOX_OPTION_DIRECTORY: /アプリ/remotely-save/Obsidian4dropbox/10_investment_insight/100_daily/option
+          DROPBOX_OPTION_DIRECTORY: /アプリ/remotely-save/Obsidian4dropbox/10_investment_insight/100_daily/option/_verification
         run: |
-          python scripts/market/check_dropbox_location.py
+          python -c 'import sys; from pathlib import Path; sys.path.insert(0, "scripts/market"); from dropbox_option_upload import upload_option_report; p = Path("market_analysis/reports/20261113_daily_report.md"); upload_option_report(p.read_text(encoding="utf-8"), "2026-11-13")'
