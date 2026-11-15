@@ -36,7 +36,13 @@ def upload_option_report(report_text, date_string, environ=None, session=request
         timeout=30,
     )
     if not token_response.ok:
-        raise RuntimeError(f"Dropbox認証に失敗しました: HTTP {token_response.status_code}")
+        try:
+            error_code = token_response.json().get("error", "")
+        except ValueError:
+            error_code = ""
+        if error_code not in {"invalid_request", "invalid_client", "invalid_grant", "unauthorized_client", "unsupported_grant_type", "invalid_scope"}:
+            error_code = "unknown"
+        raise RuntimeError(f"Dropbox認証に失敗しました: HTTP {token_response.status_code}, error={error_code}")
     token = token_response.json().get("access_token")
     if not token:
         raise RuntimeError("Dropbox認証応答にアクセストークンがありません")
