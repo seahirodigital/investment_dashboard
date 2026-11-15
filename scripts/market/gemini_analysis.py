@@ -22,6 +22,7 @@ import sys
 import time
 import requests
 from datetime import datetime, timezone, timedelta
+from jp_analysis_prices import build_summaries as build_jp_price_summaries, fetch_us_futures
 
 # Windows CP932 環境での絵文字出力エラーを回避
 if sys.platform == "win32":
@@ -551,9 +552,15 @@ def main():
         print("❌ 必要なデータファイルが不足しています", file=sys.stderr)
         sys.exit(1)
 
-    # データを軽量化（トークン節約：生データ→サマリーに変換）
-    etf_intraday = summarize_intraday(etf_intraday_raw)
-    etf_data = summarize_etf_data(etf_data_raw)
+    # 日本市場は補間済みの共有チャートを使わず、当日の日足を個別に検証する。
+    try:
+        if now_jst.hour * 60 + now_jst.minute < 15 * 60 + 35:
+            raise ValueError("日本市場の引け後まで分析を実行できません")
+        etf_intraday, etf_data = build_jp_price_summaries(etf_data_raw, today_str)
+        etf_intraday["us_futures"] = fetch_us_futures()
+    except Exception as exc:
+        print(f"❌ 株価の検証に失敗したため分析・配信を中止します: {exc}", file=sys.stderr)
+        sys.exit(1)
     option_hist = summarize_option_history(option_history)
 
     # プロンプト構築

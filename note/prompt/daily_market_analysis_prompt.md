@@ -12,10 +12,10 @@
 - 最も買われているセクターと最も売られているセクターを判定
 
 ### 個別株ランキング (etf_intraday.json)
-- TOPIX100全銘柄の本日パフォーマンスから上位20と下位20を抽出
+- TOPIX100は計算済みの topix100_ranking_high と topix100_ranking_low の順番・銘柄・daily_pct（前日終値比）をそのまま転記する。missing_topix100 の取得不能銘柄は除外し、欠損数を明記する。銘柄や値を推測で補わない。
 
 ### 各種インデックス評価
-- US先物指数（NQmain, ESmain, YMmain）
+- US先物指数（NQmain, ESmain, YMmain）は us_futures の継続限月の取得時刻を明記する。データがない場合は取得不能と明記し、値を推測しない。
 - 日本主要指数（日経平均, TOPIX, 半導体ETF）
 
 ## データ
@@ -36,13 +36,13 @@
 ```
 
 ### ETFイントラデイ・サマリー (etf_intraday.json から集計)
-各銘柄の本日始値・終値・騰落率（intraday_pct=当日始値比、daily_pct=前日終値比）
+Yahoo Financeの日本市場日足の未調整価格。各銘柄の取引日、始値、終値、前日終値と騰落率（intraday_pct=当日始値比、daily_pct=前日終値比）。データに存在しない数値は推測しない。
 ```json
 {{etf_intraday_json}}
 ```
 
 ### ETF日次・サマリー (etf_data.json から集計)
-各銘柄の直近終値・前日比(daily_pct)・週間比(weekly_pct)・月間比(monthly_pct)
+日本市場日足の未調整終値・前日比(daily_pct)・5取引日前比(weekly_pct)・20取引日前比(monthly_pct)。欠損時は値を推測しない。
 ```json
 {{etf_data_json}}
 ```
@@ -66,7 +66,7 @@
   - YMmain: (数値・変動率%)
 - **日本・主要指数**:
   - 日経平均(^N225): (数値・変動率%)
-  - TOPIX(1306.T): (数値・変動率%)
+  - TOPIX連動ETF(1306.T): (数値・変動率%)
   - 半導体ETF(2644.T): (数値・変動率%)
 - **各セクター分類分析**: (上位セクター、下位セクターと各々の変動率)
 - **売買フロー**: (売買代金と空売り比率の数値、底打ちPhase判定の結果)
