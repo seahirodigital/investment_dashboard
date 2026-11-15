@@ -1,4 +1,4 @@
-name: Dropbox分析レポート接続の検証
+name: Dropbox分析レポートの実保存検証
 
 on:
   workflow_dispatch:
